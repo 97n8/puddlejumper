@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#022c22" />
+    <title>PublicLogic OS</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800&family=Sora:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="./styles.css" />
+
+    <!-- MSAL Browser (Entra ID auth) -->
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+
+    <!-- Markdown renderer for Playbooks -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+
+    <!-- Config (no secrets; safe to ship). Copy config.example.js to config.js and fill in values. -->
+    <script src="./config.js"></script>
+  </head>
+  <body>
+    <div class="bg" aria-hidden="true"></div>
+    <div id="app" class="app">
+      <div class="boot">
+        <div class="brand">
+          <div class="brand__mark">PL</div>
+          <div>
+            <div class="brand__name">PublicLogic OS</div>
+            <div class="brand__tag">Smart Systems. Stronger Communities.</div>
+          </div>
+        </div>
+        <div class="boot__hint">Loading...</div>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
