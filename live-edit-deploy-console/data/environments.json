@@ -1,0 +1,30 @@
+[
+  {
+    "id": "env-001",
+    "town": "Phillipston",
+    "status": "foundations",
+    "tenant": {
+      "type": "M365",
+      "domain": "phillipstonma.sharepoint.com",
+      "adminContact": "Dave at Regional IT Co-op",
+      "notes": "Only checks email MWF"
+    },
+    "modules": [
+      "Authority",
+      "Accountability"
+    ],
+    "contacts": [
+      {
+        "name": "Martha",
+        "role": "Town Clerk",
+        "notes": "Retiring June 2026"
+      }
+    ],
+    "liveUrl": "https://www.publiclogic.org/os/#/phillipston/prr/resident",
+    "operator": "N. Boudreau",
+    "health": "pending",
+    "created": "2026-01-15T00:00:00Z",
+    "lastDeploy": "2026-02-03T14:22:00Z",
+    "archived": false
+  }
+]
