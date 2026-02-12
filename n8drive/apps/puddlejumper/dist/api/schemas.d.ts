@@ -84,8 +84,8 @@ export declare const evaluateRequestSchema: z.ZodObject<{
                 }>;
             }, z.core.$strict>>>;
             urgency: z.ZodOptional<z.ZodEnum<{
-                normal: "normal";
                 emergency: "emergency";
+                normal: "normal";
             }>>;
             deployMode: z.ZodOptional<z.ZodEnum<{
                 pr: "pr";
@@ -131,10 +131,10 @@ export declare const prrCloseRequestSchema: z.ZodObject<{
     disposition: z.ZodString;
 }, z.core.$strict>;
 export declare const accessRequestStatusSchema: z.ZodEnum<{
+    approved: "approved";
     received: "received";
     closed: "closed";
     under_review: "under_review";
-    approved: "approved";
     provisioned: "provisioned";
     denied: "denied";
     revoked: "revoked";
@@ -151,10 +151,10 @@ export declare const accessRequestIntakeRequestSchema: z.ZodObject<{
 }, z.core.$strict>;
 export declare const accessRequestStatusTransitionRequestSchema: z.ZodObject<{
     to_status: z.ZodEnum<{
+        approved: "approved";
         received: "received";
         closed: "closed";
         under_review: "under_review";
-        approved: "approved";
         provisioned: "provisioned";
         denied: "denied";
         revoked: "revoked";

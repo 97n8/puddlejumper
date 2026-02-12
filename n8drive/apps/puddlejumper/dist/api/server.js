@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import Database from "better-sqlite3";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import { createOptionalJwtAuthenticationMiddleware, createJwtAuthenticationMiddleware, csrfProtection, getAuthContext, requireAuthenticated, requirePermission, requireRole, resolveAuthOptions, signJwt, setJwtCookieOnResponse } from "@publiclogic/core";
@@ -57,6 +58,7 @@ const DEFAULT_ACCESS_NOTIFICATION_BATCH_SIZE = 25;
 const DEFAULT_ACCESS_NOTIFICATION_MAX_RETRIES = 8;
 const MS_GRAPH_TOKEN_HEADER = "x-ms-graph-token";
 const DEFAULT_GRAPH_PROFILE_URL = "https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName";
+const SQLITE_READINESS_STATEMENT = "BEGIN; CREATE TABLE IF NOT EXISTS __pj_health_check (k TEXT); DROP TABLE IF EXISTS __pj_health_check; COMMIT;";
 function isBuiltInLoginEnabled(nodeEnv) {
     return process.env.ALLOW_ADMIN_LOGIN === "true" && nodeEnv !== "production";
 }
@@ -1180,6 +1182,60 @@ function isPathInsideDirectory(candidatePath, baseDirectory) {
     const relative = path.relative(resolvedBase, resolvedCandidate);
     return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
+/**
+ * Performs a read/write readiness probe against a SQLite file without mutating application tables.
+ * Returns granular flags used by the /live liveness endpoint.
+ */
+function checkSqliteReadiness(dbPath) {
+    try {
+        const exists = fs.existsSync(dbPath);
+        if (!exists) {
+            return { exists, readable: false, writable: false, ok: false, error: "file-missing" };
+        }
+        const readHandle = new Database(dbPath, { readonly: true });
+        try {
+            readHandle.prepare("SELECT 1 as ok").get();
+        }
+        finally {
+            try {
+                readHandle.close();
+            }
+            catch {
+                // ignore
+            }
+        }
+        let writable = false;
+        let writeError;
+        try {
+            const writeHandle = new Database(dbPath);
+            try {
+                writeHandle.exec(SQLITE_READINESS_STATEMENT);
+                writable = true;
+            }
+            finally {
+                try {
+                    writeHandle.close();
+                }
+                catch {
+                    // ignore
+                }
+            }
+        }
+        catch (error) {
+            writeError = error instanceof Error ? error.message : String(error);
+        }
+        return { exists: true, readable: true, writable, ok: writable, error: writeError };
+    }
+    catch (error) {
+        return {
+            exists: fs.existsSync(dbPath),
+            readable: false,
+            writable: false,
+            ok: false,
+            error: error instanceof Error ? error.message : String(error)
+        };
+    }
+}
 function assertProductionInvariants(nodeEnv, authOptions) {
     if (nodeEnv !== "production") {
         return;
@@ -1351,6 +1407,44 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
     });
     app.get("/pj-workspace", (_req, res) => {
         sendPjWorkspace(res);
+    });
+    app.get("/live", (_req, res) => {
+        const publicDirExists = fs.existsSync(PUBLIC_DIR);
+        const workspaceFileExists = fs.existsSync(PJ_WORKSPACE_FILE);
+        const prrStatus = checkSqliteReadiness(prrDbPath);
+        const connectorStatus = checkSqliteReadiness(connectorDbPath);
+        const overallOk = publicDirExists && prrStatus.ok && connectorStatus.ok;
+        res.status(overallOk ? 200 : 503).json({
+            status: overallOk ? "live" : "degraded",
+            service: "puddle-jumper-deploy-remote",
+            nodeEnv,
+            now: new Date().toISOString(),
+            checks: {
+                static: {
+                    dir: PUBLIC_DIR,
+                    exists: publicDirExists,
+                    workspaceFileExists
+                },
+                prrDb: {
+                    path: prrDbPath,
+                    ...prrStatus
+                },
+                connectorDb: {
+                    path: connectorDbPath,
+                    ...connectorStatus
+                },
+                runtime: {
+                    contextLoaded: Boolean(runtimeContext),
+                    tilesLoaded: runtimeTiles.length > 0,
+                    capabilitiesLoaded: Boolean(runtimeCapabilities)
+                },
+                env: {
+                    accessNotificationWebhookConfigured: Boolean(accessNotificationWebhookUrl),
+                    jwtSecretConfigured: Boolean(authOptions.jwtPublicKey ?? authOptions.jwtSecret)
+                },
+                uptimeSeconds: Math.floor(process.uptime())
+            }
+        });
     });
     app.get("/health", (_req, res) => {
         res.json({
