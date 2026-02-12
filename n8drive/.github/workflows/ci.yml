@@ -1,5 +1,10 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -12,37 +17,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: pnpm
       - name: Install
         run: pnpm install -w --frozen-lockfile
-      - name: Build
+      - name: TypeScript build
+        run: npx tsc -b
+      - name: Workspace build
         run: pnpm -w -r build
-      - name: Run core tests
-        run: pnpm --filter @publiclogic/core test
-name: CI
-
-on:
-  pull_request:
-  push:
-    branches:
-      - main
-      - master
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run CI checks
-        run: npm run ci
+      - name: Workspace tests
+        run: pnpm -w -r test

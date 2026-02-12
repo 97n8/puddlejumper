@@ -1,3 +1,3 @@
-import { bootRemoteApp } from "/internal-src/remote-app.js";
+import { bootRemoteApp } from "../internal-src/remote-app.js";
 
 bootRemoteApp();
