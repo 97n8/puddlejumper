@@ -3,11 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "tsx watch src/api/server.ts",
     "start": "node dist/api/server.js",
     "build": "tsc --outDir dist",
     "vercel-build": "npm run build",
+    "monorepo:build": "pnpm -w -r run build",
+    "monorepo:vercel-build": "pnpm -w -r run vercel-build",
     "test": "tsx --test test/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "check:pj-contract": "node scripts/check-pj-contract.mjs",

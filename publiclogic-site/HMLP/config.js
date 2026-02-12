@@ -27,9 +27,13 @@ window.PUBLICLOGIC_OS_CONFIG = {
       tasks: "OS Tasks",
       pipeline: "OS Pipeline",
       projects: "OS Projects",
+      agenda: "OS Agenda",
       scorecard: "OS Scorecard",
       decisions: "OS Decisions"
     }
+  },
+  agenda: {
+    defaultWorkspace: "Logicville, MA"
   },
   team: {
     people: [

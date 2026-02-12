@@ -12,6 +12,7 @@ import { renderProjects } from "./pages/projects.js";
 import { renderPlaybooks } from "./pages/playbooks.js";
 import { renderTools } from "./pages/tools.js";
 import { renderSettings } from "./pages/settings.js";
+import { renderAgenda } from "./pages/agenda.js";
 
 function actionNode(a) {
   if (a.href) {
@@ -117,6 +118,7 @@ function buildShell({ onLogout, whoText }) {
   const navItems = [
     { path: "/dashboard", label: "Command Center" },
     { path: "/today", label: "Today" },
+    { path: "/agenda", label: "Agenda" },
     { path: "/tasks", label: "Tasks" },
     { path: "/pipeline", label: "Pipeline" },
     { path: "/projects", label: "Projects" },
@@ -163,6 +165,7 @@ const PAGES = {
   "/": renderDashboard,
   "/dashboard": renderDashboard,
   "/today": renderToday,
+  "/agenda": renderAgenda,
   "/tasks": renderTasks,
   "/pipeline": renderPipeline,
   "/projects": renderProjects,

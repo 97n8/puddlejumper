@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chamber Connect — Case Space</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span>North Central Chamber (MA)</span>
+          <h1>Chamber Connect</h1>
+          <div class="status-pill">VAULT-Governed</div>
+        </div>
+
+        <div class="nav-group">
+          <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+          <button class="nav-btn" data-view="triage">Triage Queue</button>
+          <button class="nav-btn" data-view="at-risk">At-Risk Queue</button>
+          <button class="nav-btn" data-view="breached">Breached Queue</button>
+          <button class="nav-btn" data-view="intake">New Intake</button>
+        </div>
+
+        <div class="user-card">
+          <label for="userSelect">Acting User</label>
+          <select id="userSelect"></select>
+          <div class="footer-note">Role-based access is enforced by header simulation.</div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="header">
+          <div>
+            <h2 id="viewTitle">Case Dashboard</h2>
+            <p class="footer-note" id="viewSubtitle">Unified intake, routing, SLA, and audit for every inquiry.</p>
+          </div>
+          <div class="status-pill" id="caseCount">Loading cases…</div>
+        </header>
+
+        <section id="dashboard" class="view">
+          <div class="dashboard" id="metrics"></div>
+          <div class="case-list">
+            <h3>Active Cases</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Case Ref</th>
+                  <th>Subject</th>
+                  <th>State</th>
+                  <th>SLA</th>
+                  <th>Assigned Team</th>
+                </tr>
+              </thead>
+              <tbody id="caseTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="queue" class="view" hidden>
+          <div class="case-list">
+            <h3 id="queueTitle">Queue</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Case Ref</th>
+                  <th>Subject</th>
+                  <th>State</th>
+                  <th>SLA</th>
+                  <th>Assigned Team</th>
+                </tr>
+              </thead>
+              <tbody id="queueTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="caseDetail" class="view" hidden>
+          <div class="panel">
+            <div class="header">
+              <div>
+                <h2 id="detailRef">Case</h2>
+                <p class="footer-note" id="detailSummary"></p>
+              </div>
+              <div class="status-pill" id="detailState"></div>
+            </div>
+
+            <div class="actions" id="caseActions"></div>
+          </div>
+
+          <div class="panel">
+            <div class="tabs" id="detailTabs"></div>
+            <div id="detailContent"></div>
+          </div>
+        </section>
+
+        <section id="intake" class="view" hidden>
+          <div class="panel">
+            <h3>New Inquiry Intake</h3>
+            <form id="intakeForm">
+              <div class="form-grid">
+                <label>Requestor Name
+                  <input name="requestor_name" required />
+                </label>
+                <label>Requestor Type
+                  <select name="requestor_type">
+                    <option value="business">Business</option>
+                    <option value="resident">Resident</option>
+                    <option value="developer">Developer</option>
+                    <option value="visitor">Visitor</option>
+                    <option value="member">Member</option>
+                    <option value="unknown">Unknown</option>
+                  </select>
+                </label>
+                <label>Email
+                  <input name="requestor_email" type="email" required />
+                </label>
+                <label>Phone
+                  <input name="requestor_phone" />
+                </label>
+                <label>Municipality
+                  <select name="municipality_affiliation" id="municipalitySelect"></select>
+                </label>
+                <label>Priority
+                  <select name="priority">
+                    <option value="low">Low</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </label>
+              </div>
+              <div class="form-grid">
+                <label>Subject
+                  <input name="subject" required />
+                </label>
+                <label>Category
+                  <select name="category" id="categorySelect"></select>
+                </label>
+                <label>Subcategory
+                  <select name="sub_category" id="subcategorySelect"></select>
+                </label>
+              </div>
+              <label>Description
+                <textarea name="description" required></textarea>
+              </label>
+              <div class="actions" style="margin-top: 16px;">
+                <button type="submit">Create Case</button>
+                <button type="button" class="secondary" id="intakeReset">Reset</button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chamber Connect — Status Lookup</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="portal-shell">
+      <h1>Chamber Connect Status Lookup</h1>
+      <p class="footer-note">Check the current status of your inquiry with your case reference and email or phone.</p>
+
+      <form id="lookupForm" class="form-grid" style="margin-top: 20px;">
+        <label>Case Reference
+          <input name="case_ref" placeholder="CC-2026-0001" required />
+        </label>
+        <label>Email or Phone
+          <input name="verify" placeholder="you@example.com" required />
+        </label>
+      </form>
+      <div class="actions" style="margin-top: 16px;">
+        <button type="submit" form="lookupForm">Check Status</button>
+        <button type="button" class="secondary" id="backButton">Back to Staff Portal</button>
+      </div>
+
+      <div id="result" class="portal-result" hidden></div>
+    </div>
+
+    <script src="/portal.js"></script>
+  </body>
+</html>

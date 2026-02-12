@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "savedAt": "2026-02-11T10:44:30.431Z",
+  "deployState": {
+    "phase": "idle",
+    "phaseUpdatedAt": "2026-02-09T09:37:58.570Z",
+    "lastPhaseDetail": "Initialized.",
+    "lastDeployTime": null,
+    "lastResult": "",
+    "lastSuccessTime": null,
+    "lastDeploymentId": "",
+    "lastCommitSha": "",
+    "lastStdoutExcerpt": "",
+    "lastStderrExcerpt": "",
+    "lastErrorLines": [],
+    "lastDeploymentReason": "",
+    "runningDeployment": null,
+    "emergencyDeclaration": null,
+    "lastEmergencyDeployTime": null
+  }
+}

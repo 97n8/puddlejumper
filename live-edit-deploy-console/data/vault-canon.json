@@ -1,0 +1,74 @@
+{
+  "foundations": [
+    {
+      "name": "Authority",
+      "description": "Maps who owns which decisions, tied to charter/bylaws.",
+      "artifacts": [
+        "Authority Map (SharePoint list)",
+        "Decision routing flows (Power Automate)",
+        "Charter cross-reference library"
+      ]
+    },
+    {
+      "name": "Accountability",
+      "description": "Defines who is responsible for what, handoff protocols.",
+      "artifacts": [
+        "Role-responsibility matrix",
+        "Handoff templates",
+        "Accountability audit trail"
+      ]
+    },
+    {
+      "name": "Boundary",
+      "description": "Defines where one role ends and another begins.",
+      "artifacts": [
+        "Boundary map",
+        "Escalation protocols",
+        "Cross-department handoff rules"
+      ]
+    },
+    {
+      "name": "Continuity",
+      "description": "Ensures the system survives the person.",
+      "artifacts": [
+        "Retention schedule (automated)",
+        "Succession docs",
+        "Knowledge capture templates"
+      ]
+    }
+  ],
+  "workspaces": [
+    {
+      "name": "Public Records",
+      "description": "Records requests and retention compliance.",
+      "dependsOn": [
+        "Authority",
+        "Continuity"
+      ]
+    },
+    {
+      "name": "Permitting",
+      "description": "Application tracking, routing, and status.",
+      "dependsOn": [
+        "Authority",
+        "Boundary"
+      ]
+    },
+    {
+      "name": "Board Compliance",
+      "description": "Packets, meeting records, and vote tracking.",
+      "dependsOn": [
+        "Authority",
+        "Accountability"
+      ]
+    },
+    {
+      "name": "Appointments",
+      "description": "Committee tracking, terms, and vacancy alerts.",
+      "dependsOn": [
+        "Authority",
+        "Boundary"
+      ]
+    }
+  ]
+}

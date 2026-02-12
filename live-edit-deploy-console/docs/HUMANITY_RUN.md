@@ -33,19 +33,68 @@ Open:
 9. Re-open live environment and verify result.
 10. Record what changed in continuity memory.
 
-## 4. Publish chain (GitHub + Preview)
+## 4. PL Quick Launch
 
-Use the `GitHub + Preview` card in Active Workspace.
+Use `PL Quick Launch` in Active Workspace.
 
-1. `Open AGNOSTIC` to update source.
-2. `Open Public_Logic` to trigger release bridge.
-3. `Open Vercel Deployments` to confirm build status.
-4. Validate with:
-   - `Open Public Site`
-   - `Open OS Home`
-   - `Open Selected Live`
+1. Open the repo you need (`AGNOSTIC`, `Public_Logic`, or `CASE Workspace`).
+2. Open SharePoint filesystem targets (`Tenant Site`, `Documents`, `Site Contents`).
+3. Open `Tenant Admin` when permission or structure checks are needed.
+4. Open `Vercel` and live URLs to verify publication.
 
-## 5. If deployment is blocked
+If environment tenant fields are empty, the launchpad defaults to `publiclogic978.sharepoint.com`.
+
+## 5. Deploy folders and documents (proof flow)
+
+This proves Tenebrux Veritas can create real filesystem artifacts for the selected environment.
+
+1. Open `Active Workspace`.
+2. Select the municipal row.
+3. In `Remote Command Center`, confirm readiness and run:
+   - `Deploy Active Target to GitHub`
+4. In `Deploy Remote`, confirm:
+   - Repository
+   - Branch
+   - Target File
+   - Origin Remote
+5. In `Folder + Document Proof`, set:
+   - `Folder Name` (example: `oakham-proof-2026-02-10`)
+   - `Document Name` (example: `proof-note.md`)
+   - Optional content
+6. Click `Create Proof Folder`.
+7. Click `Create Proof Document`.
+8. Confirm new rows appear in the proof table and audit panel.
+9. Confirm files exist on disk under:
+   - `/Users/n8/Documents/New project/live-edit-deploy-console/data/proof-system/<env-id>/`
+
+## 6. Deploy remote actions (real GitHub + SharePoint)
+
+This is the production-style control surface.
+
+1. Select the environment row.
+2. Confirm `Deploy Remote` shows the correct repo/branch/file/origin.
+3. Open `Deploy Remote Actions`.
+4. Check readiness badges:
+   - `GitHub remote: ready`
+   - `SharePoint remote: ready`
+5. Run GitHub publish:
+   - Click `Deploy Active Target to GitHub`
+6. Run SharePoint operations:
+   - Set `SharePoint Library` and `Folder Path`
+   - Click `Create SharePoint Folder`
+   - Set `Document Name`/`Document Content`, click `Create SharePoint Document`
+   - Set `Page Title`/`Page Name`, click `Create SharePoint Page`
+7. Confirm result appears in:
+   - `Last remote action` block
+   - audit entries (`remote:github_deploy`, `remote:sharepoint_*`)
+
+Required SharePoint connection refs in environment settings:
+- `tenantIdRef`: `env://TV_GRAPH_TENANT_ID`
+- `clientIdRef`: `env://TV_GRAPH_CLIENT_ID`
+- `keychainRef`: `env://TV_GRAPH_CLIENT_SECRET`
+- `graphEnabled`: true
+
+## 7. If deployment is blocked
 
 The system blocks for safety. Read the first blocker and fix in this order:
 
@@ -57,7 +106,7 @@ The system blocks for safety. Read the first blocker and fix in this order:
 
 Do not bypass blockers by changing live pages directly.
 
-## 6. Fast troubleshooting
+## 8. Fast troubleshooting
 
 - If UI is blank: rebuild and restart.
   ```bash
@@ -67,7 +116,7 @@ Do not bypass blockers by changing live pages directly.
 - If already running and ports conflict: stop old process on `3001`/`5174`, then rerun.
 - If auth fails: check session, then retry sign-in with operator account.
 
-## 7. Definition of done
+## 9. Definition of done
 
 A deployment is done only when all are true:
 

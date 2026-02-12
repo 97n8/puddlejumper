@@ -1,10 +1,19 @@
 import crypto from "node:crypto";
+import { execFile as execFileCallback } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 
 import express from "express";
 
 import { appendAuditEntry, readAuditEntries } from "../src/audit.js";
+import {
+  getAllEnvironments as getDashboardEnvironments,
+  getEnvironmentById as getDashboardEnvironmentById,
+  calculateEnvironmentHealth as calculateDashboardEnvironmentHealth,
+  getDeploymentState as getDashboardDeploymentState,
+  getRecentDeployments as getDashboardRecentDeployments,
+  getUpcomingDeadlines as getDashboardUpcomingDeadlines
+} from "../services/environment-helper.js";
 
 const ENV_STATUSES = new Set(["active", "foundations", "diagnostic", "prospect"]);
 const HEALTH_STATUSES = new Set(["nominal", "pending", "warning"]);
@@ -588,6 +597,71 @@ async function loadEnvironmentById(environmentsPath, environmentId) {
   };
 }
 
+async function loadEnvironmentRemoteScope(config, environmentId, operator) {
+  const { environment } = await loadEnvironmentById(config.veritasEnvironmentsPath, environmentId);
+  if (!environment) {
+    throw createHttpError(404, "Environment not found.");
+  }
+
+  const contextFilePath = createContextFilePath(config.veritasDeploymentContextsDir, environmentId);
+  const connectionFilePath = createConnectionFilePath(config.veritasConnectionsDir, environmentId);
+  const context = normalizeContextPayload(await readJson(contextFilePath, { ...DEFAULT_CONTEXT }), operator);
+  const connection = await readJson(connectionFilePath, null);
+
+  return {
+    environment,
+    context,
+    connection
+  };
+}
+
+async function resolveSharePointSession({ config, environmentId, operator, libraryName }) {
+  const { environment, context, connection } = await loadEnvironmentRemoteScope(
+    config,
+    environmentId,
+    operator
+  );
+
+  if (!connection) {
+    throw createHttpError(400, "Connection record is missing. Save connection refs first.");
+  }
+  if (!connection.graphEnabled) {
+    throw createHttpError(400, "Graph execution is disabled for this environment.");
+  }
+
+  const tenantDomain = String(
+    context.targetTenant?.domain || environment.tenant?.domain || connection.tenantDomain || ""
+  ).trim();
+  const siteUrl = normalizeSharePointSiteUrl(context.graph?.sharePointSiteUrl, tenantDomain);
+  if (!siteUrl) {
+    throw createHttpError(400, "SharePoint site URL is missing in deployment context.");
+  }
+
+  const tenantId = await resolveSecretReference(connection.tenantIdRef, "tenantIdRef", config);
+  const clientId = await resolveSecretReference(connection.clientIdRef, "clientIdRef", config);
+  const clientSecret = await resolveSecretReference(connection.keychainRef, "keychainRef", config);
+  const graphBaseUrl = normalizeGraphBaseUrl(context.graph?.graphBaseUrl);
+  const accessToken = await requestGraphToken({ tenantId, clientId, clientSecret });
+  const site = await resolveSiteByUrl({ accessToken, graphBaseUrl, siteUrl });
+  const drive = await resolveDrive({
+    accessToken,
+    graphBaseUrl,
+    siteId: site.id,
+    libraryName
+  });
+
+  return {
+    environment,
+    context,
+    connection,
+    accessToken,
+    graphBaseUrl,
+    siteUrl,
+    site,
+    drive
+  };
+}
+
 function filterEntries(entries, { envId = "", type = "", q = "" }) {
   const envFilter = String(envId || "").trim();
   const typeFilter = String(type || "").trim().toLowerCase();
@@ -625,6 +699,455 @@ function sanitizeConnectionPayload(raw) {
     updatedAt: new Date().toISOString(),
     notes: String(source.notes || "").trim()
   };
+}
+
+function sanitizeSegment(value, fallback = "item") {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || fallback;
+}
+
+function sanitizeDocumentName(value, fallback = "note") {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return `${fallback}.md`;
+  }
+  const cleaned = raw
+    .replace(/[\\/]/g, "-")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (!cleaned) {
+    return `${fallback}.md`;
+  }
+  if (cleaned.includes(".")) {
+    return cleaned;
+  }
+  return `${cleaned}.md`;
+}
+
+function isPathInside(parentPath, candidatePath) {
+  const parent = path.resolve(parentPath);
+  const candidate = path.resolve(candidatePath);
+  const prefix = parent.endsWith(path.sep) ? parent : `${parent}${path.sep}`;
+  return candidate === parent || candidate.startsWith(prefix);
+}
+
+function buildProofRootPath(config, envId) {
+  return path.join(config.dataDir, "proof-system", envId);
+}
+
+function buildProofLogPath(config) {
+  return path.join(config.dataDir, "proof-log.jsonl");
+}
+
+function buildProofEntryBase({ envId, town, operator, type }) {
+  return {
+    id: `proof-${crypto.randomUUID().slice(0, 12)}`,
+    envId,
+    town,
+    type,
+    operator,
+    createdAt: new Date().toISOString()
+  };
+}
+
+function createHttpError(status, message) {
+  const error = new Error(String(message || "Request failed."));
+  error.status = status;
+  return error;
+}
+
+function formatGraphErrorBody(rawBody) {
+  const text = String(rawBody || "").trim();
+  if (!text) {
+    return "";
+  }
+  if (text.length <= 320) {
+    return text;
+  }
+  return `${text.slice(0, 320)}...`;
+}
+
+function normalizeGraphBaseUrl(value) {
+  const fallback = "https://graph.microsoft.com/v1.0";
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return fallback;
+  }
+  return raw.replace(/\/+$/, "");
+}
+
+function normalizeSharePointSiteUrl(value, fallbackDomain = "") {
+  const raw = String(value || "").trim();
+  if (raw) {
+    return raw.replace(/\/+$/, "");
+  }
+  const tenant = String(fallbackDomain || "").trim();
+  if (!tenant) {
+    return "";
+  }
+  return `https://${tenant}/sites/PL`;
+}
+
+function parseSharePointSiteUrl(siteUrl) {
+  let parsed;
+  try {
+    parsed = new URL(String(siteUrl || "").trim());
+  } catch {
+    throw createHttpError(400, "SharePoint site URL is invalid.");
+  }
+  if (!/^https?:$/i.test(parsed.protocol)) {
+    throw createHttpError(400, "SharePoint site URL must use http/https.");
+  }
+  const serverRelativePath = parsed.pathname.replace(/\/+$/, "");
+  if (!serverRelativePath || serverRelativePath === "/") {
+    throw createHttpError(400, "SharePoint site URL must include a site path (for example /sites/PL).");
+  }
+  return {
+    hostname: parsed.hostname,
+    serverRelativePath
+  };
+}
+
+function encodeGraphPath(pathValue) {
+  return String(pathValue || "")
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+}
+
+function parsePathSegments(pathValue) {
+  const raw = String(pathValue || "").trim();
+  if (!raw) {
+    return [];
+  }
+  const segments = raw
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  if (segments.some((segment) => segment === "." || segment === "..")) {
+    throw createHttpError(400, "Path segments cannot contain '.' or '..'.");
+  }
+  return segments;
+}
+
+async function execFileCommand(filePath, args, options = {}) {
+  const timeoutMs = Number(options.timeoutMs || 300_000);
+  return await new Promise((resolve) => {
+    execFileCallback(
+      filePath,
+      args,
+      {
+        cwd: options.cwd,
+        timeout: timeoutMs,
+        env: options.env
+      },
+      (error, stdout, stderr) => {
+        if (error) {
+          resolve({
+            ok: false,
+            stdout: String(stdout || ""),
+            stderr: String(stderr || error.message || ""),
+            code: typeof error.code === "number" ? error.code : 1
+          });
+          return;
+        }
+        resolve({
+          ok: true,
+          stdout: String(stdout || ""),
+          stderr: String(stderr || ""),
+          code: 0
+        });
+      }
+    );
+  });
+}
+
+async function resolveSecretReference(refValue, label, config) {
+  const raw = String(refValue || "").trim();
+  if (!raw) {
+    throw createHttpError(400, `${label} is required for SharePoint remote operations.`);
+  }
+
+  if (raw.startsWith("env://")) {
+    const envKey = raw.slice("env://".length).trim();
+    const envValue = String(process.env[envKey] || "").trim();
+    if (!envValue) {
+      throw createHttpError(400, `${label} points to missing environment variable '${envKey}'.`);
+    }
+    return envValue;
+  }
+
+  if (raw.startsWith("keychain://")) {
+    const identifier = raw.slice("keychain://".length).trim();
+    if (!identifier) {
+      throw createHttpError(400, `${label} keychain reference is invalid.`);
+    }
+    const [service, account] = identifier.split("/").map((part) => String(part || "").trim());
+    if (!service) {
+      throw createHttpError(400, `${label} keychain reference must include a service name.`);
+    }
+    const args = ["find-generic-password", "-s", service, "-w"];
+    if (account) {
+      args.splice(3, 0, "-a", account);
+    }
+    const result = await execFileCommand("security", args, {
+      cwd: config.appRoot,
+      timeoutMs: 10_000,
+      env: process.env
+    });
+    if (!result.ok) {
+      throw createHttpError(
+        400,
+        `${label} could not be resolved from macOS Keychain (${service}${account ? `/${account}` : ""}).`
+      );
+    }
+    const secret = String(result.stdout || "").trim();
+    if (!secret) {
+      throw createHttpError(400, `${label} keychain secret is empty.`);
+    }
+    return secret;
+  }
+
+  return raw;
+}
+
+async function requestGraphToken({ tenantId, clientId, clientSecret }) {
+  const tokenUrl = `https://login.microsoftonline.com/${encodeURIComponent(
+    tenantId
+  )}/oauth2/v2.0/token`;
+  const body = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    scope: "https://graph.microsoft.com/.default",
+    grant_type: "client_credentials"
+  });
+  const response = await fetch(tokenUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: body.toString()
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.access_token) {
+    const hint = payload?.error_description || payload?.error || "Token request failed.";
+    throw createHttpError(401, `Graph auth failed. ${hint}`);
+  }
+  return payload.access_token;
+}
+
+async function graphRequest({
+  accessToken,
+  graphBaseUrl,
+  requestPath,
+  method = "GET",
+  body,
+  headers = {}
+}) {
+  const base = normalizeGraphBaseUrl(graphBaseUrl);
+  const url = `${base}${requestPath.startsWith("/") ? requestPath : `/${requestPath}`}`;
+  const response = await fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      ...headers
+    },
+    body
+  });
+  if (response.status === 204) {
+    return null;
+  }
+  const text = await response.text();
+  if (!response.ok) {
+    const reason = formatGraphErrorBody(text) || `${response.status} ${response.statusText}`;
+    const error = createHttpError(
+      response.status >= 400 && response.status < 600 ? response.status : 502,
+      `Graph request failed for ${requestPath}. ${reason}`
+    );
+    error.graphStatus = response.status;
+    throw error;
+  }
+  if (!text.trim()) {
+    return {};
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
+  }
+}
+
+async function resolveSiteByUrl({ accessToken, graphBaseUrl, siteUrl }) {
+  const { hostname, serverRelativePath } = parseSharePointSiteUrl(siteUrl);
+  const encodedPath = serverRelativePath
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  return await graphRequest({
+    accessToken,
+    graphBaseUrl,
+    requestPath: `/sites/${hostname}:${encodedPath}?$select=id,name,webUrl`
+  });
+}
+
+async function resolveDrive({ accessToken, graphBaseUrl, siteId, libraryName }) {
+  const requested = String(libraryName || "").trim().toLowerCase();
+  const drivesResponse = await graphRequest({
+    accessToken,
+    graphBaseUrl,
+    requestPath: `/sites/${siteId}/drives?$select=id,name,webUrl,driveType`
+  });
+  const drives = Array.isArray(drivesResponse?.value) ? drivesResponse.value : [];
+  if (!drives.length) {
+    throw createHttpError(404, "No SharePoint drives were found for this site.");
+  }
+
+  if (!requested) {
+    const fallback = drives[0];
+    return {
+      id: fallback.id,
+      name: fallback.name,
+      webUrl: fallback.webUrl
+    };
+  }
+
+  const aliases = new Set([requested]);
+  if (requested === "documents") {
+    aliases.add("shared documents");
+  }
+  if (requested === "shared documents") {
+    aliases.add("documents");
+  }
+
+  const match = drives.find((drive) => aliases.has(String(drive.name || "").trim().toLowerCase()));
+  if (!match) {
+    const available = drives.map((drive) => drive.name).filter(Boolean).join(", ");
+    throw createHttpError(
+      404,
+      `SharePoint library '${libraryName}' was not found. Available libraries: ${available || "none"}.`
+    );
+  }
+
+  return {
+    id: match.id,
+    name: match.name,
+    webUrl: match.webUrl
+  };
+}
+
+async function ensureDriveFolderPath({
+  accessToken,
+  graphBaseUrl,
+  driveId,
+  folderSegments
+}) {
+  if (!Array.isArray(folderSegments) || folderSegments.length === 0) {
+    return {
+      relativePath: "",
+      folderItem: null
+    };
+  }
+
+  let currentSegments = [];
+  let lastItem = null;
+
+  for (const segment of folderSegments) {
+    currentSegments = [...currentSegments, segment];
+    const currentPath = currentSegments.join("/");
+    const encodedCurrentPath = encodeGraphPath(currentPath);
+    const parentPath = currentSegments.slice(0, -1).join("/");
+    const encodedParentPath = encodeGraphPath(parentPath);
+
+    const requestPath = encodedParentPath
+      ? `/drives/${driveId}/root:/${encodedParentPath}:/children`
+      : `/drives/${driveId}/root/children`;
+
+    try {
+      lastItem = await graphRequest({
+        accessToken,
+        graphBaseUrl,
+        requestPath,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: segment,
+          folder: {},
+          "@microsoft.graph.conflictBehavior": "fail"
+        })
+      });
+    } catch (error) {
+      if (error?.graphStatus !== 409) {
+        throw error;
+      }
+      lastItem = await graphRequest({
+        accessToken,
+        graphBaseUrl,
+        requestPath: `/drives/${driveId}/root:/${encodedCurrentPath}?$select=id,name,webUrl,parentReference`
+      });
+    }
+  }
+
+  return {
+    relativePath: folderSegments.join("/"),
+    folderItem: lastItem
+  };
+}
+
+function ensureAspxName(pageName, pageTitle) {
+  const fallbackBase =
+    sanitizeSegment(pageTitle, "remote-page")
+      .replace(/\.+$/g, "")
+      .slice(0, 80) || "remote-page";
+  const raw = String(pageName || "").trim();
+  if (!raw) {
+    return `${fallbackBase}.aspx`;
+  }
+  const sanitized = raw
+    .replace(/[\\/]/g, "-")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const finalName = sanitized || fallbackBase;
+  return finalName.toLowerCase().endsWith(".aspx") ? finalName : `${finalName}.aspx`;
+}
+
+function createBasicPageHtml({ title, body }) {
+  const safeTitle = String(title || "Untitled Page").trim() || "Untitled Page";
+  const safeBody = String(body || "").trim();
+  return [
+    "<!DOCTYPE html>",
+    "<html>",
+    "<head>",
+    '  <meta charset="utf-8" />',
+    `  <title>${safeTitle}</title>`,
+    "</head>",
+    "<body>",
+    `  <h1>${safeTitle}</h1>`,
+    safeBody ? `  <p>${safeBody}</p>` : "  <p>Generated by Tenebrux Veritas remote control.</p>",
+    "</body>",
+    "</html>"
+  ].join("\n");
+}
+
+function excerpt(value, max = 400) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+  if (text.length <= max) {
+    return text;
+  }
+  return `${text.slice(0, max)}...`;
 }
 
 export function createVeritasRouter({
@@ -790,6 +1313,404 @@ export function createVeritasRouter({
       environmentId,
       connection
     });
+  });
+
+  router.get("/veritas/remote/:envId/status", requireOperatorAuth, async (req, res) => {
+    const envId = String(req.params.envId || "").trim();
+    if (!envId) {
+      res.status(400).json({ error: "envId is required." });
+      return;
+    }
+
+    try {
+      const { environment, context, connection } = await loadEnvironmentRemoteScope(
+        config,
+        envId,
+        req.session.user.username
+      );
+      const tenantDomain = String(
+        context.targetTenant?.domain || environment.tenant?.domain || connection?.tenantDomain || ""
+      ).trim();
+      const siteUrl = normalizeSharePointSiteUrl(context.graph?.sharePointSiteUrl, tenantDomain);
+      const remoteTarget = runtime.activeTarget
+        ? {
+            repoName: runtime.activeTarget.repoName,
+            repoRoot: runtime.activeTarget.repoRoot,
+            branch: runtime.activeTarget.branch,
+            relativeFilePath: path
+              .relative(runtime.activeTarget.repoRoot, runtime.activeTarget.targetFilePath)
+              .split(path.sep)
+              .join("/"),
+            targetFilePath: runtime.activeTarget.targetFilePath,
+            previewUrl: runtime.activeTarget.previewUrl,
+            originRemote: runtime.activeTarget.originRemote
+          }
+        : null;
+
+      const missing = [];
+      if (!connection) {
+        missing.push("connection");
+      }
+      if (connection && !connection.graphEnabled) {
+        missing.push("connection.graphEnabled");
+      }
+      if (!String(connection?.clientIdRef || "").trim()) {
+        missing.push("connection.clientIdRef");
+      }
+      if (!String(connection?.tenantIdRef || "").trim()) {
+        missing.push("connection.tenantIdRef");
+      }
+      if (!String(connection?.keychainRef || "").trim()) {
+        missing.push("connection.keychainRef");
+      }
+      if (!siteUrl) {
+        missing.push("context.graph.sharePointSiteUrl");
+      }
+
+      res.json({
+        envId,
+        town: environment.town,
+        github: {
+          ready: Boolean(remoteTarget?.originRemote && remoteTarget?.targetFilePath),
+          target: remoteTarget
+        },
+        sharepoint: {
+          ready: missing.length === 0,
+          missing,
+          siteUrl,
+          graphBaseUrl: normalizeGraphBaseUrl(context.graph?.graphBaseUrl),
+          tenantDomain: tenantDomain || "",
+          libraryDefault: "Documents"
+        }
+      });
+    } catch (error) {
+      const status = Number(error?.status || 500);
+      res.status(status).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  router.post("/veritas/remote/github/deploy", requireOperatorAuth, async (req, res) => {
+    const operator = req.session.user.username;
+    const envId = String(req.body?.environmentId || "").trim();
+    const reason = String(req.body?.reason || "").trim();
+
+    if (!envId) {
+      res.status(400).json({ error: "environmentId is required." });
+      return;
+    }
+
+    try {
+      const { environment } = await loadEnvironmentRemoteScope(config, envId, operator);
+      const target = runtime.activeTarget;
+      if (!target?.targetFilePath || !target?.repoRoot) {
+        throw createHttpError(500, "Active deploy target is not configured.");
+      }
+
+      const execution = await execFileCommand(config.deployScriptPath, [], {
+        cwd: config.appRoot,
+        timeoutMs: config.deployTimeoutMs,
+        env: {
+          ...process.env,
+          CONTENT_FILE_PATH: target.targetFilePath,
+          DEPLOY_REPO_ROOT: target.repoRoot
+        }
+      });
+
+      const now = new Date().toISOString();
+      const commitSha = typeof getGitHeadSha === "function" ? await getGitHeadSha(target.repoRoot) : null;
+      const result = execution.ok ? "success" : "error";
+      const relativeFilePath = path.relative(target.repoRoot, target.targetFilePath).split(path.sep).join("/");
+
+      const auditEntry = await appendAuditEntry(config.auditLogPath, {
+        id: `remote-gh-${crypto.randomUUID()}`,
+        timestamp: now,
+        operator,
+        user: operator,
+        action_type: "remote:github_deploy",
+        environment_id: envId,
+        town: environment.town,
+        target_repo: target.repoName,
+        target_branch: target.branch,
+        target_file: relativeFilePath,
+        git_commit_sha: commitSha,
+        reason: reason || "Remote deploy request",
+        result,
+        stdout_excerpt: excerpt(execution.stdout),
+        stderr_excerpt: excerpt(execution.stderr)
+      });
+
+      if (!execution.ok) {
+        throw createHttpError(
+          500,
+          `GitHub deploy remote failed. ${excerpt(execution.stderr) || "Check deploy script output."}`
+        );
+      }
+
+      res.json({
+        ok: true,
+        environmentId: envId,
+        town: environment.town,
+        commitSha,
+        target: {
+          repoName: target.repoName,
+          branch: target.branch,
+          relativeFilePath,
+          originRemote: target.originRemote
+        },
+        output: excerpt(execution.stdout, 1200),
+        auditEntry
+      });
+    } catch (error) {
+      const status = Number(error?.status || 500);
+      res.status(status).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  router.post("/veritas/remote/sharepoint/folder", requireOperatorAuth, async (req, res) => {
+    const operator = req.session.user.username;
+    const envId = String(req.body?.environmentId || "").trim();
+    const libraryName = String(req.body?.libraryName || "Documents").trim();
+    const folderPath = String(req.body?.folderPath || "").trim();
+
+    if (!envId) {
+      res.status(400).json({ error: "environmentId is required." });
+      return;
+    }
+    if (!folderPath) {
+      res.status(400).json({ error: "folderPath is required." });
+      return;
+    }
+
+    try {
+      const sharePoint = await resolveSharePointSession({
+        config,
+        environmentId: envId,
+        operator,
+        libraryName
+      });
+      const folderSegments = parsePathSegments(folderPath);
+      if (folderSegments.length === 0) {
+        throw createHttpError(400, "folderPath must include at least one segment.");
+      }
+
+      const folderResult = await ensureDriveFolderPath({
+        accessToken: sharePoint.accessToken,
+        graphBaseUrl: sharePoint.graphBaseUrl,
+        driveId: sharePoint.drive.id,
+        folderSegments
+      });
+
+      const now = new Date().toISOString();
+      const payload = {
+        ok: true,
+        environmentId: envId,
+        town: sharePoint.environment.town,
+        siteUrl: sharePoint.siteUrl,
+        siteId: sharePoint.site.id,
+        driveId: sharePoint.drive.id,
+        libraryName: sharePoint.drive.name,
+        folderPath: folderResult.relativePath,
+        webUrl: folderResult.folderItem?.webUrl || ""
+      };
+
+      await appendAuditEntry(config.auditLogPath, {
+        id: `remote-sp-folder-${crypto.randomUUID()}`,
+        timestamp: now,
+        operator,
+        user: operator,
+        action_type: "remote:sharepoint_folder",
+        environment_id: envId,
+        town: sharePoint.environment.town,
+        result: "success",
+        detail: payload,
+        stdout_excerpt: `Created folder path '${payload.folderPath}' in '${payload.libraryName}'.`,
+        stderr_excerpt: ""
+      });
+
+      res.status(201).json(payload);
+    } catch (error) {
+      const status = Number(error?.status || 500);
+      res.status(status).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  router.post("/veritas/remote/sharepoint/document", requireOperatorAuth, async (req, res) => {
+    const operator = req.session.user.username;
+    const envId = String(req.body?.environmentId || "").trim();
+    const libraryName = String(req.body?.libraryName || "Documents").trim();
+    const folderPath = String(req.body?.folderPath || "").trim();
+    const documentName = sanitizeDocumentName(String(req.body?.documentName || "").trim(), "remote-note");
+    const content = String(req.body?.content || "").trim();
+
+    if (!envId) {
+      res.status(400).json({ error: "environmentId is required." });
+      return;
+    }
+
+    try {
+      const sharePoint = await resolveSharePointSession({
+        config,
+        environmentId: envId,
+        operator,
+        libraryName
+      });
+      const folderSegments = parsePathSegments(folderPath);
+      await ensureDriveFolderPath({
+        accessToken: sharePoint.accessToken,
+        graphBaseUrl: sharePoint.graphBaseUrl,
+        driveId: sharePoint.drive.id,
+        folderSegments
+      });
+
+      const relativeDocumentPath = [...folderSegments, documentName].join("/");
+      const encodedDocumentPath = encodeGraphPath(relativeDocumentPath);
+      const upload = await graphRequest({
+        accessToken: sharePoint.accessToken,
+        graphBaseUrl: sharePoint.graphBaseUrl,
+        requestPath: `/drives/${sharePoint.drive.id}/root:/${encodedDocumentPath}:/content`,
+        method: "PUT",
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8"
+        },
+        body: `${content || "Generated by Tenebrux Veritas remote control."}\n`
+      });
+
+      const now = new Date().toISOString();
+      const payload = {
+        ok: true,
+        environmentId: envId,
+        town: sharePoint.environment.town,
+        siteUrl: sharePoint.siteUrl,
+        siteId: sharePoint.site.id,
+        driveId: sharePoint.drive.id,
+        libraryName: sharePoint.drive.name,
+        documentName,
+        documentPath: relativeDocumentPath,
+        webUrl: upload?.webUrl || ""
+      };
+
+      await appendAuditEntry(config.auditLogPath, {
+        id: `remote-sp-doc-${crypto.randomUUID()}`,
+        timestamp: now,
+        operator,
+        user: operator,
+        action_type: "remote:sharepoint_document",
+        environment_id: envId,
+        town: sharePoint.environment.town,
+        result: "success",
+        detail: payload,
+        stdout_excerpt: `Created document '${payload.documentPath}' in '${payload.libraryName}'.`,
+        stderr_excerpt: ""
+      });
+
+      res.status(201).json(payload);
+    } catch (error) {
+      const status = Number(error?.status || 500);
+      res.status(status).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  router.post("/veritas/remote/sharepoint/page", requireOperatorAuth, async (req, res) => {
+    const operator = req.session.user.username;
+    const envId = String(req.body?.environmentId || "").trim();
+    const pageTitle = String(req.body?.pageTitle || "").trim();
+    const pageName = ensureAspxName(String(req.body?.pageName || "").trim(), pageTitle);
+    const pageContent = String(req.body?.content || "").trim();
+
+    if (!envId) {
+      res.status(400).json({ error: "environmentId is required." });
+      return;
+    }
+    if (!pageTitle) {
+      res.status(400).json({ error: "pageTitle is required." });
+      return;
+    }
+
+    try {
+      const sharePoint = await resolveSharePointSession({
+        config,
+        environmentId: envId,
+        operator,
+        libraryName: "Site Pages"
+      });
+
+      let createdMode = "graph-site-page";
+      let pageWebUrl = "";
+      let pageId = "";
+
+      try {
+        const pageResult = await graphRequest({
+          accessToken: sharePoint.accessToken,
+          graphBaseUrl: sharePoint.graphBaseUrl,
+          requestPath: `/sites/${sharePoint.site.id}/pages`,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            "@odata.type": "#microsoft.graph.sitePage",
+            name: pageName,
+            title: pageTitle,
+            pageLayout: "article",
+            showComments: true,
+            showRecommendedPages: false
+          })
+        });
+        pageWebUrl = String(pageResult?.webUrl || "");
+        pageId = String(pageResult?.id || "");
+      } catch {
+        createdMode = "site-pages-file";
+        const html = createBasicPageHtml({ title: pageTitle, body: pageContent });
+        const encodedPagePath = encodeGraphPath(pageName);
+        const fileResult = await graphRequest({
+          accessToken: sharePoint.accessToken,
+          graphBaseUrl: sharePoint.graphBaseUrl,
+          requestPath: `/drives/${sharePoint.drive.id}/root:/${encodedPagePath}:/content`,
+          method: "PUT",
+          headers: {
+            "Content-Type": "text/html; charset=utf-8"
+          },
+          body: `${html}\n`
+        });
+        pageWebUrl = String(fileResult?.webUrl || "");
+        pageId = String(fileResult?.id || "");
+      }
+
+      const now = new Date().toISOString();
+      const payload = {
+        ok: true,
+        environmentId: envId,
+        town: sharePoint.environment.town,
+        siteUrl: sharePoint.siteUrl,
+        siteId: sharePoint.site.id,
+        driveId: sharePoint.drive.id,
+        libraryName: sharePoint.drive.name,
+        pageTitle,
+        pageName,
+        mode: createdMode,
+        pageId,
+        webUrl: pageWebUrl
+      };
+
+      await appendAuditEntry(config.auditLogPath, {
+        id: `remote-sp-page-${crypto.randomUUID()}`,
+        timestamp: now,
+        operator,
+        user: operator,
+        action_type: "remote:sharepoint_page",
+        environment_id: envId,
+        town: sharePoint.environment.town,
+        result: "success",
+        detail: payload,
+        stdout_excerpt: `Created page '${payload.pageName}' (${payload.mode}).`,
+        stderr_excerpt: ""
+      });
+
+      res.status(201).json(payload);
+    } catch (error) {
+      const status = Number(error?.status || 500);
+      res.status(status).json({ error: error instanceof Error ? error.message : String(error) });
+    }
   });
 
   router.post("/veritas/governance-diff", requireOperatorAuth, async (req, res) => {
@@ -1073,6 +1994,260 @@ export function createVeritasRouter({
       .filter((entry) => String(entry.environment_id || "") === envId)
       .sort((a, b) => String(b.timestamp || "").localeCompare(String(a.timestamp || "")));
     res.json({ entries: filtered });
+  });
+
+  router.get("/veritas/proof/:envId", requireOperatorAuth, async (req, res) => {
+    const envId = String(req.params.envId || "").trim();
+    if (!envId) {
+      res.status(400).json({ error: "envId is required." });
+      return;
+    }
+    const { environment } = await loadEnvironmentById(config.veritasEnvironmentsPath, envId);
+    if (!environment) {
+      res.status(404).json({ error: "Environment not found." });
+      return;
+    }
+
+    const rootPath = buildProofRootPath(config, envId);
+    await fs.mkdir(rootPath, { recursive: true });
+    const logPath = buildProofLogPath(config);
+    const entries = (await readJsonLines(logPath))
+      .filter((entry) => String(entry.envId || "") === envId)
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+
+    res.json({
+      envId,
+      town: environment.town,
+      rootPath,
+      entries
+    });
+  });
+
+  router.post("/veritas/proof/folder", requireOperatorAuth, async (req, res) => {
+    const operator = req.session.user.username;
+    const envId = String(req.body?.envId || "").trim();
+    const requestedFolderName = String(req.body?.folderName || "").trim();
+
+    if (!envId) {
+      res.status(400).json({ error: "envId is required." });
+      return;
+    }
+
+    const { environment } = await loadEnvironmentById(config.veritasEnvironmentsPath, envId);
+    if (!environment) {
+      res.status(404).json({ error: "Environment not found." });
+      return;
+    }
+
+    const rootPath = buildProofRootPath(config, envId);
+    await fs.mkdir(rootPath, { recursive: true });
+
+    const folderName = sanitizeSegment(
+      requestedFolderName || `${environment.town}-proof-${new Date().toISOString().slice(0, 10)}`,
+      "proof-folder"
+    );
+    const folderPath = path.join(rootPath, folderName);
+
+    if (!isPathInside(rootPath, folderPath)) {
+      res.status(400).json({ error: "Folder path is invalid." });
+      return;
+    }
+
+    await fs.mkdir(folderPath, { recursive: true });
+
+    const entry = {
+      ...buildProofEntryBase({ envId, town: environment.town, operator, type: "folder" }),
+      folderName,
+      folderPath,
+      relativePath: path.relative(config.dataDir, folderPath).split(path.sep).join("/")
+    };
+
+    await appendJsonLine(buildProofLogPath(config), entry);
+    await appendAuditEntry(config.auditLogPath, {
+      id: crypto.randomUUID(),
+      timestamp: entry.createdAt,
+      operator,
+      user: operator,
+      action_type: "proof:create_folder",
+      environment_id: envId,
+      town: environment.town,
+      result: "success",
+      detail: {
+        folderName: entry.folderName,
+        relativePath: entry.relativePath
+      },
+      stdout_excerpt: "Proof folder created.",
+      stderr_excerpt: ""
+    });
+
+    res.status(201).json(entry);
+  });
+
+  router.post("/veritas/proof/document", requireOperatorAuth, async (req, res) => {
+    const operator = req.session.user.username;
+    const envId = String(req.body?.envId || "").trim();
+    const requestedFolderName = String(req.body?.folderName || "").trim();
+    const requestedDocumentName = String(req.body?.documentName || "").trim();
+    const requestedContent = String(req.body?.content || "").trim();
+
+    if (!envId) {
+      res.status(400).json({ error: "envId is required." });
+      return;
+    }
+
+    const { environment } = await loadEnvironmentById(config.veritasEnvironmentsPath, envId);
+    if (!environment) {
+      res.status(404).json({ error: "Environment not found." });
+      return;
+    }
+
+    const rootPath = buildProofRootPath(config, envId);
+    await fs.mkdir(rootPath, { recursive: true });
+
+    const folderName = sanitizeSegment(requestedFolderName || "proof-documents", "proof-documents");
+    const folderPath = path.join(rootPath, folderName);
+    if (!isPathInside(rootPath, folderPath)) {
+      res.status(400).json({ error: "Document folder path is invalid." });
+      return;
+    }
+    await fs.mkdir(folderPath, { recursive: true });
+
+    const documentName = sanitizeDocumentName(
+      requestedDocumentName || `${environment.town}-proof-${new Date().toISOString().slice(0, 10)}`,
+      "proof-note"
+    );
+    const documentPath = path.join(folderPath, documentName);
+    if (!isPathInside(rootPath, documentPath)) {
+      res.status(400).json({ error: "Document path is invalid." });
+      return;
+    }
+
+    const content =
+      requestedContent ||
+      [
+        `# Proof Document`,
+        ``,
+        `Environment: ${environment.town} (${envId})`,
+        `Operator: ${operator}`,
+        `Timestamp: ${new Date().toISOString()}`,
+        ``,
+        `This document was created by Tenebrux Veritas proof flow.`
+      ].join("\n");
+    await fs.writeFile(documentPath, `${content}\n`, "utf8");
+
+    const entry = {
+      ...buildProofEntryBase({ envId, town: environment.town, operator, type: "document" }),
+      folderName,
+      documentName,
+      documentPath,
+      bytes: Buffer.byteLength(content, "utf8"),
+      relativePath: path.relative(config.dataDir, documentPath).split(path.sep).join("/")
+    };
+
+    await appendJsonLine(buildProofLogPath(config), entry);
+    await appendAuditEntry(config.auditLogPath, {
+      id: crypto.randomUUID(),
+      timestamp: entry.createdAt,
+      operator,
+      user: operator,
+      action_type: "proof:create_document",
+      environment_id: envId,
+      town: environment.town,
+      result: "success",
+      detail: {
+        documentName: entry.documentName,
+        folderName: entry.folderName,
+        relativePath: entry.relativePath,
+        bytes: entry.bytes
+      },
+      stdout_excerpt: "Proof document created.",
+      stderr_excerpt: ""
+    });
+
+    res.status(201).json(entry);
+  });
+
+  router.get("/health-summary", requireOperatorAuth, (_req, res) => {
+    try {
+      const environments = getDashboardEnvironments();
+      const healthData = environments.map((environment) => ({
+        ...environment,
+        health: calculateDashboardEnvironmentHealth(environment)
+      }));
+
+      const summary = {
+        totalContexts: environments.length,
+        healthyContexts: healthData.filter((item) => item.health.overall === "healthy").length,
+        warningContexts: healthData.filter((item) => item.health.overall === "warning").length,
+        errorContexts: healthData.filter((item) => item.health.overall === "error").length,
+        criticalAlerts: healthData.reduce(
+          (total, item) => total + (Array.isArray(item.health.issues) ? item.health.issues.length : 0),
+          0
+        ),
+        deploymentsToday: 0
+      };
+
+      const today = new Date().toDateString();
+      const allDeployments = getDashboardRecentDeployments(null, 250);
+      summary.deploymentsToday = allDeployments.filter((deployment) => {
+        const deploymentDate = new Date(String(deployment.timestamp || ""));
+        return !Number.isNaN(deploymentDate.getTime()) && deploymentDate.toDateString() === today;
+      }).length;
+
+      res.json(summary);
+    } catch (error) {
+      console.error("Tenebrux Veritas: Error calculating health summary", error);
+      res.status(500).json({ error: "Failed to calculate health summary." });
+    }
+  });
+
+  router.get("/upcoming-deadlines", requireOperatorAuth, (_req, res) => {
+    try {
+      const deadlines = getDashboardUpcomingDeadlines();
+      res.json({ deadlines });
+    } catch (error) {
+      console.error("Tenebrux Veritas: Error loading upcoming deadlines", error);
+      res.status(500).json({ error: "Failed to load upcoming deadlines." });
+    }
+  });
+
+  router.get("/environments", requireOperatorAuth, (_req, res) => {
+    try {
+      const environments = getDashboardEnvironments().map((environment) => ({
+        ...environment,
+        health: calculateDashboardEnvironmentHealth(environment),
+        lastDeployment: getDashboardRecentDeployments(environment.targetId, 1)[0] || null
+      }));
+      res.json({ environments });
+    } catch (error) {
+      console.error("Tenebrux Veritas: Error listing dashboard environments", error);
+      res.status(500).json({ error: "Failed to list environments." });
+    }
+  });
+
+  router.get("/environments/:targetId", requireOperatorAuth, (req, res) => {
+    try {
+      const targetId = String(req.params.targetId || "").trim();
+      const environment = getDashboardEnvironmentById(targetId);
+
+      if (!environment) {
+        res.status(404).json({ error: "Environment not found." });
+        return;
+      }
+
+      const deploymentState = getDashboardDeploymentState();
+      const recentDeployments = getDashboardRecentDeployments(environment.targetId, 10);
+
+      res.json({
+        ...environment,
+        health: calculateDashboardEnvironmentHealth(environment),
+        recentDeployments,
+        deploymentState
+      });
+    } catch (error) {
+      console.error("Tenebrux Veritas: Error loading dashboard environment", error);
+      res.status(500).json({ error: "Failed to load environment." });
+    }
   });
 
   return router;

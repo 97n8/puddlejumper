@@ -4,13 +4,20 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@publiclogic/core/*": ["packages/core/src/*"]
+    }
   },
-  "include": ["src/**/*"]
+  "include": ["apps/**/*", "packages/**/*"],
+  "references": [
+    { "path": "packages/core" }
+  ]
 }

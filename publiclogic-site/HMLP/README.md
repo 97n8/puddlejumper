@@ -4,6 +4,7 @@ This is a private, Microsoft 365-connected operations portal for PublicLogic.
 
 It is designed for you + Allie to run the business from one place:
 - Calendar (Today)
+- Living Agenda (singular intake + internal/public toggle)
 - Shared Tasks / Pipeline / Projects (Microsoft Lists in SharePoint)
 - Playbooks (the operating system docs)
 - Tool hub (links to 365 + your stack)

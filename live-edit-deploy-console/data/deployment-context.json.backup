@@ -1,0 +1,26 @@
+{
+  "6dabf89966febef5": {
+    "context": {
+      "clientShortName": "sutton-ma",
+      "clientFormalName": "Town of Sutton",
+      "environmentType": "production",
+      "primaryMunicipalContact": {
+        "name": "Jane Clerk",
+        "email": "jane.clerk@town.gov"
+      },
+      "microsoftTenantId": "publiclogic.sharepoint.com",
+      "authorityMapping": {
+        "authorityGroup": "Town-Administrators",
+        "operatorsGroup": "Dept-Heads",
+        "readOnlyGroup": "Town-Viewers"
+      },
+      "optionalModules": {
+        "permittingWorkspace": true,
+        "publicRecordsWorkspace": true,
+        "boardComplianceWorkspace": true,
+        "appointmentsWorkspace": true
+      }
+    },
+    "updatedAt": "2026-02-08T17:41:13Z"
+  }
+}

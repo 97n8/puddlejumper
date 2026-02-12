@@ -1,0 +1,30 @@
+{
+  "targetTenant": {
+    "type": "M365",
+    "domain": "phillipstonma.sharepoint.com",
+    "adminContact": "Dave at Regional IT Co-op",
+    "notes": "Only checks email MWF"
+  },
+  "selectedModules": [
+    "Authority",
+    "Accountability",
+    "Public Records"
+  ],
+  "overrides": [
+    "Open records escalation to Town Clerk when Select Board packets are requested."
+  ],
+  "checklist": {
+    "adminAccessVerified": true,
+    "charterReviewed": true,
+    "contactsConfirmed": true
+  },
+  "graph": {
+    "sharePointSiteUrl": "https://phillipstonma.sharepoint.com/sites/VAULT-Phillipston",
+    "graphBaseUrl": "https://graph.microsoft.com/v1.0",
+    "authRef": "keychain://publiclogic/phillipston-graph"
+  },
+  "metadata": {
+    "updatedBy": "admin",
+    "updatedAt": "2026-02-10T22:27:57.853Z"
+  }
+}

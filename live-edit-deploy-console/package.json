@@ -1,0 +1,18 @@
+{
+  "name": "live-edit-deploy-console",
+  "private": true,
+  "version": "1.0.0",
+  "description": "PublicLogic Portal — Powered by Tenebrux Veritas. Secure internal operator console for governance-aware deployment.",
+  "scripts": {
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "dev": "concurrently -k \"npm run dev:server\" \"npm run dev:client\"",
+    "build": "npm run build --prefix client",
+    "start": "npm run start --prefix server",
+    "create-admin": "node ./server/scripts/create-admin.js",
+    "migrate-contexts": "node ./server/scripts/migrate-to-contexts.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

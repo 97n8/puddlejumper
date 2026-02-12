@@ -1,0 +1,28 @@
+{
+  "categories": [
+    {
+      "name": "Membership",
+      "subcategories": ["Join", "Renewal", "Benefits", "Billing"]
+    },
+    {
+      "name": "Business Support",
+      "subcategories": ["Licensing", "Permits", "Zoning Guidance", "Funding"]
+    },
+    {
+      "name": "Economic Development",
+      "subcategories": ["Site Selection", "Incentives", "Workforce", "Infrastructure"]
+    },
+    {
+      "name": "Events & Tourism",
+      "subcategories": ["Event Listing", "Visitor Info", "Sponsorship", "Partnerships"]
+    },
+    {
+      "name": "Government Liaison",
+      "subcategories": ["Municipal Question", "Public Records", "Board/Committee"]
+    },
+    {
+      "name": "Other",
+      "subcategories": ["General", "Unclear", "Urgent"]
+    }
+  ]
+}

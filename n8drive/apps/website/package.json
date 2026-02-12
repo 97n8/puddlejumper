@@ -1,0 +1,13 @@
+{
+  "name": "@publiclogic/website",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "serve public -p 3000",
+    "build": "echo \"static\"",
+    "vercel-build": "echo \"static\""
+  },
+  "dependencies": {
+    "serve": "^14.0.1"
+  }
+}

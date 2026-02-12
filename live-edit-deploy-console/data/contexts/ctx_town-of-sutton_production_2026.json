@@ -1,0 +1,60 @@
+{
+  "contextId": "ctx_town-of-sutton_production_2026",
+  "clientName": "Town of Sutton",
+  "clientShortName": "sutton-ma",
+  "deploymentEnvironment": "production",
+  "tenantId": "publiclogic.sharepoint.com",
+  "sharePointRootUrl": "publiclogic.sharepoint.com",
+  "canonicalRepoUrl": "",
+  "canonicalRepoPath": "",
+  "authorityMapping": [
+    {
+      "userId": "",
+      "userName": "Town-Administrators",
+      "email": "",
+      "role": "admin",
+      "grantedBy": "migration-script",
+      "grantedDate": "2026-02-08T17:41:13.000Z",
+      "expirationDate": null,
+      "justification": "Migrated from legacy authorityGroup"
+    },
+    {
+      "userId": "",
+      "userName": "Dept-Heads",
+      "email": "",
+      "role": "editor",
+      "grantedBy": "migration-script",
+      "grantedDate": "2026-02-08T17:41:13.000Z",
+      "expirationDate": null,
+      "justification": "Migrated from legacy operatorsGroup"
+    },
+    {
+      "userId": "",
+      "userName": "Town-Viewers",
+      "email": "",
+      "role": "viewer",
+      "grantedBy": "migration-script",
+      "grantedDate": "2026-02-08T17:41:13.000Z",
+      "expirationDate": null,
+      "justification": "Migrated from legacy readOnlyGroup"
+    }
+  ],
+  "activeConnectors": [],
+  "primaryMunicipalContact": {
+    "name": "Jane Clerk",
+    "email": "jane.clerk@town.gov",
+    "phone": ""
+  },
+  "optionalModules": {
+    "permittingWorkspace": true,
+    "publicRecordsWorkspace": true,
+    "boardComplianceWorkspace": true,
+    "appointmentsWorkspace": true
+  },
+  "createdAt": "2026-02-08T17:41:13.000Z",
+  "createdBy": "migration-script",
+  "lastModified": "2026-02-08T17:41:13.000Z",
+  "modifiedBy": "migration-script",
+  "version": 1,
+  "_migratedFrom": "6dabf89966febef5"
+}

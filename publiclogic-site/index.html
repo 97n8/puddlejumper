@@ -67,6 +67,22 @@
       display: block;
       background: #022c22;
     }
+
+    .fallback {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: #022c22;
+      color: rgba(255,255,255,0.9);
+      text-align: center;
+    }
+
+    .fallback a {
+      color: #9fe8c1;
+    }
   </style>
 </head>
 <body>
@@ -80,11 +96,34 @@
   </div>
 
   <iframe
-    src="https://publiclogic.figma.site"
-    title="PublicLogic"
+    src="https://www.publiclogic.org"
+    title="PublicLogic Portal"
     allow="clipboard-read; clipboard-write; fullscreen"
+    sandbox="allow-scripts allow-same-origin allow-forms"
+    referrerpolicy="no-referrer-when-downgrade"
     onload="document.getElementById('loader').style.display='none';"
+    onerror="document.getElementById('loader').style.display='none';document.getElementById('iframe-fallback').style.display='grid';"
   ></iframe>
+
+  <div class="fallback" id="iframe-fallback" role="alert">
+    <div>
+      <p><strong>Unable to load the portal.</strong></p>
+      <p>
+        Please visit <a href="https://www.publiclogic.org">www.publiclogic.org</a> or contact the administrator.
+      </p>
+    </div>
+  </div>
+
+  <noscript>
+    <div class="fallback" style="display:grid;">
+      <div>
+        <p><strong>Unable to load the portal.</strong></p>
+        <p>
+          Please visit <a href="https://www.publiclogic.org">www.publiclogic.org</a> or contact the administrator.
+        </p>
+      </div>
+    </div>
+  </noscript>
 
 </body>
 </html>

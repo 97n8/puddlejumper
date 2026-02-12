@@ -1,0 +1,17 @@
+.DS_Store
+**/.DS_Store
+
+node_modules/
+client/node_modules/
+server/node_modules/
+client/dist/
+.env
+
+data/sessions/
+data/deploy.lock
+data/deploy-log.jsonl
+data/users.json
+
+npm-debug.log*
+.vercel
+.env*.local

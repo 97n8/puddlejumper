@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#062017" />
+    <title>PublicLogic Portal — Sign In</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Sora:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        color-scheme: dark;
+
+        --bg0: #061a10;
+        --bg1: #062017;
+        --ink: rgba(248, 247, 242, 0.96);
+        --muted: rgba(248, 247, 242, 0.68);
+        --faint: rgba(248, 247, 242, 0.14);
+        --line: rgba(248, 247, 242, 0.12);
+
+        --surface: rgba(0, 0, 0, 0.26);
+        --surface2: rgba(0, 0, 0, 0.36);
+
+        --accent: #34d399;
+        --accent2: #fbbf24;
+
+        --danger: #fb7185;
+        --shadow: 0 22px 70px rgba(0, 0, 0, 0.48);
+        --radius-lg: 22px;
+        --radius-md: 14px;
+
+        --font-sans: "Sora", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        --font-serif: "Fraunces", ui-serif, Georgia, serif;
+
+        --noise: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22200%22%20height%3D%22200%22%20viewBox%3D%220%200%20200%20200%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.9%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22/%3E%3CfeColorMatrix%20type%3D%22matrix%22%20values%3D%221%200%200%200%200%20%200%201%200%200%200%20%200%200%201%200%200%20%200%200%200%200.25%200%22/%3E%3C/filter%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20filter%3D%22url(%23n)%22%20opacity%3D%220.42%22/%3E%3C/svg%3E");
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        color: var(--ink);
+        background: linear-gradient(160deg, var(--bg0), var(--bg1));
+        overflow-x: hidden;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .bg {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(1100px 720px at 18% 12%, rgba(52, 211, 153, 0.16), transparent 62%),
+          radial-gradient(900px 520px at 86% 18%, rgba(251, 191, 36, 0.12), transparent 64%),
+          radial-gradient(900px 900px at 55% 88%, rgba(52, 211, 153, 0.08), transparent 68%),
+          linear-gradient(180deg, rgba(0, 0, 0, 0.30), transparent 46%),
+          var(--noise);
+        opacity: 1;
+      }
+
+      .bg::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(52, 211, 153, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(52, 211, 153, 0.03) 1px, transparent 1px);
+        background-size: 68px 68px;
+        opacity: 0.35;
+        mask-image: radial-gradient(circle at 20% 10%, black 30%, transparent 70%);
+        -webkit-mask-image: radial-gradient(circle at 20% 10%, black 30%, transparent 70%);
+      }
+
+      .wrap {
+        position: relative;
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: clamp(18px, 4vw, 52px);
+      }
+
+      .shell {
+        width: min(1120px, 100%);
+        display: grid;
+        grid-template-columns: 1fr minmax(340px, 420px);
+        gap: clamp(18px, 4vw, 56px);
+        align-items: center;
+      }
+
+      @media (max-width: 980px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .hero {
+        padding: clamp(6px, 1vw, 18px);
+      }
+
+      .hero__top {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      .mark {
+        width: 54px;
+        height: 54px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        color: rgba(52, 211, 153, 0.95);
+        border: 1px solid rgba(52, 211, 153, 0.30);
+        background:
+          radial-gradient(circle at 25% 25%, rgba(52, 211, 153, 0.38), transparent 56%),
+          linear-gradient(180deg, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.12));
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.36);
+        user-select: none;
+      }
+
+      .brandname {
+        font-family: var(--font-serif);
+        font-size: clamp(34px, 4.2vw, 52px);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.02;
+        margin: 0;
+      }
+
+      .tagline {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 14px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(52, 211, 153, 0.22);
+        background: rgba(0, 0, 0, 0.22);
+        color: rgba(52, 211, 153, 0.95);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        font-weight: 800;
+        font-size: 11px;
+      }
+
+      .hero__art {
+        margin: 22px 0 22px;
+        padding: 18px 18px 14px;
+        border-radius: var(--radius-lg);
+        border: 1px solid rgba(248, 247, 242, 0.10);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.14));
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .duck {
+        display: grid;
+        place-items: center;
+      }
+
+      .duck svg {
+        width: min(520px, 100%);
+        height: auto;
+        filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.45));
+        transform: translateY(2px);
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      @media (max-width: 980px) {
+        .features {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .feature {
+        border-radius: var(--radius-lg);
+        border: 1px solid rgba(248, 247, 242, 0.10);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.10));
+        padding: 16px 16px 14px;
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+        min-height: 140px;
+        transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+      }
+
+      .feature:hover {
+        transform: translateY(-2px);
+        border-color: rgba(52, 211, 153, 0.22);
+        background: linear-gradient(180deg, rgba(52, 211, 153, 0.10), rgba(0, 0, 0, 0.10));
+      }
+
+      .feature__icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        color: rgba(52, 211, 153, 0.92);
+        border: 1px solid rgba(52, 211, 153, 0.18);
+        background: rgba(52, 211, 153, 0.08);
+        margin-bottom: 12px;
+      }
+
+      .feature__icon svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .feature__title {
+        margin: 0 0 6px;
+        font-family: var(--font-serif);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        font-size: 18px;
+      }
+
+      .feature__text {
+        margin: 0;
+        color: rgba(248, 247, 242, 0.76);
+        line-height: 1.45;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .bottomline {
+        margin: 18px 0 0;
+        color: rgba(52, 211, 153, 0.24);
+        font-weight: 900;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-size: 11px;
+      }
+
+      /* Card */
+      .card {
+        border-radius: calc(var(--radius-lg) + 6px);
+        border: 1px solid rgba(248, 247, 242, 0.12);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.20));
+        box-shadow: var(--shadow);
+        padding: 26px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+        .card {
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+        }
+      }
+
+      .card::before {
+        content: "";
+        position: absolute;
+        inset: -1px;
+        pointer-events: none;
+        background: radial-gradient(700px 360px at 40% -40%, rgba(52, 211, 153, 0.18), transparent 50%);
+        opacity: 0.85;
+      }
+
+      .card__inner {
+        position: relative;
+        z-index: 1;
+      }
+
+      .card h2 {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        font-size: 22px;
+      }
+
+      .card p.sub {
+        margin: 8px 0 16px;
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .error {
+        display: none;
+        gap: 10px;
+        align-items: flex-start;
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(251, 113, 133, 0.22);
+        background: rgba(251, 113, 133, 0.10);
+        padding: 12px 12px;
+        color: rgba(255, 198, 206, 0.95);
+        font-weight: 650;
+        font-size: 13px;
+        margin: 12px 0 14px;
+      }
+
+      .error svg {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+        margin-top: 1px;
+      }
+
+      .error[data-show="1"] {
+        display: flex;
+      }
+
+      form {
+        display: grid;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      label {
+        display: grid;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: rgba(248, 247, 242, 0.78);
+        letter-spacing: 0.03em;
+      }
+
+      .field {
+        position: relative;
+      }
+
+      .input {
+        width: 100%;
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(248, 247, 242, 0.14);
+        background: rgba(0, 0, 0, 0.22);
+        color: var(--ink);
+        padding: 12px 12px 12px 44px;
+        font-size: 14px;
+        font-weight: 650;
+        outline: none;
+        transition: box-shadow 140ms ease, border-color 140ms ease, background 140ms ease;
+      }
+
+      .input::placeholder {
+        color: rgba(248, 247, 242, 0.38);
+        font-weight: 600;
+      }
+
+      .input:focus {
+        border-color: rgba(52, 211, 153, 0.38);
+        background: rgba(0, 0, 0, 0.28);
+        box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.10);
+      }
+
+      .icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 18px;
+        height: 18px;
+        color: rgba(248, 247, 242, 0.44);
+        pointer-events: none;
+      }
+
+      .field:focus-within .icon {
+        color: rgba(52, 211, 153, 0.92);
+      }
+
+      .toggle {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        border: 1px solid rgba(248, 247, 242, 0.12);
+        background: rgba(0, 0, 0, 0.16);
+        color: rgba(248, 247, 242, 0.68);
+        border-radius: 12px;
+        padding: 6px 8px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 800;
+        font-size: 12px;
+        letter-spacing: 0.02em;
+        transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+      }
+
+      .toggle:hover {
+        border-color: rgba(52, 211, 153, 0.24);
+        background: rgba(52, 211, 153, 0.08);
+        transform: translateY(calc(-50% - 1px));
+      }
+
+      .toggle svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-top: 2px;
+      }
+
+      .remember {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        font-weight: 650;
+        color: rgba(248, 247, 242, 0.72);
+        user-select: none;
+      }
+
+      .remember input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+      }
+
+      .link {
+        color: rgba(52, 211, 153, 0.95);
+        text-decoration: none;
+        font-weight: 800;
+        font-size: 13px;
+      }
+
+      .link:hover {
+        text-decoration: underline;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 3px;
+      }
+
+      .btn {
+        width: 100%;
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(52, 211, 153, 0.22);
+        background: linear-gradient(135deg, rgba(52, 211, 153, 0.86), rgba(16, 185, 129, 0.72));
+        color: rgba(6, 26, 16, 0.96);
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        padding: 12px 14px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+        position: relative;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        filter: saturate(1.08);
+        box-shadow: 0 10px 28px rgba(52, 211, 153, 0.20);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      .btn[aria-busy="true"] {
+        pointer-events: none;
+        color: transparent;
+      }
+
+      .btn[aria-busy="true"]::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 18px;
+        height: 18px;
+        margin: -9px 0 0 -9px;
+        border-radius: 999px;
+        border: 2px solid rgba(6, 26, 16, 0.28);
+        border-top-color: rgba(6, 26, 16, 0.96);
+        animation: spin 700ms linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .divider {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 12px;
+        margin: 14px 0 6px;
+        color: rgba(248, 247, 242, 0.42);
+        font-weight: 900;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-size: 11px;
+      }
+
+      .divider::before,
+      .divider::after {
+        content: "";
+        height: 1px;
+        background: rgba(248, 247, 242, 0.12);
+      }
+
+      .btn-secondary {
+        width: 100%;
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(248, 247, 242, 0.12);
+        background: rgba(0, 0, 0, 0.12);
+        color: rgba(248, 247, 242, 0.86);
+        font-weight: 850;
+        letter-spacing: 0.01em;
+        padding: 12px 14px;
+        font-size: 14px;
+        cursor: pointer;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+      }
+
+      .btn-secondary:hover {
+        transform: translateY(-1px);
+        border-color: rgba(52, 211, 153, 0.20);
+        background: rgba(52, 211, 153, 0.08);
+      }
+
+      .btn-secondary svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .foot {
+        margin-top: 14px;
+        text-align: center;
+        color: rgba(248, 247, 242, 0.54);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.58);
+        border: 1px solid rgba(248, 247, 242, 0.14);
+        border-radius: 999px;
+        padding: 10px 14px;
+        color: rgba(248, 247, 242, 0.92);
+        font-weight: 750;
+        font-size: 13px;
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.42);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 160ms ease, transform 160ms ease;
+        z-index: 10;
+      }
+
+      .toast[data-show="1"] {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-2px);
+      }
+
+      :focus-visible {
+        outline: 3px solid rgba(251, 191, 36, 0.40);
+        outline-offset: 2px;
+        border-radius: 12px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 1ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 1ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg" aria-hidden="true"></div>
+
+    <div class="wrap">
+      <main class="shell">
+        <section class="hero" aria-label="PublicLogic overview">
+          <div class="hero__top">
+            <div class="mark" aria-hidden="true">PL</div>
+            <div>
+              <h1 class="brandname">PublicLogic</h1>
+              <p class="tagline">Smarter systems. Stronger futures.</p>
+              <div class="badge" aria-label="Portal sign in">
+                <span aria-hidden="true">●</span>
+                Portal sign in
+              </div>
+            </div>
+          </div>
+
+          <div class="hero__art" aria-hidden="true">
+            <div class="duck">
+              <svg viewBox="0 0 900 360" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="w" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="rgba(52, 211, 153, 0.35)" />
+                    <stop offset="1" stop-color="rgba(52, 211, 153, 0.05)" />
+                  </linearGradient>
+                  <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#34d399" stop-opacity="0.92" />
+                    <stop offset="1" stop-color="#10b981" stop-opacity="0.72" />
+                  </linearGradient>
+                  <linearGradient id="duckBody" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#f8f7f2" />
+                    <stop offset="1" stop-color="#d8d6ce" />
+                  </linearGradient>
+                  <linearGradient id="duckWing" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#efece3" />
+                    <stop offset="1" stop-color="#cfcbbf" />
+                  </linearGradient>
+                  <linearGradient id="beak" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#fbbf24" />
+                    <stop offset="1" stop-color="#f59e0b" />
+                  </linearGradient>
+                </defs>
+
+                <!-- water -->
+                <path
+                  d="M0 248 C 120 220, 220 290, 340 248 C 460 206, 560 290, 680 248 C 780 214, 840 268, 900 248 L 900 360 L 0 360 Z"
+                  fill="url(#w)"
+                  opacity="0.85"
+                />
+                <path
+                  d="M30 252 C 140 226, 220 278, 340 252 C 460 226, 540 278, 660 252 C 760 230, 820 266, 870 252"
+                  fill="none"
+                  stroke="rgba(248,247,242,0.20)"
+                  stroke-width="2"
+                />
+
+                <!-- subtle gear silhouettes -->
+                <g opacity="0.20" fill="none" stroke="rgba(52, 211, 153, 0.90)" stroke-width="2">
+                  <circle cx="248" cy="302" r="28" />
+                  <circle cx="338" cy="318" r="18" />
+                  <circle cx="520" cy="308" r="24" />
+                  <circle cx="610" cy="326" r="14" />
+                </g>
+
+                <!-- duck -->
+                <g transform="translate(210 64)">
+                  <!-- body -->
+                  <path
+                    d="M120 178c-74 0-124-28-124-68 0-34 40-62 104-66 18-38 52-62 94-62 52 0 98 36 112 86 64 6 104 34 104 70 0 44-60 72-150 72H120z"
+                    fill="url(#duckBody)"
+                    opacity="0.98"
+                  />
+                  <path
+                    d="M70 134c28-24 68-38 114-38 64 0 110 28 110 62 0 30-40 54-104 60-62 6-120-10-140-34 2-18 8-34 20-50z"
+                    fill="url(#duckWing)"
+                    opacity="0.92"
+                  />
+
+                  <!-- head -->
+                  <path
+                    d="M318 118c0-48 40-86 90-86 50 0 90 38 90 86 0 48-40 86-90 86-50 0-90-38-90-86z"
+                    fill="url(#g)"
+                    opacity="0.95"
+                  />
+
+                  <!-- eye -->
+                  <circle cx="446" cy="98" r="10" fill="rgba(0,0,0,0.72)" />
+                  <circle cx="450" cy="94" r="4" fill="rgba(255,255,255,0.85)" />
+
+                  <!-- beak -->
+                  <path d="M492 116 L 610 144 L 492 172 Z" fill="url(#beak)" />
+                  <path d="M492 138 L 590 144 L 492 172 Z" fill="rgba(0,0,0,0.08)" />
+
+                  <!-- collar highlight -->
+                  <path
+                    d="M356 166c20-8 46-10 74 0"
+                    fill="none"
+                    stroke="rgba(248, 247, 242, 0.46)"
+                    stroke-width="4"
+                    stroke-linecap="round"
+                  />
+                </g>
+              </svg>
+            </div>
+          </div>
+
+          <div class="features" aria-label="Product pillars">
+            <article class="feature">
+              <div class="feature__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3v3" />
+                  <path d="M21 12h-3" />
+                  <path d="M12 21v-3" />
+                  <path d="M3 12h3" />
+                  <path d="M17.6 6.4l-2.1 2.1" />
+                  <path d="M8.5 15.5l-2.1 2.1" />
+                  <path d="M6.4 6.4l2.1 2.1" />
+                  <path d="M15.5 15.5l2.1 2.1" />
+                  <path d="M14.5 12a2.5 2.5 0 1 1-5 0a2.5 2.5 0 0 1 5 0Z" />
+                </svg>
+              </div>
+              <h3 class="feature__title">Integrate</h3>
+              <p class="feature__text">Connect data and processes with precision.</p>
+            </article>
+
+            <article class="feature">
+              <div class="feature__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 20h16" />
+                  <path d="M6 20V8" />
+                  <path d="M10 20V8" />
+                  <path d="M14 20V8" />
+                  <path d="M18 20V8" />
+                  <path d="M3 8h18" />
+                  <path d="M7 8V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3" />
+                </svg>
+              </div>
+              <h3 class="feature__title">Govern</h3>
+              <p class="feature__text">Make accountable decisions with authority.</p>
+            </article>
+
+            <article class="feature">
+              <div class="feature__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2a7 7 0 1 0 7 7" />
+                  <path d="M12 2v7l5 5" />
+                  <path d="M2 12a10 10 0 0 0 20 0" />
+                </svg>
+              </div>
+              <h3 class="feature__title">Sustain</h3>
+              <p class="feature__text">Manage finite resources for endurance.</p>
+            </article>
+          </div>
+
+          <div class="bottomline">Governance on the move.</div>
+        </section>
+
+        <section class="card" aria-label="Sign in form">
+          <div class="card__inner">
+            <h2>Sign in</h2>
+            <p class="sub">Use your municipal email + password, or continue with SSO.</p>
+
+            <div class="error" id="formError" role="alert" aria-live="polite">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v5" />
+                <path d="M12 16h.01" />
+              </svg>
+              <div id="errorText">We couldn’t sign you in. Check your email and password and try again.</div>
+            </div>
+
+            <form id="loginForm" novalidate>
+              <label for="email">
+                Email address
+                <div class="field">
+                  <input
+                    class="input"
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="you@municipality.gov"
+                    inputmode="email"
+                    autocomplete="email"
+                    autocapitalize="none"
+                    spellcheck="false"
+                    required
+                  />
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="2" y="4" width="20" height="16" rx="3" />
+                    <path d="M22 5L12 13 2 5" />
+                  </svg>
+                </div>
+              </label>
+
+              <label for="password">
+                Password
+                <div class="field">
+                  <input
+                    class="input"
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    minlength="8"
+                    required
+                  />
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    <circle cx="12" cy="16" r="1" />
+                  </svg>
+
+                  <button class="toggle" id="togglePw" type="button" aria-pressed="false" aria-label="Show password">
+                    <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    <span id="togglePwText">Show</span>
+                  </button>
+                </div>
+              </label>
+
+              <div class="row">
+                <label class="remember">
+                  <input type="checkbox" name="remember" />
+                  Remember me
+                </label>
+                <a class="link" href="#" onclick="event.preventDefault(); toast('Password reset is not wired yet.');">Forgot password?</a>
+              </div>
+
+              <button class="btn" id="signinBtn" type="submit" aria-busy="false">
+                Sign in
+              </button>
+
+              <div class="divider" aria-hidden="true">or</div>
+
+              <button class="btn-secondary" id="ssoBtn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+                Continue with Municipal SSO
+              </button>
+
+              <div class="foot">
+                Need access? <a class="link" href="#" onclick="event.preventDefault(); toast('Account requests are not wired yet.');">Request an account</a>
+              </div>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      const form = document.getElementById("loginForm");
+      const email = document.getElementById("email");
+      const password = document.getElementById("password");
+      const togglePw = document.getElementById("togglePw");
+      const eyeIcon = document.getElementById("eyeIcon");
+      const togglePwText = document.getElementById("togglePwText");
+      const signinBtn = document.getElementById("signinBtn");
+      const ssoBtn = document.getElementById("ssoBtn");
+      const errorEl = document.getElementById("formError");
+      const toastEl = document.getElementById("toast");
+
+      function setBusy(busy) {
+        signinBtn.setAttribute("aria-busy", busy ? "true" : "false");
+      }
+
+      function showError(message) {
+        document.getElementById("errorText").textContent = message;
+        errorEl.dataset.show = "1";
+      }
+
+      function clearError() {
+        delete errorEl.dataset.show;
+      }
+
+      let toastTimer = null;
+      function toast(message) {
+        toastEl.textContent = message;
+        toastEl.dataset.show = "1";
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          delete toastEl.dataset.show;
+        }, 2400);
+      }
+
+      togglePw.addEventListener("click", () => {
+        const showing = password.type === "text";
+        password.type = showing ? "password" : "text";
+        togglePw.setAttribute("aria-pressed", showing ? "false" : "true");
+        togglePw.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+        togglePwText.textContent = showing ? "Show" : "Hide";
+        eyeIcon.innerHTML = showing
+          ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'
+          : '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+      });
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        clearError();
+
+        if (!email.value || !email.checkValidity()) {
+          showError("Enter a valid email address.");
+          email.focus();
+          return;
+        }
+
+        if (!password.value || password.value.length < 8) {
+          showError("Your password must be at least 8 characters.");
+          password.focus();
+          return;
+        }
+
+        setBusy(true);
+        setTimeout(() => {
+          setBusy(false);
+          toast("Signed in (demo). Wire this form to your auth provider.");
+        }, 900);
+      });
+
+      ssoBtn.addEventListener("click", () => {
+        toast("Redirecting to your SSO provider (demo).");
+      });
+    </script>
+  </body>
+</html>

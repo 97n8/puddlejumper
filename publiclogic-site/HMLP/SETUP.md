@@ -89,6 +89,31 @@ Columns:
 - `TargetDate` (Date)
 - `Notes` (Multiple lines of text)
 
+### List: OS Agenda
+Used by the **Agenda** page (singular intake + public/private toggle).
+
+Columns:
+- `Kind` (Choice): `Action`, `Decision`, `Risk`, `Project`, `Note`
+- `Workspace` (Single line of text) (example: `Logicville, MA`)
+- `Owner` (Single line of text) (example: `Nate`, `Allie`, `Both`)
+- `Status` (Single line of text)
+- `DueDate` (Date)
+- `DoD` (Multiple lines of text)
+- `Details` (Multiple lines of text) (internal notes; no PII)
+- `IsPublic` (Yes/No)
+- `PublicDetails` (Multiple lines of text) (public-safe summary)
+- `OML` (Yes/No)
+- `PRR` (Yes/No)
+- `RetentionTag` (Single line of text)
+- `ImpactedDepts` (Single line of text)
+- `Likelihood` (Choice): `Low`, `Med`, `High`
+- `Impact` (Choice): `Low`, `Med`, `High`
+- `Mitigation` (Multiple lines of text)
+- `Module` (Single line of text)
+- `Funding` (Single line of text)
+- `Compliance` (Single line of text)
+- `Links` (Single line of text)
+
 Optional lists (not required for the UI to work, but supported in config):
 - `OS Scorecard`
 - `OS Decisions`

@@ -1,0 +1,10 @@
+{
+  "tenantDomain": "phillipstonma.sharepoint.com",
+  "authType": "entra",
+  "clientIdRef": "env://PHILLIPSTON_GRAPH_CLIENT_ID",
+  "tenantIdRef": "env://PHILLIPSTON_TENANT_ID",
+  "keychainRef": "keychain://publiclogic/phillipston-graph",
+  "graphEnabled": false,
+  "updatedAt": "2026-02-10T00:00:00Z",
+  "notes": "Reference-based credentials only. No plaintext secrets in repository."
+}

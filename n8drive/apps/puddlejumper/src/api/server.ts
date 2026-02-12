@@ -18,6 +18,7 @@ import {
   signJwt,
   type AuthOptions
 } from "./auth.js";
+import authCallback from "./authCallback.js";
 import { createRateLimit } from "./rateLimit.js";
 import {
   accessRequestCloseRequestSchema,
@@ -1574,6 +1575,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     throw new Error("CONNECTOR_STATE_SECRET is required");
   }
   const app = express();
+  // auth callback to set shared cookie after token exchange with Logic Commons
+  app.get('/auth/callback', authCallback);
   const engine = createDefaultEngine({ canonicalSourceOptions: options.canonicalSourceOptions });
   const prrStore = new PrrStore(prrDbPath);
   const connectorStore = new ConnectorStore(connectorDbPath);

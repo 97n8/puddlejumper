@@ -12,6 +12,7 @@ import {
   TriangleAlert
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
+import Dashboard from "./components/Dashboard.jsx";
 
 const NAV_ITEMS = [
   { id: "active", label: "Active Workspace", icon: Crosshair },
@@ -25,6 +26,8 @@ const REMEMBER_USERNAME_KEY = "tv.remember.username";
 const REMEMBER_ENABLED_KEY = "tv.remember.enabled";
 const AGNOSTIC_REPO_URL = "https://github.com/97n8/AGNOSTIC";
 const PUBLIC_LOGIC_REPO_URL = "https://github.com/97n8/Public_Logic";
+const PL_CASE_WORKSPACE_REPO_URL = "https://github.com/97n8/pl-poli-case-workspace";
+const PL_POC_TENANT_DOMAIN = "publiclogic978.sharepoint.com";
 const VERCEL_DEPLOYMENTS_URL = "https://vercel.com/97n8s-projects/public-logic/deployments";
 const PUBLIC_SITE_URL = "https://www.publiclogic.org/";
 const OS_HOME_URL = "https://www.publiclogic.org/os/";
@@ -89,6 +92,65 @@ function getLiveEnvironmentUrl(environment) {
   return "";
 }
 
+function normalizeTenantDomain(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) {
+    return "";
+  }
+  const withoutProtocol = raw.replace(/^https?:\/\//, "");
+  return withoutProtocol.split("/")[0];
+}
+
+function normalizeAbsoluteUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (/^https?:\/\//i.test(raw)) {
+    return raw.replace(/\/+$/, "");
+  }
+  return `https://${raw.replace(/^\/+/, "").replace(/\/+$/, "")}`;
+}
+
+function toRemoteWebUrl(originRemote) {
+  const raw = String(originRemote || "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (/^https?:\/\//i.test(raw)) {
+    return raw.replace(/\.git$/i, "");
+  }
+  const sshMatch = raw.match(/^git@github\.com:(.+?)(?:\.git)?$/i);
+  if (sshMatch?.[1]) {
+    return `https://github.com/${sshMatch[1]}`;
+  }
+  return "";
+}
+
+function buildLaunchTargets(environment, context) {
+  const configuredTenant = normalizeTenantDomain(context?.targetTenant?.domain);
+  const profileTenant = normalizeTenantDomain(environment?.tenant?.domain);
+  const tenantDomain = configuredTenant || profileTenant || PL_POC_TENANT_DOMAIN;
+
+  const configuredSite = normalizeAbsoluteUrl(context?.graph?.sharePointSiteUrl);
+  const siteUrl = configuredSite || `https://${tenantDomain}/sites/PL`;
+  const tenantRootUrl = `https://${tenantDomain}`;
+  const documentsUrl = `${siteUrl}/Shared%20Documents/Forms/AllItems.aspx`;
+  const siteContentsUrl = `${siteUrl}/_layouts/15/viewlsts.aspx`;
+  const tenantPrefix = tenantDomain.split(".")[0] || "";
+  const adminCenterUrl = tenantPrefix ? `https://${tenantPrefix}-admin.sharepoint.com` : "";
+
+  return {
+    tenantDomain,
+    siteUrl,
+    tenantRootUrl,
+    documentsUrl,
+    siteContentsUrl,
+    adminCenterUrl,
+    usingFallback: !configuredTenant && !profileTenant
+  };
+}
+
 function toHelpfulErrorMessage(error, fallback = "Request failed.") {
   if (!error) {
     return fallback;
@@ -113,12 +175,53 @@ function toHelpfulErrorMessage(error, fallback = "Request failed.") {
   return base || fallback;
 }
 
-function pickInitialEnvironmentId(environments) {
-  if (!Array.isArray(environments) || environments.length === 0) {
+function normalizeTownKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function toDisplayTown(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
     return "";
   }
-  const activeEnvironment = environments.find((item) => item.status === "active");
-  return activeEnvironment?.id || environments[0].id;
+  const stripped = raw.replace(/^town of\s+/i, "").trim();
+  return stripped || raw;
+}
+
+function createDefaultProofDraft(town = "") {
+  const seed = String(town || "environment")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "environment";
+  const day = new Date().toISOString().slice(0, 10);
+  return {
+    folderName: `${seed}-proof-${day}`,
+    documentName: `${seed}-proof-note-${day}.md`,
+    content: ""
+  };
+}
+
+function createDefaultRemoteActionDraft(town = "") {
+  const seed = String(town || "environment")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "environment";
+  const safeTown = String(town || "Municipality").trim() || "Municipality";
+  return {
+    libraryName: "Documents",
+    folderPath: `${seed}/proof`,
+    documentName: `${seed}-note.md`,
+    documentContent: "",
+    pageTitle: `${safeTown} Operations Update`,
+    pageName: `${seed}-operations-update.aspx`,
+    pageContent: ""
+  };
 }
 
 function LoginScreen({ onSubmit, error, loading, initialUsername = "", initialRememberMe = false }) {
@@ -532,6 +635,14 @@ function EnvironmentList({
       )}
 
       <div className="tv-env-list-items">
+        <button
+          type="button"
+          onClick={() => onSelect("")}
+          className={`tv-env-item${!selectedEnvironmentId ? " tv-env-item-active" : ""}`}
+        >
+          <p>Homepage</p>
+          <span className="tv-meta">No town selected</span>
+        </button>
         {environments.map((environment) => (
           <button
             key={environment.id}
@@ -553,6 +664,24 @@ function EnvironmentDetail({
   canon,
   context,
   connection,
+  remoteStatus,
+  onRefreshRemoteStatus,
+  remoteEnvironmentStatus,
+  remoteActionDraft,
+  onRemoteActionDraftChange,
+  onRemoteDeployGithub,
+  onRemoteCreateSharePointFolder,
+  onRemoteCreateSharePointDocument,
+  onRemoteCreateSharePointPage,
+  remoteActionLoading,
+  remoteActionResult,
+  proofEntries,
+  proofRootPath,
+  proofDraft,
+  onProofDraftChange,
+  onCreateProofFolder,
+  onCreateProofDocument,
+  proofLoading,
   onEnvironmentField,
   onSaveEnvironment,
   onContextField,
@@ -572,11 +701,69 @@ function EnvironmentDetail({
   deployLoading,
   mode = "full"
 }) {
+  const remoteTarget = remoteStatus?.target || null;
   if (!environment) {
+    const fallbackLaunchTargets = buildLaunchTargets({}, {});
     return (
-      <article className="tv-card">
-        <p className="tv-subtle">Select an environment to continue.</p>
-      </article>
+      <section className="tv-content">
+        <article className="tv-card">
+          <h3>Homepage</h3>
+          <p className="tv-subtle">
+            No environment is selected. Start from PublicLogic homepage or choose an environment.
+          </p>
+          <div className="tv-link-grid">
+            <a className="tv-primary-link" href={PUBLIC_SITE_URL} target="_blank" rel="noreferrer">
+              Open PublicLogic.org
+            </a>
+            <a className="tv-primary-link" href={OS_HOME_URL} target="_blank" rel="noreferrer">
+              Open OS Home
+            </a>
+            <a className="tv-primary-link" href={AGNOSTIC_REPO_URL} target="_blank" rel="noreferrer">
+              Open AGNOSTIC
+            </a>
+            <a className="tv-primary-link" href={PUBLIC_LOGIC_REPO_URL} target="_blank" rel="noreferrer">
+              Open Public_Logic
+            </a>
+            <a className="tv-primary-link" href={fallbackLaunchTargets.siteUrl} target="_blank" rel="noreferrer">
+              Open Tenant Site
+            </a>
+            <a className="tv-primary-link" href={fallbackLaunchTargets.documentsUrl} target="_blank" rel="noreferrer">
+              Open Documents
+            </a>
+          </div>
+        </article>
+        <article className="tv-card">
+          <h3>Deploy Remote</h3>
+          <p className="tv-subtle">Current git remote and target file used for deployment.</p>
+          {remoteTarget ? (
+            <div className="tv-active-target-grid">
+              <p>
+                <span className="tv-subtle">Repository</span>
+                <strong>{remoteTarget.repoName || "-"}</strong>
+              </p>
+              <p>
+                <span className="tv-subtle">Branch</span>
+                <strong>{remoteTarget.branch || "-"}</strong>
+              </p>
+              <p>
+                <span className="tv-subtle">Target File</span>
+                <strong>{remoteTarget.relativeFilePath || "-"}</strong>
+              </p>
+            </div>
+          ) : (
+            <p className="tv-subtle">Deploy remote not loaded yet.</p>
+          )}
+          <p className="tv-mono tv-mono-wrap">{remoteTarget?.originRemote || "-"}</p>
+          <button className="tv-ghost" type="button" onClick={onRefreshRemoteStatus}>
+            Refresh Deploy Remote
+          </button>
+        </article>
+        <article className="tv-card">
+          <p className="tv-subtle">
+            Open the <strong>Environments</strong> panel and pick a row when you want a town-scoped control surface.
+          </p>
+        </article>
+      </section>
     );
   }
 
@@ -584,6 +771,13 @@ function EnvironmentDetail({
   const selectedModules = context.selectedModules || [];
   const expectedPhrase = `deploy ${String(environment.town || "").trim().toLowerCase()}`;
   const liveEnvironmentUrl = getLiveEnvironmentUrl(environment);
+  const launchTargets = buildLaunchTargets(environment, context);
+  const remoteWebUrl = toRemoteWebUrl(remoteTarget?.originRemote);
+  const githubRemoteReady = Boolean(remoteEnvironmentStatus?.github?.ready);
+  const sharepointRemoteReady = Boolean(remoteEnvironmentStatus?.sharepoint?.ready);
+  const sharepointMissing = Array.isArray(remoteEnvironmentStatus?.sharepoint?.missing)
+    ? remoteEnvironmentStatus.sharepoint.missing
+    : [];
   const blockers = diff?.blockers || [];
   const hasUnackedWarnings = (diff?.warnings || []).some((warning) => !warningAcknowledgments[warning]);
   const canDeploy = Boolean(
@@ -684,10 +878,85 @@ function EnvironmentDetail({
 
       {mode === "focused" ? (
         <article className="tv-card">
+          <h3>Remote Command Center</h3>
+          <p className="tv-subtle">
+            Start here for this municipality. Publish to GitHub first, then create SharePoint folders, documents,
+            and pages.
+          </p>
+          <div className="tv-help-callout">
+            <p className="tv-meta">Start Here</p>
+            <ol className="tv-steps">
+              <li>
+                <strong>Step 1:</strong> Confirm readiness below.
+              </li>
+              <li>
+                <strong>Step 2:</strong> Click <em>Deploy Active Target to GitHub</em>.
+              </li>
+              <li>
+                <strong>Step 3:</strong> Use <em>SharePoint Remote Actions</em> to create folders, documents, and pages.
+              </li>
+            </ol>
+          </div>
+
+          <div className="tv-validation-grid">
+            <div className={`tv-validation${githubRemoteReady ? " ok" : " error"}`}>
+              GitHub connection: {githubRemoteReady ? "ready" : "not ready"}
+            </div>
+            <div className={`tv-validation${sharepointRemoteReady ? " ok" : " error"}`}>
+              SharePoint connection: {sharepointRemoteReady ? "ready" : "not ready"}
+            </div>
+          </div>
+
+          {!sharepointRemoteReady && sharepointMissing.length > 0 ? (
+            <p className="tv-subtle">
+              SharePoint setup needed: {sharepointMissing.join(", ")}
+            </p>
+          ) : null}
+
+          <p className="tv-meta">Primary Action</p>
+          <div className="tv-inline-actions">
+            <button
+              type="button"
+              onClick={onRemoteDeployGithub}
+              disabled={remoteActionLoading === "github-deploy"}
+            >
+              {remoteActionLoading === "github-deploy" ? "Publishing..." : "Deploy Active Target to GitHub"}
+            </button>
+            {remoteTarget?.previewUrl ? (
+              <a className="tv-primary-link" href={remoteTarget.previewUrl} target="_blank" rel="noreferrer">
+                Open Preview
+              </a>
+            ) : null}
+            {remoteWebUrl ? (
+              <a className="tv-primary-link" href={remoteWebUrl} target="_blank" rel="noreferrer">
+                Open Deploy Remote
+              </a>
+            ) : null}
+            {liveEnvironmentUrl ? (
+              <a className="tv-primary-link" href={liveEnvironmentUrl} target="_blank" rel="noreferrer">
+                Open Live Environment
+              </a>
+            ) : null}
+          </div>
+
+          {remoteActionResult ? (
+            <div className="tv-side-item">
+              <p>Latest result: {remoteActionResult.action}</p>
+              <p className="tv-subtle">{remoteActionResult.when}</p>
+              <p className="tv-mono tv-mono-wrap">{remoteActionResult.summary}</p>
+            </div>
+          ) : null}
+        </article>
+      ) : null}
+
+      {mode === "focused" ? (
+        <article className="tv-card">
           <h3>Live Environment Monitor</h3>
           {liveEnvironmentUrl ? (
             <>
-              <p className="tv-subtle">Use this link to monitor the live municipal experience for the selected town.</p>
+              <p className="tv-subtle">
+                This is the live municipal experience. Open it to confirm what residents or staff currently see.
+              </p>
               <a className="tv-primary-link" href={liveEnvironmentUrl} target="_blank" rel="noreferrer">
                 Open {environment.town} Live Environment
               </a>
@@ -703,21 +972,14 @@ function EnvironmentDetail({
 
       {mode === "focused" ? (
         <article className="tv-card">
-          <h3>GitHub + Preview</h3>
+          <h3>Reference Links</h3>
           <p className="tv-subtle">
-            Use this release bridge when you need to publish a change: source update in AGNOSTIC, then release trigger in Public_Logic.
+            One-click links for repos, tenant filesystems, deployments, and site verification.
           </p>
-          <ol className="tv-steps">
-            <li>
-              <strong>Edit source</strong>: update OS source in AGNOSTIC.
-            </li>
-            <li>
-              <strong>Publish</strong>: push release commit in Public_Logic.
-            </li>
-            <li>
-              <strong>Verify</strong>: check Vercel deployment, then validate live URLs.
-            </li>
-          </ol>
+          <p className="tv-meta">
+            Tenant in use: {launchTargets.tenantDomain}
+            {launchTargets.usingFallback ? " (default)" : ""}
+          </p>
           <div className="tv-link-grid">
             <a className="tv-primary-link" href={AGNOSTIC_REPO_URL} target="_blank" rel="noreferrer">
               Open AGNOSTIC
@@ -725,8 +987,25 @@ function EnvironmentDetail({
             <a className="tv-primary-link" href={PUBLIC_LOGIC_REPO_URL} target="_blank" rel="noreferrer">
               Open Public_Logic
             </a>
+            <a className="tv-primary-link" href={PL_CASE_WORKSPACE_REPO_URL} target="_blank" rel="noreferrer">
+              Open CASE Workspace
+            </a>
+            <a className="tv-primary-link" href={launchTargets.siteUrl} target="_blank" rel="noreferrer">
+              Open Tenant Site
+            </a>
+            <a className="tv-primary-link" href={launchTargets.documentsUrl} target="_blank" rel="noreferrer">
+              Open Documents
+            </a>
+            <a className="tv-primary-link" href={launchTargets.siteContentsUrl} target="_blank" rel="noreferrer">
+              Open Site Contents
+            </a>
+            {launchTargets.adminCenterUrl ? (
+              <a className="tv-primary-link" href={launchTargets.adminCenterUrl} target="_blank" rel="noreferrer">
+                Open Tenant Admin
+              </a>
+            ) : null}
             <a className="tv-primary-link" href={VERCEL_DEPLOYMENTS_URL} target="_blank" rel="noreferrer">
-              Open Vercel Deployments
+              Open Vercel
             </a>
             <a className="tv-primary-link" href={PUBLIC_SITE_URL} target="_blank" rel="noreferrer">
               Open Public Site
@@ -901,6 +1180,206 @@ function EnvironmentDetail({
       ) : null}
 
       <article className="tv-card">
+        <h3>Active Deploy Remote (Read-only)</h3>
+        <p className="tv-subtle">This is exactly where publish operations are sent.</p>
+        {remoteTarget ? (
+          <div className="tv-active-target-grid">
+            <p>
+              <span className="tv-subtle">Repository</span>
+              <strong>{remoteTarget.repoName || "-"}</strong>
+            </p>
+            <p>
+              <span className="tv-subtle">Branch</span>
+              <strong>{remoteTarget.branch || "-"}</strong>
+            </p>
+            <p>
+              <span className="tv-subtle">Target File</span>
+              <strong>{remoteTarget.relativeFilePath || "-"}</strong>
+            </p>
+            <p>
+              <span className="tv-subtle">Preview</span>
+              <strong>{remoteTarget.previewUrl || "-"}</strong>
+            </p>
+          </div>
+        ) : (
+          <p className="tv-subtle">Deploy remote not loaded yet.</p>
+        )}
+          <p className="tv-mono tv-mono-wrap">{remoteTarget?.originRemote || "-"}</p>
+          {remoteWebUrl ? (
+            <a className="tv-primary-link" href={remoteWebUrl} target="_blank" rel="noreferrer">
+              Open Deploy Remote
+            </a>
+          ) : null}
+        <button className="tv-ghost" type="button" onClick={onRefreshRemoteStatus}>
+          Refresh Deploy Remote
+        </button>
+      </article>
+
+      {mode === "focused" ? (
+        <article className="tv-card">
+          <h3>SharePoint Remote Actions</h3>
+          <p className="tv-subtle">
+            Create folders, documents, and pages directly in SharePoint for this selected municipality.
+          </p>
+
+          {!sharepointRemoteReady && sharepointMissing.length > 0 ? (
+            <p className="tv-subtle">
+              SharePoint setup needed before actions can run: {sharepointMissing.join(", ")}
+            </p>
+          ) : null}
+
+          <div className="tv-form-grid">
+            <label>
+              Step A · Library
+              <input
+                value={remoteActionDraft.libraryName}
+                onChange={(event) => onRemoteActionDraftChange("libraryName", event.target.value)}
+                placeholder="Documents or Site Pages (usually Documents)"
+              />
+            </label>
+            <label>
+              Step A · Folder Path
+              <input
+                value={remoteActionDraft.folderPath}
+                onChange={(event) => onRemoteActionDraftChange("folderPath", event.target.value)}
+                placeholder="governance/fy2025-2026"
+              />
+            </label>
+            <label>
+              Step B · Document Name
+              <input
+                value={remoteActionDraft.documentName}
+                onChange={(event) => onRemoteActionDraftChange("documentName", event.target.value)}
+                placeholder="deployment-note.md"
+              />
+            </label>
+            <label>
+              Step B · Document Content
+              <textarea
+                value={remoteActionDraft.documentContent}
+                onChange={(event) => onRemoteActionDraftChange("documentContent", event.target.value)}
+                placeholder="Deployment note content..."
+              />
+            </label>
+            <label>
+              Step C · Page Title
+              <input
+                value={remoteActionDraft.pageTitle}
+                onChange={(event) => onRemoteActionDraftChange("pageTitle", event.target.value)}
+                placeholder="Operations Update"
+              />
+            </label>
+            <label>
+              Step C · Page Name
+              <input
+                value={remoteActionDraft.pageName}
+                onChange={(event) => onRemoteActionDraftChange("pageName", event.target.value)}
+                placeholder="operations-update.aspx"
+              />
+            </label>
+            <label>
+              Step C · Page Content
+              <textarea
+                value={remoteActionDraft.pageContent}
+                onChange={(event) => onRemoteActionDraftChange("pageContent", event.target.value)}
+                placeholder="Optional page body text..."
+              />
+            </label>
+          </div>
+
+          <div className="tv-inline-actions">
+            <button
+              type="button"
+              onClick={onRemoteCreateSharePointFolder}
+              disabled={remoteActionLoading === "sp-folder"}
+            >
+              {remoteActionLoading === "sp-folder" ? "Creating..." : "Create SharePoint Folder"}
+            </button>
+            <button
+              type="button"
+              onClick={onRemoteCreateSharePointDocument}
+              disabled={remoteActionLoading === "sp-document"}
+            >
+              {remoteActionLoading === "sp-document" ? "Creating..." : "Create SharePoint Document"}
+            </button>
+            <button
+              type="button"
+              onClick={onRemoteCreateSharePointPage}
+              disabled={remoteActionLoading === "sp-page"}
+            >
+              {remoteActionLoading === "sp-page" ? "Creating..." : "Create SharePoint Page"}
+            </button>
+          </div>
+        </article>
+      ) : null}
+
+      <article className="tv-card">
+        <h3>Local Proof (Audit-safe)</h3>
+        <p className="tv-subtle">
+          Creates real local artifacts under `data/proof-system` and logs each action to audit.
+        </p>
+        <p className="tv-mono tv-mono-wrap">{proofRootPath || "proof-system/<env-id>"}</p>
+        <div className="tv-form-grid">
+          <label>
+            Folder Name
+            <input
+              value={proofDraft.folderName}
+              onChange={(event) => onProofDraftChange("folderName", event.target.value)}
+              placeholder="town-proof-YYYY-MM-DD"
+            />
+          </label>
+          <label>
+            Document Name
+            <input
+              value={proofDraft.documentName}
+              onChange={(event) => onProofDraftChange("documentName", event.target.value)}
+              placeholder="proof-note.md"
+            />
+          </label>
+          <label>
+            Document Content
+            <textarea
+              value={proofDraft.content}
+              onChange={(event) => onProofDraftChange("content", event.target.value)}
+              placeholder="Optional note content..."
+            />
+          </label>
+        </div>
+        <div className="tv-inline-actions">
+          <button type="button" onClick={onCreateProofFolder} disabled={proofLoading}>
+            {proofLoading ? "Working..." : "Create Proof Folder"}
+          </button>
+          <button type="button" onClick={onCreateProofDocument} disabled={proofLoading}>
+            {proofLoading ? "Working..." : "Create Proof Document"}
+          </button>
+        </div>
+        {proofEntries.length > 0 ? (
+          <div className="tv-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Path</th>
+                  <th>When</th>
+                </tr>
+              </thead>
+              <tbody>
+                {proofEntries.slice(0, 8).map((entry) => (
+                  <tr key={entry.id}>
+                    <td>{entry.type}</td>
+                    <td className="tv-mono">{entry.relativePath || "-"}</td>
+                    <td>{formatDateTime(entry.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="tv-subtle">No proof artifacts yet for this environment.</p>
+        )}
+      </article>
+
+      <article className="tv-card">
         <h3>Deployment Flow</h3>
         <ol className="tv-steps">
           <li>
@@ -1058,6 +1537,8 @@ export default function App() {
   const [loginError, setLoginError] = useState("");
 
   const [activeNav, setActiveNav] = useState("active");
+  const [showDashboard, setShowDashboard] = useState(true);
+  const [selectedDashboardEnvironment, setSelectedDashboardEnvironment] = useState(null);
   const [rememberedLogin, setRememberedLogin] = useState({
     username: "",
     rememberMe: false
@@ -1073,6 +1554,15 @@ export default function App() {
   const [warningAcknowledgments, setWarningAcknowledgments] = useState({});
   const [confirmPhrase, setConfirmPhrase] = useState("");
   const [deployLoading, setDeployLoading] = useState(false);
+  const [remoteStatus, setRemoteStatus] = useState(null);
+  const [remoteEnvironmentStatus, setRemoteEnvironmentStatus] = useState(null);
+  const [remoteActionDraft, setRemoteActionDraft] = useState(createDefaultRemoteActionDraft(""));
+  const [remoteActionLoading, setRemoteActionLoading] = useState("");
+  const [remoteActionResult, setRemoteActionResult] = useState(null);
+  const [proofEntries, setProofEntries] = useState([]);
+  const [proofRootPath, setProofRootPath] = useState("");
+  const [proofDraft, setProofDraft] = useState(createDefaultProofDraft(""));
+  const [proofLoading, setProofLoading] = useState(false);
 
   const [memoryEntries, setMemoryEntries] = useState([]);
   const [memoryFilters, setMemoryFilters] = useState({ envId: "", type: "", q: "" });
@@ -1121,18 +1611,16 @@ export default function App() {
 
   async function bootstrap() {
     try {
-      const [environmentPayload, canonPayload] = await Promise.all([
+      const [environmentPayload, canonPayload, statusPayload] = await Promise.all([
         api("/veritas/environments"),
-        api("/veritas/canon")
+        api("/veritas/canon"),
+        api("/status")
       ]);
       const items = environmentPayload.environments || [];
       setEnvironments(items);
       setCanon(canonPayload || { foundations: [], workspaces: [] });
+      setRemoteStatus(statusPayload || null);
       setAuthState("authenticated");
-
-      if (items.length > 0 && !selectedEnvironmentId) {
-        setSelectedEnvironmentId(pickInitialEnvironmentId(items));
-      }
     } catch (error) {
       if (error.status === 401) {
         setAuthState("unauthenticated");
@@ -1154,18 +1642,34 @@ export default function App() {
 
     async function loadEnvironmentScope() {
       try {
-        const [environmentPayload, contextPayload, memoryPayload, auditPayload, connectionPayload] =
+        const [
+          environmentPayload,
+          contextPayload,
+          memoryPayload,
+          auditPayload,
+          connectionPayload,
+          proofPayload,
+          remotePayload
+        ] =
           await Promise.all([
             api(`/veritas/environments/${encodeURIComponent(selectedEnvironmentId)}`),
             api(`/veritas/environments/${encodeURIComponent(selectedEnvironmentId)}/context`),
             api(`/veritas/memory/${encodeURIComponent(selectedEnvironmentId)}`),
             api(`/veritas/audit/${encodeURIComponent(selectedEnvironmentId)}`),
-            api(`/veritas/environments/${encodeURIComponent(selectedEnvironmentId)}/connection`)
+            api(`/veritas/environments/${encodeURIComponent(selectedEnvironmentId)}/connection`),
+            api(`/veritas/proof/${encodeURIComponent(selectedEnvironmentId)}`),
+            api(`/veritas/remote/${encodeURIComponent(selectedEnvironmentId)}/status`)
           ]);
 
         setSelectedEnvironment(environmentPayload);
         setContext(contextPayload || structuredClone(DEFAULT_CONTEXT));
         setConnection(connectionPayload.connection || { ...EMPTY_CONNECTION });
+        setProofEntries(proofPayload.entries || []);
+        setProofRootPath(proofPayload.rootPath || "");
+        setProofDraft(createDefaultProofDraft(environmentPayload?.town || ""));
+        setRemoteEnvironmentStatus(remotePayload || null);
+        setRemoteActionDraft(createDefaultRemoteActionDraft(environmentPayload?.town || ""));
+        setRemoteActionResult(null);
         setMemoryEntries(memoryPayload.entries || []);
         setAuditEntries(auditPayload.entries || []);
         setMemoryDraft((previous) => ({ ...previous, envId: selectedEnvironmentId }));
@@ -1177,6 +1681,15 @@ export default function App() {
 
     void loadEnvironmentScope();
   }, [selectedEnvironmentId, authState]);
+
+  useEffect(() => {
+    if (selectedEnvironmentId) {
+      return;
+    }
+    setSelectedEnvironment(null);
+    setRemoteEnvironmentStatus(null);
+    setRemoteActionResult(null);
+  }, [selectedEnvironmentId]);
 
   const filteredEnvironments = useMemo(() => {
     const query = environmentQuery.trim().toLowerCase();
@@ -1223,6 +1736,8 @@ export default function App() {
     try {
       await api("/logout", { method: "POST" });
       setAuthState("unauthenticated");
+      setShowDashboard(true);
+      setSelectedDashboardEnvironment(null);
       setSelectedEnvironmentId("");
       setSelectedEnvironment(null);
       toast.success("Session closed.");
@@ -1237,6 +1752,266 @@ export default function App() {
       setEnvironments(payload.environments || []);
     } catch (error) {
       toast.error(toHelpfulErrorMessage(error));
+    }
+  }
+
+  async function refreshRemoteStatus() {
+    try {
+      const payload = await api("/status");
+      setRemoteStatus(payload || null);
+    } catch (error) {
+      toast.error(toHelpfulErrorMessage(error));
+    }
+  }
+
+  async function refreshEnvironmentRemoteStatus(environmentId = selectedEnvironmentId) {
+    if (!environmentId) {
+      setRemoteEnvironmentStatus(null);
+      return;
+    }
+    try {
+      const payload = await api(`/veritas/remote/${encodeURIComponent(environmentId)}/status`);
+      setRemoteEnvironmentStatus(payload || null);
+    } catch (error) {
+      toast.error(toHelpfulErrorMessage(error));
+    }
+  }
+
+  async function handleDashboardEnvironmentSelected(environment) {
+    const selected = environment && typeof environment === "object" ? environment : null;
+    if (!selected) {
+      return;
+    }
+
+    const directMappedId = String(selected.consoleEnvironmentId || selected.environmentId || "").trim();
+    const selectedTownKey = normalizeTownKey(selected.clientShortName || selected.clientName || "");
+    const selectedTenantKey = normalizeTenantDomain(selected.tenantId || "");
+
+    const fallbackMatch = environments.find((item) => {
+      const envTownKey = normalizeTownKey(item.town || item.id || "");
+      const envTenantKey = normalizeTenantDomain(item.tenant?.domain || "");
+      if (selectedTownKey && envTownKey && selectedTownKey === envTownKey) {
+        return true;
+      }
+      if (selectedTenantKey && envTenantKey && selectedTenantKey === envTenantKey) {
+        return true;
+      }
+      return false;
+    });
+
+    let resolvedEnvironmentId = directMappedId || String(fallbackMatch?.id || "").trim();
+    if (!resolvedEnvironmentId) {
+      try {
+        const stage = String(selected.stage || "production").toLowerCase();
+        const statusMap = {
+          production: "active",
+          pilot: "foundations",
+          test: "diagnostic",
+          sandbox: "diagnostic"
+        };
+        const healthMap = {
+          healthy: "nominal",
+          warning: "warning",
+          error: "warning"
+        };
+        const inferredStatus = statusMap[stage] || "prospect";
+        const inferredHealth = healthMap[String(selected?.health?.overall || "").toLowerCase()] || "pending";
+
+        const created = await api("/veritas/environments", {
+          method: "POST",
+          body: JSON.stringify({
+            id: `env-${crypto.randomUUID().slice(0, 8)}`,
+            town: toDisplayTown(selected.clientName || selected.clientShortName || "Municipality"),
+            status: inferredStatus,
+            health: inferredHealth,
+            tenant: {
+              type: "M365",
+              domain: selected.tenantId || "",
+              adminContact: selected.primaryContact?.name || "",
+              notes: ""
+            },
+            modules: [],
+            contacts: [],
+            liveUrl: "",
+            operator: "N. Boudreau"
+          })
+        });
+        resolvedEnvironmentId = String(created?.id || "").trim();
+        await refreshEnvironments();
+        if (resolvedEnvironmentId) {
+          toast.success("Environment mapped into active console.");
+        }
+      } catch (error) {
+        toast.error(toHelpfulErrorMessage(error, "Unable to map this environment into the active console."));
+      }
+    }
+
+    if (!resolvedEnvironmentId) {
+      setShowDashboard(true);
+      return;
+    }
+
+    setSelectedDashboardEnvironment(selected);
+    setShowDashboard(false);
+    setActiveNav("active");
+    setSelectedEnvironmentId(resolvedEnvironmentId);
+
+    const raw = selected._raw && typeof selected._raw === "object" ? selected._raw : {};
+    const fallbackContext = {
+      ...structuredClone(DEFAULT_CONTEXT),
+      targetTenant: {
+        ...structuredClone(DEFAULT_CONTEXT).targetTenant,
+        domain: selected.tenantId || ""
+      }
+    };
+
+    setContext((previous) => ({
+      ...fallbackContext,
+      ...previous,
+      targetTenant: {
+        ...fallbackContext.targetTenant,
+        ...(previous.targetTenant || {}),
+        domain: raw.microsoftTenantId || selected.tenantId || previous.targetTenant?.domain || ""
+      },
+      selectedModules: previous.selectedModules || [],
+      overrides: Array.isArray(previous.overrides) ? previous.overrides : [],
+      checklist: {
+        ...structuredClone(DEFAULT_CONTEXT).checklist,
+        ...(previous.checklist || {})
+      },
+      graph: {
+        ...structuredClone(DEFAULT_CONTEXT).graph,
+        ...(previous.graph || {})
+      },
+      metadata: {
+        ...(previous.metadata || {}),
+        updatedBy: previous.metadata?.updatedBy || "",
+        updatedAt: previous.metadata?.updatedAt || ""
+      }
+    }));
+  }
+
+  function handleRemoteActionDraftChange(field, value) {
+    setRemoteActionDraft((previous) => ({ ...previous, [field]: value }));
+  }
+
+  async function handleRemoteDeployGithub() {
+    if (!selectedEnvironmentId) {
+      toast.error("Select an environment first.");
+      return;
+    }
+    setRemoteActionLoading("github-deploy");
+    try {
+      const payload = await api("/veritas/remote/github/deploy", {
+        method: "POST",
+        body: JSON.stringify({
+          environmentId: selectedEnvironmentId,
+          reason: `Remote publish from ${selectedEnvironment?.town || selectedEnvironmentId}`
+        })
+      });
+      setRemoteActionResult({
+        action: "GitHub deploy",
+        when: formatDateTime(new Date().toISOString()),
+        summary: payload?.commitSha
+          ? `Commit: ${payload.commitSha}`
+          : String(payload?.output || "Deploy completed.")
+      });
+      toast.success("GitHub remote deploy completed.");
+      await refreshRemoteStatus();
+    } catch (error) {
+      toast.error(toHelpfulErrorMessage(error));
+    } finally {
+      setRemoteActionLoading("");
+    }
+  }
+
+  async function handleRemoteCreateSharePointFolder() {
+    if (!selectedEnvironmentId) {
+      toast.error("Select an environment first.");
+      return;
+    }
+    setRemoteActionLoading("sp-folder");
+    try {
+      const payload = await api("/veritas/remote/sharepoint/folder", {
+        method: "POST",
+        body: JSON.stringify({
+          environmentId: selectedEnvironmentId,
+          libraryName: remoteActionDraft.libraryName,
+          folderPath: remoteActionDraft.folderPath
+        })
+      });
+      setRemoteActionResult({
+        action: "SharePoint folder",
+        when: formatDateTime(new Date().toISOString()),
+        summary: payload?.webUrl || payload?.folderPath || "Folder created."
+      });
+      toast.success("SharePoint folder created.");
+      await refreshEnvironmentRemoteStatus(selectedEnvironmentId);
+    } catch (error) {
+      toast.error(toHelpfulErrorMessage(error));
+    } finally {
+      setRemoteActionLoading("");
+    }
+  }
+
+  async function handleRemoteCreateSharePointDocument() {
+    if (!selectedEnvironmentId) {
+      toast.error("Select an environment first.");
+      return;
+    }
+    setRemoteActionLoading("sp-document");
+    try {
+      const payload = await api("/veritas/remote/sharepoint/document", {
+        method: "POST",
+        body: JSON.stringify({
+          environmentId: selectedEnvironmentId,
+          libraryName: remoteActionDraft.libraryName,
+          folderPath: remoteActionDraft.folderPath,
+          documentName: remoteActionDraft.documentName,
+          content: remoteActionDraft.documentContent
+        })
+      });
+      setRemoteActionResult({
+        action: "SharePoint document",
+        when: formatDateTime(new Date().toISOString()),
+        summary: payload?.webUrl || payload?.documentPath || "Document created."
+      });
+      toast.success("SharePoint document created.");
+      await refreshEnvironmentRemoteStatus(selectedEnvironmentId);
+    } catch (error) {
+      toast.error(toHelpfulErrorMessage(error));
+    } finally {
+      setRemoteActionLoading("");
+    }
+  }
+
+  async function handleRemoteCreateSharePointPage() {
+    if (!selectedEnvironmentId) {
+      toast.error("Select an environment first.");
+      return;
+    }
+    setRemoteActionLoading("sp-page");
+    try {
+      const payload = await api("/veritas/remote/sharepoint/page", {
+        method: "POST",
+        body: JSON.stringify({
+          environmentId: selectedEnvironmentId,
+          pageTitle: remoteActionDraft.pageTitle,
+          pageName: remoteActionDraft.pageName,
+          content: remoteActionDraft.pageContent
+        })
+      });
+      setRemoteActionResult({
+        action: `SharePoint page (${payload?.mode || "created"})`,
+        when: formatDateTime(new Date().toISOString()),
+        summary: payload?.webUrl || payload?.pageName || "Page created."
+      });
+      toast.success("SharePoint page created.");
+      await refreshEnvironmentRemoteStatus(selectedEnvironmentId);
+    } catch (error) {
+      toast.error(toHelpfulErrorMessage(error));
+    } finally {
+      setRemoteActionLoading("");
     }
   }
 
@@ -1342,6 +2117,70 @@ export default function App() {
       toast.success("Connection reference saved.");
     } catch (error) {
       toast.error(toHelpfulErrorMessage(error));
+    }
+  }
+
+  function handleProofDraftChange(field, value) {
+    setProofDraft((previous) => ({ ...previous, [field]: value }));
+  }
+
+  async function refreshProofEntries(envId) {
+    if (!envId) {
+      setProofEntries([]);
+      setProofRootPath("");
+      return;
+    }
+    const payload = await api(`/veritas/proof/${encodeURIComponent(envId)}`);
+    setProofEntries(payload.entries || []);
+    setProofRootPath(payload.rootPath || "");
+  }
+
+  async function handleCreateProofFolder() {
+    if (!selectedEnvironmentId) {
+      toast.error("Select an environment first.");
+      return;
+    }
+    setProofLoading(true);
+    try {
+      await api("/veritas/proof/folder", {
+        method: "POST",
+        body: JSON.stringify({
+          envId: selectedEnvironmentId,
+          folderName: proofDraft.folderName
+        })
+      });
+      await refreshProofEntries(selectedEnvironmentId);
+      toast.success("Proof folder created.");
+    } catch (error) {
+      toast.error(toHelpfulErrorMessage(error));
+    } finally {
+      setProofLoading(false);
+    }
+  }
+
+  async function handleCreateProofDocument() {
+    if (!selectedEnvironmentId) {
+      toast.error("Select an environment first.");
+      return;
+    }
+    setProofLoading(true);
+    try {
+      await api("/veritas/proof/document", {
+        method: "POST",
+        body: JSON.stringify({
+          envId: selectedEnvironmentId,
+          folderName: proofDraft.folderName,
+          documentName: proofDraft.documentName,
+          content: proofDraft.content
+        })
+      });
+      await refreshProofEntries(selectedEnvironmentId);
+      setProofDraft((previous) => ({ ...previous, content: "" }));
+      toast.success("Proof document created.");
+    } catch (error) {
+      toast.error(toHelpfulErrorMessage(error));
+    } finally {
+      setProofLoading(false);
     }
   }
 
@@ -1507,10 +2346,18 @@ export default function App() {
             <h1>PublicLogic Portal</h1>
             <p className="tv-subtle">Powered by Tenebrux Veritas</p>
             <p className="tv-active-target-pill">
-              Active target: {selectedEnvironment ? `${selectedEnvironment.town} (${selectedEnvironment.id})` : "none"}
+              Active target:{" "}
+              {selectedEnvironment
+                ? `${selectedEnvironment.town} (${selectedEnvironment.id})`
+                : selectedDashboardEnvironment?.clientName || "none"}
             </p>
           </div>
           <div className="tv-inline-actions">
+            {!showDashboard ? (
+              <button className="back-to-dashboard-btn" type="button" onClick={() => setShowDashboard(true)}>
+                ← Back to Dashboard
+              </button>
+            ) : null}
             <p className="tv-meta">{new Date().toLocaleString()}</p>
             <button className="tv-ghost" type="button" onClick={handleLogout}>
               <LogOut size={14} />
@@ -1519,7 +2366,11 @@ export default function App() {
           </div>
         </header>
 
-        {activeNav === "dashboard" ? (
+        {showDashboard ? (
+          <Dashboard onEnvironmentSelected={handleDashboardEnvironmentSelected} />
+        ) : null}
+
+        {!showDashboard && activeNav === "dashboard" ? (
           <DashboardView
             environments={environments}
             onOpenEnvironment={(id) => {
@@ -1529,7 +2380,7 @@ export default function App() {
           />
         ) : null}
 
-        {activeNav === "active" ? (
+        {!showDashboard && activeNav === "active" ? (
           <section className="tv-environments-layout">
             <EnvironmentList
               environments={environments}
@@ -1547,6 +2398,24 @@ export default function App() {
               canon={canon}
               context={context}
               connection={connection}
+              remoteStatus={remoteStatus}
+              onRefreshRemoteStatus={refreshRemoteStatus}
+              remoteEnvironmentStatus={remoteEnvironmentStatus}
+              remoteActionDraft={remoteActionDraft}
+              onRemoteActionDraftChange={handleRemoteActionDraftChange}
+              onRemoteDeployGithub={handleRemoteDeployGithub}
+              onRemoteCreateSharePointFolder={handleRemoteCreateSharePointFolder}
+              onRemoteCreateSharePointDocument={handleRemoteCreateSharePointDocument}
+              onRemoteCreateSharePointPage={handleRemoteCreateSharePointPage}
+              remoteActionLoading={remoteActionLoading}
+              remoteActionResult={remoteActionResult}
+              proofEntries={proofEntries}
+              proofRootPath={proofRootPath}
+              proofDraft={proofDraft}
+              onProofDraftChange={handleProofDraftChange}
+              onCreateProofFolder={handleCreateProofFolder}
+              onCreateProofDocument={handleCreateProofDocument}
+              proofLoading={proofLoading}
               onEnvironmentField={handleEnvironmentField}
               onSaveEnvironment={handleSaveEnvironment}
               onContextField={handleContextField}
@@ -1569,7 +2438,7 @@ export default function App() {
           </section>
         ) : null}
 
-        {activeNav === "environments" ? (
+        {!showDashboard && activeNav === "environments" ? (
           <section className="tv-environments-layout">
             <EnvironmentList
               environments={filteredEnvironments}
@@ -1586,6 +2455,24 @@ export default function App() {
               canon={canon}
               context={context}
               connection={connection}
+              remoteStatus={remoteStatus}
+              onRefreshRemoteStatus={refreshRemoteStatus}
+              remoteEnvironmentStatus={remoteEnvironmentStatus}
+              remoteActionDraft={remoteActionDraft}
+              onRemoteActionDraftChange={handleRemoteActionDraftChange}
+              onRemoteDeployGithub={handleRemoteDeployGithub}
+              onRemoteCreateSharePointFolder={handleRemoteCreateSharePointFolder}
+              onRemoteCreateSharePointDocument={handleRemoteCreateSharePointDocument}
+              onRemoteCreateSharePointPage={handleRemoteCreateSharePointPage}
+              remoteActionLoading={remoteActionLoading}
+              remoteActionResult={remoteActionResult}
+              proofEntries={proofEntries}
+              proofRootPath={proofRootPath}
+              proofDraft={proofDraft}
+              onProofDraftChange={handleProofDraftChange}
+              onCreateProofFolder={handleCreateProofFolder}
+              onCreateProofDocument={handleCreateProofDocument}
+              proofLoading={proofLoading}
               onEnvironmentField={handleEnvironmentField}
               onSaveEnvironment={handleSaveEnvironment}
               onContextField={handleContextField}

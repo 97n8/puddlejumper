@@ -1,0 +1,64 @@
+{
+  "ruleset_id": "nc-chamber-routing",
+  "version": "1.0.0",
+  "status": "active",
+  "effective_at": "2026-02-04T00:00:00-05:00",
+  "default": {
+    "assigned_team": "Chamber Intake",
+    "sla_tier": "2_business_days",
+    "routing_profile": "default-intake"
+  },
+  "rules": [
+    {
+      "rule_id": "R-001",
+      "name": "Membership to Member Services",
+      "priority": 1,
+      "enabled": true,
+      "logic": "AND",
+      "conditions": [
+        {"field": "category", "operator": "eq", "value": "Membership"}
+      ],
+      "actions": {
+        "assigned_team": "Member Services",
+        "sla_tier": "2_business_days",
+        "routing_profile": "member-services"
+      },
+      "stop_processing": true,
+      "explanation_template": "Routed to Member Services because category is Membership."
+    },
+    {
+      "rule_id": "R-002",
+      "name": "Municipal Liaison Routing",
+      "priority": 5,
+      "enabled": true,
+      "logic": "AND",
+      "conditions": [
+        {"field": "municipality_affiliation", "operator": "in", "value": ["Municipality A", "Municipality B", "Municipality C", "Municipality D", "Municipality E", "Municipality F"]}
+      ],
+      "actions": {
+        "assigned_team": "Municipality: {{municipality_affiliation}}",
+        "sla_tier": "5_business_days",
+        "routing_profile": "municipal-liaison"
+      },
+      "stop_processing": true,
+      "explanation_template": "Routed to {{municipality_affiliation}} liaison based on municipality affiliation."
+    },
+    {
+      "rule_id": "R-010",
+      "name": "Urgent Priority",
+      "priority": 10,
+      "enabled": true,
+      "logic": "AND",
+      "conditions": [
+        {"field": "priority", "operator": "eq", "value": "urgent"}
+      ],
+      "actions": {
+        "assigned_team": "Executive Response",
+        "sla_tier": "same_day",
+        "routing_profile": "urgent-escalation"
+      },
+      "stop_processing": true,
+      "explanation_template": "Urgent priority routed to Executive Response with same-day SLA."
+    }
+  ]
+}

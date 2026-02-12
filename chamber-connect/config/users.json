@@ -1,0 +1,40 @@
+[
+  {
+    "user_id": "u-admin",
+    "name": "Alex Admin",
+    "role": "Chamber_Admin",
+    "team": "Leadership"
+  },
+  {
+    "user_id": "u-staff",
+    "name": "Riley Staff",
+    "role": "Chamber_Staff",
+    "team": "Chamber Intake"
+  },
+  {
+    "user_id": "u-liaison-a",
+    "name": "Morgan Liaison",
+    "role": "Municipal_Liaison",
+    "municipality": "Municipality A",
+    "team": "Municipality: Municipality A"
+  },
+  {
+    "user_id": "u-liaison-c",
+    "name": "Taylor Liaison",
+    "role": "Municipal_Liaison",
+    "municipality": "Municipality C",
+    "team": "Municipality: Municipality C"
+  },
+  {
+    "user_id": "u-partner",
+    "name": "Jordan Partner",
+    "role": "Partner_Vendor",
+    "team": "Partner: Vendor X"
+  },
+  {
+    "user_id": "u-auditor",
+    "name": "Avery Auditor",
+    "role": "Read_Only_Auditor",
+    "team": "Audit"
+  }
+]
