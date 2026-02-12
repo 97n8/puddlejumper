@@ -2,6 +2,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import serverless from 'serverless-http';
 import { cookieParserMiddleware, validateJwt } from '@publiclogic/core';
+import loginRouter from './routes/login.js';
 
 const app = express();
 app.use(cookieParserMiddleware());
@@ -32,5 +33,8 @@ app.get('/api/capabilities/manifest', validateJwt(), (req: any, res) => {
 app.get('/api/runtime/context', validateJwt(), (req: any, res) => {
   res.json({ workspace: { id: 'default' }, municipality: { id: 'default' }, operator: req.auth?.sub });
 });
+
+// register login route under /api/login
+app.use('/api', loginRouter);
 
 export default serverless(app);
