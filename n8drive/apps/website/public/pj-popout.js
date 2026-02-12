@@ -1,4 +1,4 @@
-import { applyIdentityContext, isTrustedOriginFromList } from "/internal-src/pj-popout-security.js";
+import { applyIdentityContext, isTrustedOriginFromList } from "./internal-src/pj-popout-security.js";
 
 const omnisearch = document.getElementById('omnisearch');
 const resultsContainer = document.getElementById('results');
