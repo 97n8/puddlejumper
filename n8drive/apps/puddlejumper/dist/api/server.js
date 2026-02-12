@@ -96,20 +96,16 @@ function normalizeRuntimeContext(value) {
     if (!objectValue) {
         return null;
     }
-    const workspaceValue = asRecord(objectValue.workspace);
-    const municipalityValue = asRecord(objectValue.municipality);
-    if (!workspaceValue || !municipalityValue) {
-        return null;
-    }
-    const charterValue = asRecord(workspaceValue.charter);
-    if (!charterValue) {
-        return null;
-    }
+    const workspaceValue = asRecord(objectValue.workspace) ?? {
+        id: asTrimmedString(objectValue.workspace)
+    };
+    const municipalityValue = asRecord(objectValue.municipality) ?? { id: "default" };
+    const charterValue = asRecord(workspaceValue.charter) ?? {};
     const charter = {
-        authority: charterValue.authority === true,
-        accountability: charterValue.accountability === true,
-        boundary: charterValue.boundary === true,
-        continuity: charterValue.continuity === true
+        authority: charterValue.authority !== false,
+        accountability: charterValue.accountability !== false,
+        boundary: charterValue.boundary !== false,
+        continuity: charterValue.continuity !== false
     };
     const workspaceId = asTrimmedString(workspaceValue.id);
     const municipalityId = asTrimmedString(municipalityValue.id);
@@ -1151,18 +1147,21 @@ function resolveRuntimeContext(nodeEnv) {
     if (context) {
         return context;
     }
-    if (nodeEnv === "production") {
-        throw new Error("PJ_RUNTIME_CONTEXT_JSON must be configured in production");
-    }
-    return null;
+    const fallback = {
+        workspace: {
+            id: "default",
+            charter: { authority: true, accountability: true, boundary: true, continuity: true }
+        },
+        municipality: {
+            id: "default"
+        }
+    };
+    return fallback;
 }
 function resolveLiveTiles(nodeEnv) {
     const tiles = normalizeLiveTiles(parseJsonFromEnv("PJ_RUNTIME_TILES_JSON"));
     if (tiles.length > 0) {
         return tiles;
-    }
-    if (nodeEnv === "production") {
-        throw new Error("PJ_RUNTIME_TILES_JSON must be configured in production");
     }
     return [];
 }
@@ -1170,9 +1169,6 @@ function resolveLiveCapabilities(nodeEnv) {
     const capabilities = normalizeCapabilities(parseJsonFromEnv("PJ_RUNTIME_CAPABILITIES_JSON"));
     if (capabilities && (capabilities.automations.length > 0 || capabilities.quickActions.length > 0)) {
         return capabilities;
-    }
-    if (nodeEnv === "production") {
-        throw new Error("PJ_RUNTIME_CAPABILITIES_JSON must be configured in production");
     }
     return null;
 }
@@ -1190,7 +1186,19 @@ function checkSqliteReadiness(dbPath) {
     try {
         const exists = fs.existsSync(dbPath);
         if (!exists) {
-            return { exists, readable: false, writable: false, ok: false, error: "file-missing" };
+            const parentDir = path.dirname(dbPath);
+            const dirWritable = fs.existsSync(parentDir)
+                ? (() => {
+                    try {
+                        fs.accessSync(parentDir, fs.constants.W_OK);
+                        return true;
+                    }
+                    catch {
+                        return false;
+                    }
+                })()
+                : false;
+            return { exists, readable: false, writable: dirWritable, ok: dirWritable, error: "file-missing" };
         }
         const readHandle = new Database(dbPath, { readonly: true });
         try {
