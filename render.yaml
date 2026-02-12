@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: puddlejumper
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: n8drive/apps/puddlejumper
+    buildCommand: cd ../.. && npm ci && cd apps/puddlejumper && npm run build
+    startCommand: node dist/api/server.js
+    healthCheckPath: /health
+    disk:
+      name: puddlejumper-data
+      mountPath: /opt/render/project/src/n8drive/apps/puddlejumper/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        fromGroup: render
+      - key: PRR_DB_PATH
+        value: ./data/prr.db
+      - key: CONNECTOR_DB_PATH
+        value: ./data/connectors.db
+      - key: IDEMPOTENCY_DB_PATH
+        value: ./data/idempotency.db
+      - key: RATE_LIMIT_DB_PATH
+        value: ./data/rate-limit.db
+      - key: AUTH_ISSUER
+        value: puddle-jumper
+      - key: AUTH_AUDIENCE
+        value: puddle-jumper-api
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CONNECTOR_STATE_SECRET
+        generateValue: true
+      - key: ACCESS_NOTIFICATION_WEBHOOK_URL
+        value: https://placeholder-webhook.invalid
+      - key: PJ_RUNTIME_CONTEXT_JSON
+        value: '{"workspace":{"id":"default","charter":{"authority":true,"accountability":true,"boundary":true,"continuity":true}},"municipality":{"id":"default","name":"Production"}}'
+      - key: PJ_RUNTIME_TILES_JSON
+        value: '[]'
+      - key: PJ_RUNTIME_CAPABILITIES_JSON
+        value: '{}'
