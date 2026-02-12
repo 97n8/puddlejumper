@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
-import { serialize } from 'cookie';
 import type { Request, Response } from 'express';
+import { setJwtCookieOnResponse } from '@publiclogic/core';
 
 export default async function authCallback(req: Request, res: Response) {
   try {
@@ -28,16 +28,7 @@ export default async function authCallback(req: Request, res: Response) {
       return res.status(502).send('Logic Commons returned no token');
     }
 
-    const cookie = serialize('jwt', token, {
-      domain: process.env.COOKIE_DOMAIN || '.publiclogic.org',
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: Number(process.env.JWT_MAX_AGE_SECONDS ?? 3600)
-    });
-
-    res.setHeader('Set-Cookie', cookie);
+    setJwtCookieOnResponse(res, token, { maxAge: Number(process.env.JWT_MAX_AGE_SECONDS ?? 3600), sameSite: 'Lax' });
     res.redirect(process.env.PJ_UI_URL || '/');
   } catch (err) {
     // eslint-disable-next-line no-console
