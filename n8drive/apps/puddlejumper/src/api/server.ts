@@ -729,12 +729,24 @@ function normalizePathname(pathname: string): string {
   return pathname;
 }
 
-function buildConnectSrcDirective(trustedParentOrigins: string[], includeParentOrigins: boolean): string {
-  if (!includeParentOrigins || trustedParentOrigins.length === 0) {
-    return "connect-src 'self'";
+function buildConnectSrcDirective(
+  trustedParentOrigins: string[],
+  includeParentOrigins: boolean,
+  allowLocalDevtools: boolean
+): string {
+  const sources = new Set<string>(["'self'"]);
+  if (includeParentOrigins) {
+    for (const origin of trustedParentOrigins) {
+      sources.add(origin);
+    }
   }
-  const sources = Array.from(new Set(["'self'", ...trustedParentOrigins]));
-  return `connect-src ${sources.join(" ")}`;
+  if (allowLocalDevtools) {
+    sources.add("http://localhost:3002");
+    sources.add("http://127.0.0.1:3002");
+    sources.add("http://localhost:9222");
+    sources.add("http://127.0.0.1:9222");
+  }
+  return `connect-src ${Array.from(sources).join(" ")}`;
 }
 
 function escapeHtmlAttribute(value: string): string {
@@ -745,11 +757,11 @@ function escapeHtmlAttribute(value: string): string {
     .replace(/>/g, "&gt;");
 }
 
-function renderPjWorkspaceHtml(trustedParentOrigins: string[]): string {
+function renderPjWorkspaceHtml(trustedParentOrigins: string[], allowLocalDevtools: boolean): string {
   let source = fs.readFileSync(PJ_WORKSPACE_FILE, "utf8");
   const inlineHashes = resolvePjInlineCspHashes();
   if (inlineHashes.styleHash && inlineHashes.scriptHash) {
-    const connectSrcDirective = buildConnectSrcDirective(trustedParentOrigins, true);
+    const connectSrcDirective = buildConnectSrcDirective(trustedParentOrigins, true, allowLocalDevtools);
     const inlineMetaCsp = [
       "default-src 'self'",
       "base-uri 'none'",
@@ -1289,10 +1301,10 @@ function createSecurityHeadersMiddleware(nodeEnv: string) {
   return (req: express.Request, res: express.Response, next: express.NextFunction): void => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     if (allowCrossOriginEmbedding) {
-      res.removeHeader("X-Frame-Options");
-    } else {
-      res.setHeader("X-Frame-Options", "SAMEORIGIN");
-    }
+    res.removeHeader("X-Frame-Options");
+  } else {
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  }
 
     const normalizedPath = normalizePathname(req.path);
     const allowsInlineAssets = inlinePjPaths.has(normalizedPath);
@@ -1305,7 +1317,7 @@ function createSecurityHeadersMiddleware(nodeEnv: string) {
       ? `style-src 'self' 'sha256-${inlineHashes.styleHash}'`
       : "style-src 'self' https://fonts.googleapis.com";
 
-    const connectSrc = buildConnectSrcDirective(trustedParentOrigins, allowsParentApiConnect);
+    const connectSrc = buildConnectSrcDirective(trustedParentOrigins, allowsParentApiConnect, nodeEnv !== "production");
 
     res.setHeader(
       "Content-Security-Policy",
@@ -1764,7 +1776,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   const sendPjWorkspace = (res: express.Response): void => {
     res.setHeader("Cache-Control", "no-store, max-age=0");
-    res.type("html").send(renderPjWorkspaceHtml(trustedParentOrigins));
+    res.type("html").send(renderPjWorkspaceHtml(trustedParentOrigins, nodeEnv !== "production"));
   };
 
   app.get("/pj", (_req, res) => {
