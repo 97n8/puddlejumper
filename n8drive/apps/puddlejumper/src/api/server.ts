@@ -16,6 +16,7 @@ import {
   requireRole,
   resolveAuthOptions,
   signJwt,
+  setJwtCookieOnResponse,
   type AuthOptions
 } from "@publiclogic/core";
 import authCallback from "./authCallback.js";
@@ -999,7 +1000,7 @@ function resolvePrimaryScope(auth: AuthContext, runtimeContext: RuntimeContext):
   if (fromTenantId) {
     return fromTenantId;
   }
-  const fromTenants = auth.tenants.find((tenant) => tenant.id.trim())?.id.trim();
+  const fromTenants = auth.tenants.find((tenant: any) => tenant.id.trim())?.id.trim();
   if (fromTenants) {
     return fromTenants;
   }
@@ -1742,7 +1743,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       return;
     }
 
-    const token = signJwt(
+    const token = await signJwt(
       {
         sub: user.id,
         name: user.name,
@@ -1752,17 +1753,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
         tenantId: user.tenantId ?? undefined,
         delegations: []
       },
-      authOptions,
-      { expiresIn: "8h" }
+      { expiresIn: '8h' }
     );
 
-    res.cookie(SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: nodeEnv === "production",
-      sameSite: "lax",
-      maxAge: SESSION_MAX_AGE_MS,
-      path: "/"
-    });
+    setJwtCookieOnResponse(res, token, { maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000), sameSite: 'lax' });
     res.status(200).json({
       ok: true,
       user: {
@@ -2248,7 +2242,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     const expiresInSeconds = 900;
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
 
-    const token = signJwt(
+    const token = await signJwt(
       {
         sub: auth.userId,
         name: auth.name,
@@ -2258,7 +2252,6 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
         tenantId: auth.tenantId ?? undefined,
         delegations: auth.delegations
       },
-      authOptions,
       { expiresIn: `${expiresInSeconds}s` }
     );
 

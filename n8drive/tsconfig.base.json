@@ -12,7 +12,9 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@publiclogic/core/*": ["packages/core/src/*"]
-    }
+      "@publiclogic/core": ["packages/core/dist/index.d.ts"],
+      "@publiclogic/core/*": ["packages/core/dist/*"]
+    },
+    "typeRoots": ["./types", "./node_modules/@types"]
   }
 }

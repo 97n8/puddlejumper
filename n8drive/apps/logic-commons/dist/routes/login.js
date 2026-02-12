@@ -1,5 +1,6 @@
 import express from 'express';
 import { signJwt } from '@publiclogic/core';
+import { verifyGoogleIdToken } from '../lib/google.js';
 const router = express.Router();
 router.post('/login', async (req, res) => {
     try {
@@ -8,16 +9,14 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'provider and providerToken required' });
         let userInfo = null;
         if (provider === 'google') {
-            // Quick verification: tokeninfo (fine for prototyping). For production use JWKS verification.
-            const tokenInfoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(providerToken)}`);
-            if (!tokenInfoRes.ok)
+            // Verify using Google's JWKS (recommended for production)
+            let info = null;
+            try {
+                const payload = await verifyGoogleIdToken(providerToken, process.env.PJ_CLIENT_ID);
+                info = payload;
+            }
+            catch (e) {
                 return res.status(401).json({ error: 'invalid provider token' });
-            const info = await tokenInfoRes.json().catch(() => null);
-            if (!info)
-                return res.status(401).json({ error: 'invalid token response' });
-            // Validate audience
-            if (info.aud && process.env.PJ_CLIENT_ID && info.aud !== process.env.PJ_CLIENT_ID) {
-                return res.status(401).json({ error: 'invalid audience' });
             }
             userInfo = { sub: info.sub, email: info.email, name: info.name };
         }

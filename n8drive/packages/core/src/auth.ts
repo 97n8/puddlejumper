@@ -5,6 +5,8 @@ export type AuthOptions = {
   issuer?: string;
   audience?: string;
   jwtSecret?: string;
+  jwtPublicKey?: string;
+  jwtPrivateKey?: string;
 };
 
 export type AuthContext = Record<string, any>;
@@ -14,6 +16,8 @@ export function resolveAuthOptions(opts?: Partial<AuthOptions>): AuthOptions {
     issuer: process.env.AUTH_ISSUER,
     audience: process.env.AUTH_AUDIENCE,
     jwtSecret: process.env.JWT_SECRET,
+    jwtPublicKey: process.env.JWT_PUBLIC_KEY,
+    jwtPrivateKey: process.env.JWT_PRIVATE_KEY,
     ...(opts || {})
   };
 }
