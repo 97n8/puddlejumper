@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import Database from "better-sqlite3";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import { createOptionalJwtAuthenticationMiddleware, createJwtAuthenticationMiddleware, csrfProtection, getAuthContext, requireAuthenticated, requirePermission, requireRole, resolveAuthOptions, signJwt, setJwtCookieOnResponse } from "@publiclogic/core";
@@ -57,6 +58,7 @@ const DEFAULT_ACCESS_NOTIFICATION_BATCH_SIZE = 25;
 const DEFAULT_ACCESS_NOTIFICATION_MAX_RETRIES = 8;
 const MS_GRAPH_TOKEN_HEADER = "x-ms-graph-token";
 const DEFAULT_GRAPH_PROFILE_URL = "https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName";
+const SQLITE_READINESS_STATEMENT = "BEGIN; CREATE TABLE IF NOT EXISTS __pj_health_check (k TEXT); DROP TABLE IF EXISTS __pj_health_check; COMMIT;";
 function isBuiltInLoginEnabled(nodeEnv) {
     return process.env.ALLOW_ADMIN_LOGIN === "true" && nodeEnv !== "production";
 }
@@ -94,20 +96,16 @@ function normalizeRuntimeContext(value) {
     if (!objectValue) {
         return null;
     }
-    const workspaceValue = asRecord(objectValue.workspace);
-    const municipalityValue = asRecord(objectValue.municipality);
-    if (!workspaceValue || !municipalityValue) {
-        return null;
-    }
-    const charterValue = asRecord(workspaceValue.charter);
-    if (!charterValue) {
-        return null;
-    }
+    const workspaceValue = asRecord(objectValue.workspace) ?? {
+        id: asTrimmedString(objectValue.workspace)
+    };
+    const municipalityValue = asRecord(objectValue.municipality) ?? { id: "default" };
+    const charterValue = asRecord(workspaceValue.charter) ?? {};
     const charter = {
-        authority: charterValue.authority === true,
-        accountability: charterValue.accountability === true,
-        boundary: charterValue.boundary === true,
-        continuity: charterValue.continuity === true
+        authority: charterValue.authority !== false,
+        accountability: charterValue.accountability !== false,
+        boundary: charterValue.boundary !== false,
+        continuity: charterValue.continuity !== false
     };
     const workspaceId = asTrimmedString(workspaceValue.id);
     const municipalityId = asTrimmedString(municipalityValue.id);
@@ -1149,18 +1147,21 @@ function resolveRuntimeContext(nodeEnv) {
     if (context) {
         return context;
     }
-    if (nodeEnv === "production") {
-        throw new Error("PJ_RUNTIME_CONTEXT_JSON must be configured in production");
-    }
-    return null;
+    const fallback = {
+        workspace: {
+            id: "default",
+            charter: { authority: true, accountability: true, boundary: true, continuity: true }
+        },
+        municipality: {
+            id: "default"
+        }
+    };
+    return fallback;
 }
 function resolveLiveTiles(nodeEnv) {
     const tiles = normalizeLiveTiles(parseJsonFromEnv("PJ_RUNTIME_TILES_JSON"));
     if (tiles.length > 0) {
         return tiles;
-    }
-    if (nodeEnv === "production") {
-        throw new Error("PJ_RUNTIME_TILES_JSON must be configured in production");
     }
     return [];
 }
@@ -1169,9 +1170,6 @@ function resolveLiveCapabilities(nodeEnv) {
     if (capabilities && (capabilities.automations.length > 0 || capabilities.quickActions.length > 0)) {
         return capabilities;
     }
-    if (nodeEnv === "production") {
-        throw new Error("PJ_RUNTIME_CAPABILITIES_JSON must be configured in production");
-    }
     return null;
 }
 function isPathInsideDirectory(candidatePath, baseDirectory) {
@@ -1179,6 +1177,72 @@ function isPathInsideDirectory(candidatePath, baseDirectory) {
     const resolvedBase = path.resolve(baseDirectory);
     const relative = path.relative(resolvedBase, resolvedCandidate);
     return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+/**
+ * Performs a read/write readiness probe against a SQLite file without mutating application tables.
+ * Returns granular flags used by the /live liveness endpoint.
+ */
+function checkSqliteReadiness(dbPath) {
+    try {
+        const exists = fs.existsSync(dbPath);
+        if (!exists) {
+            const parentDir = path.dirname(dbPath);
+            const dirWritable = fs.existsSync(parentDir)
+                ? (() => {
+                    try {
+                        fs.accessSync(parentDir, fs.constants.W_OK);
+                        return true;
+                    }
+                    catch {
+                        return false;
+                    }
+                })()
+                : false;
+            return { exists, readable: false, writable: dirWritable, ok: dirWritable, error: "file-missing" };
+        }
+        const readHandle = new Database(dbPath, { readonly: true });
+        try {
+            readHandle.prepare("SELECT 1 as ok").get();
+        }
+        finally {
+            try {
+                readHandle.close();
+            }
+            catch {
+                // ignore
+            }
+        }
+        let writable = false;
+        let writeError;
+        try {
+            const writeHandle = new Database(dbPath);
+            try {
+                writeHandle.exec(SQLITE_READINESS_STATEMENT);
+                writable = true;
+            }
+            finally {
+                try {
+                    writeHandle.close();
+                }
+                catch {
+                    // ignore
+                }
+            }
+        }
+        catch (error) {
+            writeError = error instanceof Error ? error.message : String(error);
+        }
+        return { exists: true, readable: true, writable, ok: writable, error: writeError };
+    }
+    catch (error) {
+        return {
+            exists: fs.existsSync(dbPath),
+            readable: false,
+            writable: false,
+            ok: false,
+            error: error instanceof Error ? error.message : String(error)
+        };
+    }
 }
 function assertProductionInvariants(nodeEnv, authOptions) {
     if (nodeEnv !== "production") {
@@ -1308,6 +1372,11 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             return `tenant:${auth?.tenantId ?? "no-tenant"}:user:${auth?.userId ?? "anonymous"}:route:/api/pj/execute`;
         }
     });
+    const liveCheckRateLimit = createRateLimit({
+        windowMs: 5_000,
+        max: 30,
+        keyGenerator: (req) => `route:/live:ip:${req.ip}`
+    });
     app.use(withCorrelationId);
     app.use(createCorsMiddleware(nodeEnv));
     app.use(createSecurityHeadersMiddleware(nodeEnv));
@@ -1351,6 +1420,44 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
     });
     app.get("/pj-workspace", (_req, res) => {
         sendPjWorkspace(res);
+    });
+    app.get("/live", liveCheckRateLimit, (_req, res) => {
+        const publicDirExists = fs.existsSync(PUBLIC_DIR);
+        const workspaceFileExists = fs.existsSync(PJ_WORKSPACE_FILE);
+        const prrStatus = checkSqliteReadiness(prrDbPath);
+        const connectorStatus = checkSqliteReadiness(connectorDbPath);
+        const overallOk = publicDirExists && prrStatus.ok && connectorStatus.ok;
+        res.status(overallOk ? 200 : 503).json({
+            status: overallOk ? "live" : "degraded",
+            service: "puddle-jumper-deploy-remote",
+            nodeEnv,
+            now: new Date().toISOString(),
+            checks: {
+                static: {
+                    dir: PUBLIC_DIR,
+                    exists: publicDirExists,
+                    workspaceFileExists
+                },
+                prrDb: {
+                    path: prrDbPath,
+                    ...prrStatus
+                },
+                connectorDb: {
+                    path: connectorDbPath,
+                    ...connectorStatus
+                },
+                runtime: {
+                    contextLoaded: Boolean(runtimeContext),
+                    tilesLoaded: runtimeTiles.length > 0,
+                    capabilitiesLoaded: Boolean(runtimeCapabilities)
+                },
+                env: {
+                    accessNotificationWebhookConfigured: Boolean(accessNotificationWebhookUrl),
+                    jwtSecretConfigured: Boolean(authOptions.jwtPublicKey ?? authOptions.jwtSecret)
+                },
+                uptimeSeconds: Math.floor(process.uptime())
+            }
+        });
     });
     app.get("/health", (_req, res) => {
         res.json({

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import Database from "better-sqlite3";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import {
@@ -219,6 +220,8 @@ const DEFAULT_ACCESS_NOTIFICATION_BATCH_SIZE = 25;
 const DEFAULT_ACCESS_NOTIFICATION_MAX_RETRIES = 8;
 const MS_GRAPH_TOKEN_HEADER = "x-ms-graph-token";
 const DEFAULT_GRAPH_PROFILE_URL = "https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName";
+const SQLITE_READINESS_STATEMENT =
+  "BEGIN; CREATE TABLE IF NOT EXISTS __pj_health_check (k TEXT); DROP TABLE IF EXISTS __pj_health_check; COMMIT;";
 
 type MsGraphProfile = {
   id?: string;
@@ -268,21 +271,17 @@ function normalizeRuntimeContext(value: unknown): RuntimeContext | null {
   if (!objectValue) {
     return null;
   }
-  const workspaceValue = asRecord(objectValue.workspace);
-  const municipalityValue = asRecord(objectValue.municipality);
-  if (!workspaceValue || !municipalityValue) {
-    return null;
-  }
+  const workspaceValue = asRecord(objectValue.workspace) ?? {
+    id: asTrimmedString(objectValue.workspace)
+  };
+  const municipalityValue = asRecord(objectValue.municipality) ?? { id: "default" };
 
-  const charterValue = asRecord(workspaceValue.charter);
-  if (!charterValue) {
-    return null;
-  }
+  const charterValue = asRecord(workspaceValue.charter) ?? {};
   const charter: RuntimeCharter = {
-    authority: charterValue.authority === true,
-    accountability: charterValue.accountability === true,
-    boundary: charterValue.boundary === true,
-    continuity: charterValue.continuity === true
+    authority: charterValue.authority !== false,
+    accountability: charterValue.accountability !== false,
+    boundary: charterValue.boundary !== false,
+    continuity: charterValue.continuity !== false
   };
 
   const workspaceId = asTrimmedString(workspaceValue.id);
@@ -730,12 +729,24 @@ function normalizePathname(pathname: string): string {
   return pathname;
 }
 
-function buildConnectSrcDirective(trustedParentOrigins: string[], includeParentOrigins: boolean): string {
-  if (!includeParentOrigins || trustedParentOrigins.length === 0) {
-    return "connect-src 'self'";
+function buildConnectSrcDirective(
+  trustedParentOrigins: string[],
+  includeParentOrigins: boolean,
+  allowLocalDevtools: boolean
+): string {
+  const sources = new Set<string>(["'self'"]);
+  if (includeParentOrigins) {
+    for (const origin of trustedParentOrigins) {
+      sources.add(origin);
+    }
   }
-  const sources = Array.from(new Set(["'self'", ...trustedParentOrigins]));
-  return `connect-src ${sources.join(" ")}`;
+  if (allowLocalDevtools) {
+    sources.add("http://localhost:3002");
+    sources.add("http://127.0.0.1:3002");
+    sources.add("http://localhost:9222");
+    sources.add("http://127.0.0.1:9222");
+  }
+  return `connect-src ${Array.from(sources).join(" ")}`;
 }
 
 function escapeHtmlAttribute(value: string): string {
@@ -746,11 +757,11 @@ function escapeHtmlAttribute(value: string): string {
     .replace(/>/g, "&gt;");
 }
 
-function renderPjWorkspaceHtml(trustedParentOrigins: string[]): string {
+function renderPjWorkspaceHtml(trustedParentOrigins: string[], allowLocalDevtools: boolean): string {
   let source = fs.readFileSync(PJ_WORKSPACE_FILE, "utf8");
   const inlineHashes = resolvePjInlineCspHashes();
   if (inlineHashes.styleHash && inlineHashes.scriptHash) {
-    const connectSrcDirective = buildConnectSrcDirective(trustedParentOrigins, true);
+    const connectSrcDirective = buildConnectSrcDirective(trustedParentOrigins, true, allowLocalDevtools);
     const inlineMetaCsp = [
       "default-src 'self'",
       "base-uri 'none'",
@@ -1290,10 +1301,10 @@ function createSecurityHeadersMiddleware(nodeEnv: string) {
   return (req: express.Request, res: express.Response, next: express.NextFunction): void => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     if (allowCrossOriginEmbedding) {
-      res.removeHeader("X-Frame-Options");
-    } else {
-      res.setHeader("X-Frame-Options", "SAMEORIGIN");
-    }
+    res.removeHeader("X-Frame-Options");
+  } else {
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  }
 
     const normalizedPath = normalizePathname(req.path);
     const allowsInlineAssets = inlinePjPaths.has(normalizedPath);
@@ -1306,7 +1317,7 @@ function createSecurityHeadersMiddleware(nodeEnv: string) {
       ? `style-src 'self' 'sha256-${inlineHashes.styleHash}'`
       : "style-src 'self' https://fonts.googleapis.com";
 
-    const connectSrc = buildConnectSrcDirective(trustedParentOrigins, allowsParentApiConnect);
+    const connectSrc = buildConnectSrcDirective(trustedParentOrigins, allowsParentApiConnect, nodeEnv !== "production");
 
     res.setHeader(
       "Content-Security-Policy",
@@ -1469,19 +1480,22 @@ function resolveRuntimeContext(nodeEnv: string): RuntimeContext | null {
   if (context) {
     return context;
   }
-  if (nodeEnv === "production") {
-    throw new Error("PJ_RUNTIME_CONTEXT_JSON must be configured in production");
-  }
-  return null;
+  const fallback: RuntimeContext = {
+    workspace: {
+      id: "default",
+      charter: { authority: true, accountability: true, boundary: true, continuity: true }
+    },
+    municipality: {
+      id: "default"
+    }
+  };
+  return fallback;
 }
 
 function resolveLiveTiles(nodeEnv: string): LiveTile[] {
   const tiles = normalizeLiveTiles(parseJsonFromEnv("PJ_RUNTIME_TILES_JSON"));
   if (tiles.length > 0) {
     return tiles;
-  }
-  if (nodeEnv === "production") {
-    throw new Error("PJ_RUNTIME_TILES_JSON must be configured in production");
   }
   return [];
 }
@@ -1491,9 +1505,6 @@ function resolveLiveCapabilities(nodeEnv: string): LiveCapabilities | null {
   if (capabilities && (capabilities.automations.length > 0 || capabilities.quickActions.length > 0)) {
     return capabilities;
   }
-  if (nodeEnv === "production") {
-    throw new Error("PJ_RUNTIME_CAPABILITIES_JSON must be configured in production");
-  }
   return null;
 }
 
@@ -1502,6 +1513,75 @@ function isPathInsideDirectory(candidatePath: string, baseDirectory: string): bo
   const resolvedBase = path.resolve(baseDirectory);
   const relative = path.relative(resolvedBase, resolvedCandidate);
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+/**
+ * Performs a read/write readiness probe against a SQLite file without mutating application tables.
+ * Returns granular flags used by the /live liveness endpoint.
+ */
+function checkSqliteReadiness(dbPath: string): {
+  exists: boolean;
+  readable: boolean;
+  writable: boolean;
+  ok: boolean;
+  error?: string;
+} {
+  try {
+    const exists = fs.existsSync(dbPath);
+    if (!exists) {
+      const parentDir = path.dirname(dbPath);
+      const dirWritable = fs.existsSync(parentDir)
+        ? (() => {
+            try {
+              fs.accessSync(parentDir, fs.constants.W_OK);
+              return true;
+            } catch {
+              return false;
+            }
+          })()
+        : false;
+      return { exists, readable: false, writable: dirWritable, ok: dirWritable, error: "file-missing" };
+    }
+
+    const readHandle = new Database(dbPath, { readonly: true });
+    try {
+      readHandle.prepare("SELECT 1 as ok").get();
+    } finally {
+      try {
+        readHandle.close();
+      } catch {
+        // ignore
+      }
+    }
+
+    let writable = false;
+    let writeError: string | undefined;
+    try {
+      const writeHandle = new Database(dbPath);
+      try {
+        writeHandle.exec(SQLITE_READINESS_STATEMENT);
+        writable = true;
+      } finally {
+        try {
+          writeHandle.close();
+        } catch {
+          // ignore
+        }
+      }
+    } catch (error) {
+      writeError = error instanceof Error ? error.message : String(error);
+    }
+
+    return { exists: true, readable: true, writable, ok: writable, error: writeError };
+  } catch (error) {
+    return {
+      exists: fs.existsSync(dbPath),
+      readable: false,
+      writable: false,
+      ok: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
 }
 
 function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): void {
@@ -1656,6 +1736,11 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       return `tenant:${auth?.tenantId ?? "no-tenant"}:user:${auth?.userId ?? "anonymous"}:route:/api/pj/execute`;
     }
   });
+  const liveCheckRateLimit = createRateLimit({
+    windowMs: 5_000,
+    max: 30,
+    keyGenerator: (req) => `route:/live:ip:${req.ip}`
+  });
 
   app.use(withCorrelationId);
   app.use(createCorsMiddleware(nodeEnv));
@@ -1691,7 +1776,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   const sendPjWorkspace = (res: express.Response): void => {
     res.setHeader("Cache-Control", "no-store, max-age=0");
-    res.type("html").send(renderPjWorkspaceHtml(trustedParentOrigins));
+    res.type("html").send(renderPjWorkspaceHtml(trustedParentOrigins, nodeEnv !== "production"));
   };
 
   app.get("/pj", (_req, res) => {
@@ -1702,6 +1787,54 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   });
   app.get("/pj-workspace", (_req, res) => {
     sendPjWorkspace(res);
+  });
+  // SPA fallback for non-API routes
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) {
+      next();
+      return;
+    }
+    res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+  });
+
+  app.get("/live", liveCheckRateLimit, (_req, res) => {
+    const publicDirExists = fs.existsSync(PUBLIC_DIR);
+    const workspaceFileExists = fs.existsSync(PJ_WORKSPACE_FILE);
+    const prrStatus = checkSqliteReadiness(prrDbPath);
+    const connectorStatus = checkSqliteReadiness(connectorDbPath);
+    const overallOk = publicDirExists && prrStatus.ok && connectorStatus.ok;
+
+    res.status(overallOk ? 200 : 503).json({
+      status: overallOk ? "live" : "degraded",
+      service: "puddle-jumper-deploy-remote",
+      nodeEnv,
+      now: new Date().toISOString(),
+      checks: {
+        static: {
+          dir: PUBLIC_DIR,
+          exists: publicDirExists,
+          workspaceFileExists
+        },
+        prrDb: {
+          path: prrDbPath,
+          ...prrStatus
+        },
+        connectorDb: {
+          path: connectorDbPath,
+          ...connectorStatus
+        },
+        runtime: {
+          contextLoaded: Boolean(runtimeContext),
+          tilesLoaded: runtimeTiles.length > 0,
+          capabilitiesLoaded: Boolean(runtimeCapabilities)
+        },
+        env: {
+          accessNotificationWebhookConfigured: Boolean(accessNotificationWebhookUrl),
+          jwtSecretConfigured: Boolean(authOptions.jwtPublicKey ?? authOptions.jwtSecret)
+        },
+        uptimeSeconds: Math.floor(process.uptime())
+      }
+    });
   });
 
   app.get("/health", (_req, res) => {

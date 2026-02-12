@@ -117,6 +117,12 @@ When modifying PJ:
 
 Any change that weakens governance, capability gating, or security posture is invalid.
 
+## 9) Authentication Flow (Centralized)
+
+- PJ is never anonymous. If the JWT session cookie is missing/invalid, the UI must redirect to the main PublicLogic login page (`publiclogic.org/login`) with a return URL back to PJ.
+- Login happens at the portal (Clerk: magic link or Google SSO). The portal issues the shared cookie for `*.publiclogic.org`, which PJ then reads to render runtime context, operator identity, tiles, and capabilities.
+- If operators report a redirect loop, first verify the cookie exists on `.publiclogic.org`. If present but PJ still redirects, investigate cookie domain/SameSite or middleware parsing—do not weaken the redirect requirement.
+
 ## Enforcement
 
 The following CI checks enforce this contract:
