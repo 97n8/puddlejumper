@@ -11,6 +11,7 @@
     "start": "node dist/api/server.js"
   },
   "dependencies": {
+    "@publiclogic/core": "workspace:*",
     "express": "^4.21.2",
     "cookie-parser": "^1.4.7",
     "jsonwebtoken": "^9.0.3"
