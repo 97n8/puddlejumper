@@ -1,23 +1,8 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "outDir": "./dist",
-    "rootDir": ".",
-    "strict": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "types": ["node"],
-    "baseUrl": ".",
-    "paths": {
-      "@publiclogic/core/*": ["packages/core/src/*"]
-    }
-  },
-  "include": ["apps/**/*", "packages/**/*"],
+  "files": [],
   "references": [
-    { "path": "packages/core" }
+    { "path": "packages/core" },
+    { "path": "apps/logic-commons" },
+    { "path": "apps/puddlejumper" }
   ]
 }

@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 import { URLSearchParams } from "node:url";
 import express from "express";
 import { z } from "zod";
-import type { AuthContext } from "./auth.js";
-import { getAuthContext } from "./auth.js";
+import type { AuthContext } from "@publiclogic/core";
+import { getAuthContext } from "@publiclogic/core";
 import { ConnectorStore, type ConnectorProvider, type ConnectorTokenRecord } from "./connectorStore.js";
 
 type ConnectorStatusPayload = {

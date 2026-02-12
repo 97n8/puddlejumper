@@ -17,7 +17,7 @@ import {
   resolveAuthOptions,
   signJwt,
   type AuthOptions
-} from "./auth.js";
+} from "@publiclogic/core";
 import authCallback from "./authCallback.js";
 import { createRateLimit } from "./rateLimit.js";
 import {
