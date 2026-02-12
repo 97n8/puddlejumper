@@ -3,3 +3,5 @@ node_modules/
 npm-debug.log*
 /tmp/
 data/publiclogic-audit.ndjson
+data/*.db-shm
+data/*.db-wal

@@ -70,7 +70,7 @@ export function createRateLimit(options: RateLimitOptions): RequestHandler {
     res.setHeader("X-RateLimit-Reset", String(Math.ceil(activeBucket.resetAt / 1000)));
 
     if (activeBucket.count > max) {
-      res.status(429).json({ error: "Too Many Requests" });
+      res.status(429).json({ error: "Too Many Requests", code: "RATE_LIMITED" });
       return;
     }
 

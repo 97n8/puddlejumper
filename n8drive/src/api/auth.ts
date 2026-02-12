@@ -224,7 +224,7 @@ function parseBearerToken(req: Request): string | null {
 }
 
 function failUnauthorized(res: Response): void {
-  res.status(401).json({ error: "Unauthorized" });
+  res.status(401).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
 }
 
 function devFallbackSecretAllowed(secret: string): boolean {
@@ -433,7 +433,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return;
   }
 
-  res.status(403).json({ error: "Forbidden: missing request marker" });
+  res.status(403).json({ error: "Forbidden: missing request marker", code: "CSRF_MISSING" });
 }
 
 export function requireAuthenticated(): RequestHandler {
@@ -455,7 +455,7 @@ export function requireRole(requiredRole: string): RequestHandler {
       return;
     }
     if (auth.role !== normalizedRole) {
-      res.status(403).json({ error: "Forbidden" });
+      res.status(403).json({ error: "Forbidden", code: "FORBIDDEN" });
       return;
     }
     next();
@@ -471,7 +471,7 @@ export function requirePermission(requiredPermission: string): RequestHandler {
       return;
     }
     if (!auth.permissions.includes(normalizedPermission)) {
-      res.status(403).json({ error: "Forbidden" });
+      res.status(403).json({ error: "Forbidden", code: "FORBIDDEN" });
       return;
     }
     next();

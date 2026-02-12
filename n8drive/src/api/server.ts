@@ -1574,6 +1574,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     throw new Error("CONNECTOR_STATE_SECRET is required");
   }
   const app = express();
+  const startedAt = Date.now();
   const engine = createDefaultEngine({ canonicalSourceOptions: options.canonicalSourceOptions });
   const prrStore = new PrrStore(prrDbPath);
   const connectorStore = new ConnectorStore(connectorDbPath);
@@ -1654,6 +1655,20 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   });
 
   app.use(withCorrelationId);
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction): void => {
+    const start = Date.now();
+    res.on("finish", () => {
+      if (req.path.startsWith("/api/")) {
+        logServerInfo("http", getCorrelationId(res), {
+          method: req.method,
+          path: req.path,
+          status: res.statusCode,
+          durationMs: Date.now() - start
+        });
+      }
+    });
+    next();
+  });
   app.use(createCorsMiddleware(nodeEnv));
   app.use(createSecurityHeadersMiddleware(nodeEnv));
   app.use(express.json({ limit: "2mb" }));
@@ -1701,11 +1716,15 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   });
 
   app.get("/health", (_req, res) => {
+    const uptimeMs = Date.now() - startedAt;
+    const uptimeSeconds = Math.floor(uptimeMs / 1000);
     res.json({
       status: "ok",
       service: "puddle-jumper-deploy-remote",
+      version: engine.schemaVersion,
       systemPromptVersion: engine.systemPromptVersion,
       nodeEnv,
+      uptime: uptimeSeconds,
       now: new Date().toISOString()
     });
   });
@@ -2492,12 +2511,12 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (error instanceof SyntaxError) {
-      res.status(400).json({ error: "Invalid JSON body" });
+      res.status(400).json({ error: "Invalid JSON body", code: "INVALID_JSON" });
       return;
     }
     const correlationId = getCorrelationId(res);
     logServerError(`${req.method} ${req.path}`, correlationId, error);
-    res.status(500).json({ error: "Internal server error", correlationId });
+    res.status(500).json({ error: "Internal server error", code: "INTERNAL_ERROR", correlationId });
   });
 
   return app;
@@ -2506,10 +2525,25 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 export function startServer() {
   const app = createApp();
   const port = Number.parseInt(process.env.PORT ?? "3002", 10);
-  app.listen(port, () => {
+  const server = app.listen(port, () => {
     // eslint-disable-next-line no-console
     console.log(`Puddle Jumper Deploy Remote running on http://localhost:${port}`);
   });
+
+  const gracefulShutdown = (signal: string) => {
+    // eslint-disable-next-line no-console
+    console.log(`Received ${signal}, shutting down gracefully…`);
+    server.close(() => {
+      // eslint-disable-next-line no-console
+      console.log("Server closed");
+      process.exit(0);
+    });
+  };
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+  return server;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {

@@ -261,6 +261,44 @@ test("security headers are set on responses", async () => {
   assert.doesNotMatch(String(response.headers["content-security-policy"] ?? ""), /'unsafe-inline'/);
 });
 
+test("GET /health returns uptime, version, and service fields", async () => {
+  const app = createSecuredApp();
+  const response = await request(app).get("/health");
+  assert.equal(response.status, 200);
+  assert.equal(response.body.status, "ok");
+  assert.equal(response.body.service, "puddle-jumper-deploy-remote");
+  assert.equal(typeof response.body.version, "number");
+  assert.ok(response.body.version >= 1, "version should be a positive integer");
+  assert.equal(typeof response.body.uptime, "number");
+  assert.ok(response.body.uptime >= 0, "uptime should be non-negative");
+  assert.equal(typeof response.body.systemPromptVersion, "string");
+  assert.equal(typeof response.body.now, "string");
+  assert.ok(response.body.now, "now should be a non-empty ISO string");
+});
+
+test("error responses include machine-readable code field", async () => {
+  const app = createSecuredApp();
+
+  const unauthResponse = await request(app).get("/api/identity");
+  assert.equal(unauthResponse.status, 401);
+  assert.equal(unauthResponse.body.code, "UNAUTHORIZED");
+
+  const csrfResponse = await request(app)
+    .post("/api/evaluate")
+    .set("Authorization", `Bearer ${authToken()}`)
+    .send({});
+  assert.equal(csrfResponse.status, 403);
+  assert.equal(csrfResponse.body.code, "CSRF_MISSING");
+
+  const forbiddenResponse = await request(app)
+    .post("/api/evaluate")
+    .set("Authorization", `Bearer ${authToken({ permissions: [] })}`)
+    .set(REQUEST_MARKER_HEADER, "true")
+    .send({});
+  assert.equal(forbiddenResponse.status, 403);
+  assert.equal(forbiddenResponse.body.code, "FORBIDDEN");
+});
+
 test("GET /pj-workspace allows trusted parent origins in connect-src", async () => {
   const app = createSecuredApp();
   const response = await request(app).get("/pj-workspace");
