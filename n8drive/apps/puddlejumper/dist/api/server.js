@@ -1364,6 +1364,11 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             return `tenant:${auth?.tenantId ?? "no-tenant"}:user:${auth?.userId ?? "anonymous"}:route:/api/pj/execute`;
         }
     });
+    const liveCheckRateLimit = createRateLimit({
+        windowMs: 5_000,
+        max: 30,
+        keyGenerator: (req) => `route:/live:ip:${req.ip}`
+    });
     app.use(withCorrelationId);
     app.use(createCorsMiddleware(nodeEnv));
     app.use(createSecurityHeadersMiddleware(nodeEnv));
@@ -1408,7 +1413,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
     app.get("/pj-workspace", (_req, res) => {
         sendPjWorkspace(res);
     });
-    app.get("/live", (_req, res) => {
+    app.get("/live", liveCheckRateLimit, (_req, res) => {
         const publicDirExists = fs.existsSync(PUBLIC_DIR);
         const workspaceFileExists = fs.existsSync(PJ_WORKSPACE_FILE);
         const prrStatus = checkSqliteReadiness(prrDbPath);
