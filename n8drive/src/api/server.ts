@@ -2533,7 +2533,14 @@ export function startServer() {
   const gracefulShutdown = (signal: string) => {
     // eslint-disable-next-line no-console
     console.log(`Received ${signal}, shutting down gracefully…`);
+    const forceExitTimer = setTimeout(() => {
+      // eslint-disable-next-line no-console
+      console.error("Graceful shutdown timed out, forcing exit");
+      process.exit(1);
+    }, 30_000);
+    forceExitTimer.unref?.();
     server.close(() => {
+      clearTimeout(forceExitTimer);
       // eslint-disable-next-line no-console
       console.log("Server closed");
       process.exit(0);
