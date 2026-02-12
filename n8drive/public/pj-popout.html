@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PuddleJumper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/pj-popout.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">PuddleJumper</div>
+            <div class="operator-info">
+                <div class="operator-name" id="operatorName">
+                    <span class="loading-indicator">Loading identity</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="omnisearch-container">
+        <input type="text" class="omnisearch-bar" id="omnisearch" placeholder="Search automations, statutes, or just start typing to act (provision folder, run health check, deploy module…)" autofocus>
+
+        <div class="results-meta">
+            <div class="tenant-connections">
+                <div>
+                    <span class="tenant-label">Active tenant</span>
+                    <select class="tenant-select" id="tenantSelect" disabled>
+                        <option value="">Loading tenant scope...</option>
+                    </select>
+                </div>
+                <div class="connections" id="connectionsList"></div>
+            </div>
+            <div id="resultCount">All capabilities</div>
+        </div>
+
+        <div class="connector-status-panel" id="connectorStatusPanel"></div>
+
+        <div class="results" id="results"></div>
+
+        <div class="empty-state is-hidden" id="emptyState">
+            Nothing matches yet — try "folder", "health", "deploy", or any statute.
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+
+    <div class="modal" id="provision-folder">
+        <div class="modal-content">
+            <h2 class="modal-title">Provision New SharePoint Folder</h2>
+            <p class="modal-copy">Creates a governed folder with ARCHIEVE naming, retention, and access controls applied automatically.</p>
+
+            <div class="modal-field">
+                <label class="modal-label">Folder Name (human readable)</label>
+                <input type="text" class="modal-input" placeholder="e.g., PRR-2026-Central">
+            </div>
+
+            <div class="modal-field">
+                <label class="modal-label">Parent Library</label>
+                <select class="modal-input">
+                    <option>Records Vault > Public Records Requests</option>
+                    <option>Finance > Invoices</option>
+                    <option>HR > Personnel Files</option>
+                </select>
+            </div>
+
+            <div class="modal-field modal-field-wide">
+                <label class="modal-label">Statutory Basis</label>
+                <input type="text" class="modal-input" value="M.G.L. c.66 §10" readonly>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-grow">Provision Folder</button>
+                <button class="btn btn-secondary close-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/pj-popout.js"></script>
+</body>
+</html>

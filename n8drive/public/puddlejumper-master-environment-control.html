@@ -1,0 +1,3776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 https://localhost:3000 https://127.0.0.1:3000; img-src 'self' data:; font-src 'self'; style-src 'sha256-fTms2d9Ut8ysQGIClHqOBL1hlMYUaViM+DyKGJwq1NY='; script-src 'sha256-5hrYZdZlxTC5g1jLx2EFnqUHNPYDeGu+RzJ2UcNkTqA=';">
+  <meta name="pj-trusted-parent-origins" content="">
+  <title>PuddleJumper - Master Environment Control</title>
+  <style>
+    :root {
+      --bg: #0e1728;
+      --panel: #172238;
+      --card: #233654;
+      --text: #e5ecf6;
+      --muted: #9fb0c6;
+      --primary: #5ea4ff;
+      --accent: #8dc7ff;
+      --success: #3ec08b;
+      --warning: #e3b462;
+      --danger: #d88b9a;
+      --border: #334a6f;
+      --hover: #2b4267;
+      --surface: #121d31;
+      --surface-soft: #1b2a44;
+      --chip: #1e304d;
+    }
+
+    body.tone-0 { --primary: #5ea4ff; --accent: #8dc7ff; }
+    body.tone-1 { --primary: #61b2da; --accent: #8fd8ff; }
+    body.tone-2 { --primary: #6fa4de; --accent: #94d4c4; }
+    body.tone-3 { --primary: #7fa3d9; --accent: #b8c5f5; }
+    body.tone-4 { --primary: #70b8b1; --accent: #8fdccd; }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(180deg, #0c1524 0%, #0a1220 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1rem 1.5rem;
+      background: #09111f;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: .7rem;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .env-badge,
+    .pro-badge,
+    .context-chip {
+      padding: .28rem .75rem;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 600;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .env-badge {
+      background: color-mix(in srgb, var(--primary) 22%, transparent);
+      color: var(--text);
+      border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+    }
+
+    .pro-badge {
+      background: color-mix(in srgb, var(--accent) 20%, transparent);
+      color: var(--text);
+      border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    }
+
+    .context-chip {
+      background: color-mix(in srgb, var(--surface-soft) 88%, transparent);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    i[data-lucide] {
+      display: inline-block;
+      min-width: 1.1em;
+      text-align: center;
+      font-style: normal;
+      line-height: 1;
+      margin-right: .25rem;
+    }
+
+    button {
+      padding: .58rem .95rem;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: .9rem;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      transition: background .12s ease, border-color .12s ease;
+      font-weight: 600;
+    }
+
+    button:hover { background: var(--hover); border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    button.primary {
+      background: color-mix(in srgb, var(--primary) 30%, var(--surface-soft));
+      border-color: color-mix(in srgb, var(--primary) 60%, var(--border));
+      color: #eef6ff;
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .navigator {
+      width: 390px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-width: 320px;
+      max-width: 480px;
+    }
+
+    .controls {
+      padding: 1.1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: .7rem;
+    }
+
+    select,
+    input,
+    textarea {
+      padding: .7rem .8rem;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: .95rem;
+      width: 100%;
+    }
+
+    textarea { resize: vertical; }
+
+    #search {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239fb0c6' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: 12px center;
+      padding-left: 2.35rem;
+    }
+
+    .tree {
+      flex: 1;
+      overflow: auto;
+      padding: .8rem;
+    }
+
+    details { margin-bottom: .35rem; }
+
+    summary {
+      padding: .6rem .75rem;
+      cursor: pointer;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      font-weight: 600;
+      list-style: none;
+    }
+
+    summary:hover { background: var(--hover); }
+    summary::-webkit-details-marker { display: none; }
+
+    .folder-row { font-weight: 700; }
+
+    .item-row {
+      padding: .58rem .7rem .58rem 2rem;
+      border-radius: 9px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: .5rem;
+      cursor: pointer;
+      font-size: .92rem;
+    }
+
+    .item-row:hover { background: var(--hover); }
+    .item-row.selected {
+      background: color-mix(in srgb, var(--primary) 26%, var(--surface-soft));
+      border: 1px solid color-mix(in srgb, var(--primary) 60%, var(--border));
+    }
+
+    .meta {
+      font-size: .75rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .inspector {
+      flex: 1;
+      padding: 1.2rem;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: .9rem;
+      background: linear-gradient(180deg, #0d1729 0%, #0b1524 100%);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 2.6rem 1rem;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .small { font-size: .86rem; color: var(--muted); }
+    .muted { color: var(--muted); }
+    .u-mt-2 { margin-top: .2rem; }
+    .u-mt-35 { margin-top: .35rem; }
+    .u-mt-45 { margin-top: .45rem; }
+    .u-mt-5 { margin-top: .5rem; }
+    .u-mt-55 { margin-top: .55rem; }
+    .u-mt-6 { margin-top: .6rem; }
+    .u-mt-65 { margin-top: .65rem; }
+    .u-mb-6 { margin-bottom: .6rem; }
+    .u-mb-7 { margin-bottom: .7rem; }
+    .u-mb-8 { margin-bottom: .8rem; }
+    .u-flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .tree-empty { padding: .7rem; }
+    .field-error { border-color: color-mix(in srgb, var(--danger) 60%, var(--border)) !important; }
+    .field-normal { border-color: var(--border) !important; }
+    .entity-title {
+      font-weight: 800;
+      margin-bottom: .4rem;
+    }
+    .entity-title-lg {
+      font-weight: 800;
+      font-size: 1.12rem;
+    }
+    .link-wrap { margin-top: .55rem; }
+    .json-editor {
+      height: 240px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .json-editor-sm {
+      height: 220px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .is-hidden { display: none !important; }
+
+    .depth-1 { padding-left: 1.1rem !important; }
+    .depth-2 { padding-left: 2.2rem !important; }
+    .depth-3 { padding-left: 3.3rem !important; }
+    .depth-4 { padding-left: 4.4rem !important; }
+    .depth-5 { padding-left: 5.5rem !important; }
+    .depth-6 { padding-left: 6.6rem !important; }
+    .depth-7 { padding-left: 7.7rem !important; }
+    .depth-8 { padding-left: 8.8rem !important; }
+    .depth-9 { padding-left: 9.9rem !important; }
+    .depth-10 { padding-left: 11rem !important; }
+    .depth-11 { padding-left: 12.1rem !important; }
+    .depth-12 { padding-left: 13.2rem !important; }
+
+    .row {
+      display: flex;
+      gap: .6rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .env-actions {
+      display: flex;
+      gap: .55rem;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .inspector-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: .8rem;
+      flex-wrap: wrap;
+      margin-bottom: .5rem;
+    }
+
+    .clarity-panel {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(140px, 1fr));
+      gap: .55rem;
+      margin: .55rem 0 .8rem;
+    }
+
+    .clarity-item {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .55rem .65rem;
+      min-height: 62px;
+    }
+
+    .clarity-label {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: .33rem;
+    }
+
+    .clarity-value {
+      font-size: .92rem;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .3rem .65rem;
+      border-radius: 999px;
+      border: 1px solid;
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .status-stable { color: var(--success); border-color: color-mix(in srgb, var(--success) 55%, transparent); background: color-mix(in srgb, var(--success) 14%, transparent); }
+    .status-modified { color: #8ec5ff; border-color: color-mix(in srgb, #8ec5ff 55%, transparent); background: color-mix(in srgb, #8ec5ff 15%, transparent); }
+    .status-snapshot { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 55%, transparent); background: color-mix(in srgb, var(--warning) 15%, transparent); }
+    .status-drifted { color: #f5b8c6; border-color: color-mix(in srgb, #f5b8c6 55%, transparent); background: color-mix(in srgb, #f5b8c6 15%, transparent); }
+
+    .view-toggle {
+      display: inline-flex;
+      gap: .45rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .3rem;
+      margin: .5rem 0;
+    }
+
+    .view-toggle button {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: .48rem .7rem;
+      font-size: .82rem;
+      color: var(--muted);
+    }
+
+    .view-toggle button.active {
+      background: color-mix(in srgb, var(--primary) 20%, var(--surface-soft));
+      border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+      color: #e8f3ff;
+    }
+
+    pre.json {
+      margin: 0;
+      background: #081429;
+      border: 1px solid #273f63;
+      border-radius: 10px;
+      padding: .85rem;
+      overflow: auto;
+      color: #d8ebff;
+      font-size: .84rem;
+      line-height: 1.45;
+      max-height: 420px;
+    }
+
+    .structured-wrap {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--surface);
+    }
+
+    .structured-row {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr 1.6fr;
+      gap: .6rem;
+      padding: .55rem .65rem;
+      border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+      align-items: center;
+    }
+
+    .structured-row:last-child { border-bottom: none; }
+
+    .structured-path {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: .78rem;
+      color: #c9ddf5;
+      word-break: break-word;
+    }
+
+    .structured-type {
+      font-size: .75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .structured-input,
+    .structured-input-json {
+      width: 100%;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: .45rem .55rem;
+      font-size: .84rem;
+    }
+
+    .structured-input-json {
+      min-height: 56px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      resize: vertical;
+    }
+
+    .structured-controls {
+      display: flex;
+      gap: .55rem;
+      margin-top: .65rem;
+      flex-wrap: wrap;
+    }
+
+    .diff-banner {
+      border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+      background: color-mix(in srgb, var(--accent) 10%, var(--surface-soft));
+      border-radius: 10px;
+      padding: .55rem .7rem;
+      font-size: .84rem;
+      line-height: 1.4;
+      color: #dfeeff;
+      margin-top: .5rem;
+    }
+
+    .diff-banner.neutral {
+      border-color: color-mix(in srgb, var(--border) 75%, transparent);
+      background: color-mix(in srgb, var(--surface-soft) 80%, transparent);
+      color: var(--muted);
+    }
+
+    .diff-banner.error {
+      border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+      background: color-mix(in srgb, var(--danger) 10%, var(--surface-soft));
+      color: #f4d4dc;
+    }
+
+    .diff-preview {
+      margin-top: .55rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .diff-preview summary {
+      padding: .55rem .7rem;
+      font-size: .84rem;
+      font-weight: 700;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      background: #0f1b30;
+    }
+
+    .diff-preview pre {
+      margin: 0;
+      max-height: 260px;
+      border: none;
+      border-radius: 0;
+      background: #081427;
+      font-size: .78rem;
+    }
+
+    .connector-status-panel {
+      display: grid;
+      gap: .5rem;
+      margin-top: .6rem;
+    }
+
+    .connector-status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: .6rem;
+      padding: .55rem .65rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-soft);
+    }
+
+    .connector-status-name {
+      font-size: .9rem;
+      font-weight: 700;
+    }
+
+    .connector-status-detail {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: .15rem;
+    }
+
+    .audit {
+      max-height: 420px;
+      overflow: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .55rem;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+
+    .audit-entry {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-soft);
+      overflow: hidden;
+    }
+
+    .audit-entry summary {
+      padding: .6rem .7rem;
+      display: grid;
+      grid-template-columns: 1.2fr .7fr .9fr .8fr 1fr;
+      gap: .55rem;
+      align-items: center;
+      font-size: .78rem;
+      font-weight: 600;
+      color: #dde9fa;
+      background: #14233a;
+    }
+
+    .audit-status-ok { color: #9be9c5; }
+    .audit-status-fail { color: #f2b9c4; }
+
+    .audit-details {
+      padding: .65rem;
+      border-top: 1px solid var(--border);
+      display: grid;
+      gap: .55rem;
+    }
+
+    .audit-meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: .45rem;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+
+    .audit-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .55rem;
+    }
+
+    .audit-grid pre {
+      max-height: 180px;
+      font-size: .74rem;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(7, 12, 22, 0.65);
+      z-index: 9999;
+      padding: 1rem;
+    }
+
+    .modal-card {
+      width: min(1040px, 98vw);
+      max-height: calc(100vh - 2rem);
+      overflow: auto;
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 55px rgba(0, 0, 0, .42);
+    }
+
+    label {
+      display: block;
+      margin-bottom: .35rem;
+      font-weight: 600;
+      font-size: .88rem;
+    }
+
+    small.hint {
+      display: block;
+      color: var(--muted);
+      font-size: .8rem;
+      margin-top: .35rem;
+      line-height: 1.45;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: .9rem;
+      align-items: start;
+    }
+
+    .modal-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .65rem;
+    }
+
+    .checkbox {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      font-size: .85rem;
+      color: var(--text);
+      margin-right: .8rem;
+    }
+
+    a.inline-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a.inline-link:hover { text-decoration: underline; }
+
+    @media (max-width: 1100px) {
+      .main { flex-direction: column; }
+      .navigator {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        max-height: 45vh;
+      }
+      .inspector { padding: 1rem; }
+      .clarity-panel { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+      .audit-entry summary { grid-template-columns: 1fr 1fr; }
+      .audit-grid { grid-template-columns: 1fr; }
+      .split { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="tone-0">
+<header>
+  <h1><i data-lucide="shield"></i> PuddleJumper - Master Environment Control</h1>
+  <div class="header-actions">
+    <div class="row">
+      <select id="envSelect"></select>
+      <button id="newEnvBtn" title="New environment">+</button>
+      <button id="importEnvBtn" title="Import environment">Import</button>
+    </div>
+    <span id="activeEnvBadge" class="context-chip">Active: -</span>
+    <span id="activeEnvId" class="context-chip">ID: -</span>
+    <button class="primary" id="openCmdPal"><i data-lucide="command"></i> Command</button>
+    <button id="auditExport"><i data-lucide="download"></i> Export Log</button>
+    <span class="pro-badge">Control Fabric</span>
+    <span id="status" class="env-badge">0 envs</span>
+  </div>
+</header>
+
+<div class="main">
+  <div class="navigator">
+    <div class="controls">
+      <select id="mode">
+        <option value="connector">Connectors</option>
+        <option value="project">Projects</option>
+      </select>
+
+      <select id="connector">
+        <option value="ALL">All Connectors</option>
+        <option value="GitHub">GitHub</option>
+        <option value="Drive">Drive</option>
+        <option value="SharePoint">SharePoint</option>
+        <option value="Bookmarks">Bookmarks</option>
+      </select>
+
+      <input id="search" placeholder="Live search across everything..." />
+      <div class="muted small">Demo connector items are local showcase data. Environment controls in the inspector are the execution surface.</div>
+      <div id="liveSourceStatus" class="muted small">Live sources: loading...</div>
+    </div>
+
+    <div class="tree" id="tree"></div>
+  </div>
+
+  <div class="inspector">
+    <div class="card" id="envDetails">
+      <div class="empty">Select an environment from the top-right dropdown or create a new one.</div>
+    </div>
+
+    <div class="card">
+      <strong><i data-lucide="history"></i> Execution Log</strong>
+      <div class="small muted u-mt-35">Action, correlation, mode, timestamp, and latency. Expand an entry to inspect payload and result.</div>
+      <div class="audit" id="audit">No executions yet</div>
+    </div>
+
+    <div class="card">
+      <strong>Connectors</strong>
+      <div class="muted small u-mt-5">Connector metadata is live when backend endpoints are available. Local cache is used only when backend mode is disabled.</div>
+      <div id="connectorStatusPanel" class="connector-status-panel"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modalRoot" hidden></div>
+
+<script>
+let AUTH_TOKEN = null;
+let AUTH_TOKEN_EXPIRES_AT = 0;
+const PJ_EXECUTE = "/api/pj/execute";
+const ENABLE_BACKEND = true;
+const TOKEN_REFRESH_EARLY_MS = 30 * 1000;
+let authTokenRefreshPromise = null;
+let liveHydratePromise = null;
+let API_BASE_ORIGIN = window.location.origin;
+
+function normalizeApiOrigin(value) {
+  try {
+    const parsed = new URL(String(value), window.location.origin);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+    return parsed.origin;
+  } catch {
+    return "";
+  }
+}
+
+function setApiBaseOrigin(value) {
+  const normalized = normalizeApiOrigin(value);
+  if (!normalized) return false;
+  API_BASE_ORIGIN = normalized;
+  return true;
+}
+
+function resolveApiUrl(path) {
+  const target = String(path || "");
+  if (/^https?:\/\//i.test(target)) return target;
+  const normalizedPath = target.startsWith("/") ? target : "/" + target;
+  return API_BASE_ORIGIN + normalizedPath;
+}
+
+function today() { return new Date().toISOString().split("T")[0]; }
+function genId() { return crypto && crypto.randomUUID ? crypto.randomUUID() : "id_" + Math.random().toString(36).slice(2); }
+function safeParseLS(key, fallback) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || "null");
+    return parsed || fallback;
+  } catch {
+    return fallback;
+  }
+}
+function pretty(obj) {
+  try { return JSON.stringify(obj, null, 2); } catch { return String(obj); }
+}
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+function stableDate() {
+  return new Date().toISOString();
+}
+
+function normalizeAuthorizationHeader(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^Bearer\s+/i.test(trimmed)) {
+    return trimmed;
+  }
+  return "Bearer " + trimmed;
+}
+
+function clearRuntimeAuthToken() {
+  AUTH_TOKEN = null;
+  AUTH_TOKEN_EXPIRES_AT = 0;
+}
+
+function extractBearerToken(value) {
+  const normalized = normalizeAuthorizationHeader(value);
+  if (!normalized) return "";
+  return normalized.replace(/^Bearer\s+/i, "").trim();
+}
+
+function decodeJwtPayload(value) {
+  try {
+    const token = extractBearerToken(value);
+    if (!token) return null;
+    const parts = token.split(".");
+    if (parts.length < 2 || !parts[1]) return null;
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+    const decoded = atob(padded);
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+function resolveTokenExpiryMs(payload, tokenValue) {
+  if (payload && typeof payload === "object") {
+    if (typeof payload.expires_at === "string") {
+      const parsed = Date.parse(payload.expires_at);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    if (typeof payload.expires_in === "number" && Number.isFinite(payload.expires_in) && payload.expires_in > 0) {
+      return Date.now() + payload.expires_in * 1000;
+    }
+  }
+  const jwtPayload = decodeJwtPayload(tokenValue);
+  if (jwtPayload && typeof jwtPayload.exp === "number" && Number.isFinite(jwtPayload.exp) && jwtPayload.exp > 0) {
+    return jwtPayload.exp * 1000;
+  }
+  return 0;
+}
+
+function isTokenExpiringSoon() {
+  return !AUTH_TOKEN_EXPIRES_AT || Date.now() >= AUTH_TOKEN_EXPIRES_AT - TOKEN_REFRESH_EARLY_MS;
+}
+
+function buildAuthHeaders(baseHeaders) {
+  const headers = Object.assign({}, baseHeaders || {});
+  const normalized = normalizeAuthorizationHeader(AUTH_TOKEN);
+  if (normalized) {
+    headers.Authorization = normalized;
+  }
+  return headers;
+}
+
+function setRuntimeAuthToken(value, expiryMs) {
+  const normalized = normalizeAuthorizationHeader(value);
+  if (!normalized) return false;
+  const resolvedExpiry = Number.isFinite(expiryMs) && expiryMs > 0 ? expiryMs : resolveTokenExpiryMs(null, normalized);
+  if (AUTH_TOKEN === normalized && AUTH_TOKEN_EXPIRES_AT === resolvedExpiry) return false;
+  AUTH_TOKEN = normalized;
+  AUTH_TOKEN_EXPIRES_AT = resolvedExpiry || 0;
+  return true;
+}
+
+function isDevBrowser() {
+  return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+}
+
+function traceTokenBootstrap(payload) {
+  if (!isDevBrowser() || !payload || typeof payload !== "object") return;
+  const correlationId = typeof payload.correlationId === "string" ? payload.correlationId : "";
+  if (!correlationId) return;
+  // eslint-disable-next-line no-console
+  console.debug("[PJ]", "token-bootstrap", correlationId);
+}
+
+async function refreshRuntimeAuthToken(force) {
+  if (!ENABLE_BACKEND) return false;
+  if (!force && normalizeAuthorizationHeader(AUTH_TOKEN) && !isTokenExpiringSoon()) return true;
+  if (authTokenRefreshPromise) return authTokenRefreshPromise;
+
+  authTokenRefreshPromise = (async function () {
+    try {
+      const response = await fetch(resolveApiUrl("/api/pj/identity-token"), {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "X-PuddleJumper-Request": "true"
+        }
+      });
+      if (!response.ok) {
+        if (response.status === 401) {
+          clearRuntimeAuthToken();
+        }
+        return false;
+      }
+      const payload = await response.json().catch(function () { return null; });
+      traceTokenBootstrap(payload);
+      const candidate = payload && typeof payload === "object" ? payload.token : null;
+      const expiryMs = resolveTokenExpiryMs(payload, candidate);
+      return setRuntimeAuthToken(candidate, expiryMs);
+    } catch {
+      return false;
+    } finally {
+      authTokenRefreshPromise = null;
+    }
+  })();
+
+  return authTokenRefreshPromise;
+}
+
+async function ensureValidRuntimeAuthToken() {
+  if (!ENABLE_BACKEND) return false;
+  const normalized = normalizeAuthorizationHeader(AUTH_TOKEN);
+  if (!normalized) {
+    return refreshRuntimeAuthToken(false);
+  }
+  if (!isTokenExpiringSoon()) {
+    return true;
+  }
+  return refreshRuntimeAuthToken(true);
+}
+
+async function hydrateRuntimeAuthToken(force) {
+  return refreshRuntimeAuthToken(Boolean(force));
+}
+
+const ICON_MAP = {
+  shield: "🛡",
+  command: "⌘",
+  download: "⇩",
+  history: "⏱",
+  folder: "📁",
+  github: "⌂",
+  "file-text": "📄",
+  "file-check": "✅",
+  link: "🔗",
+  camera: "📸",
+  eye: "👁",
+  save: "💾",
+  "arrow-up-right": "↗",
+  "share-2": "⇪"
+};
+
+function renderIcons(root) {
+  const scope = root || document;
+  scope.querySelectorAll("i[data-lucide]").forEach(function (el) {
+    const key = String(el.getAttribute("data-lucide") || "");
+    el.textContent = ICON_MAP[key] || "•";
+    el.setAttribute("aria-hidden", "true");
+  });
+}
+
+const lucide = {
+  createIcons: function (opts) {
+    const attrs = opts && opts.attrs;
+    const roots = attrs && attrs.id ? document.querySelectorAll("#" + attrs.id) : [document];
+    roots.forEach(function (root) { renderIcons(root); });
+  }
+};
+
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function appendIconLabel(container, iconName, label) {
+  const iconEl = document.createElement("i");
+  iconEl.setAttribute("data-lucide", iconName);
+  container.appendChild(iconEl);
+  container.appendChild(document.createTextNode(String(label || "")));
+}
+
+function sanitizeModalHtml(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(String(html || ""), "text/html");
+  const fragment = document.createDocumentFragment();
+  while (doc.body.firstChild) {
+    fragment.appendChild(doc.body.firstChild);
+  }
+  const banned = ["script", "iframe", "object", "embed", "link", "meta"];
+  banned.forEach(function (tag) {
+    fragment.querySelectorAll(tag).forEach(function (node) { node.remove(); });
+  });
+  fragment.querySelectorAll("*").forEach(function (node) {
+    Array.from(node.attributes).forEach(function (attr) {
+      const name = attr.name.toLowerCase();
+      const value = String(attr.value || "");
+      if (name.startsWith("on")) {
+        node.removeAttribute(attr.name);
+        return;
+      }
+      if ((name === "href" || name === "src") && value.trim().toLowerCase().startsWith("javascript:")) {
+        node.removeAttribute(attr.name);
+      }
+    });
+  });
+  return fragment;
+}
+
+function diffJSON(oldObj, newObj, base) {
+  const changes = [];
+  const prefix = base || "";
+  const keys = new Set([].concat(Object.keys(oldObj || {}), Object.keys(newObj || {})));
+
+  keys.forEach((k) => {
+    const path = prefix ? prefix + "." + k : k;
+    const a = oldObj ? oldObj[k] : undefined;
+    const b = newObj ? newObj[k] : undefined;
+    const bothObjects = a && b && typeof a === "object" && typeof b === "object" && !Array.isArray(a) && !Array.isArray(b);
+    if (bothObjects) {
+      changes.push.apply(changes, diffJSON(a, b, path));
+      return;
+    }
+    let equal = false;
+    try {
+      equal = JSON.stringify(a) === JSON.stringify(b);
+    } catch {
+      equal = a === b;
+    }
+    if (!equal) {
+      changes.push({ path: path, oldVal: a, newVal: b });
+    }
+  });
+
+  return changes;
+}
+
+function hashString(value) {
+  let h = 0;
+  const text = String(value || "");
+  for (let i = 0; i < text.length; i += 1) {
+    h = (h << 5) - h + text.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h);
+}
+
+function toneClassForEnv(envId) {
+  return "tone-" + (hashString(envId) % 5);
+}
+
+function flattenConfig(value, path, output) {
+  const currentPath = path || [];
+  const list = output || [];
+
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    list.push({ path: currentPath.slice(), value: value, type: Array.isArray(value) ? "array" : value === null ? "null" : typeof value });
+    return list;
+  }
+
+  const keys = Object.keys(value);
+  if (keys.length === 0) {
+    list.push({ path: currentPath.slice(), value: {}, type: "object" });
+    return list;
+  }
+
+  keys.forEach((key) => {
+    flattenConfig(value[key], currentPath.concat([key]), list);
+  });
+
+  return list;
+}
+
+function getAtPath(obj, path) {
+  let node = obj;
+  for (let i = 0; i < path.length; i += 1) {
+    if (node == null) return undefined;
+    node = node[path[i]];
+  }
+  return node;
+}
+
+function setAtPath(obj, path, value) {
+  if (!path.length) {
+    return value;
+  }
+  let node = obj;
+  for (let i = 0; i < path.length - 1; i += 1) {
+    const key = path[i];
+    if (typeof node[key] !== "object" || node[key] === null) {
+      node[key] = {};
+    }
+    node = node[key];
+  }
+  node[path[path.length - 1]] = value;
+  return obj;
+}
+
+function parseTypedValue(raw, originalType) {
+  if (originalType === "number") {
+    const n = Number(raw);
+    if (Number.isNaN(n)) throw new Error("Expected number");
+    return n;
+  }
+  if (originalType === "boolean") {
+    if (raw === "true" || raw === true) return true;
+    if (raw === "false" || raw === false) return false;
+    throw new Error("Expected true or false");
+  }
+  if (originalType === "null") {
+    if (String(raw).trim().toLowerCase() === "null" || String(raw).trim() === "") return null;
+    throw new Error("Expected null");
+  }
+  if (originalType === "object" || originalType === "array") {
+    const parsed = JSON.parse(raw);
+    if (originalType === "object" && (parsed === null || typeof parsed !== "object" || Array.isArray(parsed))) {
+      throw new Error("Expected object JSON");
+    }
+    if (originalType === "array" && !Array.isArray(parsed)) {
+      throw new Error("Expected array JSON");
+    }
+    return parsed;
+  }
+  return String(raw);
+}
+
+function deriveTopLevelPatch(oldConfig, newConfig) {
+  const patch = {};
+  const keys = new Set([].concat(Object.keys(oldConfig || {}), Object.keys(newConfig || {})));
+  keys.forEach((key) => {
+    const oldVal = oldConfig ? oldConfig[key] : undefined;
+    const newVal = newConfig ? newConfig[key] : undefined;
+    if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+      patch[key] = newVal;
+    }
+  });
+  return patch;
+}
+
+function truncate(value, max) {
+  const text = String(value == null ? "" : value);
+  const size = max || 96;
+  return text.length > size ? text.slice(0, size - 1) + "..." : text;
+}
+
+async function callPJ(actionId, payload, mode) {
+  const execMode = mode || "execute";
+  const data = payload || {};
+  const requestBody = { actionId: actionId, payload: data, mode: execMode };
+  await ensureValidRuntimeAuthToken();
+  const headers = buildAuthHeaders({
+    "Content-Type": "application/json",
+    "X-PuddleJumper-Request": "true"
+  });
+  const localCorrelation = crypto && crypto.randomUUID ? crypto.randomUUID() : genId();
+  headers["x-correlation-id"] = localCorrelation;
+
+  if (!ENABLE_BACKEND) {
+    throw new Error("backend_disabled");
+  }
+
+  const startedAt = performance.now();
+  let attemptedRetry = false;
+  let response = await fetch(resolveApiUrl(PJ_EXECUTE), {
+    method: "POST",
+    credentials: "include",
+    headers: headers,
+    body: JSON.stringify(requestBody)
+  });
+  if (response.status === 401 && !attemptedRetry) {
+    attemptedRetry = true;
+    const refreshed = await refreshRuntimeAuthToken(true);
+    if (refreshed) {
+      const retryHeaders = buildAuthHeaders({
+        "Content-Type": "application/json",
+        "X-PuddleJumper-Request": "true",
+        "x-correlation-id": localCorrelation
+      });
+      response = await fetch(resolveApiUrl(PJ_EXECUTE), {
+        method: "POST",
+        credentials: "include",
+        headers: retryHeaders,
+        body: JSON.stringify(requestBody)
+      });
+    } else {
+      throw new Error("Authentication required");
+    }
+  }
+
+  const payloadType = response.headers.get("content-type") || "";
+  const parsed = payloadType.includes("application/json")
+    ? await response.json().catch(function () { return { error: "invalid_json" }; })
+    : await response.text().catch(function () { return ""; });
+
+  const latencyMs = Math.round(performance.now() - startedAt);
+  const normalized = typeof parsed === "object" && parsed !== null ? parsed : { data: parsed };
+  normalized.__status = response.status;
+  normalized.__latencyMs = latencyMs;
+  normalized.__correlationId = normalized.correlationId || localCorrelation;
+  normalized.__mode = execMode;
+  normalized.__actionId = actionId;
+  normalized.__request = requestBody;
+
+  return normalized;
+}
+
+const LS_KEY = "pj_envs_master_v1";
+let store = safeParseLS(LS_KEY, null);
+if (!store) {
+  const id = genId();
+  store = {
+    envs: [
+      {
+        id: id,
+        name: "Showcase",
+        createdAt: stableDate(),
+        updatedAt: stableDate(),
+        version: 1,
+        config: { example: true, retentionPolicy: "default", region: "us-east-1" }
+      }
+    ],
+    demoContent: {},
+    snapshots: {}
+  };
+  store.snapshots[id] = [];
+  localStorage.setItem(LS_KEY, JSON.stringify(store));
+}
+if (!store.demoContent || typeof store.demoContent !== "object") store.demoContent = {};
+if (!store.snapshots || typeof store.snapshots !== "object") store.snapshots = {};
+
+if (ENABLE_BACKEND) {
+  // Enforced live mode: do not surface previously seeded local demo trees.
+  store.demoContent = {};
+  localStorage.setItem(LS_KEY, JSON.stringify(store));
+}
+
+let currentEnvId = localStorage.getItem("pj_current_env_master") || (store.envs[0] && store.envs[0].id);
+if (!currentEnvId && store.envs.length) {
+  currentEnvId = store.envs[0].id;
+}
+
+const uiState = {
+  selectedTreeItem: null,
+  configView: localStorage.getItem("pj_config_view") || "raw",
+  structuredDraftByEnv: {},
+  pendingDiffByEnv: {},
+  lastPromotePreviewByTarget: {}
+};
+
+const liveState = {
+  identity: null,
+  runtimeTiles: [],
+  connectorStatuses: {},
+  loaded: false,
+  error: ""
+};
+const CONNECTOR_PROVIDER_ORDER = ["microsoft", "google", "github"];
+const connectorAuthPollers = {};
+
+function defaultDemo() {
+  return {};
+}
+
+function getEnv(envId) {
+  return store.envs.find(function (e) { return e.id === envId; }) || null;
+}
+
+function ensureSnapshots(envId) {
+  if (!store.snapshots[envId]) {
+    store.snapshots[envId] = [];
+  }
+  return store.snapshots[envId];
+}
+
+function addSnapshotLocal(envId, reason, configOverride) {
+  const env = getEnv(envId);
+  if (!env) return;
+  const snapshot = {
+    id: genId(),
+    createdAt: stableDate(),
+    reason: reason || "snapshot",
+    config: clone(configOverride || env.config)
+  };
+  const list = ensureSnapshots(envId);
+  list.unshift(snapshot);
+  if (list.length > 25) list.length = 25;
+}
+
+function saveStore() {
+  localStorage.setItem(LS_KEY, JSON.stringify(store));
+  renderEnvSelect();
+  renderEnvPanel();
+  renderTree();
+}
+
+function addEnvLocal(env) {
+  store.envs.push(env);
+  if (!store.demoContent[env.id]) store.demoContent[env.id] = {};
+  ensureSnapshots(env.id);
+  saveStore();
+}
+
+function updateEnvLocal(envId, data) {
+  const idx = store.envs.findIndex(function (e) { return e.id === envId; });
+  if (idx === -1) throw new Error("env_not_found");
+  store.envs[idx] = Object.assign({}, store.envs[idx], data, { updatedAt: stableDate() });
+  saveStore();
+}
+
+const envSelectEl = document.getElementById("envSelect");
+const statusEl = document.getElementById("status");
+const treeEl = document.getElementById("tree");
+const envDetailsEl = document.getElementById("envDetails");
+const auditEl = document.getElementById("audit");
+const activeEnvBadgeEl = document.getElementById("activeEnvBadge");
+const activeEnvIdEl = document.getElementById("activeEnvId");
+const liveSourceStatusEl = document.getElementById("liveSourceStatus");
+
+const auditLog = [];
+
+function pushAudit(entry) {
+  const normalized = {
+    time: stableDate(),
+    actionId: entry.actionId || "unknown.action",
+    mode: entry.mode || "execute",
+    correlationId: entry.correlationId || "n/a",
+    success: Boolean(entry.success),
+    latencyMs: typeof entry.latencyMs === "number" ? entry.latencyMs : null,
+    payload: entry.payload || null,
+    result: entry.result || null,
+    message: entry.message || ""
+  };
+  auditLog.unshift(normalized);
+  if (auditLog.length > 300) auditLog.length = 300;
+  renderAudit();
+}
+
+function renderAudit() {
+  auditEl.replaceChildren();
+  if (!auditLog.length) {
+    auditEl.textContent = "No executions yet";
+    return;
+  }
+
+  auditLog.forEach(function (entry) {
+    const details = document.createElement("details");
+    details.className = "audit-entry";
+
+    const summary = document.createElement("summary");
+
+    const colAction = document.createElement("div");
+    colAction.textContent = entry.actionId;
+
+    const colMode = document.createElement("div");
+    colMode.textContent = entry.mode;
+
+    const colStatus = document.createElement("div");
+    colStatus.className = entry.success ? "audit-status-ok" : "audit-status-fail";
+    colStatus.textContent = entry.success ? "OK" : "FAIL";
+
+    const colLatency = document.createElement("div");
+    colLatency.textContent = entry.latencyMs == null ? "-" : entry.latencyMs + "ms";
+
+    const colTime = document.createElement("div");
+    colTime.textContent = new Date(entry.time).toLocaleString();
+
+    summary.append(colAction, colMode, colStatus, colLatency, colTime);
+
+    const body = document.createElement("div");
+    body.className = "audit-details";
+
+    const meta = document.createElement("div");
+    meta.className = "audit-meta";
+    const corr = document.createElement("div");
+    corr.textContent = "Correlation ID: " + entry.correlationId;
+    const msg = document.createElement("div");
+    msg.textContent = "Message: " + (entry.message || "-");
+    meta.append(corr, msg);
+
+    const grids = document.createElement("div");
+    grids.className = "audit-grid";
+
+    const payloadWrap = document.createElement("div");
+    const payloadLabel = document.createElement("div");
+    payloadLabel.className = "small";
+    payloadLabel.textContent = "Payload";
+    const payloadPre = document.createElement("pre");
+    payloadPre.className = "json";
+    payloadPre.textContent = pretty(entry.payload || {});
+    payloadWrap.append(payloadLabel, payloadPre);
+
+    const resultWrap = document.createElement("div");
+    const resultLabel = document.createElement("div");
+    resultLabel.className = "small";
+    resultLabel.textContent = "Result";
+    const resultPre = document.createElement("pre");
+    resultPre.className = "json";
+    resultPre.textContent = pretty(entry.result || entry.message || {});
+    resultWrap.append(resultLabel, resultPre);
+
+    grids.append(payloadWrap, resultWrap);
+    body.append(meta, grids);
+
+    details.append(summary, body);
+    auditEl.appendChild(details);
+  });
+}
+
+function deriveEnvironmentState(env) {
+  const latestSnapshot = ensureSnapshots(env.id)[0] || null;
+  const modified = latestSnapshot ? diffJSON(latestSnapshot.config, env.config).length > 0 : false;
+  const drift = (uiState.pendingDiffByEnv[env.id] && uiState.pendingDiffByEnv[env.id].count > 0) || false;
+  const snapshotAvailable = ensureSnapshots(env.id).length > 0;
+
+  if (drift) return { label: "Drifted", className: "status-drifted", detail: uiState.pendingDiffByEnv[env.id].count + " field changes staged" };
+  if (modified) return { label: "Modified", className: "status-modified", detail: "Config differs from latest snapshot" };
+  if (snapshotAvailable) return { label: "Snapshot Available", className: "status-snapshot", detail: ensureSnapshots(env.id).length + " snapshot(s) stored" };
+  return { label: "Stable", className: "status-stable", detail: "No staged drift" };
+}
+
+function updateEnvironmentContextVisuals() {
+  const env = getEnv(currentEnvId);
+  if (!env) {
+    activeEnvBadgeEl.textContent = "Active: -";
+    activeEnvIdEl.textContent = "ID: -";
+    document.body.className = "tone-0";
+    return;
+  }
+  activeEnvBadgeEl.textContent = "Active: " + env.name;
+  activeEnvIdEl.textContent = "ID: " + env.id;
+  document.body.className = toneClassForEnv(env.id);
+}
+
+function renderEnvSelect() {
+  envSelectEl.replaceChildren();
+  store.envs.forEach(function (env) {
+    const option = document.createElement("option");
+    option.value = env.id;
+    option.textContent = env.name;
+    if (env.id === currentEnvId) option.selected = true;
+    envSelectEl.appendChild(option);
+  });
+  statusEl.textContent = store.envs.length + " envs";
+  updateEnvironmentContextVisuals();
+}
+
+function normalizeConnectorName(input) {
+  const value = String(input || "").trim().toLowerCase();
+  if (!value) return null;
+  if (value.includes("github")) return "GitHub";
+  if (value.includes("sharepoint")) return "SharePoint";
+  if (value.includes("drive") || value.includes("google")) return "Drive";
+  if (value.includes("bookmark")) return "Bookmarks";
+  return null;
+}
+
+function normalizeConnectorFromUnknown(input) {
+  if (typeof input === "string") {
+    return normalizeConnectorName(input);
+  }
+  if (!input || typeof input !== "object") {
+    return null;
+  }
+  return normalizeConnectorName(
+    input.connector ||
+    input.provider ||
+    input.name ||
+    input.type ||
+    input.system ||
+    ""
+  );
+}
+
+function registerConnectorMap(mapLike, onConnector) {
+  if (!mapLike || typeof mapLike !== "object" || Array.isArray(mapLike)) {
+    return;
+  }
+  Object.keys(mapLike).forEach(function (key) {
+    const value = mapLike[key];
+    if (typeof value === "boolean") {
+      if (value) {
+        const normalized = normalizeConnectorName(key);
+        if (normalized) onConnector(normalized);
+      }
+      return;
+    }
+    if (typeof value === "string") {
+      const normalized = normalizeConnectorName(value) || normalizeConnectorName(key);
+      if (normalized) onConnector(normalized);
+      return;
+    }
+    if (value && typeof value === "object") {
+      const enabled = typeof value.enabled === "boolean" ? value.enabled : true;
+      if (!enabled) return;
+      const normalized = normalizeConnectorFromUnknown(value) || normalizeConnectorName(key);
+      if (normalized) onConnector(normalized);
+    }
+  });
+}
+
+function splitTargets(raw) {
+  return String(raw || "")
+    .split(",")
+    .map(function (entry) { return entry.trim(); })
+    .filter(Boolean);
+}
+
+function parseTargetDescriptor(target) {
+  const raw = String(target || "").trim();
+  const lowered = raw.toLowerCase();
+  if (!raw || lowered.startsWith("health:")) {
+    return null;
+  }
+  if (lowered.startsWith("github:")) {
+    const repo = raw.slice("github:".length);
+    if (!repo) return null;
+    return { connector: "GitHub", label: repo, type: "repo", url: "https://github.com/" + repo };
+  }
+  if (lowered.startsWith("sharepoint:")) {
+    const value = raw.slice("sharepoint:".length);
+    const url = value.startsWith("http://") || value.startsWith("https://") ? value : "";
+    return { connector: "SharePoint", label: value || raw, type: "record", url: url };
+  }
+  if (lowered.startsWith("drive:")) {
+    const value = raw.slice("drive:".length);
+    return { connector: "Drive", label: value || raw, type: "document", url: "" };
+  }
+  if (lowered.startsWith("bookmark:")) {
+    const value = raw.slice("bookmark:".length);
+    const url = value.startsWith("http://") || value.startsWith("https://") ? value : "";
+    return { connector: "Bookmarks", label: value || raw, type: "link", url: url };
+  }
+  if (/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(raw)) {
+    return { connector: "GitHub", label: raw, type: "repo", url: "https://github.com/" + raw };
+  }
+  try {
+    const url = new URL(raw);
+    const host = url.hostname.toLowerCase();
+    if (host === "github.com" || host.endsWith(".github.com")) {
+      const segments = url.pathname.split("/").filter(Boolean);
+      const repo = segments.length >= 2 ? segments[0] + "/" + segments[1] : raw;
+      return { connector: "GitHub", label: repo, type: "repo", url: url.href };
+    }
+    if (host.includes("sharepoint.com")) {
+      return {
+        connector: "SharePoint",
+        label: decodeURIComponent(url.pathname.replace(/^\/+/, "") || host),
+        type: "record",
+        url: url.href
+      };
+    }
+    if (host === "drive.google.com" || host === "docs.google.com") {
+      return {
+        connector: "Drive",
+        label: decodeURIComponent(url.pathname.replace(/^\/+/, "") || raw),
+        type: "document",
+        url: url.href
+      };
+    }
+  } catch {
+    // ignore non-url targets
+  }
+  return null;
+}
+
+function ensureConnectorNode(tree, connectorName) {
+  if (!tree[connectorName]) {
+    tree[connectorName] = { type: "root", children: {} };
+  }
+  return tree[connectorName];
+}
+
+function ensureFolderNode(rootNode, folderName) {
+  if (!rootNode.children[folderName]) {
+    rootNode.children[folderName] = { type: "folder", children: {} };
+  }
+  return rootNode.children[folderName];
+}
+
+function addLiveConnectionItem(tree, connectorName, tenantName) {
+  const rootNode = ensureConnectorNode(tree, connectorName);
+  const folder = ensureFolderNode(rootNode, "Live Connections");
+  const itemName = tenantName + " connection";
+  if (!folder.children[itemName]) {
+    folder.children[itemName] = { type: "record", project: "Live", url: "" };
+  }
+}
+
+function addLiveTargetItem(tree, descriptor) {
+  const rootNode = ensureConnectorNode(tree, descriptor.connector);
+  const folder = ensureFolderNode(rootNode, "Live Targets");
+  const itemName = descriptor.label;
+  if (!folder.children[itemName]) {
+    folder.children[itemName] = {
+      type: descriptor.type,
+      project: "Live",
+      url: descriptor.url || ""
+    };
+  }
+}
+
+function asStringList(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map(function (entry) { return String(entry == null ? "" : entry).trim(); })
+    .filter(Boolean);
+}
+
+function asDescriptorEntries(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map(function (entry) {
+      if (typeof entry === "string") {
+        return { label: entry.trim(), url: "" };
+      }
+      if (!entry || typeof entry !== "object") {
+        return { label: "", url: "" };
+      }
+      const label = String(
+        entry.label ||
+        entry.name ||
+        entry.displayName ||
+        entry.title ||
+        entry.path ||
+        entry.id ||
+        ""
+      ).trim();
+      const url = String(entry.url || entry.webUrl || "").trim();
+      return { label: label, url: url };
+    })
+    .filter(function (entry) { return Boolean(entry.label); });
+}
+
+function extractDescriptorsFromConnection(candidate) {
+  const descriptors = [];
+  if (typeof candidate === "string") {
+    const direct = parseTargetDescriptor(candidate);
+    if (direct) descriptors.push(direct);
+    return descriptors;
+  }
+  if (!candidate || typeof candidate !== "object") {
+    return descriptors;
+  }
+
+  const connector = normalizeConnectorFromUnknown(candidate);
+  if (!connector) {
+    return descriptors;
+  }
+
+  const folders = asDescriptorEntries(candidate.folders)
+    .concat(asDescriptorEntries(candidate.libraries))
+    .concat(asDescriptorEntries(candidate.paths))
+    .concat(asDescriptorEntries(candidate.targets));
+  const sitePath = typeof candidate.sitePath === "string" ? candidate.sitePath.trim() : "";
+  const siteUrl = typeof candidate.url === "string" ? candidate.url.trim() : "";
+
+  if (sitePath) {
+    descriptors.push({
+      connector: connector,
+      label: sitePath,
+      type: connector === "GitHub" ? "repo" : "record",
+      url: siteUrl
+    });
+  }
+  folders.forEach(function (folder) {
+    const parsedFromUrl = folder.url ? parseTargetDescriptor(folder.url) : null;
+    const parsedFromLabel = parsedFromUrl ? null : parseTargetDescriptor(folder.label);
+    const parsed = parsedFromUrl || parsedFromLabel;
+    descriptors.push({
+      connector: parsed && parsed.connector ? parsed.connector : connector,
+      label: parsed && parsed.label ? parsed.label : folder.label,
+      type: parsed && parsed.type ? parsed.type : (connector === "GitHub" ? "repo" : "record"),
+      url: folder.url || (parsed && parsed.url ? parsed.url : "")
+    });
+  });
+
+  const unique = new Set();
+  return descriptors.filter(function (entry) {
+    const key = String(entry.connector) + "::" + String(entry.label) + "::" + String(entry.url || "");
+    if (unique.has(key)) return false;
+    unique.add(key);
+    return true;
+  });
+}
+
+function buildLiveConnectorOverlay(env) {
+  const overlay = {};
+  const identity = liveState.identity && typeof liveState.identity === "object" ? liveState.identity : null;
+  const connectorStatuses =
+    liveState.connectorStatuses && typeof liveState.connectorStatuses === "object"
+      ? liveState.connectorStatuses
+      : {};
+  if (!identity && !Object.keys(connectorStatuses).length) {
+    return overlay;
+  }
+
+  const envScope = String(env.id || "").toLowerCase();
+  const tenantPool = Array.isArray(identity.tenants) ? identity.tenants : [];
+  const matchingTenants = tenantPool.filter(function (tenant) {
+    const tenantId = String(tenant && tenant.id ? tenant.id : "").toLowerCase();
+    const tenantName = String(tenant && tenant.name ? tenant.name : "").toLowerCase();
+    if (!envScope) return true;
+    return tenantId === envScope || tenantName === envScope;
+  });
+  const tenants = matchingTenants.length ? matchingTenants : tenantPool;
+  const identityLabel = String(identity.tenantName || identity.name || "Tenant");
+
+  function registerConnectorForTenant(candidate, tenantName) {
+    const connectorName = normalizeConnectorFromUnknown(candidate);
+    if (!connectorName) return;
+    addLiveConnectionItem(overlay, connectorName, tenantName);
+    extractDescriptorsFromConnection(candidate).forEach(function (descriptor) {
+      addLiveTargetItem(overlay, descriptor);
+    });
+  }
+
+  tenants.forEach(function (tenant) {
+    const tenantName = String(tenant && tenant.name ? tenant.name : tenant && tenant.id ? tenant.id : "Tenant");
+    const connections = Array.isArray(tenant && tenant.connections) ? tenant.connections : [];
+    const connectors = Array.isArray(tenant && tenant.connectors) ? tenant.connectors : [];
+    connections.forEach(function (connection) { registerConnectorForTenant(connection, tenantName); });
+    connectors.forEach(function (connection) { registerConnectorForTenant(connection, tenantName); });
+    registerConnectorMap(tenant && tenant.integrations, function (connectorName) {
+      addLiveConnectionItem(overlay, connectorName, tenantName);
+    });
+  });
+
+  const topLevelConnections = Array.isArray(identity.connections) ? identity.connections : [];
+  const topLevelConnectors = Array.isArray(identity.connectors) ? identity.connectors : [];
+  topLevelConnections.forEach(function (connection) { registerConnectorForTenant(connection, identityLabel); });
+  topLevelConnectors.forEach(function (connection) { registerConnectorForTenant(connection, identityLabel); });
+  registerConnectorMap(identity.integrations, function (connectorName) {
+    addLiveConnectionItem(overlay, connectorName, identityLabel);
+  });
+
+  liveState.runtimeTiles.forEach(function (tile) {
+    const rawTargets = [];
+    if (typeof tile.target === "string") {
+      rawTargets.push.apply(rawTargets, splitTargets(tile.target));
+    }
+    if (Array.isArray(tile.targets)) {
+      tile.targets.forEach(function (entry) {
+        rawTargets.push.apply(rawTargets, splitTargets(entry));
+      });
+    }
+    rawTargets.forEach(function (target) {
+      const descriptor = parseTargetDescriptor(target);
+      if (!descriptor) return;
+      addLiveTargetItem(overlay, descriptor);
+    });
+  });
+
+  Object.keys(connectorStatuses).forEach(function (providerKey) {
+    const status = connectorStatuses[providerKey];
+    if (!status || typeof status !== "object" || status.connected !== true) {
+      return;
+    }
+    const providerName = normalizeConnectorFromUnknown(providerKey) || String(providerKey);
+    const account = typeof status.account === "string" ? status.account.trim() : "";
+    addLiveConnectionItem(overlay, providerName, account || "Connected");
+  });
+
+  return overlay;
+}
+
+function mergeConnectorTrees(baseTree, overlayTree) {
+  const merged = clone(baseTree || {});
+  Object.keys(overlayTree || {}).forEach(function (connectorName) {
+    if (!merged[connectorName]) {
+      merged[connectorName] = clone(overlayTree[connectorName]);
+      return;
+    }
+    const mergedRoot = merged[connectorName];
+    const overlayRoot = overlayTree[connectorName];
+    mergedRoot.children = mergedRoot.children || {};
+    Object.keys(overlayRoot.children || {}).forEach(function (folderName) {
+      if (!mergedRoot.children[folderName]) {
+        mergedRoot.children[folderName] = clone(overlayRoot.children[folderName]);
+        return;
+      }
+      const mergedFolder = mergedRoot.children[folderName];
+      const overlayFolder = overlayRoot.children[folderName];
+      mergedFolder.children = mergedFolder.children || {};
+      Object.keys(overlayFolder.children || {}).forEach(function (itemName) {
+        if (!mergedFolder.children[itemName]) {
+          mergedFolder.children[itemName] = clone(overlayFolder.children[itemName]);
+        }
+      });
+    });
+  });
+  return merged;
+}
+
+function hasRenderableTree(tree) {
+  if (!tree || typeof tree !== "object") return false;
+  return Object.keys(tree).some(function (connectorName) {
+    const root = tree[connectorName];
+    if (!root || typeof root !== "object") return false;
+    const folders = root.children && typeof root.children === "object" ? root.children : {};
+    return Object.keys(folders).some(function (folderName) {
+      const folder = folders[folderName];
+      if (!folder || typeof folder !== "object") return false;
+      if (!folder.children || typeof folder.children !== "object") return false;
+      return Object.keys(folder.children).length > 0;
+    });
+  });
+}
+
+function getRenderTreeForEnv(envId) {
+  const env = getEnv(envId);
+  const baseTree = store.demoContent[envId] || {};
+  if (!env) return {};
+  if (!ENABLE_BACKEND) return baseTree;
+  const overlay = buildLiveConnectorOverlay(env);
+  if (hasRenderableTree(overlay)) {
+    return overlay;
+  }
+  return {};
+}
+
+function updateLiveSourceStatus() {
+  if (!liveSourceStatusEl) return;
+  if (!ENABLE_BACKEND) {
+    liveSourceStatusEl.textContent = "Live sources: backend disabled (local fallback)";
+    return;
+  }
+  if (!liveState.loaded && !liveState.error) {
+    liveSourceStatusEl.textContent = "Live sources: loading...";
+    return;
+  }
+  const identity = liveState.identity && typeof liveState.identity === "object" ? liveState.identity : null;
+  const tenants = identity && Array.isArray(identity.tenants) ? identity.tenants : [];
+  const connectors = new Set();
+  function addConnector(candidate) {
+    const normalized = normalizeConnectorFromUnknown(candidate);
+    if (normalized) connectors.add(normalized);
+  }
+  tenants.forEach(function (tenant) {
+    const list = Array.isArray(tenant.connections) ? tenant.connections : [];
+    const connectorList = Array.isArray(tenant.connectors) ? tenant.connectors : [];
+    list.forEach(function (connection) { addConnector(connection); });
+    connectorList.forEach(function (connection) { addConnector(connection); });
+    registerConnectorMap(tenant.integrations, function (name) { connectors.add(name); });
+  });
+  if (identity) {
+    const topLevelConnections = Array.isArray(identity.connections) ? identity.connections : [];
+    const topLevelConnectorList = Array.isArray(identity.connectors) ? identity.connectors : [];
+    topLevelConnections.forEach(function (connection) { addConnector(connection); });
+    topLevelConnectorList.forEach(function (connection) { addConnector(connection); });
+    registerConnectorMap(identity.integrations, function (name) { connectors.add(name); });
+  }
+  const runtimeTiles = Array.isArray(liveState.runtimeTiles) ? liveState.runtimeTiles : [];
+  runtimeTiles.forEach(function (tile) {
+    const rawTargets = [];
+    if (typeof tile.target === "string") {
+      rawTargets.push.apply(rawTargets, splitTargets(tile.target));
+    }
+    if (Array.isArray(tile.targets)) {
+      tile.targets.forEach(function (entry) {
+        rawTargets.push.apply(rawTargets, splitTargets(entry));
+      });
+    }
+    rawTargets.forEach(function (target) {
+      const descriptor = parseTargetDescriptor(target);
+      if (descriptor && descriptor.connector) connectors.add(descriptor.connector);
+    });
+  });
+  const connectorStatuses =
+    liveState.connectorStatuses && typeof liveState.connectorStatuses === "object"
+      ? liveState.connectorStatuses
+      : {};
+  Object.keys(connectorStatuses).forEach(function (providerKey) {
+    const status = connectorStatuses[providerKey];
+    if (!status || typeof status !== "object" || status.connected !== true) {
+      return;
+    }
+    const normalized = normalizeConnectorFromUnknown(providerKey);
+    if (normalized) connectors.add(normalized);
+  });
+
+  if (liveState.error) {
+    if (connectors.size || tenants.length) {
+      const connectorList = connectors.size ? Array.from(connectors).sort().join(", ") : "metadata only";
+      liveSourceStatusEl.textContent =
+        "Live sources from parent context: " + connectorList +
+        " (backend metadata unavailable: " + liveState.error + ")";
+      return;
+    }
+    liveSourceStatusEl.textContent = "Live sources unavailable: " + liveState.error;
+    return;
+  }
+  if (!connectors.size) {
+    liveSourceStatusEl.textContent = "Live sources: authenticated, but backend returned no connector metadata.";
+    return;
+  }
+  const connectorList = Array.from(connectors).sort();
+  liveSourceStatusEl.textContent =
+    "Live sources: " + connectorList.join(", ") + " (" + connectors.size + ") across " +
+    tenants.length + " tenant scope" + (tenants.length === 1 ? "" : "s");
+}
+
+function providerLabel(provider) {
+  if (provider === "microsoft") return "Microsoft 365";
+  if (provider === "google") return "Google Workspace";
+  if (provider === "github") return "GitHub";
+  return String(provider || "Connector");
+}
+
+function getConnectorStatuses() {
+  if (!liveState.connectorStatuses || typeof liveState.connectorStatuses !== "object") {
+    return {};
+  }
+  return liveState.connectorStatuses;
+}
+
+function renderConnectorStatusPanel() {
+  const panel = document.getElementById("connectorStatusPanel");
+  if (!panel) return;
+  panel.replaceChildren();
+
+  if (!ENABLE_BACKEND) {
+    const note = document.createElement("div");
+    note.className = "small muted";
+    note.textContent = "Connector status unavailable while backend mode is disabled.";
+    panel.appendChild(note);
+    return;
+  }
+
+  const statuses = getConnectorStatuses();
+  const hasAnyStatus = Object.keys(statuses).length > 0;
+  if (!hasAnyStatus) {
+    const loading = document.createElement("div");
+    loading.className = "small muted";
+    loading.textContent = liveState.loaded
+      ? "No connector status metadata returned yet."
+      : "Loading connector status...";
+    panel.appendChild(loading);
+    return;
+  }
+
+  CONNECTOR_PROVIDER_ORDER.forEach(function (provider) {
+    const status = statuses[provider] && typeof statuses[provider] === "object" ? statuses[provider] : { connected: false };
+    const connected = status.connected === true;
+    const account = typeof status.account === "string" ? status.account.trim() : "";
+    const expiresAt = typeof status.expiresAt === "string" ? status.expiresAt.trim() : "";
+
+    const row = document.createElement("div");
+    row.className = "connector-status-row";
+
+    const left = document.createElement("div");
+    const name = document.createElement("div");
+    name.className = "connector-status-name";
+    name.textContent = providerLabel(provider);
+    const detail = document.createElement("div");
+    detail.className = "connector-status-detail";
+    if (connected) {
+      detail.textContent = account
+        ? `Connected as ${account}${expiresAt ? ` - expires ${expiresAt}` : ""}`
+        : `Connected${expiresAt ? ` - expires ${expiresAt}` : ""}`;
+    } else {
+      detail.textContent = "Disconnected";
+    }
+    left.append(name, detail);
+
+    const actionButton = document.createElement("button");
+    actionButton.textContent = connected ? "Disconnect" : "Connect";
+    if (!connected) {
+      actionButton.className = "primary";
+    }
+    actionButton.addEventListener("click", function () {
+      if (connected) {
+        void disconnectProvider(provider);
+      } else {
+        void connectProvider(provider);
+      }
+    });
+
+    row.append(left, actionButton);
+    panel.appendChild(row);
+  });
+}
+
+async function fetchLiveJson(path) {
+  await ensureValidRuntimeAuthToken();
+  const requestUrl = resolveApiUrl(path);
+  const requestHeaders = buildAuthHeaders({ "X-PuddleJumper-Request": "true" });
+  let attemptedRetry = false;
+  let response = await fetch(requestUrl, {
+    method: "GET",
+    credentials: "include",
+    headers: requestHeaders
+  });
+  if (response.status === 401 && !attemptedRetry) {
+    attemptedRetry = true;
+    const refreshed = await refreshRuntimeAuthToken(true);
+    if (refreshed) {
+      const retryHeaders = buildAuthHeaders({ "X-PuddleJumper-Request": "true" });
+      response = await fetch(requestUrl, {
+        method: "GET",
+        credentials: "include",
+        headers: retryHeaders
+      });
+    } else {
+      throw new Error("Authentication required");
+    }
+  }
+  const payloadType = response.headers.get("content-type") || "";
+  const parsed = payloadType.includes("application/json")
+    ? await response.json().catch(function () { return { error: "invalid_json" }; })
+    : await response.text().catch(function () { return ""; });
+  if (!response.ok) {
+    const message = typeof parsed === "object" && parsed && parsed.error ? String(parsed.error) : "request_failed";
+    throw new Error(message);
+  }
+  return parsed;
+}
+
+async function postLiveJson(path, body) {
+  await ensureValidRuntimeAuthToken();
+  const requestUrl = resolveApiUrl(path);
+  const requestHeaders = buildAuthHeaders({
+    "X-PuddleJumper-Request": "true",
+    "Content-Type": "application/json"
+  });
+  let attemptedRetry = false;
+  let response = await fetch(requestUrl, {
+    method: "POST",
+    credentials: "include",
+    headers: requestHeaders,
+    body: JSON.stringify(body || {})
+  });
+  if (response.status === 401 && !attemptedRetry) {
+    attemptedRetry = true;
+    const refreshed = await refreshRuntimeAuthToken(true);
+    if (refreshed) {
+      const retryHeaders = buildAuthHeaders({
+        "X-PuddleJumper-Request": "true",
+        "Content-Type": "application/json"
+      });
+      response = await fetch(requestUrl, {
+        method: "POST",
+        credentials: "include",
+        headers: retryHeaders,
+        body: JSON.stringify(body || {})
+      });
+    } else {
+      throw new Error("Authentication required");
+    }
+  }
+  const payloadType = response.headers.get("content-type") || "";
+  const parsed = payloadType.includes("application/json")
+    ? await response.json().catch(function () { return { error: "invalid_json" }; })
+    : await response.text().catch(function () { return ""; });
+  if (!response.ok) {
+    const message = typeof parsed === "object" && parsed && parsed.error ? String(parsed.error) : "request_failed";
+    throw new Error(message);
+  }
+  return parsed;
+}
+
+function clearConnectorPoll(provider) {
+  const existingPoll = connectorAuthPollers[provider];
+  if (existingPoll) {
+    clearInterval(existingPoll.timerId);
+    delete connectorAuthPollers[provider];
+  }
+}
+
+async function refreshConnectorStatuses() {
+  if (!ENABLE_BACKEND) return;
+  const payload = await fetchLiveJson("/api/connectors");
+  liveState.connectorStatuses =
+    payload && typeof payload === "object" && payload.connectors && typeof payload.connectors === "object"
+      ? payload.connectors
+      : {};
+  updateLiveSourceStatus();
+  renderTree();
+  renderConnectorStatusPanel();
+}
+
+async function connectProvider(provider) {
+  if (!ENABLE_BACKEND) {
+    alert("Connector auth requires backend mode.");
+    return;
+  }
+  clearConnectorPoll(provider);
+  try {
+    const payload = await postLiveJson("/api/connectors/" + encodeURIComponent(provider) + "/auth/start", {});
+    const authUrl = payload && typeof payload === "object" && typeof payload.authUrl === "string" ? payload.authUrl : "";
+    if (!authUrl) {
+      throw new Error("Authorization URL missing");
+    }
+    const popup = window.open(authUrl, "pj-connector-auth-" + provider, "width=560,height=720");
+    if (!popup) {
+      window.location.assign(authUrl);
+      return;
+    }
+    let attemptCount = 0;
+    const timerId = setInterval(async function () {
+      attemptCount += 1;
+      try {
+        await refreshConnectorStatuses();
+        const status = getConnectorStatuses()[provider];
+        if (status && status.connected === true) {
+          clearConnectorPoll(provider);
+          if (!popup.closed) popup.close();
+          pushAudit({
+            actionId: "connector.connect." + provider,
+            mode: "execute",
+            correlationId: "local-connect",
+            success: true,
+            payload: { provider: provider },
+            result: { connected: true }
+          });
+        }
+      } catch {
+        // keep polling until timeout
+      }
+      if (attemptCount >= 90 || popup.closed) {
+        clearConnectorPoll(provider);
+      }
+    }, 2000);
+    connectorAuthPollers[provider] = { timerId: timerId };
+  } catch (error) {
+    pushAudit({
+      actionId: "connector.connect." + provider,
+      mode: "execute",
+      correlationId: "local-connect",
+      success: false,
+      message: error && error.message ? error.message : "request_failed",
+      payload: { provider: provider },
+      result: { connected: false }
+    });
+    alert("Failed to start connector auth.");
+  }
+}
+
+async function disconnectProvider(provider) {
+  if (!ENABLE_BACKEND) {
+    alert("Connector auth requires backend mode.");
+    return;
+  }
+  const confirmed = window.confirm("Disconnect " + providerLabel(provider) + "?");
+  if (!confirmed) {
+    return;
+  }
+  clearConnectorPoll(provider);
+  try {
+    await postLiveJson("/api/connectors/" + encodeURIComponent(provider) + "/disconnect", {});
+    await refreshConnectorStatuses();
+    pushAudit({
+      actionId: "connector.disconnect." + provider,
+      mode: "execute",
+      correlationId: "local-disconnect",
+      success: true,
+      payload: { provider: provider },
+      result: { connected: false }
+    });
+  } catch (error) {
+    pushAudit({
+      actionId: "connector.disconnect." + provider,
+      mode: "execute",
+      correlationId: "local-disconnect",
+      success: false,
+      message: error && error.message ? error.message : "request_failed",
+      payload: { provider: provider },
+      result: {}
+    });
+    alert("Failed to disconnect connector.");
+  }
+}
+
+async function hydrateLiveSources() {
+  if (liveHydratePromise) {
+    return liveHydratePromise;
+  }
+  liveHydratePromise = (async function () {
+  if (!ENABLE_BACKEND) {
+    liveState.loaded = true;
+    updateLiveSourceStatus();
+    return;
+  }
+
+  try {
+    const [identityPayload, tilesPayload, connectorsPayload] = await Promise.all([
+      fetchLiveJson("/api/identity"),
+      fetchLiveJson("/api/config/tiles").catch(function () { return []; }),
+      fetchLiveJson("/api/connectors").catch(function () { return null; })
+    ]);
+    liveState.identity = identityPayload && typeof identityPayload === "object" ? identityPayload : null;
+    applyServerTrustedOrigins(liveState.identity);
+    liveState.runtimeTiles = Array.isArray(tilesPayload) ? tilesPayload : [];
+    liveState.connectorStatuses =
+      connectorsPayload &&
+      typeof connectorsPayload === "object" &&
+      connectorsPayload.connectors &&
+      typeof connectorsPayload.connectors === "object"
+        ? connectorsPayload.connectors
+        : {};
+    liveState.loaded = true;
+    liveState.error = "";
+    updateLiveSourceStatus();
+    renderConnectorStatusPanel();
+    renderTree();
+    pushAudit({
+      actionId: "ui.live_sources",
+      mode: "execute",
+      correlationId: "local-live",
+      success: true,
+      payload: { endpoints: ["/api/identity", "/api/config/tiles", "/api/connectors"] },
+      result: {
+        tenants: Array.isArray(liveState.identity && liveState.identity.tenants) ? liveState.identity.tenants.length : 0,
+        tiles: liveState.runtimeTiles.length,
+        connectors: Object.keys(liveState.connectorStatuses || {}).length
+      }
+    });
+  } catch (error) {
+    liveState.loaded = true;
+    liveState.error = error && error.message ? error.message : "unknown_error";
+    updateLiveSourceStatus();
+    renderConnectorStatusPanel();
+    pushAudit({
+      actionId: "ui.live_sources",
+      mode: "execute",
+      correlationId: "local-live",
+      success: false,
+      message: liveState.error,
+      payload: { endpoints: ["/api/identity", "/api/config/tiles", "/api/connectors"] },
+      result: { fallback: "no_live_connector_metadata" }
+    });
+  }
+  })();
+  try {
+    await liveHydratePromise;
+  } finally {
+    liveHydratePromise = null;
+  }
+}
+
+function normalizeOrigin(value) {
+  try {
+    const parsed = new URL(String(value), window.location.origin);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+    return parsed.origin;
+  } catch {
+    return "";
+  }
+}
+
+function resolveDepthClass(depth) {
+  const numeric = Number(depth);
+  if (!Number.isFinite(numeric)) return "depth-1";
+  const bounded = Math.max(1, Math.min(12, Math.floor(numeric)));
+  return "depth-" + bounded;
+}
+
+function resolveConfiguredTrustedOrigins() {
+  const origins = new Set();
+  const sameOrigin = normalizeOrigin(window.location.origin);
+  if (sameOrigin) origins.add(sameOrigin);
+  const configured = document.querySelector('meta[name="pj-trusted-parent-origins"]');
+  const content = configured ? String(configured.getAttribute("content") || "") : "";
+  content.split(",").map(function (value) { return value.trim(); }).filter(Boolean).forEach(function (value) {
+    const origin = normalizeOrigin(value);
+    if (origin) origins.add(origin);
+  });
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    origins.add("http://localhost:3000");
+    origins.add("http://127.0.0.1:3000");
+  }
+  return origins;
+}
+
+const TRUSTED_PARENT_ORIGINS = resolveConfiguredTrustedOrigins();
+
+function alignApiBaseWithParentContext() {
+  if (window.parent === window) {
+    setApiBaseOrigin(window.location.origin);
+    return;
+  }
+  const referrerOrigin = normalizeOrigin(document.referrer || "");
+  if (referrerOrigin && TRUSTED_PARENT_ORIGINS.has(referrerOrigin)) {
+    setApiBaseOrigin(referrerOrigin);
+    return;
+  }
+  setApiBaseOrigin(window.location.origin);
+}
+
+function resolveParentMessageOrigins() {
+  const referrerOrigin = normalizeOrigin(document.referrer || "");
+  if (referrerOrigin && TRUSTED_PARENT_ORIGINS.has(referrerOrigin)) {
+    return [referrerOrigin];
+  }
+  const localOrigin = normalizeOrigin(window.location.origin);
+  const localHost = (() => {
+    try {
+      return new URL(window.location.origin).hostname;
+    } catch {
+      return "";
+    }
+  })();
+  const nonLocalOrigins = Array.from(TRUSTED_PARENT_ORIGINS).filter(function (origin) {
+    return origin && origin !== localOrigin;
+  });
+  const sameHostOrigins = nonLocalOrigins.filter(function (origin) {
+    try {
+      return localHost && new URL(origin).hostname === localHost;
+    } catch {
+      return false;
+    }
+  });
+  return sameHostOrigins.length > 0 ? sameHostOrigins : nonLocalOrigins;
+}
+
+alignApiBaseWithParentContext();
+
+function requestParentIdentityContext() {
+  if (window.parent === window) return;
+  const parentOrigins = resolveParentMessageOrigins();
+  parentOrigins.forEach(function (origin) {
+    if (!origin) return;
+    try {
+      window.parent.postMessage(
+        {
+          type: "PJ_CONTEXT_REQUEST",
+          payload: { includeToken: true, includeIdentity: true }
+        },
+        origin
+      );
+    } catch {
+      // Best-effort handshake only.
+    }
+  });
+}
+
+function extractRelayTokenFromPayload(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  const candidates = [
+    payload.pjToken,
+    payload.accessToken,
+    payload.token,
+    payload.authorization
+  ];
+  for (let index = 0; index < candidates.length; index += 1) {
+    const normalized = normalizeAuthorizationHeader(candidates[index]);
+    if (normalized) return normalized;
+  }
+  return null;
+}
+
+function applyServerTrustedOrigins(identityPayload) {
+  const allowed = Array.isArray(identityPayload && identityPayload.trustedParentOrigins)
+    ? identityPayload.trustedParentOrigins
+    : [];
+  allowed.forEach(function (value) {
+    const origin = normalizeOrigin(value);
+    if (origin) TRUSTED_PARENT_ORIGINS.add(origin);
+  });
+}
+
+function applyIdentityContextFromMessage(payload) {
+  if (!payload || typeof payload !== "object" || !Array.isArray(payload.tenants)) {
+    return false;
+  }
+  const relayToken = extractRelayTokenFromPayload(payload);
+  if (relayToken) {
+    setRuntimeAuthToken(relayToken, resolveTokenExpiryMs(payload, relayToken));
+  }
+  liveState.identity = {
+    name: payload.name || "",
+    role: payload.role || "",
+    tenants: payload.tenants
+  };
+  liveState.loaded = true;
+  liveState.error = "";
+  updateLiveSourceStatus();
+  renderConnectorStatusPanel();
+  renderTree();
+  pushAudit({
+    actionId: "ui.identity_context",
+    mode: "execute",
+    correlationId: "local-message",
+    success: true,
+    payload: { source: "postMessage" },
+    result: {
+      tenants: payload.tenants.length
+    }
+  });
+  return true;
+}
+
+function connectorFilterPass(connectorName) {
+  const selected = document.getElementById("connector").value;
+  return selected === "ALL" || selected === connectorName;
+}
+
+function projectFilterPass(node, searchTerm) {
+  const mode = document.getElementById("mode").value;
+  if (mode !== "project") return true;
+  if (!searchTerm) return true;
+  const project = (node.project || "").toLowerCase();
+  return project.includes(searchTerm);
+}
+
+function renderTree() {
+  const envDemo = getRenderTreeForEnv(currentEnvId);
+  const term = document.getElementById("search").value.toLowerCase().trim();
+  treeEl.replaceChildren();
+  let rendered = 0;
+
+  Object.keys(envDemo).forEach(function (connectorName) {
+    if (!connectorFilterPass(connectorName)) return;
+    const rootNode = envDemo[connectorName];
+    const block = renderConnector(connectorName, rootNode, term);
+    if (block) {
+      treeEl.appendChild(block);
+      rendered += 1;
+    }
+  });
+
+  if (!rendered) {
+    const empty = document.createElement("div");
+    empty.className = "small muted tree-empty";
+    if (!ENABLE_BACKEND) {
+      empty.textContent = "No local connector cache in this environment yet.";
+    } else if (!liveState.loaded) {
+      empty.textContent = "Loading live connector metadata...";
+    } else {
+      empty.textContent = "No live connector metadata available for this environment.";
+    }
+    treeEl.appendChild(empty);
+  }
+
+  lucide.createIcons();
+}
+
+function renderConnector(name, root, term) {
+  const details = document.createElement("details");
+  details.open = true;
+  const summary = document.createElement("summary");
+  summary.className = "folder-row";
+  appendIconLabel(summary, "folder", name);
+  details.appendChild(summary);
+
+  const countBefore = details.querySelectorAll(".item-row").length;
+  renderChildren(root, details, 1, term, name);
+  const countAfter = details.querySelectorAll(".item-row").length;
+
+  if (!countAfter && term) {
+    return null;
+  }
+
+  return details;
+}
+
+function icon(type) {
+  if (type === "repo") return "github";
+  if (type === "document") return "file-text";
+  if (type === "record") return "file-check";
+  return "link";
+}
+
+function renderChildren(node, parentEl, depth, term, connectorName) {
+  if (!node || !node.children) return;
+  Object.keys(node.children).forEach(function (name) {
+    const child = node.children[name];
+
+    if (child.type === "folder") {
+      const folder = document.createElement("details");
+      folder.open = true;
+      const summary = document.createElement("summary");
+      summary.className = "folder-row " + resolveDepthClass(depth);
+      appendIconLabel(summary, "folder", name);
+      folder.appendChild(summary);
+      renderChildren(child, folder, depth + 1, term, connectorName);
+      if (!term || folder.querySelector(".item-row")) {
+        parentEl.appendChild(folder);
+      }
+      return;
+    }
+
+    const haystack = (name + " " + (child.project || "") + " " + (child.type || "")).toLowerCase();
+    if (term && !haystack.includes(term)) return;
+    if (!projectFilterPass(child, term)) return;
+
+    const row = document.createElement("div");
+    row.className = "item-row " + resolveDepthClass(depth) + (uiState.selectedTreeItem && uiState.selectedTreeItem.name === name ? " selected" : "");
+
+    const left = document.createElement("span");
+    appendIconLabel(left, icon(child.type), name);
+    const right = document.createElement("span");
+    right.className = "meta";
+    right.textContent = child.project || "";
+
+    row.append(left, right);
+    row.addEventListener("click", function () {
+      uiState.selectedTreeItem = { connector: connectorName, name: name, item: clone(child) };
+      selectDemoItem(child, name, connectorName);
+      renderTree();
+    });
+
+    parentEl.appendChild(row);
+  });
+}
+
+function selectDemoItem(item, name, connector) {
+  const env = getEnv(currentEnvId);
+  if (!env) return;
+
+  const detailsCard = document.createElement("div");
+  detailsCard.className = "card";
+
+  const title = document.createElement("div");
+  title.className = "entity-title";
+  title.textContent = name;
+
+  const meta = document.createElement("div");
+  meta.className = "small";
+  meta.textContent = "Connector: " + connector + " | Type: " + (item.type || "-") + " | Project: " + (item.project || "-");
+
+  detailsCard.append(title, meta);
+
+  if (item.url) {
+    const linkWrap = document.createElement("div");
+    linkWrap.className = "link-wrap";
+    const link = document.createElement("a");
+    link.className = "inline-link";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.href = item.url;
+    link.textContent = "Open source ->";
+    linkWrap.appendChild(link);
+    detailsCard.appendChild(linkWrap);
+  }
+
+  envDetailsEl.replaceChildren(detailsCard);
+}
+
+function renderStructuredView(env, draft) {
+  const wrap = document.createElement("div");
+  wrap.className = "structured-wrap";
+
+  const rows = flattenConfig(draft);
+  rows.forEach(function (row) {
+    const rowEl = document.createElement("div");
+    rowEl.className = "structured-row";
+
+    const pathEl = document.createElement("div");
+    pathEl.className = "structured-path";
+    pathEl.textContent = row.path.length ? row.path.join(".") : "(root)";
+
+    const typeEl = document.createElement("div");
+    typeEl.className = "structured-type";
+    typeEl.textContent = row.type;
+
+    let inputEl;
+    if (row.type === "boolean") {
+      inputEl = document.createElement("select");
+      inputEl.className = "structured-input";
+      const yes = document.createElement("option");
+      yes.value = "true";
+      yes.textContent = "true";
+      const no = document.createElement("option");
+      no.value = "false";
+      no.textContent = "false";
+      inputEl.append(yes, no);
+      inputEl.value = String(getAtPath(draft, row.path));
+    } else if (row.type === "object" || row.type === "array") {
+      inputEl = document.createElement("textarea");
+      inputEl.className = "structured-input-json";
+      inputEl.value = pretty(getAtPath(draft, row.path));
+    } else {
+      inputEl = document.createElement("input");
+      inputEl.className = "structured-input";
+      inputEl.value = row.type === "null" ? "null" : String(getAtPath(draft, row.path));
+    }
+
+    inputEl.dataset.path = JSON.stringify(row.path);
+    inputEl.dataset.type = row.type;
+    inputEl.classList.add("field-normal");
+
+    inputEl.addEventListener("change", function () {
+      const path = JSON.parse(inputEl.dataset.path || "[]");
+      const originalType = inputEl.dataset.type;
+      const nextDraft = clone(uiState.structuredDraftByEnv[env.id]);
+      try {
+        const parsedValue = parseTypedValue(inputEl.value, originalType);
+        setAtPath(nextDraft, path, parsedValue);
+        uiState.structuredDraftByEnv[env.id] = nextDraft;
+        inputEl.classList.remove("field-error");
+        inputEl.classList.add("field-normal");
+        renderEnvPanel();
+      } catch (error) {
+        inputEl.classList.remove("field-normal");
+        inputEl.classList.add("field-error");
+        alert("Structured edit rejected: " + error.message);
+      }
+    });
+
+    rowEl.append(pathEl, typeEl, inputEl);
+    wrap.appendChild(rowEl);
+  });
+
+  return wrap;
+}
+
+function renderEnvPanel() {
+  const env = getEnv(currentEnvId);
+  if (!env) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "No environment selected";
+    envDetailsEl.replaceChildren(empty);
+    updateEnvironmentContextVisuals();
+    return;
+  }
+
+  if (!uiState.structuredDraftByEnv[env.id]) {
+    uiState.structuredDraftByEnv[env.id] = clone(env.config);
+  }
+
+  const state = deriveEnvironmentState(env);
+  const snapshotCount = ensureSnapshots(env.id).length;
+
+  const panel = document.createElement("div");
+  panel.className = "card";
+
+  const titleRow = document.createElement("div");
+  titleRow.className = "inspector-title";
+
+  const left = document.createElement("div");
+  const name = document.createElement("div");
+  name.className = "entity-title-lg";
+  name.textContent = env.name;
+  const idLine = document.createElement("div");
+  idLine.className = "small";
+  idLine.textContent = "Environment ID: " + env.id;
+  left.append(name, idLine);
+
+  const actions = document.createElement("div");
+  actions.className = "env-actions";
+  function makeActionButton(id, iconName, label, className) {
+    const button = document.createElement("button");
+    button.id = id;
+    if (className) button.className = className;
+    appendIconLabel(button, iconName, label);
+    return button;
+  }
+  actions.append(
+    makeActionButton("btnSnapshot", "camera", "Snapshot"),
+    makeActionButton("btnDryRunUpdate", "eye", "Dry-run update"),
+    makeActionButton("btnUpdate", "save", "Update", "primary"),
+    makeActionButton("btnPromote", "arrow-up-right", "Promote"),
+    makeActionButton("btnExport", "share-2", "Export")
+  );
+
+  titleRow.append(left, actions);
+  panel.appendChild(titleRow);
+
+  const clarity = document.createElement("div");
+  clarity.className = "clarity-panel";
+
+  const c1 = document.createElement("div");
+  c1.className = "clarity-item";
+  const c1Label = document.createElement("div");
+  c1Label.className = "clarity-label";
+  c1Label.textContent = "Environment Name";
+  const c1Value = document.createElement("div");
+  c1Value.className = "clarity-value";
+  c1Value.textContent = env.name;
+  c1.append(c1Label, c1Value);
+
+  const c2 = document.createElement("div");
+  c2.className = "clarity-item";
+  const c2Label = document.createElement("div");
+  c2Label.className = "clarity-label";
+  c2Label.textContent = "Version";
+  const c2Value = document.createElement("div");
+  c2Value.className = "clarity-value";
+  c2Value.textContent = "v" + env.version;
+  c2.append(c2Label, c2Value);
+
+  const c3 = document.createElement("div");
+  c3.className = "clarity-item";
+  const c3Label = document.createElement("div");
+  c3Label.className = "clarity-label";
+  c3Label.textContent = "Last Updated (ISO)";
+  const c3Value = document.createElement("div");
+  c3Value.className = "clarity-value";
+  c3Value.textContent = env.updatedAt;
+  c3.append(c3Label, c3Value);
+
+  const c4 = document.createElement("div");
+  c4.className = "clarity-item";
+  const c4Label = document.createElement("div");
+  c4Label.className = "clarity-label";
+  c4Label.textContent = "Status";
+  const c4Value = document.createElement("div");
+  c4Value.className = "clarity-value";
+  const c4Pill = document.createElement("span");
+  c4Pill.className = "status-pill " + state.className;
+  c4Pill.textContent = state.label;
+  c4Value.appendChild(c4Pill);
+  const c4Detail = document.createElement("div");
+  c4Detail.className = "small u-mt-35";
+  c4Detail.textContent = state.detail;
+  c4.append(c4Label, c4Value, c4Detail);
+
+  clarity.append(c1, c2, c3, c4);
+  panel.appendChild(clarity);
+
+  const snapshotLine = document.createElement("div");
+  snapshotLine.className = "small";
+  snapshotLine.textContent = "Snapshots available: " + snapshotCount;
+  panel.appendChild(snapshotLine);
+
+  const diffHint = document.createElement("div");
+  diffHint.className = "diff-banner" + (state.label === "Stable" ? " neutral" : "");
+  if (state.label === "Drifted") {
+    diffHint.textContent = uiState.pendingDiffByEnv[env.id].count + " configuration fields will change when staged operations are applied.";
+  } else {
+    diffHint.textContent = "No staged drift detected for this environment.";
+  }
+  panel.appendChild(diffHint);
+
+  const toggle = document.createElement("div");
+  toggle.className = "view-toggle";
+  const structuredButton = document.createElement("button");
+  structuredButton.id = "viewStructured";
+  structuredButton.textContent = "Structured View";
+  if (uiState.configView === "structured") structuredButton.className = "active";
+  const rawButton = document.createElement("button");
+  rawButton.id = "viewRaw";
+  rawButton.textContent = "Raw JSON View";
+  if (uiState.configView === "raw") rawButton.className = "active";
+  toggle.append(structuredButton, rawButton);
+  panel.appendChild(toggle);
+
+  const structuredWrap = document.createElement("div");
+  structuredWrap.id = "structuredViewWrap";
+  structuredWrap.hidden = uiState.configView !== "structured";
+
+  const structuredDraft = uiState.structuredDraftByEnv[env.id];
+  const structuredView = renderStructuredView(env, structuredDraft);
+  structuredWrap.appendChild(structuredView);
+
+  const structuredControls = document.createElement("div");
+  structuredControls.className = "structured-controls";
+  const resetStructured = document.createElement("button");
+  resetStructured.id = "resetStructured";
+  resetStructured.textContent = "Reset Structured Draft";
+  const previewStructured = document.createElement("button");
+  previewStructured.id = "previewStructured";
+  previewStructured.textContent = "Preview Structured Draft";
+  const queueStructured = document.createElement("button");
+  queueStructured.id = "queueStructured";
+  queueStructured.className = "primary";
+  queueStructured.textContent = "Queue Structured Draft";
+  structuredControls.append(resetStructured, previewStructured, queueStructured);
+  structuredWrap.appendChild(structuredControls);
+
+  const rawWrap = document.createElement("div");
+  rawWrap.id = "rawViewWrap";
+  rawWrap.hidden = uiState.configView !== "raw";
+  const rawLabel = document.createElement("label");
+  rawLabel.textContent = "Configuration (JSON)";
+  const rawPre = document.createElement("pre");
+  rawPre.className = "json";
+  rawPre.id = "envConfig";
+  const rawHint = document.createElement("small");
+  rawHint.className = "hint";
+  rawHint.textContent = "Raw JSON is canonical. Structured edits convert to the same JSON shape before update execution.";
+  rawWrap.append(rawLabel, rawPre, rawHint);
+
+  panel.append(structuredWrap, rawWrap);
+
+  envDetailsEl.replaceChildren(panel);
+  document.getElementById("envConfig").textContent = pretty(env.config);
+
+  document.getElementById("viewStructured").addEventListener("click", function () {
+    uiState.configView = "structured";
+    localStorage.setItem("pj_config_view", uiState.configView);
+    renderEnvPanel();
+  });
+  document.getElementById("viewRaw").addEventListener("click", function () {
+    uiState.configView = "raw";
+    localStorage.setItem("pj_config_view", uiState.configView);
+    renderEnvPanel();
+  });
+
+  document.getElementById("resetStructured").addEventListener("click", function () {
+    uiState.structuredDraftByEnv[env.id] = clone(env.config);
+    renderEnvPanel();
+  });
+
+  document.getElementById("previewStructured").addEventListener("click", function () {
+    const draft = uiState.structuredDraftByEnv[env.id];
+    const changes = diffJSON(env.config, draft);
+    uiState.pendingDiffByEnv[env.id] = { count: changes.length, updatedAt: stableDate() };
+    showPreviewModal({ oldConfig: env.config, newConfig: draft, diff: changes });
+  });
+
+  document.getElementById("queueStructured").addEventListener("click", function () {
+    const draft = uiState.structuredDraftByEnv[env.id];
+    const patch = deriveTopLevelPatch(env.config, draft);
+    const changes = diffJSON(env.config, draft);
+    if (!changes.length) {
+      alert("No changes to queue from structured draft.");
+      return;
+    }
+    uiState.pendingDiffByEnv[env.id] = { count: changes.length, updatedAt: stableDate() };
+    showUpdateModal(env, false, patch);
+  });
+
+  document.getElementById("btnSnapshot").addEventListener("click", function () { showSnapshotModal(env); });
+  document.getElementById("btnDryRunUpdate").addEventListener("click", function () { showUpdateModal(env, true); });
+  document.getElementById("btnUpdate").addEventListener("click", function () { showUpdateModal(env, false); });
+  document.getElementById("btnPromote").addEventListener("click", function () { showPromoteModal(env); });
+  document.getElementById("btnExport").addEventListener("click", function () {
+    const payload = { name: env.name, version: env.version, config: env.config };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = env.name + "-env.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  updateEnvironmentContextVisuals();
+  lucide.createIcons();
+}
+
+function showModal(html, onClose) {
+  const root = document.getElementById("modalRoot");
+  root.hidden = false;
+  root.replaceChildren();
+  const overlay = document.createElement("div");
+  overlay.className = "modal";
+  overlay.id = "modalOverlay";
+  const card = document.createElement("div");
+  card.className = "modal-card";
+  card.appendChild(sanitizeModalHtml(html));
+  overlay.appendChild(card);
+  root.appendChild(overlay);
+
+  const closeHandler = onClose || function () {};
+  document.getElementById("modalOverlay").addEventListener("click", function (event) {
+    if (event.target.id !== "modalOverlay") return;
+    root.hidden = true;
+    root.replaceChildren();
+    closeHandler();
+  });
+}
+
+function closeModal() {
+  const root = document.getElementById("modalRoot");
+  root.hidden = true;
+  root.replaceChildren();
+}
+
+function showPreviewModal(preview) {
+  const diff = preview.diff || diffJSON(preview.oldConfig || {}, preview.newConfig || {});
+  const summaryText = diff.length + " field" + (diff.length === 1 ? "" : "s") + " will change.";
+  const oldConfigText = escapeHtml(pretty(preview.oldConfig || {}));
+  const newConfigText = escapeHtml(pretty(preview.newConfig || {}));
+  const diffText = escapeHtml(pretty(diff));
+
+  const html = [
+    '<div class="u-flex-between u-mb-6">',
+    "<strong>Diff Preview</strong>",
+    '<button id="closePreview">Close</button>',
+    "</div>",
+    '<div class="diff-banner">' + escapeHtml(summaryText) + "</div>",
+    '<div class="split u-mt-65">',
+    '<div class="modal-section"><label>Old</label><pre class="json">' + oldConfigText + "</pre></div>",
+    '<div class="modal-section"><label>New</label><pre class="json">' + newConfigText + "</pre></div>",
+    "</div>",
+    '<div class="diff-preview u-mt-65"><details open><summary>Changed fields</summary><pre class="json">' + diffText + "</pre></details></div>"
+  ].join("");
+
+  showModal(html);
+  document.getElementById("closePreview").addEventListener("click", closeModal);
+}
+
+function buildDiffPreviewUI(diffContainerId, detailsId, previewId, oldConfigGetter, newConfigGetter) {
+  function refresh() {
+    const banner = document.getElementById(diffContainerId);
+    const details = document.getElementById(detailsId);
+    const preview = document.getElementById(previewId);
+
+    try {
+      const oldConfig = oldConfigGetter();
+      const newConfig = newConfigGetter();
+      const diff = diffJSON(oldConfig, newConfig);
+
+      if (!diff.length) {
+        banner.className = "diff-banner neutral";
+        banner.textContent = "No configuration changes detected.";
+      } else {
+        banner.className = "diff-banner";
+        banner.textContent = diff.length + " configuration field" + (diff.length === 1 ? "" : "s") + " will change.";
+      }
+
+      details.open = diff.length > 0;
+      preview.textContent = pretty(diff);
+      return diff;
+    } catch (error) {
+      banner.className = "diff-banner error";
+      banner.textContent = "Invalid JSON patch. Fix syntax to continue.";
+      details.open = false;
+      preview.textContent = "[]";
+      return null;
+    }
+  }
+
+  return { refresh: refresh };
+}
+
+function showCreateEnvModal() {
+  const html = [
+    '<div class="u-flex-between u-mb-8">',
+    "<strong>Create Environment</strong>",
+    '<button id="closeModal">Close</button>',
+    "</div>",
+    '<div class="split">',
+    "<div>",
+    "<label>Name</label>",
+    '<input id="newEnvName" placeholder="e.g., phillipston-prod" />',
+    '<label class="u-mt-6">Initial config (JSON)</label>',
+    '<textarea id="newEnvConfig" class="json-editor">{}</textarea>',
+    '<div class="row u-mt-6">',
+    '<button id="createEnvDry">Dry-run</button>',
+    '<button id="createEnv" class="primary">Create</button>',
+    "</div>",
+    "</div>",
+    '<div class="modal-section">',
+    '<div class="small">This flow preserves the existing execution contract:<br><code>POST /api/pj/execute</code> with <code>{ actionId, payload, mode }</code>.</div>',
+    '<pre class="json u-mt-6">{\n  "region": "us-east-1",\n  "retention": { "policy": "default" },\n  "flags": { "safeMode": true }\n}</pre>',
+    "</div>",
+    "</div>"
+  ].join("");
+
+  showModal(html);
+  lucide.createIcons();
+
+  document.getElementById("closeModal").addEventListener("click", closeModal);
+
+  document.getElementById("createEnvDry").addEventListener("click", async function () {
+    const name = document.getElementById("newEnvName").value.trim();
+    if (!name) return alert("Name required");
+
+    let cfg;
+    try {
+      cfg = JSON.parse(document.getElementById("newEnvConfig").value || "{}");
+    } catch {
+      return alert("Invalid JSON");
+    }
+
+    try {
+      const response = await callPJ("environment.create", { name: name, config: cfg }, "dry-run");
+      pushAudit({
+        actionId: "environment.create",
+        mode: "dry-run",
+        correlationId: response.__correlationId,
+        success: Boolean(response.success),
+        latencyMs: response.__latencyMs,
+        payload: response.__request,
+        result: response.data || response
+      });
+      alert("Dry-run preview:\n\n" + pretty(response.data || response));
+    } catch (error) {
+      pushAudit({
+        actionId: "environment.create",
+        mode: "dry-run",
+        success: false,
+        payload: { actionId: "environment.create", payload: { name: name, config: cfg }, mode: "dry-run" },
+        message: error.message,
+        result: { fallbackPreview: { name: name, version: 1, config: cfg } }
+      });
+      alert("Dry-run failed (backend). Local preview generated.");
+    } finally {
+      closeModal();
+    }
+  });
+
+  document.getElementById("createEnv").addEventListener("click", async function () {
+    const name = document.getElementById("newEnvName").value.trim();
+    if (!name) return alert("Name required");
+
+    let cfg;
+    try {
+      cfg = JSON.parse(document.getElementById("newEnvConfig").value || "{}");
+    } catch {
+      return alert("Invalid JSON");
+    }
+
+    try {
+      const response = await callPJ("environment.create", { name: name, config: cfg }, "execute");
+      pushAudit({
+        actionId: "environment.create",
+        mode: "execute",
+        correlationId: response.__correlationId,
+        success: Boolean(response.success),
+        latencyMs: response.__latencyMs,
+        payload: response.__request,
+        result: response.data || response
+      });
+
+      if (!response.success || !response.data || !response.data.id) {
+        throw new Error("Execution failed. No changes were applied.");
+      }
+
+      addEnvLocal({
+        id: response.data.id,
+        name: response.data.name || name,
+        createdAt: response.data.createdAt || stableDate(),
+        updatedAt: response.data.updatedAt || stableDate(),
+        version: response.data.version || 1,
+        config: response.data.config || cfg
+      });
+      currentEnvId = response.data.id;
+      localStorage.setItem("pj_current_env_master", currentEnvId);
+      saveStore();
+      alert("Environment created.");
+    } catch (error) {
+      pushAudit({
+        actionId: "environment.create",
+        mode: "execute",
+        success: false,
+        payload: { actionId: "environment.create", payload: { name: name, config: cfg }, mode: "execute" },
+        message: error.message
+      });
+      alert("Execution failed. No changes were applied.");
+    } finally {
+      closeModal();
+      renderEnvPanel();
+      renderTree();
+    }
+  });
+}
+
+function showUpdateModal(env, isDryRun, initialPatch) {
+  const modeLabel = isDryRun ? "Dry-run Update" : "Update";
+  const applyLabel = isDryRun ? "Preview (dry-run)" : "Apply update";
+  const patchText = escapeHtml(pretty(initialPatch || {}));
+
+  const html = [
+    '<div class="u-flex-between u-mb-6">',
+    "<strong>" + escapeHtml(modeLabel + " - " + env.name) + "</strong>",
+    '<button id="closeModal2">Close</button>',
+    "</div>",
+    '<div class="split">',
+    "<div>",
+    "<label>Patch (JSON) - merges into existing config</label>",
+    '<textarea id="envPatch" class="json-editor">' + patchText + "</textarea>",
+    '<div class="row u-mt-6">',
+    '<button id="previewBtn">Preview</button>',
+    '<button id="applyBtn" class="primary">' + escapeHtml(applyLabel) + "</button>",
+    "</div>",
+    "</div>",
+    '<div class="modal-section">',
+    '<div id="updateDiffBanner" class="diff-banner neutral">No configuration changes detected.</div>',
+    '<details id="updateDiffDetails" class="diff-preview u-mt-55"><summary>Diff preview</summary><pre id="updateDiffPreview" class="json">[]</pre></details>',
+    '<small class="hint">Preview highlights changed fields before execution. Destructive changes are shown in the diff details.</small>',
+    "</div>",
+    "</div>"
+  ].join("");
+
+  showModal(html);
+  document.getElementById("closeModal2").addEventListener("click", closeModal);
+
+  const patchInput = document.getElementById("envPatch");
+  const diffUi = buildDiffPreviewUI(
+    "updateDiffBanner",
+    "updateDiffDetails",
+    "updateDiffPreview",
+    function () { return env.config; },
+    function () {
+      const patch = JSON.parse(patchInput.value || "{}");
+      return Object.assign({}, env.config, patch);
+    }
+  );
+
+  function previewCurrentDiff() {
+    const diff = diffUi.refresh();
+    if (Array.isArray(diff)) {
+      uiState.pendingDiffByEnv[env.id] = { count: diff.length, updatedAt: stableDate() };
+    }
+    return diff;
+  }
+
+  patchInput.addEventListener("input", previewCurrentDiff);
+  previewCurrentDiff();
+
+  document.getElementById("previewBtn").addEventListener("click", async function () {
+    let patch;
+    try {
+      patch = JSON.parse(patchInput.value || "{}");
+    } catch {
+      return alert("Invalid JSON");
+    }
+
+    try {
+      const response = await callPJ("environment.update", { environmentId: env.id, patch: patch }, "dry-run");
+      const preview = response.data && (response.data.preview || response.data) ? (response.data.preview || response.data) : {
+        oldConfig: env.config,
+        newConfig: Object.assign({}, env.config, patch)
+      };
+      const diff = preview.diff || diffJSON(preview.oldConfig || env.config, preview.newConfig || Object.assign({}, env.config, patch));
+      uiState.pendingDiffByEnv[env.id] = { count: diff.length, updatedAt: stableDate() };
+
+      pushAudit({
+        actionId: "environment.update",
+        mode: "dry-run",
+        correlationId: response.__correlationId,
+        success: Boolean(response.success),
+        latencyMs: response.__latencyMs,
+        payload: response.__request,
+        result: response.data || response
+      });
+      showPreviewModal({ oldConfig: preview.oldConfig || env.config, newConfig: preview.newConfig || Object.assign({}, env.config, patch), diff: diff });
+    } catch (error) {
+      const newCfg = Object.assign({}, env.config, patch);
+      const diff = diffJSON(env.config, newCfg);
+      uiState.pendingDiffByEnv[env.id] = { count: diff.length, updatedAt: stableDate() };
+      pushAudit({
+        actionId: "environment.update",
+        mode: "dry-run",
+        success: false,
+        payload: { actionId: "environment.update", payload: { environmentId: env.id, patch: patch }, mode: "dry-run" },
+        message: error.message,
+        result: { localPreview: true, diff: diff }
+      });
+      showPreviewModal({ oldConfig: env.config, newConfig: newCfg, diff: diff });
+    }
+  });
+
+  document.getElementById("applyBtn").addEventListener("click", async function () {
+    let patch;
+    try {
+      patch = JSON.parse(patchInput.value || "{}");
+    } catch {
+      return alert("Invalid JSON");
+    }
+
+    const newCfg = Object.assign({}, env.config, patch);
+    const diff = diffJSON(env.config, newCfg);
+    uiState.pendingDiffByEnv[env.id] = { count: diff.length, updatedAt: stableDate() };
+
+    if (isDryRun) {
+      document.getElementById("previewBtn").click();
+      return;
+    }
+
+    try {
+      const response = await callPJ("environment.update", { environmentId: env.id, patch: patch }, "execute");
+      pushAudit({
+        actionId: "environment.update",
+        mode: "execute",
+        correlationId: response.__correlationId,
+        success: Boolean(response.success),
+        latencyMs: response.__latencyMs,
+        payload: response.__request,
+        result: response.data || response
+      });
+
+      if (!response.success || !response.data || typeof response.data.config !== "object" || response.data.config === null) {
+        throw new Error("Execution failed. No changes were applied.");
+      }
+
+      const nextConfig = response.data.config;
+      const nextVersion = response.data.version || env.version + 1;
+      updateEnvLocal(env.id, { config: nextConfig, version: nextVersion });
+      uiState.structuredDraftByEnv[env.id] = clone(nextConfig);
+      uiState.pendingDiffByEnv[env.id] = { count: 0, updatedAt: stableDate() };
+      alert("Update applied.");
+    } catch (error) {
+      pushAudit({
+        actionId: "environment.update",
+        mode: "execute",
+        success: false,
+        payload: { actionId: "environment.update", payload: { environmentId: env.id, patch: patch }, mode: "execute" },
+        message: error.message
+      });
+      alert("Execution failed. No changes were applied.");
+    } finally {
+      closeModal();
+      renderEnvPanel();
+    }
+  });
+}
+
+function showSnapshotModal(env) {
+  const html = [
+    '<div class="u-flex-between u-mb-7">',
+    "<strong>" + escapeHtml("Snapshot - " + env.name) + "</strong>",
+    '<button id="closeSnap">Close</button>',
+    "</div>",
+    "<label>Message (optional)</label>",
+    '<input id="snapMsg" placeholder="Why are you snapshotting?" />',
+    '<div class="row u-mt-65">',
+    '<button id="doDry">Dry-run</button>',
+    '<button id="doSnap" class="primary">Snapshot</button>',
+    '<button id="downloadSnap">Download Snapshot</button>',
+    "</div>"
+  ].join("");
+
+  showModal(html);
+  document.getElementById("closeSnap").addEventListener("click", closeModal);
+
+  document.getElementById("doDry").addEventListener("click", async function () {
+    try {
+      const response = await callPJ("environment.snapshot", { environmentId: env.id }, "dry-run");
+      pushAudit({
+        actionId: "environment.snapshot",
+        mode: "dry-run",
+        correlationId: response.__correlationId,
+        success: Boolean(response.success),
+        latencyMs: response.__latencyMs,
+        payload: response.__request,
+        result: response.data || response
+      });
+      alert("Dry-run snapshot preview:\n\n" + pretty(response.data || response));
+    } catch (error) {
+      pushAudit({
+        actionId: "environment.snapshot",
+        mode: "dry-run",
+        success: false,
+        payload: { actionId: "environment.snapshot", payload: { environmentId: env.id }, mode: "dry-run" },
+        message: error.message,
+        result: { localPreview: { environmentId: env.id, config: env.config } }
+      });
+      alert("Dry-run failed. Local preview available in log.");
+    }
+  });
+
+  document.getElementById("doSnap").addEventListener("click", async function () {
+    const msg = document.getElementById("snapMsg").value.trim();
+    try {
+      const response = await callPJ("environment.snapshot", { environmentId: env.id, message: msg || undefined }, "execute");
+      if (!response.success) {
+        throw new Error("Execution failed. No changes were applied.");
+      }
+      pushAudit({
+        actionId: "environment.snapshot",
+        mode: "execute",
+        correlationId: response.__correlationId,
+        success: Boolean(response.success),
+        latencyMs: response.__latencyMs,
+        payload: response.__request,
+        result: response.data || response
+      });
+      alert("Snapshot stored.");
+      closeModal();
+    } catch (error) {
+      pushAudit({
+        actionId: "environment.snapshot",
+        mode: "execute",
+        success: false,
+        payload: { actionId: "environment.snapshot", payload: { environmentId: env.id, message: msg || undefined }, mode: "execute" },
+        message: error.message
+      });
+      alert("Execution failed. No changes were applied.");
+    }
+  });
+
+  document.getElementById("downloadSnap").addEventListener("click", function () {
+    const blob = new Blob([JSON.stringify({ id: env.id, version: env.version, capturedAt: stableDate(), config: env.config }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = env.name + "-snapshot.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+function computePromoteCandidate(sourceId, targetId, merge) {
+  const source = getEnv(sourceId);
+  const target = getEnv(targetId);
+  if (!source || !target) return null;
+  const newConfig = merge ? Object.assign({}, target.config, source.config) : clone(source.config);
+  const diff = diffJSON(target.config, newConfig);
+  return { source: source, target: target, newConfig: newConfig, diff: diff };
+}
+
+function showPromoteModal(env) {
+  const html = [
+    '<div class="u-flex-between u-mb-6">',
+    "<strong>Promote Configuration</strong>",
+    '<button id="closeProm">Close</button>',
+    "</div>",
+    '<div class="split">',
+    "<div>",
+    "<label>Source</label>",
+    '<select id="promSource"></select>',
+    '<label class="u-mt-45">Target</label>',
+    '<select id="promTarget"></select>',
+    '<label class="u-mt-5">Options</label>',
+    '<div class="row u-mt-2">',
+    '<label class="checkbox"><input type="checkbox" id="promMerge"> Merge into target (shallow)</label>',
+    '<label class="checkbox"><input type="checkbox" id="promSnapshotTarget" checked> Snapshot target before promote</label>',
+    '</div>',
+    '<div class="row u-mt-2">',
+    '<label class="checkbox"><input type="checkbox" id="promOverwriteConfirm"> I confirm this overwrite after reviewing diff</label>',
+    "</div>",
+    '<div class="row u-mt-65">',
+    '<button id="promDry">Dry-run</button>',
+    '<button id="promExec" class="primary">Promote</button>',
+    "</div>",
+    "</div>",
+    '<div class="modal-section">',
+    '<div id="promoteDiffBanner" class="diff-banner neutral">Select source and target to compute promote diff.</div>',
+    '<details id="promoteDiffDetails" class="diff-preview u-mt-55"><summary>Promote diff preview</summary><pre id="promoteDiffPreview" class="json">[]</pre></details>',
+    '<small class="hint">Promote uses actionId <code>environment.promote</code>. Same source and target are blocked.</small>',
+    "</div>",
+    "</div>"
+  ].join("");
+
+  showModal(html);
+  const sourceEl = document.getElementById("promSource");
+  const targetEl = document.getElementById("promTarget");
+  const mergeEl = document.getElementById("promMerge");
+  const overwriteEl = document.getElementById("promOverwriteConfirm");
+  const snapshotEl = document.getElementById("promSnapshotTarget");
+  const promoteBtn = document.getElementById("promExec");
+
+  store.envs.forEach(function (candidate) {
+    const srcOpt = document.createElement("option");
+    srcOpt.value = candidate.id;
+    srcOpt.textContent = candidate.name;
+    if (candidate.id === env.id) srcOpt.selected = true;
+    sourceEl.appendChild(srcOpt);
+
+    const tgtOpt = document.createElement("option");
+    tgtOpt.value = candidate.id;
+    tgtOpt.textContent = candidate.name;
+    if (candidate.id !== env.id) targetEl.appendChild(tgtOpt);
+  });
+
+  if (!targetEl.value && sourceEl.options.length > 1) {
+    targetEl.selectedIndex = sourceEl.selectedIndex === 0 ? 1 : 0;
+  }
+
+  function refreshPromotePreview() {
+    const banner = document.getElementById("promoteDiffBanner");
+    const details = document.getElementById("promoteDiffDetails");
+    const preview = document.getElementById("promoteDiffPreview");
+
+    if (sourceEl.value === targetEl.value) {
+      banner.className = "diff-banner error";
+      banner.textContent = "Source and target must be different environments.";
+      preview.textContent = "[]";
+      details.open = false;
+      promoteBtn.disabled = true;
+      return null;
+    }
+
+    const candidate = computePromoteCandidate(sourceEl.value, targetEl.value, mergeEl.checked);
+    if (!candidate) {
+      banner.className = "diff-banner error";
+      banner.textContent = "Unable to compute promote diff.";
+      details.open = false;
+      promoteBtn.disabled = true;
+      return null;
+    }
+
+    const count = candidate.diff.length;
+    uiState.lastPromotePreviewByTarget[targetEl.value] = { count: count, at: stableDate() };
+
+    if (!count) {
+      banner.className = "diff-banner neutral";
+      banner.textContent = "No configuration changes detected.";
+    } else {
+      banner.className = "diff-banner";
+      banner.textContent = count + " configuration field" + (count === 1 ? "" : "s") + " will change.";
+    }
+
+    preview.textContent = pretty(candidate.diff);
+    details.open = count > 0;
+    promoteBtn.disabled = false;
+    return candidate;
+  }
+
+  sourceEl.addEventListener("change", refreshPromotePreview);
+  targetEl.addEventListener("change", refreshPromotePreview);
+  mergeEl.addEventListener("change", refreshPromotePreview);
+  document.getElementById("closeProm").addEventListener("click", closeModal);
+
+  document.getElementById("promDry").addEventListener("click", async function () {
+    const candidate = refreshPromotePreview();
+    if (!candidate) return;
+
+    try {
+      const response = await callPJ("environment.promote", {
+        sourceEnvironmentId: sourceEl.value,
+        targetEnvironmentId: targetEl.value,
+        merge: mergeEl.checked
+      }, "dry-run");
+      pushAudit({
+        actionId: "environment.promote",
+        mode: "dry-run",
+        correlationId: response.__correlationId,
+        success: Boolean(response.success),
+        latencyMs: response.__latencyMs,
+        payload: response.__request,
+        result: response.data || response
+      });
+      const preview = response.data && response.data.preview ? response.data.preview : {
+        oldConfig: candidate.target.config,
+        newConfig: candidate.newConfig,
+        diff: candidate.diff
+      };
+      showPreviewModal({ oldConfig: preview.oldConfig || candidate.target.config, newConfig: preview.newConfig || candidate.newConfig, diff: preview.diff || candidate.diff });
+    } catch (error) {
+      pushAudit({
+        actionId: "environment.promote",
+        mode: "dry-run",
+        success: false,
+        payload: {
+          actionId: "environment.promote",
+          payload: { sourceEnvironmentId: sourceEl.value, targetEnvironmentId: targetEl.value, merge: mergeEl.checked },
+          mode: "dry-run"
+        },
+        message: error.message,
+        result: { localPreview: true, diff: candidate.diff }
+      });
+      showPreviewModal({ oldConfig: candidate.target.config, newConfig: candidate.newConfig, diff: candidate.diff });
+    }
+  });
+
+  document.getElementById("promExec").addEventListener("click", async function () {
+    const candidate = refreshPromotePreview();
+    if (!candidate) return;
+
+    if (candidate.diff.length > 0 && !overwriteEl.checked) {
+      alert("Confirm overwrite before promote.");
+      return;
+    }
+
+    const payload = {
+      sourceEnvironmentId: sourceEl.value,
+      targetEnvironmentId: targetEl.value,
+      merge: mergeEl.checked
+    };
+
+    if (snapshotEl.checked) {
+      try {
+        const snapshotResponse = await callPJ(
+          "environment.snapshot",
+          { environmentId: targetEl.value, message: "auto snapshot before promote" },
+          "execute"
+        );
+        if (!snapshotResponse.success) {
+          throw new Error("Snapshot before promote failed.");
+        }
+      } catch (error) {
+        pushAudit({
+          actionId: "environment.snapshot",
+          mode: "execute",
+          success: false,
+          payload: {
+            actionId: "environment.snapshot",
+            payload: { environmentId: targetEl.value, message: "auto snapshot before promote" },
+            mode: "execute"
+          },
+          message: error && error.message ? error.message : "Snapshot before promote failed."
+        });
+        alert("Snapshot before promote failed. No changes were applied.");
+        return;
+      }
+    }
+
+    try {
+      const response = await callPJ("environment.promote", payload, "execute");
+      pushAudit({
+        actionId: "environment.promote",
+        mode: "execute",
+        correlationId: response.__correlationId,
+        success: Boolean(response.success),
+        latencyMs: response.__latencyMs,
+        payload: response.__request,
+        result: response.data || response
+      });
+
+      if (!response.success || !response.data || typeof response.data.config !== "object" || response.data.config === null) {
+        throw new Error("Execution failed. No changes were applied.");
+      }
+
+      const target = getEnv(targetEl.value);
+      const mergedConfig = response.data.config;
+
+      updateEnvLocal(target.id, {
+        config: mergedConfig,
+        version: response.data.version || target.version + 1
+      });
+
+      uiState.structuredDraftByEnv[target.id] = clone(mergedConfig);
+      uiState.pendingDiffByEnv[target.id] = { count: 0, updatedAt: stableDate() };
+      alert("Promote complete.");
+    } catch (error) {
+      pushAudit({
+        actionId: "environment.promote",
+        mode: "execute",
+        success: false,
+        payload: { actionId: "environment.promote", payload: payload, mode: "execute" },
+        message: error.message
+      });
+      alert("Execution failed. No changes were applied.");
+    } finally {
+      closeModal();
+      renderEnvPanel();
+      renderTree();
+    }
+  });
+
+  refreshPromotePreview();
+}
+
+envSelectEl.addEventListener("change", function (event) {
+  currentEnvId = event.target.value;
+  localStorage.setItem("pj_current_env_master", currentEnvId);
+  renderEnvPanel();
+  renderTree();
+});
+
+document.getElementById("newEnvBtn").addEventListener("click", showCreateEnvModal);
+
+document.getElementById("importEnvBtn").addEventListener("click", function () {
+  const raw = prompt("Paste exported environment JSON:");
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw);
+    const id = genId();
+    const env = {
+      id: id,
+      name: parsed.name || "Imported " + today(),
+      createdAt: stableDate(),
+      updatedAt: stableDate(),
+      version: parsed.version || 1,
+      config: parsed.config || {}
+    };
+    addEnvLocal(env);
+    currentEnvId = id;
+    localStorage.setItem("pj_current_env_master", id);
+    renderEnvPanel();
+    alert("Imported.");
+  } catch {
+    alert("Invalid JSON");
+  }
+});
+
+document.getElementById("mode").addEventListener("change", renderTree);
+document.getElementById("connector").addEventListener("change", renderTree);
+document.getElementById("search").addEventListener("input", renderTree);
+
+window.addEventListener("message", function (event) {
+  if (!event || !event.data || typeof event.data !== "object") {
+    return;
+  }
+  const type = String(event.data.type || "");
+  if (type !== "PJ_IDENTITY_CONTEXT" && type !== "IDENTITY_UPDATE" && type !== "pj.identity" && type !== "PJ_AUTH_TOKEN") return;
+  if (window.parent !== window && event.source !== window.parent) return;
+  const origin = normalizeOrigin(event.origin);
+  if (!TRUSTED_PARENT_ORIGINS.has(origin)) {
+    return;
+  }
+  setApiBaseOrigin(origin);
+  const payload = event.data.payload;
+  if (!payload || typeof payload !== "object") {
+    return;
+  }
+  const relayToken = extractRelayTokenFromPayload(payload);
+  if (relayToken) {
+    setRuntimeAuthToken(relayToken, resolveTokenExpiryMs(payload, relayToken));
+  }
+  if (type === "PJ_AUTH_TOKEN") {
+    void hydrateLiveSources();
+    return;
+  }
+  if (applyIdentityContextFromMessage(payload)) {
+    void hydrateLiveSources();
+  }
+});
+
+document.getElementById("openCmdPal").addEventListener("click", async function () {
+  let actions = [
+    { id: "environment.create" },
+    { id: "environment.update" },
+    { id: "environment.promote" },
+    { id: "environment.snapshot" }
+  ];
+
+  try {
+    if (ENABLE_BACKEND) {
+      const payload = await fetchLiveJson("/api/pj/actions");
+      if (Array.isArray(payload) && payload.length) actions = payload;
+    }
+  } catch {
+    // keep defaults
+  }
+
+  const optionsHtml = actions.map(function (a) {
+    const actionId = a && typeof a.id === "string" ? a.id : "";
+    return '<option value="' + escapeHtml(actionId) + '">' + escapeHtml(actionId) + "</option>";
+  }).join("");
+
+  const html = [
+    '<div class="u-flex-between u-mb-6">',
+    "<strong>Command Palette</strong>",
+    '<button id="closeCmd">Close</button>',
+    "</div>",
+    "<label>Action</label>",
+    '<select id="cmdAction">' + optionsHtml + "</select>",
+    '<label class="u-mt-55">Payload (JSON)</label>',
+    '<textarea id="cmdPayload" class="json-editor-sm">{}</textarea>',
+    '<div class="row u-mt-6">',
+    '<button id="cmdDry">Dry-run</button>',
+    '<button id="cmdExec" class="primary">Execute</button>',
+    "</div>"
+  ].join("");
+
+  showModal(html);
+
+  document.getElementById("closeCmd").addEventListener("click", closeModal);
+
+  document.getElementById("cmdDry").addEventListener("click", async function () {
+    const actionId = document.getElementById("cmdAction").value;
+    let payload;
+    try {
+      payload = JSON.parse(document.getElementById("cmdPayload").value || "{}");
+    } catch {
+      return alert("Invalid JSON");
+    }
+
+    try {
+      const response = await callPJ(actionId, payload, "dry-run");
+      pushAudit({
+        actionId: actionId,
+        mode: "dry-run",
+        correlationId: response.__correlationId,
+        success: Boolean(response.success),
+        latencyMs: response.__latencyMs,
+        payload: response.__request,
+        result: response.data || response
+      });
+      alert("Dry-run result:\n\n" + pretty(response.data || response));
+    } catch (error) {
+      pushAudit({
+        actionId: actionId,
+        mode: "dry-run",
+        success: false,
+        payload: { actionId: actionId, payload: payload, mode: "dry-run" },
+        message: error.message
+      });
+      alert("Dry-run failed: " + error.message);
+    }
+  });
+
+  document.getElementById("cmdExec").addEventListener("click", async function () {
+    const actionId = document.getElementById("cmdAction").value;
+    let payload;
+    try {
+      payload = JSON.parse(document.getElementById("cmdPayload").value || "{}");
+    } catch {
+      return alert("Invalid JSON");
+    }
+
+    try {
+      const response = await callPJ(actionId, payload, "execute");
+      pushAudit({
+        actionId: actionId,
+        mode: "execute",
+        correlationId: response.__correlationId,
+        success: Boolean(response.success),
+        latencyMs: response.__latencyMs,
+        payload: response.__request,
+        result: response.data || response
+      });
+
+      if (actionId === "environment.create" && response.success && response.data && response.data.id) {
+        addEnvLocal({
+          id: response.data.id,
+          name: response.data.name || payload.name || "New environment",
+          createdAt: response.data.createdAt || stableDate(),
+          updatedAt: response.data.updatedAt || stableDate(),
+          version: response.data.version || 1,
+          config: response.data.config || payload.config || {}
+        });
+        currentEnvId = response.data.id;
+        localStorage.setItem("pj_current_env_master", currentEnvId);
+      }
+
+      if (actionId === "environment.update" && payload.environmentId && response.success && response.data && response.data.config) {
+        updateEnvLocal(payload.environmentId, {
+          config: response.data.config,
+          version: response.data.version || (getEnv(payload.environmentId).version + 1)
+        });
+        uiState.structuredDraftByEnv[payload.environmentId] = clone(response.data.config);
+      }
+
+      alert("Execution result:\n\n" + pretty(response.data || response));
+      renderEnvPanel();
+      renderTree();
+    } catch (error) {
+      pushAudit({
+        actionId: actionId,
+        mode: "execute",
+        success: false,
+        payload: { actionId: actionId, payload: payload, mode: "execute" },
+        message: error.message
+      });
+      alert("Execution failed: " + error.message);
+    }
+  });
+});
+
+document.getElementById("auditExport").addEventListener("click", function () {
+  const blob = new Blob([JSON.stringify(auditLog, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "pj-execution-log-" + today() + ".json";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+renderEnvSelect();
+renderEnvPanel();
+renderTree();
+lucide.createIcons();
+renderAudit();
+updateLiveSourceStatus();
+renderConnectorStatusPanel();
+requestParentIdentityContext();
+void (async function bootLiveSources() {
+  await hydrateRuntimeAuthToken(false);
+  await hydrateLiveSources();
+})();
+
+pushAudit({
+  actionId: "ui.init",
+  mode: "execute",
+  correlationId: "local-init",
+  success: true,
+  latencyMs: 0,
+  payload: { startup: true },
+  result: { message: "PuddleJumper ready" }
+});
+</script>
+</body>
+</html>
