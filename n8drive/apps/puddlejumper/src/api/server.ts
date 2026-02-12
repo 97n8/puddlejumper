@@ -1788,6 +1788,14 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.get("/pj-workspace", (_req, res) => {
     sendPjWorkspace(res);
   });
+  // SPA fallback for non-API routes
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) {
+      next();
+      return;
+    }
+    res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+  });
 
   app.get("/live", liveCheckRateLimit, (_req, res) => {
     const publicDirExists = fs.existsSync(PUBLIC_DIR);
