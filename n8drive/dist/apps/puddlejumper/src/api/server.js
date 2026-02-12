@@ -15,6 +15,7 @@ import { PrrStore } from "./prrStore.js";
 import { createPublicPrrRouter } from "./publicPrrRouter.js";
 import { ConnectorStore } from "./connectorStore.js";
 import { createConnectorsRouter } from "./connectors.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../../");
@@ -22,6 +23,7 @@ const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const INTERNAL_SRC_DIR = path.join(ROOT_DIR, "src", "internal-remote");
 const CONTROLLED_DATA_DIR = path.join(ROOT_DIR, "data");
 const PJ_WORKSPACE_FILE = path.join(PUBLIC_DIR, "puddlejumper-master-environment-control.html");
+
 const PJ_ACTION_DEFINITIONS = [
     {
         id: "environment.create",
@@ -44,6 +46,7 @@ const PJ_ACTION_DEFINITIONS = [
         requires: ["evaluate.execute", "missionControl.tiles.customize"]
     }
 ];
+
 const SESSION_COOKIE_NAME = "jwt";
 const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
 const LOGIN_WINDOW_MS = 60_000;
@@ -57,9 +60,11 @@ const DEFAULT_ACCESS_NOTIFICATION_BATCH_SIZE = 25;
 const DEFAULT_ACCESS_NOTIFICATION_MAX_RETRIES = 8;
 const MS_GRAPH_TOKEN_HEADER = "x-ms-graph-token";
 const DEFAULT_GRAPH_PROFILE_URL = "https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName";
+
 function isBuiltInLoginEnabled(nodeEnv) {
     return process.env.ALLOW_ADMIN_LOGIN === "true" && nodeEnv !== "production";
 }
+
 function parseJsonFromEnv(name) {
     const raw = process.env[name];
     if (!raw) {
@@ -72,9 +77,11 @@ function parseJsonFromEnv(name) {
         return null;
     }
 }
+
 function asTrimmedString(value) {
     return typeof value === "string" ? value.trim() : "";
 }
+
 function asStringArray(value) {
     if (!Array.isArray(value)) {
         return [];
@@ -83,12 +90,14 @@ function asStringArray(value) {
         .map((entry) => asTrimmedString(entry))
         .filter(Boolean);
 }
+
 function asRecord(value) {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
         return null;
     }
     return value;
 }
+
 function normalizeRuntimeContext(value) {
     const objectValue = asRecord(value);
     if (!objectValue) {
@@ -158,6 +167,7 @@ function normalizeRuntimeContext(value) {
         ...(actionDefaults ? { actionDefaults } : {})
     };
 }
+
 function normalizeLiveTiles(value) {
     if (!Array.isArray(value)) {
         return [];
@@ -196,6 +206,7 @@ function normalizeLiveTiles(value) {
     }
     return tiles;
 }
+
 function normalizeCapabilities(value) {
     const objectValue = asRecord(value);
     if (!objectValue) {
@@ -257,6 +268,7 @@ function normalizeCapabilities(value) {
         .filter((entry) => Boolean(entry));
     return { automations, quickActions };
 }
+
 function secureEqual(left, right) {
     const leftBuffer = Buffer.from(left, "utf8");
     const rightBuffer = Buffer.from(right, "utf8");
@@ -265,6 +277,7 @@ function secureEqual(left, right) {
     }
     return crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
+
 function parseLoginUsersFromEnv() {
     const raw = process.env.PJ_LOGIN_USERS_JSON;
     if (!raw) {
@@ -338,9 +351,11 @@ function parseLoginUsersFromEnv() {
         return [];
     }
 }
+
 function resolveLoginUsers() {
     return parseLoginUsersFromEnv();
 }
+
 async function findUserAndValidate(users, requestBody) {
     const username = typeof requestBody?.username === "string" ? requestBody.username.trim() : "";
     const password = typeof requestBody?.password === "string" ? requestBody.password : "";
@@ -357,6 +372,7 @@ async function findUserAndValidate(users, requestBody) {
     }
     return user;
 }
+
 function parseCsv(value) {
     if (!value) {
         return [];
@@ -366,12 +382,15 @@ function parseCsv(value) {
         .map((item) => item.trim())
         .filter(Boolean);
 }
+
 function normalizePrincipal(value) {
     return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
+
 function parsePrincipalSet(value) {
     return new Set(parseCsv(value).map((entry) => normalizePrincipal(entry)).filter(Boolean));
 }
+
 function extractMsGraphToken(req) {
     const rawHeader = req.get(MS_GRAPH_TOKEN_HEADER);
     if (!rawHeader) {
@@ -383,6 +402,7 @@ function extractMsGraphToken(req) {
     }
     return trimmed;
 }
+
 async function fetchMsGraphProfile(token, fetchImpl) {
     const response = await fetchImpl(DEFAULT_GRAPH_PROFILE_URL, {
         method: "GET",
@@ -399,6 +419,7 @@ async function fetchMsGraphProfile(token, fetchImpl) {
     }
     return payload;
 }
+
 function buildMsGraphAuthContext(profile, runtimeContext, nodeEnv) {
     const principal = normalizePrincipal(profile.userPrincipalName || profile.mail);
     const profileId = typeof profile.id === "string" ? profile.id.trim() : "";
@@ -436,6 +457,7 @@ function buildMsGraphAuthContext(profile, runtimeContext, nodeEnv) {
         delegations: []
     };
 }
+
 function parseEnvPositiveInt(value) {
     if (typeof value !== "string" || !value.trim()) {
         return null;
@@ -446,6 +468,7 @@ function parseEnvPositiveInt(value) {
     }
     return parsed;
 }
+
 function normalizeTrustedOrigin(value) {
     try {
         const parsed = new URL(value);
@@ -458,6 +481,7 @@ function normalizeTrustedOrigin(value) {
         return null;
     }
 }
+
 function resolveTrustedParentOrigins(nodeEnv) {
     const configured = parseCsv(process.env.PJ_ALLOWED_PARENT_ORIGINS)
         .map((value) => normalizeTrustedOrigin(value))
@@ -470,6 +494,7 @@ function resolveTrustedParentOrigins(nodeEnv) {
         .filter((value) => Boolean(value));
     return Array.from(new Set([...configured, ...normalizedDefaults]));
 }
+
 function resolveCorsAllowedOrigins(nodeEnv) {
     const configured = parseCsv(process.env.CORS_ALLOWED_ORIGINS)
         .map((value) => normalizeTrustedOrigin(value))
@@ -492,12 +517,14 @@ function resolveCorsAllowedOrigins(nodeEnv) {
     const trustedParentOrigins = resolveTrustedParentOrigins(nodeEnv);
     return Array.from(new Set([...configured, ...normalizedDefaults, ...trustedParentOrigins]));
 }
-function normalizePathname(pathname) {
+
+function normalizePathname(pathname 배열) {
     if (pathname.length > 1 && pathname.endsWith("/")) {
         return pathname.slice(0, -1);
     }
     return pathname;
 }
+
 function buildConnectSrcDirective(trustedParentOrigins, includeParentOrigins) {
     if (!includeParentOrigins || trustedParentOrigins.length === 0) {
         return "connect-src 'self'";
@@ -505,6 +532,7 @@ function buildConnectSrcDirective(trustedParentOrigins, includeParentOrigins) {
     const sources = Array.from(new Set(["'self'", ...trustedParentOrigins]));
     return `connect-src ${sources.join(" ")}`;
 }
+
 function escapeHtmlAttribute(value) {
     return value
         .replace(/&/g, "&amp;")
@@ -512,6 +540,7 @@ function escapeHtmlAttribute(value) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
 }
+
 function renderPjWorkspaceHtml(trustedParentOrigins) {
     let source = fs.readFileSync(PJ_WORKSPACE_FILE, "utf8");
     const inlineHashes = resolvePjInlineCspHashes();
@@ -537,6 +566,7 @@ function renderPjWorkspaceHtml(trustedParentOrigins) {
     }
     return source.replace(marker, `<meta name="pj-trusted-parent-origins" content="${trustedValue}">`);
 }
+
 function extractInlineTagContent(source, tag) {
     const pattern = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`);
     const match = source.match(pattern);
@@ -545,6 +575,7 @@ function extractInlineTagContent(source, tag) {
     }
     return match[1];
 }
+
 function resolvePjInlineCspHashes() {
     try {
         const source = fs.readFileSync(PJ_WORKSPACE_FILE, "utf8");
@@ -558,6 +589,7 @@ function resolvePjInlineCspHashes() {
         return { scriptHash: null, styleHash: null };
     }
 }
+
 function initials(name) {
     return name
         .split(/\s+/)
@@ -566,6 +598,7 @@ function initials(name) {
         .map((part) => part[0]?.toUpperCase() ?? "")
         .join("");
 }
+
 function summarizePrompt(prompt) {
     const normalized = prompt.replace(/\s+/g, " ").trim();
     if (!normalized) {
@@ -573,6 +606,7 @@ function summarizePrompt(prompt) {
     }
     return normalized.length > 300 ? `${normalized.slice(0, 300)}…` : normalized;
 }
+
 function normalizeCorrelationId(value) {
     if (!value) {
         return null;
@@ -583,6 +617,7 @@ function normalizeCorrelationId(value) {
     }
     return trimmed;
 }
+
 function withCorrelationId(req, res, next) {
     const incoming = normalizeCorrelationId(req.get(CORRELATION_ID_HEADER));
     const correlationId = incoming ?? crypto.randomUUID();
@@ -590,10 +625,12 @@ function withCorrelationId(req, res, next) {
     res.setHeader("X-Correlation-Id", correlationId);
     next();
 }
+
 function getCorrelationId(res) {
     const fromLocals = typeof res.locals?.correlationId === "string" ? res.locals.correlationId : "";
     return fromLocals || crypto.randomUUID();
 }
+
 function logServerError(scope, correlationId, error) {
     const serialized = {
         level: "error",
@@ -606,6 +643,7 @@ function logServerError(scope, correlationId, error) {
     // eslint-disable-next-line no-console
     console.error(JSON.stringify(serialized));
 }
+
 function logServerInfo(scope, correlationId, details) {
     const serialized = {
         level: "info",
@@ -617,17 +655,20 @@ function logServerInfo(scope, correlationId, details) {
     // eslint-disable-next-line no-console
     console.info(JSON.stringify(serialized));
 }
+
 function truncateText(value, maxLength) {
     if (value.length <= maxLength) {
         return value;
     }
     return `${value.slice(0, Math.max(0, maxLength - 1))}…`;
 }
+
 function computeAccessNotificationBackoffMs(retryCount) {
     const baseMs = 30_000;
     const exponent = Math.max(0, retryCount - 1);
     return Math.min(60 * 60 * 1000, baseMs * 2 ** exponent);
 }
+
 export async function processAccessNotificationQueueOnce(options) {
     const claimed = options.prrStore.claimPendingAccessRequestNotifications(options.batchSize);
     if (claimed.length === 0) {
@@ -692,6 +733,7 @@ export async function processAccessNotificationQueueOnce(options) {
         }
     }
 }
+
 function buildCapabilityManifest(auth, runtimeTiles, runtimeCapabilities) {
     const canEvaluate = auth.permissions.includes("deploy");
     const canEditCorePrompt = auth.role === "admin";
@@ -712,9 +754,11 @@ function buildCapabilityManifest(auth, runtimeTiles, runtimeCapabilities) {
         }
     };
 }
+
 function isPjActionAllowed(manifest, action) {
     return action.requires.every((capabilityKey) => manifest.capabilities[capabilityKey] === true);
 }
+
 function listAllowedPjActions(manifest) {
     return PJ_ACTION_DEFINITIONS
         .filter((action) => isPjActionAllowed(manifest, action))
@@ -724,6 +768,7 @@ function listAllowedPjActions(manifest) {
         requires: [...action.requires]
     }));
 }
+
 function resolvePrimaryScope(auth, runtimeContext) {
     const fromTenantId = auth.tenantId?.trim();
     if (fromTenantId) {
@@ -735,6 +780,7 @@ function resolvePrimaryScope(auth, runtimeContext) {
     }
     return runtimeContext.workspace.id;
 }
+
 function resolveStatuteCitation(runtimeContext) {
     const statutes = runtimeContext.municipality.statutes;
     if (statutes && typeof statutes === "object") {
@@ -745,10 +791,12 @@ function resolveStatuteCitation(runtimeContext) {
     }
     return "MGL Ch. 66 Section 10";
 }
+
 function normalizeTargetSegment(value) {
     const normalized = value.trim().replace(/[^A-Za-z0-9._:-]+/g, "-");
     return normalized || "default";
 }
+
 function buildPjEvaluatePayload(auth, runtimeContext, request, correlationId) {
     const scope = resolvePrimaryScope(auth, runtimeContext);
     const timestamp = new Date().toISOString();
@@ -912,6 +960,7 @@ function buildPjEvaluatePayload(auth, runtimeContext, request, correlationId) {
         timestamp
     };
 }
+
 function resolveDecisionStatusCode(result) {
     if (result.approved) {
         return 200;
@@ -924,6 +973,7 @@ function resolveDecisionStatusCode(result) {
     }
     return 400;
 }
+
 function buildPjExecuteData(request, evaluatePayload, decision) {
     const base = {
         actionId: request.actionId,
@@ -973,6 +1023,7 @@ function buildPjExecuteData(request, evaluatePayload, decision) {
         message: request.payload.message ?? ""
     };
 }
+
 function createSecurityHeadersMiddleware(nodeEnv) {
     const trustedParentOrigins = resolveTrustedParentOrigins(nodeEnv);
     const frameAncestors = ["'self'", ...trustedParentOrigins].join(" ");
@@ -1023,6 +1074,7 @@ function createSecurityHeadersMiddleware(nodeEnv) {
         next();
     };
 }
+
 function createCorsMiddleware(nodeEnv) {
     const allowedOrigins = new Set(resolveCorsAllowedOrigins(nodeEnv));
     const defaultAllowHeaders = [
@@ -1057,6 +1109,7 @@ function createCorsMiddleware(nodeEnv) {
         next();
     };
 }
+
 function scopedRequestId(userId, tenantId, requestId) {
     if (!requestId) {
         return undefined;
@@ -1064,9 +1117,11 @@ function scopedRequestId(userId, tenantId, requestId) {
     const normalizedTenant = tenantId && tenantId.trim() ? tenantId.trim() : "no-tenant";
     return `${userId}:${normalizedTenant}:${requestId}`;
 }
+
 function normalizeScopeToken(value) {
     return value.trim().toLowerCase();
 }
+
 function extractTargetScopeToken(target) {
     const rawTarget = target.trim();
     if (!rawTarget) {
@@ -1090,6 +1145,7 @@ function extractTargetScopeToken(target) {
     const [scope = ""] = rest.split(":");
     return scope ? normalizeScopeToken(scope) : null;
 }
+
 function assertTenantScope(auth, payload) {
     const authorizedScopes = new Set();
     if (auth.tenantId) {
@@ -1144,6 +1200,7 @@ function assertTenantScope(auth, payload) {
     }
     return { ok: true };
 }
+
 function resolveRuntimeContext(nodeEnv) {
     const context = normalizeRuntimeContext(parseJsonFromEnv("PJ_RUNTIME_CONTEXT_JSON"));
     if (context) {
@@ -1154,6 +1211,7 @@ function resolveRuntimeContext(nodeEnv) {
     }
     return null;
 }
+
 function resolveLiveTiles(nodeEnv) {
     const tiles = normalizeLiveTiles(parseJsonFromEnv("PJ_RUNTIME_TILES_JSON"));
     if (tiles.length > 0) {
@@ -1164,6 +1222,7 @@ function resolveLiveTiles(nodeEnv) {
     }
     return [];
 }
+
 function resolveLiveCapabilities(nodeEnv) {
     const capabilities = normalizeCapabilities(parseJsonFromEnv("PJ_RUNTIME_CAPABILITIES_JSON"));
     if (capabilities && (capabilities.automations.length > 0 || capabilities.quickActions.length > 0)) {
@@ -1174,12 +1233,14 @@ function resolveLiveCapabilities(nodeEnv) {
     }
     return null;
 }
+
 function isPathInsideDirectory(candidatePath, baseDirectory) {
     const resolvedCandidate = path.resolve(candidatePath);
     const resolvedBase = path.resolve(baseDirectory);
     const relative = path.relative(resolvedBase, resolvedCandidate);
     return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
+
 function assertProductionInvariants(nodeEnv, authOptions) {
     if (nodeEnv !== "production") {
         return;
@@ -1229,6 +1290,7 @@ function assertProductionInvariants(nodeEnv, authOptions) {
         throw new Error("CONNECTOR_STATE_SECRET is required in production");
     }
 }
+
 export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", options = {}) {
     const authOptions = resolveAuthOptions(options.authOptions);
     assertProductionInvariants(nodeEnv, authOptions);
@@ -1361,6 +1423,86 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             now: new Date().toISOString()
         });
     });
+
+    // /live liveness/readiness endpoint with diagnostics
+    app.get("/live", async (req, res) => {
+        const now = new Date().toISOString();
+        const nodeEnv = process.env.NODE_ENV || "development";
+        const service = "puddle-jumper-deploy-remote";
+
+        // Static assets check
+        const publicIndex = path.join(PUBLIC_DIR, "index.html");
+        const websiteServed = fs.existsSync(publicIndex);
+
+        // DB paths
+        const prrPath = process.env.PRR_DB_PATH || path.join(process.cwd(), "data", "prr.db");
+        const connectorPath = process.env.CONNECTOR_DB_PATH || path.join(process.cwd(), "data", "connectors.db");
+
+        // Safe DB check (read + minimal write test)
+        function checkSqliteReadWrite(dbPath: string) {
+            try {
+                if (!fs.existsSync(dbPath)) {
+                    return { exists: false, readable: false, writable: false, ok: false, error: "file-missing" };
+                }
+                const db = new Database(dbPath, { readonly: true });
+                try {
+                    db.prepare("SELECT 1 as ok").get();
+                    db.close();
+                    // Test write with temp table
+                    const db2 = new Database(dbPath);
+                    try {
+                        db2.exec("BEGIN; CREATE TABLE IF NOT EXISTS __pj_health_check (k TEXT); DROP TABLE IF EXISTS __pj_health_check; COMMIT;");
+                        db2.close();
+                        return { exists: true, readable: true, writable: true, ok: true };
+                    } catch (writeErr) {
+                        db2.close();
+                        return { exists: true, readable: true, writable: false, ok: false, error: String(writeErr) };
+                    }
+                } catch (readErr) {
+                    db.close();
+                    return { exists: true, readable: false, writable: false, ok: false, error: String(readErr) };
+                }
+            } catch (err) {
+                return { exists: false, readable: false, writable: false, ok: false, error: String(err) };
+            }
+        }
+
+        let prrCheck = null;
+        let connectorCheck = null;
+        try {
+            prrCheck = checkSqliteReadWrite(prrPath);
+        } catch (e) {
+            prrCheck = { ok: false, error: String(e) };
+        }
+        try {
+            connectorCheck = checkSqliteReadWrite(connectorPath);
+        } catch (e) {
+            connectorCheck = { ok: false, error: String(e) };
+        }
+
+        // Aggregate
+        const overallOk = websiteServed && prrCheck && prrCheck.ok;
+
+        const payload = {
+            status: overallOk ? "live" : "degraded",
+            service,
+            nodeEnv,
+            now,
+            checks: {
+                website: { path: publicIndex, exists: websiteServed },
+                prrDb: { path: prrPath, ...prrCheck },
+                connectorDb: { path: connectorPath, ...connectorCheck },
+                env: {
+                    JWT_SECRET: Boolean(process.env.JWT_SECRET),
+                    ACCESS_NOTIFICATION_WEBHOOK_URL: Boolean(process.env.ACCESS_NOTIFICATION_WEBHOOK_URL)
+                },
+                uptimeSeconds: Math.floor(process.uptime())
+            }
+        };
+
+        res.status(overallOk ? 200 : 503).json(payload);
+    });
+
     app.post("/api/login", loginRateLimit, async (req, res) => {
         if (!builtInLoginEnabled) {
             res.status(404).json({ error: "Not Found" });
@@ -1411,6 +1553,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             }
         });
     });
+
     app.use("/api", (req, res, next) => {
         if (req.method === "POST" && req.path === "/login") {
             next();
@@ -1434,7 +1577,9 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         }
         authMiddleware(req, res, next);
     });
+
     app.use("/api", csrfProtection);
+
     app.post("/api/logout", requireAuthenticated(), (_req, res) => {
         res.clearCookie(SESSION_COOKIE_NAME, {
             httpOnly: true,
@@ -1444,13 +1589,16 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         });
         res.status(200).json({ ok: true });
     });
+
     app.get("/api/sample", requireAuthenticated(), (_req, res) => {
         res.status(404).json({ error: "Not available" });
     });
+
     app.use("/api/connectors", createConnectorsRouter({
         store: connectorStore,
         stateHmacKey: connectorStateSecret
     }));
+
     app.post("/api/prr/intake", (req, res) => {
         const parsed = prrIntakeRequestSchema.safeParse(req.body);
         if (!parsed.success) {
@@ -1492,6 +1640,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             tracking_url: trackingUrl
         });
     });
+
     app.get("/api/prr", requireAuthenticated(), (req, res) => {
         const auth = getAuthContext(req);
         if (!auth) {
@@ -1522,6 +1671,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         });
         res.json(result);
     });
+
     app.post("/api/prr/:id/status", requireAuthenticated(), (req, res) => {
         const auth = getAuthContext(req);
         if (!auth) {
@@ -1569,6 +1719,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         }
         res.status(200).json(transition.row);
     });
+
     app.post("/api/prr/:id/close", requireAuthenticated(), (req, res) => {
         const auth = getAuthContext(req);
         if (!auth) {
@@ -1616,6 +1767,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         }
         res.status(200).json(closed.row);
     });
+
     app.post("/api/access/request", (req, res) => {
         const parsed = accessRequestIntakeRequestSchema.safeParse(req.body);
         if (!parsed.success) {
@@ -1655,6 +1807,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             notification: created.notification
         });
     });
+
     app.post("/api/access/request/:id/status", requireAuthenticated(), (req, res) => {
         const auth = getAuthContext(req);
         if (!auth) {
@@ -1707,6 +1860,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         }
         res.status(200).json(transition.row);
     });
+
     app.post("/api/access/request/:id/close", requireAuthenticated(), (req, res) => {
         const auth = getAuthContext(req);
         if (!auth) {
@@ -1754,6 +1908,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         }
         res.status(200).json(closed.row);
     });
+
     app.get("/api/runtime/context", requireAuthenticated(), (req, res) => {
         const auth = getAuthContext(req);
         if (!auth) {
@@ -1778,6 +1933,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             timestamp: new Date().toISOString()
         });
     });
+
     app.get("/api/config/tiles", requireAuthenticated(), (_req, res) => {
         if (runtimeTiles.length === 0) {
             res.status(503).json({ error: "Runtime tiles unavailable" });
@@ -1785,6 +1941,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         }
         res.json(runtimeTiles);
     });
+
     app.get("/api/config/capabilities", requireAuthenticated(), (_req, res) => {
         if (!runtimeCapabilities) {
             res.status(503).json({ error: "Runtime capabilities unavailable" });
@@ -1792,6 +1949,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         }
         res.json(runtimeCapabilities);
     });
+
     app.get("/api/capabilities/manifest", requireAuthenticated(), (req, res) => {
         const auth = getAuthContext(req);
         if (!auth) {
@@ -1800,6 +1958,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         }
         res.json(buildCapabilityManifest(auth, runtimeTiles, runtimeCapabilities));
     });
+
     app.get("/api/pj/actions", requireAuthenticated(), (req, res) => {
         const auth = getAuthContext(req);
         if (!auth) {
@@ -1809,6 +1968,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         const manifest = buildCapabilityManifest(auth, runtimeTiles, runtimeCapabilities);
         res.json(listAllowedPjActions(manifest));
     });
+
     app.get("/api/pj/identity-token", async (req, res) => {
         let auth = getAuthContext(req);
         const correlationId = getCorrelationId(res);
@@ -1863,6 +2023,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             correlationId
         });
     });
+
     app.post("/api/pj/execute", pjExecuteRateLimit, requireAuthenticated(), async (req, res) => {
         const auth = getAuthContext(req);
         const correlationId = getCorrelationId(res);
@@ -1942,6 +2103,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             res.status(500).json({ success: false, correlationId, error: "Internal server error" });
         }
     });
+
     app.get("/api/prompt", promptRateLimit, requireRole("admin"), (req, res) => {
         try {
             const content = getSystemPromptText();
@@ -1959,6 +2121,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             res.status(500).json({ error: "Internal server error", correlationId });
         }
     });
+
     app.get("/api/core-prompt", promptRateLimit, requireAuthenticated(), (req, res) => {
         const auth = getAuthContext(req);
         if (!auth) {
@@ -1986,6 +2149,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             res.status(500).json({ error: "Internal server error", correlationId });
         }
     });
+
     app.get("/api/identity", requireAuthenticated(), (req, res) => {
         const auth = getAuthContext(req);
         if (!auth) {
@@ -2000,6 +2164,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             trustedParentOrigins
         });
     });
+
     app.post("/api/evaluate", evaluateRateLimit, requirePermission("deploy"), async (req, res) => {
         const auth = getAuthContext(req);
         if (!auth) {
@@ -2064,6 +2229,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             res.status(500).json({ error: "Internal server error", correlationId });
         }
     });
+
     app.use((error, req, res, _next) => {
         if (error instanceof SyntaxError) {
             res.status(400).json({ error: "Invalid JSON body" });
@@ -2073,8 +2239,10 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         logServerError(`${req.method} ${req.path}`, correlationId, error);
         res.status(500).json({ error: "Internal server error", correlationId });
     });
+
     return app;
 }
+
 export function startServer() {
     const app = createApp();
     const port = Number.parseInt(process.env.PORT ?? "3002", 10);
@@ -2083,6 +2251,7 @@ export function startServer() {
         console.log(`Puddle Jumper Deploy Remote running on http://localhost:${port}`);
     });
 }
+
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
     startServer();
 }
