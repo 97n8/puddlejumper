@@ -21,6 +21,6 @@ type AccessNotificationWorkerOptions = {
     maxRetries: number;
 };
 export declare function processAccessNotificationQueueOnce(options: AccessNotificationWorkerOptions): Promise<void>;
-export declare function createApp(nodeEnv?: string, options?: CreateAppOptions): import("express-serve-static-core").Express;
+export declare function createApp(nodeEnv?: string, options?: CreateAppOptions): any;
 export declare function startServer(): void;
 export {};

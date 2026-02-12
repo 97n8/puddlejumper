@@ -496,12 +496,20 @@ function normalizePathname(pathname) {
     }
     return pathname;
 }
-function buildConnectSrcDirective(trustedParentOrigins, includeParentOrigins) {
-    if (!includeParentOrigins || trustedParentOrigins.length === 0) {
-        return "connect-src 'self'";
+function buildConnectSrcDirective(trustedParentOrigins, includeParentOrigins, allowLocalDevtools) {
+    const sources = new Set(["'self'"]);
+    if (includeParentOrigins) {
+        for (const origin of trustedParentOrigins) {
+            sources.add(origin);
+        }
     }
-    const sources = Array.from(new Set(["'self'", ...trustedParentOrigins]));
-    return `connect-src ${sources.join(" ")}`;
+    if (allowLocalDevtools) {
+        sources.add("http://localhost:3002");
+        sources.add("http://127.0.0.1:3002");
+        sources.add("http://localhost:9222");
+        sources.add("http://127.0.0.1:9222");
+    }
+    return `connect-src ${Array.from(sources).join(" ")}`;
 }
 function escapeHtmlAttribute(value) {
     return value
@@ -510,11 +518,11 @@ function escapeHtmlAttribute(value) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
 }
-function renderPjWorkspaceHtml(trustedParentOrigins) {
+function renderPjWorkspaceHtml(trustedParentOrigins, allowLocalDevtools) {
     let source = fs.readFileSync(PJ_WORKSPACE_FILE, "utf8");
     const inlineHashes = resolvePjInlineCspHashes();
     if (inlineHashes.styleHash && inlineHashes.scriptHash) {
-        const connectSrcDirective = buildConnectSrcDirective(trustedParentOrigins, true);
+        const connectSrcDirective = buildConnectSrcDirective(trustedParentOrigins, true, allowLocalDevtools);
         const inlineMetaCsp = [
             "default-src 'self'",
             "base-uri 'none'",
@@ -1006,7 +1014,7 @@ function createSecurityHeadersMiddleware(nodeEnv) {
         const styleSrc = allowsInlineAssets && inlineHashes.styleHash
             ? `style-src 'self' 'sha256-${inlineHashes.styleHash}'`
             : "style-src 'self' https://fonts.googleapis.com";
-        const connectSrc = buildConnectSrcDirective(trustedParentOrigins, allowsParentApiConnect);
+        const connectSrc = buildConnectSrcDirective(trustedParentOrigins, allowsParentApiConnect, nodeEnv !== "production");
         res.setHeader("Content-Security-Policy", [
             "default-src 'self'",
             scriptSrc,
@@ -1410,7 +1418,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
     }
     const sendPjWorkspace = (res) => {
         res.setHeader("Cache-Control", "no-store, max-age=0");
-        res.type("html").send(renderPjWorkspaceHtml(trustedParentOrigins));
+        res.type("html").send(renderPjWorkspaceHtml(trustedParentOrigins, nodeEnv !== "production"));
     };
     app.get("/pj", (_req, res) => {
         sendPjWorkspace(res);
@@ -1420,6 +1428,14 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
     });
     app.get("/pj-workspace", (_req, res) => {
         sendPjWorkspace(res);
+    });
+    // SPA fallback for non-API routes
+    app.get("*", (req, res, next) => {
+        if (req.path.startsWith("/api/")) {
+            next();
+            return;
+        }
+        res.sendFile(path.join(PUBLIC_DIR, "index.html"));
     });
     app.get("/live", liveCheckRateLimit, (_req, res) => {
         const publicDirExists = fs.existsSync(PUBLIC_DIR);

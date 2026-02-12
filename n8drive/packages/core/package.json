@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc --project tsconfig.json --outDir dist",
+    "build": "tsc -b",
     "test": "vitest run"
   },
   "dependencies": {
@@ -15,9 +15,5 @@
   ,
   "devDependencies": {
     "vitest": "^1.0.0"
-  },
-  "scripts": {
-    "build": "tsc --project ../../tsconfig.json --outDir dist",
-    "test": "vitest run"
   }
 }
