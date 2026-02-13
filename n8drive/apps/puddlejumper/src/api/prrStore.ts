@@ -1,13 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, "../../");
-const CONTROLLED_DATA_DIR = path.join(ROOT_DIR, "data");
 
 export const PRR_STATUSES = ["received", "acknowledged", "in_progress", "extended", "closed"] as const;
 export type PrrStatus = (typeof PRR_STATUSES)[number];
@@ -217,10 +211,10 @@ export function addBusinessDays(startIso: string, days: number): string {
 export class PrrStore {
   private readonly db: Database.Database;
 
-  constructor(dbPath: string) {
+  constructor(dbPath: string, allowedBaseDir?: string) {
     const resolvedPath = path.resolve(dbPath);
-    if (!isPathInsideDirectory(resolvedPath, CONTROLLED_DATA_DIR)) {
-      throw new Error(`PRR_DB_PATH must be inside ${CONTROLLED_DATA_DIR}`);
+    if (allowedBaseDir && !isPathInsideDirectory(resolvedPath, allowedBaseDir)) {
+      throw new Error(`PRR_DB_PATH must be inside ${allowedBaseDir}`);
     }
 
     fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });

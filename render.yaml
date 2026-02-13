@@ -20,13 +20,13 @@ services:
       - key: PORT
         fromGroup: render
       - key: PRR_DB_PATH
-        value: ./data/prr.db
+        value: /data/prr.db
       - key: CONNECTOR_DB_PATH
-        value: ./data/connectors.db
+        value: /data/connectors.db
       - key: IDEMPOTENCY_DB_PATH
-        value: ./data/idempotency.db
+        value: /data/idempotency.db
       - key: RATE_LIMIT_DB_PATH
-        value: ./data/rate-limit.db
+        value: /data/rate-limit.db
       - key: AUTH_ISSUER
         value: puddle-jumper
       - key: AUTH_AUDIENCE
