@@ -1,14 +1,14 @@
 {
   "version": 2,
   "builds": [
-    { "src": "src/api/server.ts", "use": "@vercel/node" },
-    { "src": "public/**", "use": "@vercel/static" }
+    { "src": "apps/puddlejumper/src/api/server.ts", "use": "@vercel/node" },
+    { "src": "apps/puddlejumper/public/**", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "src/api/server.ts" },
-    { "src": "/(.*)", "dest": "/public/$1" }
+    { "src": "/api/(.*)", "dest": "apps/puddlejumper/src/api/server.ts" },
+    { "src": "/(.*)", "dest": "apps/puddlejumper/public/$1" }
   ],
   "functions": {
-    "src/api/server.ts": { "maxDuration": 60 }
+    "apps/puddlejumper/src/api/server.ts": { "maxDuration": 60 }
   }
 }
