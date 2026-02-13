@@ -1,3 +1,13 @@
+// eslint-disable-next-line no-console
+console.log("[EARLY BOOT DEBUG] Raw env at module load:", {
+  NODE_ENV: process.env.NODE_ENV,
+  CONTROLLED_DATA_DIR: process.env.CONTROLLED_DATA_DIR,
+  PRR_DB_PATH: process.env.PRR_DB_PATH,
+  IDEMPOTENCY_DB_PATH: process.env.IDEMPOTENCY_DB_PATH,
+  RATE_LIMIT_DB_PATH: process.env.RATE_LIMIT_DB_PATH,
+  CONNECTOR_DB_PATH: process.env.CONNECTOR_DB_PATH
+});
+
 import express from "express";
 import fs from "node:fs";
 import path from "node:path";
@@ -56,12 +66,12 @@ const CONTROLLED_DATA_DIR = path.resolve(
     ? CONTROLLED_DATA_DIR_INPUT.trim() || "/data"
     : CONTROLLED_DATA_DIR_INPUT.trim() || path.join(ROOT_DIR, "data")
 );
-if (NODE_ENV === "production") {
-  // eslint-disable-next-line no-console
-  console.log("[prod invariant] CONTROLLED_DATA_DIR raw env:", JSON.stringify(CONTROLLED_DATA_DIR_INPUT));
-  // eslint-disable-next-line no-console
-  console.log("[prod invariant] CONTROLLED_DATA_DIR resolved:", CONTROLLED_DATA_DIR);
-}
+// eslint-disable-next-line no-console
+console.log("[invariant-debug] NODE_ENV:", NODE_ENV);
+// eslint-disable-next-line no-console
+console.log("[invariant-debug] CONTROLLED_DATA_DIR raw env:", JSON.stringify(CONTROLLED_DATA_DIR_INPUT));
+// eslint-disable-next-line no-console
+console.log("[invariant-debug] CONTROLLED_DATA_DIR resolved:", CONTROLLED_DATA_DIR);
 const PJ_WORKSPACE_FILE = path.join(PUBLIC_DIR, "puddlejumper-master-environment-control.html");
 const PJ_WORKSPACE_FALLBACK_FILE = path.resolve(
   ROOT_DIR,
@@ -1592,7 +1602,9 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
   try {
     const resolved = resolvePathFromEnv("PRR_DB_PATH", DEFAULT_PRR_DB_PATH);
     // eslint-disable-next-line no-console
-    console.log("[prod invariant] PRR_DB_PATH resolved:", resolved, "base:", CONTROLLED_DATA_DIR);
+    console.log("[invariant-debug] PRR_DB_PATH raw env:", JSON.stringify(process.env.PRR_DB_PATH));
+    // eslint-disable-next-line no-console
+    console.log("[invariant-debug] PRR_DB_PATH resolved:", resolved, "base:", CONTROLLED_DATA_DIR);
     resolveInsideControlledDir(CONTROLLED_DATA_DIR, resolved);
   } catch {
     throw new Error("PRR_DB_PATH must be inside the controlled data directory");
@@ -1601,7 +1613,9 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
   try {
     const resolved = resolvePathFromEnv("IDEMPOTENCY_DB_PATH", DEFAULT_IDEMPOTENCY_DB_PATH);
     // eslint-disable-next-line no-console
-    console.log("[prod invariant] IDEMPOTENCY_DB_PATH resolved:", resolved, "base:", CONTROLLED_DATA_DIR);
+    console.log("[invariant-debug] IDEMPOTENCY_DB_PATH raw env:", JSON.stringify(process.env.IDEMPOTENCY_DB_PATH));
+    // eslint-disable-next-line no-console
+    console.log("[invariant-debug] IDEMPOTENCY_DB_PATH resolved:", resolved, "base:", CONTROLLED_DATA_DIR);
     resolveInsideControlledDir(CONTROLLED_DATA_DIR, resolved);
   } catch {
     throw new Error("IDEMPOTENCY_DB_PATH must be inside the controlled data directory");
@@ -1610,7 +1624,9 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
   try {
     const resolved = resolvePathFromEnv("RATE_LIMIT_DB_PATH", DEFAULT_RATE_LIMIT_DB_PATH);
     // eslint-disable-next-line no-console
-    console.log("[prod invariant] RATE_LIMIT_DB_PATH resolved:", resolved, "base:", CONTROLLED_DATA_DIR);
+    console.log("[invariant-debug] RATE_LIMIT_DB_PATH raw env:", JSON.stringify(process.env.RATE_LIMIT_DB_PATH));
+    // eslint-disable-next-line no-console
+    console.log("[invariant-debug] RATE_LIMIT_DB_PATH resolved:", resolved, "base:", CONTROLLED_DATA_DIR);
     resolveInsideControlledDir(CONTROLLED_DATA_DIR, resolved);
   } catch {
     throw new Error("RATE_LIMIT_DB_PATH must be inside the controlled data directory");
@@ -1619,7 +1635,9 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
   try {
     const resolved = resolvePathFromEnv("CONNECTOR_DB_PATH", DEFAULT_CONNECTOR_DB_PATH);
     // eslint-disable-next-line no-console
-    console.log("[prod invariant] CONNECTOR_DB_PATH resolved:", resolved, "base:", CONTROLLED_DATA_DIR);
+    console.log("[invariant-debug] CONNECTOR_DB_PATH raw env:", JSON.stringify(process.env.CONNECTOR_DB_PATH));
+    // eslint-disable-next-line no-console
+    console.log("[invariant-debug] CONNECTOR_DB_PATH resolved:", resolved, "base:", CONTROLLED_DATA_DIR);
     resolveInsideControlledDir(CONTROLLED_DATA_DIR, resolved);
   } catch {
     throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
