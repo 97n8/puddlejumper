@@ -44,6 +44,7 @@ import { PrrStore, type AccessRequestStatus, type PrrStatus } from "./prrStore.j
 import { createPublicPrrRouter } from "./publicPrrRouter.js";
 import { ConnectorStore } from "./connectorStore.js";
 import { createConnectorsRouter } from "./connectors.js";
+import { resolveControlledDataDir } from "./dataDir.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,7 +52,6 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../../");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const INTERNAL_SRC_DIR = path.join(ROOT_DIR, "src", "internal-remote");
-const CONTROLLED_DATA_DIR = path.join(ROOT_DIR, "data");
 const PJ_WORKSPACE_FILE = path.join(PUBLIC_DIR, "puddlejumper-master-environment-control.html");
 
 type CreateAppOptions = {
@@ -214,8 +214,6 @@ const LOGIN_WINDOW_MS = 60_000;
 const LOGIN_MAX_ATTEMPTS = 10;
 const CORRELATION_ID_HEADER = "x-correlation-id";
 const CORRELATION_ID_PATTERN = /^[A-Za-z0-9._:-]{8,128}$/;
-const DEFAULT_PRR_DB_PATH = path.join(CONTROLLED_DATA_DIR, "prr.db");
-const DEFAULT_CONNECTOR_DB_PATH = path.join(CONTROLLED_DATA_DIR, "connectors.db");
 const DEFAULT_ACCESS_NOTIFICATION_INTERVAL_MS = 30_000;
 const DEFAULT_ACCESS_NOTIFICATION_BATCH_SIZE = 25;
 const DEFAULT_ACCESS_NOTIFICATION_MAX_RETRIES = 8;
@@ -1530,6 +1528,73 @@ function checkSqliteReadiness(dbPath: string): {
   }
 }
 
+/**
+ * Resolves all database file paths using the controlled data directory and environment overrides.
+ */
+function resolveDataPaths(controlledDataDir: string): {
+  prrDbPath: string;
+  connectorDbPath: string;
+  idempotencyDbPath: string;
+  rateLimitDbPath: string;
+} {
+  return {
+    prrDbPath: path.resolve(process.env.PRR_DB_PATH ?? path.join(controlledDataDir, "prr.db")),
+    connectorDbPath: path.resolve(process.env.CONNECTOR_DB_PATH ?? path.join(controlledDataDir, "connectors.db")),
+    idempotencyDbPath: path.resolve(process.env.IDEMPOTENCY_DB_PATH ?? path.join(controlledDataDir, "idempotency.db")),
+    rateLimitDbPath: path.resolve(process.env.RATE_LIMIT_DB_PATH ?? path.join(controlledDataDir, "rate-limit.db"))
+  };
+}
+
+function assertControlledDataPaths(
+  controlledDataDir: string,
+  dataPaths: ReturnType<typeof resolveDataPaths>
+): void {
+  if (!isPathInsideDirectory(dataPaths.prrDbPath, controlledDataDir)) {
+    throw new Error("PRR_DB_PATH must be inside the controlled data directory");
+  }
+  if (!isPathInsideDirectory(dataPaths.idempotencyDbPath, controlledDataDir)) {
+    throw new Error("IDEMPOTENCY_DB_PATH must be inside the controlled data directory");
+  }
+  if (!isPathInsideDirectory(dataPaths.rateLimitDbPath, controlledDataDir)) {
+    throw new Error("RATE_LIMIT_DB_PATH must be inside the controlled data directory");
+  }
+  if (!isPathInsideDirectory(dataPaths.connectorDbPath, controlledDataDir)) {
+    throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
+  }
+}
+
+/**
+ * Logs resolved invariant paths and relevant environment variables for diagnostics.
+ */
+function logInvariantPaths(
+  nodeEnv: string,
+  controlledDataDir: string,
+  dataPaths: ReturnType<typeof resolveDataPaths>
+): void {
+  // eslint-disable-next-line no-console
+  console.info(
+    JSON.stringify({
+      level: "info",
+      scope: "invariants",
+      nodeEnv,
+      controlledDataDir,
+      env: {
+        PJ_CONTROLLED_DATA_DIR: process.env.PJ_CONTROLLED_DATA_DIR ?? null,
+        PRR_DB_PATH: process.env.PRR_DB_PATH ?? null,
+        IDEMPOTENCY_DB_PATH: process.env.IDEMPOTENCY_DB_PATH ?? null,
+        RATE_LIMIT_DB_PATH: process.env.RATE_LIMIT_DB_PATH ?? null,
+        CONNECTOR_DB_PATH: process.env.CONNECTOR_DB_PATH ?? null
+      },
+      resolved: {
+        prrDbPath: dataPaths.prrDbPath,
+        idempotencyDbPath: dataPaths.idempotencyDbPath,
+        rateLimitDbPath: dataPaths.rateLimitDbPath,
+        connectorDbPath: dataPaths.connectorDbPath
+      }
+    })
+  );
+}
+
 function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): void {
   if (nodeEnv !== "production") {
     return;
@@ -1558,42 +1623,26 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
   if (authOptions.jwtSecret?.trim() === "dev-secret") {
     throw new Error("JWT secret cannot use development fallback in production");
   }
-  const prrPath = process.env.PRR_DB_PATH ?? "";
-  const idempotencyPath = process.env.IDEMPOTENCY_DB_PATH ?? "";
-  const rateLimitPath = process.env.RATE_LIMIT_DB_PATH ?? "";
-  const connectorPath = process.env.CONNECTOR_DB_PATH ?? "";
   const connectorStateSecret = (process.env.CONNECTOR_STATE_SECRET ?? "").trim();
-  if (!isPathInsideDirectory(prrPath, CONTROLLED_DATA_DIR)) {
-    throw new Error("PRR_DB_PATH must be inside the controlled data directory");
-  }
-  if (!isPathInsideDirectory(idempotencyPath, CONTROLLED_DATA_DIR)) {
-    throw new Error("IDEMPOTENCY_DB_PATH must be inside the controlled data directory");
-  }
-  if (!isPathInsideDirectory(rateLimitPath, CONTROLLED_DATA_DIR)) {
-    throw new Error("RATE_LIMIT_DB_PATH must be inside the controlled data directory");
-  }
-  if (!isPathInsideDirectory(connectorPath, CONTROLLED_DATA_DIR)) {
-    throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
-  }
   if (!connectorStateSecret) {
     throw new Error("CONNECTOR_STATE_SECRET is required in production");
   }
 }
 
 export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development", options: CreateAppOptions = {}): express.Application {
+  const controlledDataDir = resolveControlledDataDir(nodeEnv);
+  const dataPaths = resolveDataPaths(controlledDataDir);
+  logInvariantPaths(nodeEnv, controlledDataDir, dataPaths);
   const authOptions = resolveAuthOptions(options.authOptions);
-  assertProductionInvariants(nodeEnv, authOptions);
-  const prrDbPath = path.resolve(process.env.PRR_DB_PATH ?? DEFAULT_PRR_DB_PATH);
-  const connectorDbPath = path.resolve(process.env.CONNECTOR_DB_PATH ?? DEFAULT_CONNECTOR_DB_PATH);
+  if (nodeEnv === "production") {
+    assertProductionInvariants(nodeEnv, authOptions);
+  }
+  assertControlledDataPaths(controlledDataDir, dataPaths);
+  const prrDbPath = dataPaths.prrDbPath;
+  const connectorDbPath = dataPaths.connectorDbPath;
   const connectorStateSecret =
     (process.env.CONNECTOR_STATE_SECRET ?? "").trim() ||
     (nodeEnv === "production" ? "" : "dev-connector-state-secret");
-  if (!isPathInsideDirectory(prrDbPath, CONTROLLED_DATA_DIR)) {
-    throw new Error("PRR_DB_PATH must be inside the controlled data directory");
-  }
-  if (!isPathInsideDirectory(connectorDbPath, CONTROLLED_DATA_DIR)) {
-    throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
-  }
   if (!connectorStateSecret) {
     throw new Error("CONNECTOR_STATE_SECRET is required");
   }
@@ -2549,9 +2598,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 export function startServer() {
   const app = createApp();
   const port = Number.parseInt(process.env.PORT ?? "3002", 10);
-  app.listen(port, () => {
+  const host = "0.0.0.0";
+  app.listen(port, host, () => {
     // eslint-disable-next-line no-console
-    console.log(`Puddle Jumper Deploy Remote running on http://localhost:${port}`);
+    console.log(`Puddle Jumper Deploy Remote running on http://${host}:${port}`);
   });
 }
 
