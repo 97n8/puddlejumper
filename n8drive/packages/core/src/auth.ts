@@ -77,11 +77,9 @@ export function requireRole(role: string): RequestHandler {
   };
 }
 
-export function csrfProtection(): RequestHandler {
-  return (_req, _res, next) => {
-    // noop placeholder; integrate real CSRF protection as needed
-    next();
-  };
-}
+export const csrfProtection: RequestHandler = (_req, _res, next) => {
+  // noop placeholder; integrate real CSRF protection as needed
+  next();
+};
 
 export { signJwt };

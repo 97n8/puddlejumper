@@ -13,5 +13,5 @@ export declare function getAuthContext(req: any): AuthContext | null;
 export declare function requireAuthenticated(): RequestHandler;
 export declare function requirePermission(permission: string): RequestHandler;
 export declare function requireRole(role: string): RequestHandler;
-export declare function csrfProtection(): RequestHandler;
+export declare const csrfProtection: RequestHandler;
 export { signJwt };
