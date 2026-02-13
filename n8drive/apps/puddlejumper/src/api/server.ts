@@ -49,10 +49,19 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../../");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const INTERNAL_SRC_DIR = path.join(ROOT_DIR, "src", "internal-remote");
-const CONTROLLED_DATA_DIR_INPUT = (process.env.CONTROLLED_DATA_DIR ?? "").trim();
+const NODE_ENV = (process.env.NODE_ENV ?? "development").trim() || "development";
+const CONTROLLED_DATA_DIR_INPUT = process.env.CONTROLLED_DATA_DIR ?? "";
 const CONTROLLED_DATA_DIR = path.resolve(
-  CONTROLLED_DATA_DIR_INPUT.length > 0 ? CONTROLLED_DATA_DIR_INPUT : path.join(ROOT_DIR, "data")
+  NODE_ENV === "production"
+    ? CONTROLLED_DATA_DIR_INPUT.trim() || "/data"
+    : CONTROLLED_DATA_DIR_INPUT.trim() || path.join(ROOT_DIR, "data")
 );
+if (NODE_ENV === "production") {
+  // eslint-disable-next-line no-console
+  console.log("[prod invariant] CONTROLLED_DATA_DIR raw env:", JSON.stringify(CONTROLLED_DATA_DIR_INPUT));
+  // eslint-disable-next-line no-console
+  console.log("[prod invariant] CONTROLLED_DATA_DIR resolved:", CONTROLLED_DATA_DIR);
+}
 const PJ_WORKSPACE_FILE = path.join(PUBLIC_DIR, "puddlejumper-master-environment-control.html");
 const PJ_WORKSPACE_FALLBACK_FILE = path.resolve(
   ROOT_DIR,
@@ -1581,34 +1590,37 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
   const connectorStateSecret = (process.env.CONNECTOR_STATE_SECRET ?? "").trim();
 
   try {
-    resolveInsideControlledDir(CONTROLLED_DATA_DIR, resolvePathFromEnv("PRR_DB_PATH", DEFAULT_PRR_DB_PATH));
+    const resolved = resolvePathFromEnv("PRR_DB_PATH", DEFAULT_PRR_DB_PATH);
+    // eslint-disable-next-line no-console
+    console.log("[prod invariant] PRR_DB_PATH resolved:", resolved, "base:", CONTROLLED_DATA_DIR);
+    resolveInsideControlledDir(CONTROLLED_DATA_DIR, resolved);
   } catch {
     throw new Error("PRR_DB_PATH must be inside the controlled data directory");
   }
 
   try {
-    resolveInsideControlledDir(
-      CONTROLLED_DATA_DIR,
-      resolvePathFromEnv("IDEMPOTENCY_DB_PATH", DEFAULT_IDEMPOTENCY_DB_PATH)
-    );
+    const resolved = resolvePathFromEnv("IDEMPOTENCY_DB_PATH", DEFAULT_IDEMPOTENCY_DB_PATH);
+    // eslint-disable-next-line no-console
+    console.log("[prod invariant] IDEMPOTENCY_DB_PATH resolved:", resolved, "base:", CONTROLLED_DATA_DIR);
+    resolveInsideControlledDir(CONTROLLED_DATA_DIR, resolved);
   } catch {
     throw new Error("IDEMPOTENCY_DB_PATH must be inside the controlled data directory");
   }
 
   try {
-    resolveInsideControlledDir(
-      CONTROLLED_DATA_DIR,
-      resolvePathFromEnv("RATE_LIMIT_DB_PATH", DEFAULT_RATE_LIMIT_DB_PATH)
-    );
+    const resolved = resolvePathFromEnv("RATE_LIMIT_DB_PATH", DEFAULT_RATE_LIMIT_DB_PATH);
+    // eslint-disable-next-line no-console
+    console.log("[prod invariant] RATE_LIMIT_DB_PATH resolved:", resolved, "base:", CONTROLLED_DATA_DIR);
+    resolveInsideControlledDir(CONTROLLED_DATA_DIR, resolved);
   } catch {
     throw new Error("RATE_LIMIT_DB_PATH must be inside the controlled data directory");
   }
 
   try {
-    resolveInsideControlledDir(
-      CONTROLLED_DATA_DIR,
-      resolvePathFromEnv("CONNECTOR_DB_PATH", DEFAULT_CONNECTOR_DB_PATH)
-    );
+    const resolved = resolvePathFromEnv("CONNECTOR_DB_PATH", DEFAULT_CONNECTOR_DB_PATH);
+    // eslint-disable-next-line no-console
+    console.log("[prod invariant] CONNECTOR_DB_PATH resolved:", resolved, "base:", CONTROLLED_DATA_DIR);
+    resolveInsideControlledDir(CONTROLLED_DATA_DIR, resolved);
   } catch {
     throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
   }
