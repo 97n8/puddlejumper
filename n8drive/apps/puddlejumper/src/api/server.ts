@@ -49,8 +49,18 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../../");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const INTERNAL_SRC_DIR = path.join(ROOT_DIR, "src", "internal-remote");
-const CONTROLLED_DATA_DIR = path.join(ROOT_DIR, "data");
+const CONTROLLED_DATA_DIR_INPUT = (process.env.CONTROLLED_DATA_DIR ?? "").trim();
+const CONTROLLED_DATA_DIR = path.resolve(
+  CONTROLLED_DATA_DIR_INPUT.length > 0 ? CONTROLLED_DATA_DIR_INPUT : path.join(ROOT_DIR, "data")
+);
 const PJ_WORKSPACE_FILE = path.join(PUBLIC_DIR, "puddlejumper-master-environment-control.html");
+const PJ_WORKSPACE_FALLBACK_FILE = path.resolve(
+  ROOT_DIR,
+  "../website/public/public/puddlejumper-master-environment-control.html"
+);
+const PJ_WORKSPACE_CANDIDATE_PATHS = Array.from(
+  new Set([PJ_WORKSPACE_FILE, PJ_WORKSPACE_FALLBACK_FILE].map((candidate) => path.resolve(candidate)))
+);
 
 type CreateAppOptions = {
   authOptions?: Partial<AuthOptions>;
@@ -213,6 +223,8 @@ const LOGIN_MAX_ATTEMPTS = 10;
 const CORRELATION_ID_HEADER = "x-correlation-id";
 const CORRELATION_ID_PATTERN = /^[A-Za-z0-9._:-]{8,128}$/;
 const DEFAULT_PRR_DB_PATH = path.join(CONTROLLED_DATA_DIR, "prr.db");
+const DEFAULT_IDEMPOTENCY_DB_PATH = path.join(CONTROLLED_DATA_DIR, "idempotency.db");
+const DEFAULT_RATE_LIMIT_DB_PATH = path.join(CONTROLLED_DATA_DIR, "rate-limit.db");
 const DEFAULT_CONNECTOR_DB_PATH = path.join(CONTROLLED_DATA_DIR, "connectors.db");
 const DEFAULT_ACCESS_NOTIFICATION_INTERVAL_MS = 30_000;
 const DEFAULT_ACCESS_NOTIFICATION_BATCH_SIZE = 25;
@@ -730,6 +742,25 @@ function normalizePathname(pathname: string): string {
   return pathname;
 }
 
+function readPjWorkspaceSource(): string {
+  let lastError: Error | null = null;
+  for (const candidate of PJ_WORKSPACE_CANDIDATE_PATHS) {
+    try {
+      return fs.readFileSync(candidate, "utf8");
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      lastError = err;
+      if ((error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
+        continue;
+      }
+      throw err;
+    }
+  }
+  const inspected = PJ_WORKSPACE_CANDIDATE_PATHS.join(", ");
+  const details = lastError ? ` (last error: ${lastError.message})` : "";
+  throw new Error(`PuddleJumper workspace HTML not found. Checked paths: ${inspected}${details}`);
+}
+
 function buildConnectSrcDirective(trustedParentOrigins: string[], includeParentOrigins: boolean): string {
   if (!includeParentOrigins || trustedParentOrigins.length === 0) {
     return "connect-src 'self'";
@@ -747,7 +778,7 @@ function escapeHtmlAttribute(value: string): string {
 }
 
 function renderPjWorkspaceHtml(trustedParentOrigins: string[]): string {
-  let source = fs.readFileSync(PJ_WORKSPACE_FILE, "utf8");
+  let source = readPjWorkspaceSource();
   const inlineHashes = resolvePjInlineCspHashes();
   if (inlineHashes.styleHash && inlineHashes.scriptHash) {
     const connectSrcDirective = buildConnectSrcDirective(trustedParentOrigins, true);
@@ -786,7 +817,7 @@ function extractInlineTagContent(source: string, tag: "script" | "style"): strin
 
 function resolvePjInlineCspHashes(): { scriptHash: string | null; styleHash: string | null } {
   try {
-    const source = fs.readFileSync(PJ_WORKSPACE_FILE, "utf8");
+    const source = readPjWorkspaceSource();
     const scriptContent = extractInlineTagContent(source, "script");
     const styleContent = extractInlineTagContent(source, "style");
     const scriptHash = scriptContent ? crypto.createHash("sha256").update(scriptContent, "utf8").digest("base64") : null;
@@ -1497,11 +1528,22 @@ function resolveLiveCapabilities(nodeEnv: string): LiveCapabilities | null {
   return null;
 }
 
-function isPathInsideDirectory(candidatePath: string, baseDirectory: string): boolean {
-  const resolvedCandidate = path.resolve(candidatePath);
-  const resolvedBase = path.resolve(baseDirectory);
-  const relative = path.relative(resolvedBase, resolvedCandidate);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+function resolvePathFromEnv(name: string, fallbackAbsolutePath: string): string {
+  const rawValue = process.env[name];
+  const trimmed = rawValue?.trim();
+  const value = trimmed && trimmed.length > 0 ? trimmed : fallbackAbsolutePath;
+  return path.resolve(value);
+}
+
+function resolveInsideControlledDir(baseDir: string, candidate: string): string {
+  const base = path.resolve(baseDir.trim());
+  const target = path.resolve(candidate.trim());
+
+  if (!target.startsWith(base + path.sep) && target !== base) {
+    throw new Error("Path must be inside controlled data directory");
+  }
+
+  return target;
 }
 
 function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): void {
@@ -1536,23 +1578,41 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
     throw new Error("JWT secret cannot use development fallback in production");
   }
 
-  const prrPath = process.env.PRR_DB_PATH ?? "";
-  const idempotencyPath = process.env.IDEMPOTENCY_DB_PATH ?? "";
-  const rateLimitPath = process.env.RATE_LIMIT_DB_PATH ?? "";
-  const connectorPath = process.env.CONNECTOR_DB_PATH ?? "";
   const connectorStateSecret = (process.env.CONNECTOR_STATE_SECRET ?? "").trim();
-  if (!isPathInsideDirectory(prrPath, CONTROLLED_DATA_DIR)) {
+
+  try {
+    resolveInsideControlledDir(CONTROLLED_DATA_DIR, resolvePathFromEnv("PRR_DB_PATH", DEFAULT_PRR_DB_PATH));
+  } catch {
     throw new Error("PRR_DB_PATH must be inside the controlled data directory");
   }
-  if (!isPathInsideDirectory(idempotencyPath, CONTROLLED_DATA_DIR)) {
+
+  try {
+    resolveInsideControlledDir(
+      CONTROLLED_DATA_DIR,
+      resolvePathFromEnv("IDEMPOTENCY_DB_PATH", DEFAULT_IDEMPOTENCY_DB_PATH)
+    );
+  } catch {
     throw new Error("IDEMPOTENCY_DB_PATH must be inside the controlled data directory");
   }
-  if (!isPathInsideDirectory(rateLimitPath, CONTROLLED_DATA_DIR)) {
+
+  try {
+    resolveInsideControlledDir(
+      CONTROLLED_DATA_DIR,
+      resolvePathFromEnv("RATE_LIMIT_DB_PATH", DEFAULT_RATE_LIMIT_DB_PATH)
+    );
+  } catch {
     throw new Error("RATE_LIMIT_DB_PATH must be inside the controlled data directory");
   }
-  if (!isPathInsideDirectory(connectorPath, CONTROLLED_DATA_DIR)) {
+
+  try {
+    resolveInsideControlledDir(
+      CONTROLLED_DATA_DIR,
+      resolvePathFromEnv("CONNECTOR_DB_PATH", DEFAULT_CONNECTOR_DB_PATH)
+    );
+  } catch {
     throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
   }
+
   if (!connectorStateSecret) {
     throw new Error("CONNECTOR_STATE_SECRET is required in production");
   }
@@ -1561,17 +1621,29 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
 export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development", options: CreateAppOptions = {}) {
   const authOptions = resolveAuthOptions(options.authOptions);
   assertProductionInvariants(nodeEnv, authOptions);
-  const prrDbPath = path.resolve(process.env.PRR_DB_PATH ?? DEFAULT_PRR_DB_PATH);
-  const connectorDbPath = path.resolve(process.env.CONNECTOR_DB_PATH ?? DEFAULT_CONNECTOR_DB_PATH);
+  let prrDbPath: string;
+  try {
+    prrDbPath = resolveInsideControlledDir(
+      CONTROLLED_DATA_DIR,
+      resolvePathFromEnv("PRR_DB_PATH", DEFAULT_PRR_DB_PATH)
+    );
+  } catch {
+    throw new Error("PRR_DB_PATH must be inside the controlled data directory");
+  }
+
+  let connectorDbPath: string;
+  try {
+    connectorDbPath = resolveInsideControlledDir(
+      CONTROLLED_DATA_DIR,
+      resolvePathFromEnv("CONNECTOR_DB_PATH", DEFAULT_CONNECTOR_DB_PATH)
+    );
+  } catch {
+    throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
+  }
+
   const connectorStateSecret =
     (process.env.CONNECTOR_STATE_SECRET ?? "").trim() ||
     (nodeEnv === "production" ? "" : "dev-connector-state-secret");
-  if (!isPathInsideDirectory(prrDbPath, CONTROLLED_DATA_DIR)) {
-    throw new Error("PRR_DB_PATH must be inside the controlled data directory");
-  }
-  if (!isPathInsideDirectory(connectorDbPath, CONTROLLED_DATA_DIR)) {
-    throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
-  }
   if (!connectorStateSecret) {
     throw new Error("CONNECTOR_STATE_SECRET is required");
   }
@@ -1791,7 +1863,13 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     authMiddleware(req, res, next);
   });
 
-  app.use("/api", csrfProtection);
+  app.use("/api", (req, res, next) => {
+    if (req.method === "GET") {
+      next();
+      return;
+    }
+    csrfProtection(req, res, next);
+  });
 
   app.post("/api/logout", requireAuthenticated(), (_req, res) => {
     res.clearCookie(SESSION_COOKIE_NAME, {
@@ -2501,10 +2579,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
 export function startServer() {
   const app = createApp();
-  const port = Number.parseInt(process.env.PORT ?? "3002", 10);
-  app.listen(port, () => {
+  const port = Number(process.env.PORT ?? "8080");
+  app.listen(port, "0.0.0.0", () => {
     // eslint-disable-next-line no-console
-    console.log(`Puddle Jumper Deploy Remote running on http://localhost:${port}`);
+    console.log(`Puddle Jumper Deploy Remote listening on port ${port}`);
   });
 }
 
