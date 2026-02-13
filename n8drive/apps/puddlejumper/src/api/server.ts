@@ -1847,6 +1847,19 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     });
   });
 
+  app.get("/api/diagnostics/vs", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    res.json({
+      status: "ok",
+      nodeEnv,
+      uptimeSeconds: Math.floor(process.uptime()),
+      now: new Date().toISOString(),
+      correlationId: req.get("X-Correlation-Id") ?? null,
+      userId: auth?.userId ?? null,
+      tenantId: auth?.tenantId ?? null
+    });
+  });
+
   app.post("/api/login", loginRateLimit, async (req, res) => {
     if (!builtInLoginEnabled) {
       res.status(404).json({ error: "Not Found" });
@@ -1924,7 +1937,17 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     authMiddleware(req, res, next);
   });
 
-  app.use("/api", csrfProtection);
+  app.use("/api", (req, res, next) => {
+    if (req.method === "TRACE") {
+      res.status(405).end();
+      return;
+    }
+    if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
+      next();
+      return;
+    }
+    csrfProtection(req, res, next);
+  });
 
   app.post("/api/logout", requireAuthenticated(), (_req, res) => {
     res.clearCookie(SESSION_COOKIE_NAME, {
