@@ -1381,6 +1381,22 @@ test("GET /api/sample is not available", async () => {
   assert.equal(response.status, 404);
 });
 
+test("GET /api/diagnostics/vs reports server state", async () => {
+  const app = createSecuredApp();
+  const response = await request(app)
+    .get("/api/diagnostics/vs")
+    .set("Authorization", `Bearer ${authToken()}`)
+    .set("X-Correlation-Id", "corr-vs-check");
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body?.status, "ok");
+  assert.equal(response.body?.nodeEnv, "development");
+  assert.equal(response.body?.correlationId, "corr-vs-check");
+  assert.equal(response.body?.userId, "user-1");
+  assert.ok(typeof response.body?.uptimeSeconds === "number");
+  assert.ok(response.body?.uptimeSeconds >= 0);
+});
+
 test("TRACE /api routes are blocked", async () => {
   const app = createSecuredApp();
   const response = await request(app).trace("/api/any");

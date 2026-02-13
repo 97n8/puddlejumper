@@ -1847,6 +1847,19 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     });
   });
 
+  app.get("/api/diagnostics/vs", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    res.json({
+      status: "ok",
+      nodeEnv,
+      uptimeSeconds: Math.floor(process.uptime()),
+      now: new Date().toISOString(),
+      correlationId: req.get("X-Correlation-Id") ?? null,
+      userId: auth?.userId ?? null,
+      tenantId: auth?.tenantId ?? null
+    });
+  });
+
   app.post("/api/login", loginRateLimit, async (req, res) => {
     if (!builtInLoginEnabled) {
       res.status(404).json({ error: "Not Found" });
