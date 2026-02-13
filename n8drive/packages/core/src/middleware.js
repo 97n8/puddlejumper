@@ -2,24 +2,19 @@ import cookieParser from 'cookie-parser';
 import type { RequestHandler } from 'express';
 import { verifyJwt } from './jwt.js';
 
-export function cookieParserMiddleware(): RequestHandler {
-    return cookieParser();
-}
+export const cookieParserMiddleware: RequestHandler = cookieParser();
 
-export function validateJwt(): RequestHandler {
-    return async (req, res, next) => {
-        const token = req.cookies?.jwt;
+export const validateJwt: RequestHandler = async (req, res, next) => {
+  const token = req.cookies?.jwt;
+  if (!token) {
+    return res.status(401).json({ error: 'Missing token' });
+  }
 
-        if (!token) {
-            return res.status(401).json({ error: 'Missing token' });
-        }
-
-        try {
-            const auth = await verifyJwt(token);
-            (req as any).auth = auth;
-            next();
-        } catch {
-            return res.status(401).json({ error: 'Invalid token' });
-        }
-    };
-}
+  try {
+    const auth = await verifyJwt(token);
+    (req as any).auth = auth;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
