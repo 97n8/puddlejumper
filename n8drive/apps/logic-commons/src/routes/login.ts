@@ -1,8 +1,8 @@
-import express from 'express';
+import express, { Router } from 'express';
 import { signJwt } from '@publiclogic/core';
 import { verifyGoogleIdToken } from '../lib/google.js';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 router.post('/login', async (req, res) => {
   try {

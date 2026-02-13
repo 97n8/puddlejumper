@@ -1864,6 +1864,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   });
 
   // Hardened CSRF protection for /api
+  const csrfMiddleware = csrfProtection();
   app.use("/api", (req, res, next) => {
     const method = (req.method || "").toUpperCase();
 
@@ -1879,7 +1880,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     }
 
     // For all other methods (POST/PUT/PATCH/DELETE/...), run CSRF protection.
-    return csrfProtection(req, res, next);
+    return csrfMiddleware(req, res, next);
   });
 
   app.post("/api/logout", requireAuthenticated(), (_req, res) => {

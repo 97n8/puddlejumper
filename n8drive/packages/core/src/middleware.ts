@@ -2,8 +2,8 @@ import type { RequestHandler } from 'express';
 import cookieParser from 'cookie-parser';
 import { verifyJwt } from './jwt.js';
 
-export function cookieParserMiddleware() {
-  return cookieParser();
+export function cookieParserMiddleware(): RequestHandler {
+  return cookieParser() as RequestHandler;
 }
 
 export function validateJwt(): RequestHandler {
