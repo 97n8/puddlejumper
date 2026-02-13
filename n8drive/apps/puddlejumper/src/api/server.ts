@@ -1924,7 +1924,17 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     authMiddleware(req, res, next);
   });
 
-  app.use("/api", csrfProtection);
+  app.use("/api", (req, res, next) => {
+    if (req.method === "TRACE") {
+      res.status(405).end();
+      return;
+    }
+    if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
+      next();
+      return;
+    }
+    csrfProtection(req, res, next);
+  });
 
   app.post("/api/logout", requireAuthenticated(), (_req, res) => {
     res.clearCookie(SESSION_COOKIE_NAME, {
