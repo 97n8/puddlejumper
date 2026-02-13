@@ -1,0 +1,26 @@
+# Puddlejumper artifacts
+/n8drive/apps/puddlejumper/dist/
+/n8drive/apps/puddlejumper/data/*.db
+/n8drive/apps/puddlejumper/data/*.db-*
+*.db
+*.db-shm
+*.db-wal
+
+# Node / package manager
+/node_modules/
+/.pnpm-store
+.pnpm-debug.log
+
+# Build output
+/n8drive/dist/
+/n8drive/build/
+/*.log
+
+# Local env and machine files
+.env
+.fly/
+fly.toml
+
+# Editor cruft
+.vscode/
+.idea/

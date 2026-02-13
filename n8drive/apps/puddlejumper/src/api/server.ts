@@ -1,4 +1,14 @@
-import express from "express";
+// eslint-disable-next-line no-console
+console.log("[EARLY BOOT DEBUG] Raw env at module load:", {
+  NODE_ENV: process.env.NODE_ENV,
+  CONTROLLED_DATA_DIR: process.env.CONTROLLED_DATA_DIR,
+  PRR_DB_PATH: process.env.PRR_DB_PATH,
+  IDEMPOTENCY_DB_PATH: process.env.IDEMPOTENCY_DB_PATH,
+  RATE_LIMIT_DB_PATH: process.env.RATE_LIMIT_DB_PATH,
+  CONNECTOR_DB_PATH: process.env.CONNECTOR_DB_PATH
+});
+
+import express, { type Express } from "express";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -51,8 +61,25 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../../");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const INTERNAL_SRC_DIR = path.join(ROOT_DIR, "src", "internal-remote");
-const CONTROLLED_DATA_DIR = path.join(ROOT_DIR, "data");
+const NODE_ENV = (process.env.NODE_ENV ?? "development").trim() || "development";
+const CONTROLLED_DATA_DIR_INPUT = process.env.CONTROLLED_DATA_DIR ?? "";
+// eslint-disable-next-line no-console
+console.log("[invariant-debug] NODE_ENV:", NODE_ENV);
+// eslint-disable-next-line no-console
+console.log("[invariant-debug] CONTROLLED_DATA_DIR raw env:", JSON.stringify(CONTROLLED_DATA_DIR_INPUT));
+// eslint-disable-next-line no-console
+console.log(
+  "[invariant-debug] CONTROLLED_DATA_DIR resolved:",
+  resolveControlledDataDir(NODE_ENV)
+);
 const PJ_WORKSPACE_FILE = path.join(PUBLIC_DIR, "puddlejumper-master-environment-control.html");
+const PJ_WORKSPACE_FALLBACK_FILE = path.resolve(
+  ROOT_DIR,
+  "../website/public/public/puddlejumper-master-environment-control.html"
+);
+const PJ_WORKSPACE_CANDIDATE_PATHS = Array.from(
+  new Set([PJ_WORKSPACE_FILE, PJ_WORKSPACE_FALLBACK_FILE].map((candidate) => path.resolve(candidate)))
+);
 
 type CreateAppOptions = {
   authOptions?: Partial<AuthOptions>;
@@ -214,8 +241,6 @@ const LOGIN_WINDOW_MS = 60_000;
 const LOGIN_MAX_ATTEMPTS = 10;
 const CORRELATION_ID_HEADER = "x-correlation-id";
 const CORRELATION_ID_PATTERN = /^[A-Za-z0-9._:-]{8,128}$/;
-const DEFAULT_PRR_DB_PATH = path.join(CONTROLLED_DATA_DIR, "prr.db");
-const DEFAULT_CONNECTOR_DB_PATH = path.join(CONTROLLED_DATA_DIR, "connectors.db");
 const DEFAULT_ACCESS_NOTIFICATION_INTERVAL_MS = 30_000;
 const DEFAULT_ACCESS_NOTIFICATION_BATCH_SIZE = 25;
 const DEFAULT_ACCESS_NOTIFICATION_MAX_RETRIES = 8;
@@ -706,6 +731,28 @@ function normalizePathname(pathname: string): string {
   return pathname;
 }
 
+function readPjWorkspaceSource(): string {
+  let lastError: Error | null = null;
+  for (const candidate of PJ_WORKSPACE_CANDIDATE_PATHS) {
+    try {
+      return fs.readFileSync(candidate, "utf8");
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      lastError = err;
+      if ((error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
+        continue;
+      }
+      throw err;
+    }
+  }
+  const inspected = PJ_WORKSPACE_CANDIDATE_PATHS.join(", ");
+  const details = lastError ? ` (last error: ${lastError.message})` : "";
+  throw new Error(`PuddleJumper workspace HTML not found. Checked paths: ${inspected}${details}`);
+}
+
+function buildConnectSrcDirective(trustedParentOrigins: string[], includeParentOrigins: boolean): string {
+  if (!includeParentOrigins || trustedParentOrigins.length === 0) {
+    return "connect-src 'self'";
 function buildConnectSrcDirective(
   trustedParentOrigins: string[],
   includeParentOrigins: boolean,
@@ -734,6 +781,8 @@ function escapeHtmlAttribute(value: string): string {
     .replace(/>/g, "&gt;");
 }
 
+function renderPjWorkspaceHtml(trustedParentOrigins: string[]): string {
+  let source = readPjWorkspaceSource();
 function renderPjWorkspaceHtml(trustedParentOrigins: string[], allowLocalDevtools: boolean): string {
   let source = fs.readFileSync(PJ_WORKSPACE_FILE, "utf8");
   const inlineHashes = resolvePjInlineCspHashes();
@@ -774,7 +823,7 @@ function extractInlineTagContent(source: string, tag: "script" | "style"): strin
 
 function resolvePjInlineCspHashes(): { scriptHash: string | null; styleHash: string | null } {
   try {
-    const source = fs.readFileSync(PJ_WORKSPACE_FILE, "utf8");
+    const source = readPjWorkspaceSource();
     const scriptContent = extractInlineTagContent(source, "script");
     const styleContent = extractInlineTagContent(source, "style");
     const scriptHash = scriptContent ? crypto.createHash("sha256").update(scriptContent, "utf8").digest("base64") : null;
@@ -1457,11 +1506,28 @@ function resolveLiveCapabilities(nodeEnv: string): LiveCapabilities | null {
   return null;
 }
 
-function isPathInsideDirectory(candidatePath: string, baseDirectory: string): boolean {
-  const resolvedCandidate = path.resolve(candidatePath);
-  const resolvedBase = path.resolve(baseDirectory);
-  const relative = path.relative(resolvedBase, resolvedCandidate);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+function resolvePathFromEnv(name: string, fallbackAbsolutePath: string): string {
+  const rawValue = process.env[name];
+  const trimmed = rawValue?.trim();
+  const value = trimmed && trimmed.length > 0 ? trimmed : fallbackAbsolutePath;
+  return path.resolve(value);
+}
+
+function resolveInsideControlledDir(baseDir: string, candidate: string): string {
+  const base = path.resolve(baseDir.trim());
+  const target = path.resolve(candidate.trim());
+
+  if (!target.startsWith(base + path.sep) && target !== base) {
+    throw new Error("Path must be inside controlled data directory");
+  }
+
+  return target;
+}
+
+function resolveControlledDataDir(nodeEnv: string): string {
+  const rawEnv = (process.env.CONTROLLED_DATA_DIR ?? "").trim();
+  const fallback = nodeEnv === "production" ? "/data" : path.join(ROOT_DIR, "data");
+  return path.resolve(rawEnv || fallback);
 }
 
 /**
@@ -1537,6 +1603,13 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
   if (process.env.ALLOW_ADMIN_LOGIN === "true") {
     throw new Error("ALLOW_ADMIN_LOGIN must not be true in production");
   }
+
+  const controlledDataDir = resolveControlledDataDir(nodeEnv);
+  const defaultPrrDbPath = path.join(controlledDataDir, "prr.db");
+  const defaultIdempotencyDbPath = path.join(controlledDataDir, "idempotency.db");
+  const defaultRateLimitDbPath = path.join(controlledDataDir, "rate-limit.db");
+  const defaultConnectorDbPath = path.join(controlledDataDir, "connectors.db");
+
   const requiredEnvVars = [
     "PJ_RUNTIME_CONTEXT_JSON",
     "PJ_RUNTIME_TILES_JSON",
@@ -1558,42 +1631,95 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
   if (authOptions.jwtSecret?.trim() === "dev-secret") {
     throw new Error("JWT secret cannot use development fallback in production");
   }
+
   const prrPath = process.env.PRR_DB_PATH ?? "";
   const idempotencyPath = process.env.IDEMPOTENCY_DB_PATH ?? "";
   const rateLimitPath = process.env.RATE_LIMIT_DB_PATH ?? "";
   const connectorPath = process.env.CONNECTOR_DB_PATH ?? "";
   const connectorStateSecret = (process.env.CONNECTOR_STATE_SECRET ?? "").trim();
-  if (!isPathInsideDirectory(prrPath, CONTROLLED_DATA_DIR)) {
+
+  try {
+    const resolved = resolvePathFromEnv("PRR_DB_PATH", defaultPrrDbPath);
+    // eslint-disable-next-line no-console
+    console.log("[invariant-debug] PRR_DB_PATH raw env:", JSON.stringify(process.env.PRR_DB_PATH));
+    // eslint-disable-next-line no-console
+    console.log("[invariant-debug] PRR_DB_PATH resolved:", resolved, "base:", controlledDataDir);
+    resolveInsideControlledDir(controlledDataDir, resolved);
+  } catch {
     throw new Error("PRR_DB_PATH must be inside the controlled data directory");
   }
-  if (!isPathInsideDirectory(idempotencyPath, CONTROLLED_DATA_DIR)) {
+
+  try {
+    const resolved = resolvePathFromEnv("IDEMPOTENCY_DB_PATH", defaultIdempotencyDbPath);
+    // eslint-disable-next-line no-console
+    console.log("[invariant-debug] IDEMPOTENCY_DB_PATH raw env:", JSON.stringify(process.env.IDEMPOTENCY_DB_PATH));
+    // eslint-disable-next-line no-console
+    console.log("[invariant-debug] IDEMPOTENCY_DB_PATH resolved:", resolved, "base:", controlledDataDir);
+    resolveInsideControlledDir(controlledDataDir, resolved);
+  } catch {
     throw new Error("IDEMPOTENCY_DB_PATH must be inside the controlled data directory");
   }
-  if (!isPathInsideDirectory(rateLimitPath, CONTROLLED_DATA_DIR)) {
+
+  try {
+    const resolved = resolvePathFromEnv("RATE_LIMIT_DB_PATH", defaultRateLimitDbPath);
+    // eslint-disable-next-line no-console
+    console.log("[invariant-debug] RATE_LIMIT_DB_PATH raw env:", JSON.stringify(process.env.RATE_LIMIT_DB_PATH));
+    // eslint-disable-next-line no-console
+    console.log("[invariant-debug] RATE_LIMIT_DB_PATH resolved:", resolved, "base:", controlledDataDir);
+    resolveInsideControlledDir(controlledDataDir, resolved);
+  } catch {
     throw new Error("RATE_LIMIT_DB_PATH must be inside the controlled data directory");
   }
-  if (!isPathInsideDirectory(connectorPath, CONTROLLED_DATA_DIR)) {
+
+  try {
+    const resolved = resolvePathFromEnv("CONNECTOR_DB_PATH", defaultConnectorDbPath);
+    // eslint-disable-next-line no-console
+    console.log("[invariant-debug] CONNECTOR_DB_PATH raw env:", JSON.stringify(process.env.CONNECTOR_DB_PATH));
+    // eslint-disable-next-line no-console
+    console.log("[invariant-debug] CONNECTOR_DB_PATH resolved:", resolved, "base:", controlledDataDir);
+    resolveInsideControlledDir(controlledDataDir, resolved);
+  } catch {
     throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
   }
+
   if (!connectorStateSecret) {
     throw new Error("CONNECTOR_STATE_SECRET is required in production");
   }
 }
 
+export function createApp(
+  nodeEnv: string = process.env.NODE_ENV ?? "development",
+  options: CreateAppOptions = {}
+): Express {
 export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development", options: CreateAppOptions = {}): express.Application {
   const authOptions = resolveAuthOptions(options.authOptions);
   assertProductionInvariants(nodeEnv, authOptions);
-  const prrDbPath = path.resolve(process.env.PRR_DB_PATH ?? DEFAULT_PRR_DB_PATH);
-  const connectorDbPath = path.resolve(process.env.CONNECTOR_DB_PATH ?? DEFAULT_CONNECTOR_DB_PATH);
+  const controlledDataDir = resolveControlledDataDir(nodeEnv);
+  const defaultPrrDbPath = path.join(controlledDataDir, "prr.db");
+  const defaultConnectorDbPath = path.join(controlledDataDir, "connectors.db");
+  let prrDbPath: string;
+  try {
+    prrDbPath = resolveInsideControlledDir(
+      controlledDataDir,
+      resolvePathFromEnv("PRR_DB_PATH", defaultPrrDbPath)
+    );
+  } catch {
+    throw new Error("PRR_DB_PATH must be inside the controlled data directory");
+  }
+
+  let connectorDbPath: string;
+  try {
+    connectorDbPath = resolveInsideControlledDir(
+      controlledDataDir,
+      resolvePathFromEnv("CONNECTOR_DB_PATH", defaultConnectorDbPath)
+    );
+  } catch {
+    throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
+  }
+
   const connectorStateSecret =
     (process.env.CONNECTOR_STATE_SECRET ?? "").trim() ||
     (nodeEnv === "production" ? "" : "dev-connector-state-secret");
-  if (!isPathInsideDirectory(prrDbPath, CONTROLLED_DATA_DIR)) {
-    throw new Error("PRR_DB_PATH must be inside the controlled data directory");
-  }
-  if (!isPathInsideDirectory(connectorDbPath, CONTROLLED_DATA_DIR)) {
-    throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
-  }
   if (!connectorStateSecret) {
     throw new Error("CONNECTOR_STATE_SECRET is required");
   }
@@ -1601,7 +1727,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   // auth callback to set shared cookie after token exchange with Logic Commons
   app.get('/auth/callback', authCallback);
   const engine = createDefaultEngine({ canonicalSourceOptions: options.canonicalSourceOptions });
-  const prrStore = new PrrStore(prrDbPath);
+  const prrStore = new PrrStore(prrDbPath, controlledDataDir);
   const connectorStore = new ConnectorStore(connectorDbPath);
   const authMiddleware = createJwtAuthenticationMiddleware(authOptions);
   const optionalAuthMiddleware = createOptionalJwtAuthenticationMiddleware(authOptions);
@@ -1863,6 +1989,12 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     authMiddleware(req, res, next);
   });
 
+  app.use("/api", (req, res, next) => {
+    if (req.method === "GET") {
+      next();
+      return;
+    }
+    csrfProtection(req, res, next);
   // Hardened CSRF protection for /api
   app.use("/api", (req, res, next) => {
     const method = (req.method || "").toUpperCase();
@@ -2548,10 +2680,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
 export function startServer() {
   const app = createApp();
-  const port = Number.parseInt(process.env.PORT ?? "3002", 10);
-  app.listen(port, () => {
+  const port = Number(process.env.PORT ?? "8080");
+  app.listen(port, "0.0.0.0", () => {
     // eslint-disable-next-line no-console
-    console.log(`Puddle Jumper Deploy Remote running on http://localhost:${port}`);
+    console.log(`Puddle Jumper Deploy Remote listening on port ${port}`);
   });
 }
 

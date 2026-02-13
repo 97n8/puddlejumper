@@ -4,7 +4,4 @@ npm-debug.log*
 /tmp/
 data/publiclogic-audit.ndjson
 dist/
-*/dist/
-*.tsbuildinfo
-*/tsconfig.tsbuildinfo
-pnpm-lock.yaml
+apps/*/dist/
