@@ -63,10 +63,8 @@ export function requireRole(role) {
         next();
     };
 }
-export function csrfProtection() {
-    return (_req, _res, next) => {
-        // noop placeholder; integrate real CSRF protection as needed
-        next();
-    };
-}
+export const csrfProtection = (_req, _res, next) => {
+    // noop placeholder; integrate real CSRF protection as needed
+    next();
+};
 export { signJwt };
