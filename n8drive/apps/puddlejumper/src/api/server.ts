@@ -1879,7 +1879,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       { expiresIn: '8h' }
     );
     setJwtCookieOnResponse(res, token, { maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000), sameSite: 'lax' });
-    res.status(200).json({
+  return csrfProtection()(req, res, next);  // add () to invoke factory
       ok: true,
       user: {
         id: user.id,
