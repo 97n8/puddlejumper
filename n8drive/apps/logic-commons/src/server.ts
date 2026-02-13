@@ -1,12 +1,13 @@
 import express from 'express';
-import bodyParser from 'body-parser';
+// body-parser is deprecated; use Express built-ins
 import serverless from 'serverless-http';
 import { cookieParserMiddleware, validateJwt } from '@publiclogic/core';
 import loginRouter from './routes/login.js';
 
 const app = express();
 app.use(cookieParserMiddleware());
-app.use(bodyParser.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 
 app.post('/internal/dev-token', async (req, res) => {
   if (process.env.DEV_MODE !== 'true') return res.status(403).json({ error: 'Forbidden' });

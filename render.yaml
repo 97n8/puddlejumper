@@ -5,13 +5,15 @@ services:
     region: oregon
     plan: free
     rootDir: n8drive/apps/puddlejumper
-    buildCommand: cd ../.. && npm ci && cd apps/puddlejumper && npm run build
+    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile && pnpm --filter @publiclogic/core... build && pnpm --filter @publiclogic/puddlejumper... build
     startCommand: node dist/api/server.js
     healthCheckPath: /health
+
     disk:
       name: puddlejumper-data
-      mountPath: /opt/render/project/src/n8drive/apps/puddlejumper/data
+      mountPath: /opt/render/project/src/data
       sizeGB: 1
+
     envVars:
       - key: NODE_ENV
         value: production
