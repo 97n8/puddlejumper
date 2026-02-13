@@ -1381,6 +1381,50 @@ test("GET /api/sample is not available", async () => {
   assert.equal(response.status, 404);
 });
 
+test("GET /api/diagnostics/vs reports server state", async () => {
+  const app = createSecuredApp();
+  const response = await request(app)
+    .get("/api/diagnostics/vs")
+    .set("Authorization", `Bearer ${authToken()}`)
+    .set("X-Correlation-Id", "corr-vs-check");
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body?.status, "ok");
+  assert.equal(response.body?.nodeEnv, "development");
+  assert.equal(response.body?.correlationId, "corr-vs-check");
+  assert.equal(response.body?.userId, "user-1");
+  assert.ok(typeof response.body?.uptimeSeconds === "number");
+  assert.ok(response.body?.uptimeSeconds >= 0);
+});
+
+test("TRACE /api routes are blocked", async () => {
+  const app = createSecuredApp();
+  const response = await request(app).trace("/api/any");
+  assert.equal(response.status, 405);
+});
+
+test("CSRF wrapper allows safe methods to proceed", async () => {
+  const app = createSecuredApp();
+  const targets: Array<{ method: "get" | "head" | "options"; path: string }> = [
+    { method: "get", path: "/api/capabilities/manifest" },
+    { method: "head", path: "/api/capabilities/manifest" },
+    { method: "options", path: "/api/capabilities/manifest" }
+  ];
+
+  for (const target of targets) {
+    // @ts-expect-error supertest supports these dynamic methods
+    const response = await request(app)[target.method](target.path);
+    assert.notEqual(response.status, 405);
+  }
+});
+
+test("CSRF wrapper still enforces protection on mutating methods", async () => {
+  const app = createSecuredApp();
+  const response = await request(app).post("/api/evaluate").send({});
+  assert.notEqual(response.status, 405);
+  assert.notEqual(response.status, 200);
+});
+
 test("POST /api/evaluate returns 401 when unauthenticated", async () => {
   const app = createSecuredApp();
   const response = await request(app)

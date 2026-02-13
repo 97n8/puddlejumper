@@ -6,7 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc --project tsconfig.json --outDir dist",
+    "build": "tsc -b",
     "vercel-build": "npm run build && node dist/server.js",
     "start": "node dist/server.js"
   },

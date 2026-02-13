@@ -13,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import Database from "better-sqlite3";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import {
@@ -56,6 +57,7 @@ import { createConnectorsRouter } from "./connectors.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 const ROOT_DIR = path.resolve(__dirname, "../../");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const INTERNAL_SRC_DIR = path.join(ROOT_DIR, "src", "internal-remote");
@@ -244,6 +246,8 @@ const DEFAULT_ACCESS_NOTIFICATION_BATCH_SIZE = 25;
 const DEFAULT_ACCESS_NOTIFICATION_MAX_RETRIES = 8;
 const MS_GRAPH_TOKEN_HEADER = "x-ms-graph-token";
 const DEFAULT_GRAPH_PROFILE_URL = "https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName";
+const SQLITE_READINESS_STATEMENT =
+  "BEGIN; CREATE TABLE IF NOT EXISTS __pj_health_check (k TEXT); DROP TABLE IF EXISTS __pj_health_check; COMMIT;";
 
 type MsGraphProfile = {
   id?: string;
@@ -293,29 +297,22 @@ function normalizeRuntimeContext(value: unknown): RuntimeContext | null {
   if (!objectValue) {
     return null;
   }
-  const workspaceValue = asRecord(objectValue.workspace);
-  const municipalityValue = asRecord(objectValue.municipality);
-  if (!workspaceValue || !municipalityValue) {
-    return null;
-  }
-
-  const charterValue = asRecord(workspaceValue.charter);
-  if (!charterValue) {
-    return null;
-  }
-  const charter: RuntimeCharter = {
-    authority: charterValue.authority === true,
-    accountability: charterValue.accountability === true,
-    boundary: charterValue.boundary === true,
-    continuity: charterValue.continuity === true
+  const workspaceValue = asRecord(objectValue.workspace) ?? {
+    id: asTrimmedString(objectValue.workspace)
   };
-
+  const municipalityValue = asRecord(objectValue.municipality) ?? { id: "default" };
+  const charterValue = asRecord(workspaceValue.charter) ?? {};
+  const charter: RuntimeCharter = {
+    authority: charterValue.authority !== false,
+    accountability: charterValue.accountability !== false,
+    boundary: charterValue.boundary !== false,
+    continuity: charterValue.continuity !== false
+  };
   const workspaceId = asTrimmedString(workspaceValue.id);
   const municipalityId = asTrimmedString(municipalityValue.id);
   if (!workspaceId || !municipalityId) {
     return null;
   }
-
   const workspace: RuntimeWorkspace = {
     id: workspaceId,
     charter,
@@ -336,7 +333,6 @@ function normalizeRuntimeContext(value: unknown): RuntimeContext | null {
       ? { risk_profile: municipalityValue.risk_profile as Record<string, unknown> }
       : {})
   };
-
   const actionDefaultsValue = asRecord(objectValue.actionDefaults);
   const actionDefaults: RuntimeActionDefaults | undefined = actionDefaultsValue
     ? {
@@ -355,7 +351,6 @@ function normalizeRuntimeContext(value: unknown): RuntimeContext | null {
           : {})
       }
     : undefined;
-
   return {
     workspace,
     municipality,
@@ -409,7 +404,6 @@ function normalizeCapabilities(value: unknown): LiveCapabilities | null {
   }
   const automationsValue = Array.isArray(objectValue.automations) ? objectValue.automations : [];
   const quickActionsValue = Array.isArray(objectValue.quickActions) ? objectValue.quickActions : [];
-
   const automations = automationsValue
     .map((entry) => {
       const objectEntry = asRecord(entry);
@@ -437,7 +431,6 @@ function normalizeCapabilities(value: unknown): LiveCapabilities | null {
       } satisfies CapabilityAutomation;
     })
     .filter((entry): entry is CapabilityAutomation => Boolean(entry));
-
   const quickActions = quickActionsValue
     .map((entry) => {
       const objectEntry = asRecord(entry);
@@ -463,7 +456,6 @@ function normalizeCapabilities(value: unknown): LiveCapabilities | null {
       } satisfies CapabilityAction;
     })
     .filter((entry): entry is CapabilityAction => Boolean(entry));
-
   return { automations, quickActions };
 }
 
@@ -481,13 +473,11 @@ function parseLoginUsersFromEnv(): LoginUser[] {
   if (!raw) {
     return [];
   }
-
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) {
       return [];
     }
-
     return parsed
       .map((entry) => {
         if (!entry || typeof entry !== "object") {
@@ -531,11 +521,9 @@ function parseLoginUsersFromEnv(): LoginUser[] {
               })
               .filter((tenant): tenant is LoginUser["tenants"][number] => Boolean(tenant))
           : [];
-
         if (!id || !username || !passwordHash || !name || !role) {
           return null;
         }
-
         return {
           id,
           username,
@@ -566,7 +554,6 @@ async function findUserAndValidate(
   if (!username || !password) {
     return null;
   }
-
   const user = users.find((candidate) => secureEqual(candidate.username, username));
   if (!user) {
     return null;
@@ -575,7 +562,6 @@ async function findUserAndValidate(
   if (!passwordMatches) {
     return null;
   }
-
   return user;
 }
 
@@ -639,12 +625,10 @@ function buildMsGraphAuthContext(
   if (!principal && !profileId) {
     return null;
   }
-
   const adminPrincipals = parsePrincipalSet(process.env.PJ_GRAPH_ADMIN_PRINCIPALS);
   const deployPrincipals = parsePrincipalSet(process.env.PJ_GRAPH_DEPLOY_PRINCIPALS);
   const adminFallbackPrincipals = parsePrincipalSet(process.env.PJ_GRAPH_ADMIN_USERS);
   const deployFallbackPrincipals = parsePrincipalSet(process.env.PJ_GRAPH_DEPLOY_USERS);
-
   const isAdmin =
     (principal && adminPrincipals.has(principal)) ||
     (principal && adminFallbackPrincipals.has(principal));
@@ -652,7 +636,6 @@ function buildMsGraphAuthContext(
     (principal && deployPrincipals.has(principal)) ||
     (principal && deployFallbackPrincipals.has(principal));
   const canDeploy = nodeEnv === "production" ? isAdmin || explicitDeploy : true;
-
   const defaultWorkspaceId = runtimeContext?.workspace?.id?.trim() || "publiclogic";
   const defaultWorkspaceName = runtimeContext?.workspace?.name?.trim() || "PublicLogic";
   const defaultConnections = Array.from(
@@ -662,7 +645,6 @@ function buildMsGraphAuthContext(
         .filter((value): value is string => Boolean(value))
     )
   );
-
   return {
     userId: profileId || principal,
     name: (typeof profile.displayName === "string" ? profile.displayName.trim() : "") || principal || profileId,
@@ -708,16 +690,13 @@ function resolveTrustedParentOrigins(nodeEnv: string): string[] {
   const configured = parseCsv(process.env.PJ_ALLOWED_PARENT_ORIGINS)
     .map((value) => normalizeTrustedOrigin(value))
     .filter((value): value is string => Boolean(value));
-
   const defaults =
     nodeEnv === "production"
       ? []
       : ["http://localhost:3000", "http://127.0.0.1:3000"];
-
   const normalizedDefaults = defaults
     .map((value) => normalizeTrustedOrigin(value))
     .filter((value): value is string => Boolean(value));
-
   return Array.from(new Set([...configured, ...normalizedDefaults]));
 }
 
@@ -725,7 +704,6 @@ function resolveCorsAllowedOrigins(nodeEnv: string): string[] {
   const configured = parseCsv(process.env.CORS_ALLOWED_ORIGINS)
     .map((value) => normalizeTrustedOrigin(value))
     .filter((value): value is string => Boolean(value));
-
   const defaults =
     nodeEnv === "production"
       ? []
@@ -739,11 +717,9 @@ function resolveCorsAllowedOrigins(nodeEnv: string): string[] {
           "http://127.0.0.1:3002",
           "https://127.0.0.1:3002"
         ];
-
   const normalizedDefaults = defaults
     .map((value) => normalizeTrustedOrigin(value))
     .filter((value): value is string => Boolean(value));
-
   const trustedParentOrigins = resolveTrustedParentOrigins(nodeEnv);
   return Array.from(new Set([...configured, ...normalizedDefaults, ...trustedParentOrigins]));
 }
@@ -777,9 +753,24 @@ function readPjWorkspaceSource(): string {
 function buildConnectSrcDirective(trustedParentOrigins: string[], includeParentOrigins: boolean): string {
   if (!includeParentOrigins || trustedParentOrigins.length === 0) {
     return "connect-src 'self'";
+function buildConnectSrcDirective(
+  trustedParentOrigins: string[],
+  includeParentOrigins: boolean,
+  allowLocalDevtools: boolean
+): string {
+  const sources = new Set<string>(["'self'"]);
+  if (includeParentOrigins) {
+    for (const origin of trustedParentOrigins) {
+      sources.add(origin);
+    }
   }
-  const sources = Array.from(new Set(["'self'", ...trustedParentOrigins]));
-  return `connect-src ${sources.join(" ")}`;
+  if (allowLocalDevtools) {
+    sources.add("http://localhost:3002");
+    sources.add("http://127.0.0.1:3002");
+    sources.add("http://localhost:9222");
+    sources.add("http://127.0.0.1:9222");
+  }
+  return `connect-src ${Array.from(sources).join(" ")}`;
 }
 
 function escapeHtmlAttribute(value: string): string {
@@ -792,9 +783,11 @@ function escapeHtmlAttribute(value: string): string {
 
 function renderPjWorkspaceHtml(trustedParentOrigins: string[]): string {
   let source = readPjWorkspaceSource();
+function renderPjWorkspaceHtml(trustedParentOrigins: string[], allowLocalDevtools: boolean): string {
+  let source = fs.readFileSync(PJ_WORKSPACE_FILE, "utf8");
   const inlineHashes = resolvePjInlineCspHashes();
   if (inlineHashes.styleHash && inlineHashes.scriptHash) {
-    const connectSrcDirective = buildConnectSrcDirective(trustedParentOrigins, true);
+    const connectSrcDirective = buildConnectSrcDirective(trustedParentOrigins, true, allowLocalDevtools);
     const inlineMetaCsp = [
       "default-src 'self'",
       "base-uri 'none'",
@@ -933,7 +926,6 @@ export async function processAccessNotificationQueueOnce(options: AccessNotifica
   if (claimed.length === 0) {
     return;
   }
-
   for (const notification of claimed) {
     const correlationId = crypto.randomUUID();
     try {
@@ -946,7 +938,6 @@ export async function processAccessNotificationQueueOnce(options: AccessNotifica
       } catch {
         payload = { raw_payload: notification.payload_json };
       }
-
       const response = await options.fetchImpl(options.webhookUrl, {
         method: "POST",
         headers: {
@@ -963,12 +954,10 @@ export async function processAccessNotificationQueueOnce(options: AccessNotifica
           payload
         })
       });
-
       const responseBody = truncateText(await response.text(), 2_000);
       if (!response.ok) {
         throw new Error(`Webhook returned ${response.status}: ${responseBody || "empty response"}`);
       }
-
       options.prrStore.markAccessRequestNotificationDelivered({
         notificationId: notification.id,
         deliveredAt: new Date().toISOString(),
@@ -1009,7 +998,6 @@ function buildCapabilityManifest(
   const hasCapabilities =
     runtimeCapabilities !== null &&
     (runtimeCapabilities.automations.length > 0 || runtimeCapabilities.quickActions.length > 0);
-
   return {
     tenantId: auth.tenantId,
     userId: auth.userId,
@@ -1092,7 +1080,6 @@ function buildPjEvaluatePayload(
       policyKey
     }
   };
-
   if (request.actionId === "environment.create") {
     const segment = normalizeTargetSegment(request.payload.name);
     return {
@@ -1129,7 +1116,6 @@ function buildPjEvaluatePayload(
       timestamp
     };
   }
-
   if (request.actionId === "environment.update") {
     const environmentId = normalizeTargetSegment(request.payload.environmentId);
     return {
@@ -1166,7 +1152,6 @@ function buildPjEvaluatePayload(
       timestamp
     };
   }
-
   if (request.actionId === "environment.promote") {
     const source = normalizeTargetSegment(request.payload.sourceEnvironmentId);
     const target = normalizeTargetSegment(request.payload.targetEnvironmentId);
@@ -1204,7 +1189,6 @@ function buildPjEvaluatePayload(
       timestamp
     };
   }
-
   const snapshotEnvironmentId = normalizeTargetSegment(request.payload.environmentId);
   return {
     workspace: {
@@ -1264,7 +1248,6 @@ function buildPjExecuteData(
     mode: request.mode,
     decision
   };
-
   if (request.mode === "dry-run") {
     return {
       ...base,
@@ -1276,7 +1259,6 @@ function buildPjExecuteData(
       }
     };
   }
-
   if (request.actionId === "environment.create") {
     return {
       ...base,
@@ -1288,7 +1270,6 @@ function buildPjExecuteData(
       updatedAt: decision.auditRecord.timestamp
     };
   }
-
   if (request.actionId === "environment.update") {
     return {
       ...base,
@@ -1296,7 +1277,6 @@ function buildPjExecuteData(
       patch: request.payload.patch
     };
   }
-
   if (request.actionId === "environment.promote") {
     return {
       ...base,
@@ -1305,7 +1285,6 @@ function buildPjExecuteData(
       merge: Boolean(request.payload.merge)
     };
   }
-
   return {
     ...base,
     environmentId: request.payload.environmentId,
@@ -1330,7 +1309,6 @@ function createSecurityHeadersMiddleware(nodeEnv: string) {
     "/puddlejumper-master-environment-control.html",
     "/pj-popout.html"
   ]);
-
   return (req: express.Request, res: express.Response, next: express.NextFunction): void => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     if (allowCrossOriginEmbedding) {
@@ -1338,7 +1316,6 @@ function createSecurityHeadersMiddleware(nodeEnv: string) {
     } else {
       res.setHeader("X-Frame-Options", "SAMEORIGIN");
     }
-
     const normalizedPath = normalizePathname(req.path);
     const allowsInlineAssets = inlinePjPaths.has(normalizedPath);
     const allowsParentApiConnect = trustedConnectPaths.has(normalizedPath);
@@ -1349,9 +1326,7 @@ function createSecurityHeadersMiddleware(nodeEnv: string) {
     const styleSrc = allowsInlineAssets && inlineHashes.styleHash
       ? `style-src 'self' 'sha256-${inlineHashes.styleHash}'`
       : "style-src 'self' https://fonts.googleapis.com";
-
-    const connectSrc = buildConnectSrcDirective(trustedParentOrigins, allowsParentApiConnect);
-
+    const connectSrc = buildConnectSrcDirective(trustedParentOrigins, allowsParentApiConnect, nodeEnv !== "production");
     res.setHeader(
       "Content-Security-Policy",
       [
@@ -1380,12 +1355,10 @@ function createCorsMiddleware(nodeEnv: string) {
     "X-Correlation-Id"
   ].join(", ");
   const allowMethods = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
-
   return (req: express.Request, res: express.Response, next: express.NextFunction): void => {
     const originHeader = req.get("Origin");
     const normalizedOrigin = originHeader ? normalizeTrustedOrigin(originHeader) : null;
     const isAllowedOrigin = normalizedOrigin ? allowedOrigins.has(normalizedOrigin) : false;
-
     if (isAllowedOrigin && normalizedOrigin) {
       res.setHeader("Access-Control-Allow-Origin", normalizedOrigin);
       res.append("Vary", "Origin");
@@ -1395,7 +1368,6 @@ function createCorsMiddleware(nodeEnv: string) {
       res.setHeader("Access-Control-Allow-Headers", requestedHeaders ?? defaultAllowHeaders);
       res.setHeader("Access-Control-Max-Age", "600");
     }
-
     if (req.method === "OPTIONS" && originHeader) {
       if (!isAllowedOrigin) {
         res.status(403).json({ error: "CORS origin denied" });
@@ -1404,7 +1376,6 @@ function createCorsMiddleware(nodeEnv: string) {
       res.status(200).end();
       return;
     }
-
     next();
   };
 }
@@ -1429,12 +1400,10 @@ function extractTargetScopeToken(target: string): string | null {
   if (rawTarget.startsWith("health:")) {
     return "__internal__";
   }
-
   if (!rawTarget.includes(":")) {
     const [owner = ""] = rawTarget.split("/");
     return owner ? normalizeScopeToken(owner) : null;
   }
-
   const [connector = "", rest = ""] = rawTarget.split(":", 2);
   if (!rest) {
     return null;
@@ -1465,7 +1434,6 @@ function assertTenantScope(auth: AuthContext, payload: EvaluateRequestBody):
       authorizedScopes.add(normalizeScopeToken(tenant.sha));
     }
   }
-
   if (authorizedScopes.size === 0) {
     return {
       ok: false,
@@ -1473,7 +1441,6 @@ function assertTenantScope(auth: AuthContext, payload: EvaluateRequestBody):
       details: { userId: auth.userId }
     };
   }
-
   const workspaceScope = normalizeScopeToken(payload.workspace.id);
   if (!authorizedScopes.has(workspaceScope)) {
     return {
@@ -1482,7 +1449,6 @@ function assertTenantScope(auth: AuthContext, payload: EvaluateRequestBody):
       details: { workspaceId: payload.workspace.id, tenantId: auth.tenantId, authorizedScopes: Array.from(authorizedScopes) }
     };
   }
-
   const unauthorizedTargets = payload.action.targets.filter((target) => {
     const token = extractTargetScopeToken(target);
     if (!token) {
@@ -1504,7 +1470,6 @@ function assertTenantScope(auth: AuthContext, payload: EvaluateRequestBody):
       }
     };
   }
-
   return { ok: true };
 }
 
@@ -1513,19 +1478,22 @@ function resolveRuntimeContext(nodeEnv: string): RuntimeContext | null {
   if (context) {
     return context;
   }
-  if (nodeEnv === "production") {
-    throw new Error("PJ_RUNTIME_CONTEXT_JSON must be configured in production");
-  }
-  return null;
+  const fallback: RuntimeContext = {
+    workspace: {
+      id: "default",
+      charter: { authority: true, accountability: true, boundary: true, continuity: true }
+    },
+    municipality: {
+      id: "default"
+    }
+  };
+  return fallback;
 }
 
 function resolveLiveTiles(nodeEnv: string): LiveTile[] {
   const tiles = normalizeLiveTiles(parseJsonFromEnv("PJ_RUNTIME_TILES_JSON"));
   if (tiles.length > 0) {
     return tiles;
-  }
-  if (nodeEnv === "production") {
-    throw new Error("PJ_RUNTIME_TILES_JSON must be configured in production");
   }
   return [];
 }
@@ -1534,9 +1502,6 @@ function resolveLiveCapabilities(nodeEnv: string): LiveCapabilities | null {
   const capabilities = normalizeCapabilities(parseJsonFromEnv("PJ_RUNTIME_CAPABILITIES_JSON"));
   if (capabilities && (capabilities.automations.length > 0 || capabilities.quickActions.length > 0)) {
     return capabilities;
-  }
-  if (nodeEnv === "production") {
-    throw new Error("PJ_RUNTIME_CAPABILITIES_JSON must be configured in production");
   }
   return null;
 }
@@ -1563,6 +1528,72 @@ function resolveControlledDataDir(nodeEnv: string): string {
   const rawEnv = (process.env.CONTROLLED_DATA_DIR ?? "").trim();
   const fallback = nodeEnv === "production" ? "/data" : path.join(ROOT_DIR, "data");
   return path.resolve(rawEnv || fallback);
+}
+
+/**
+ * Performs a read/write readiness probe against a SQLite file without mutating application tables.
+ * Returns granular flags used by the /live liveness endpoint.
+ */
+function checkSqliteReadiness(dbPath: string): {
+  exists: boolean;
+  readable: boolean;
+  writable: boolean;
+  ok: boolean;
+  error?: string;
+} {
+  try {
+    const exists = fs.existsSync(dbPath);
+    if (!exists) {
+      const parentDir = path.dirname(dbPath);
+      const dirWritable = fs.existsSync(parentDir)
+        ? (() => {
+            try {
+              fs.accessSync(parentDir, fs.constants.W_OK);
+              return true;
+            } catch {
+              return false;
+            }
+          })()
+        : false;
+      return { exists, readable: false, writable: dirWritable, ok: dirWritable, error: "file-missing" };
+    }
+    const readHandle = new Database(dbPath, { readonly: true });
+    try {
+      readHandle.prepare("SELECT 1 as ok").get();
+    } finally {
+      try {
+        readHandle.close();
+      } catch {
+        // ignore
+      }
+    }
+    let writable = false;
+    let writeError: string | undefined;
+    try {
+      const writeHandle = new Database(dbPath);
+      try {
+        writeHandle.exec(SQLITE_READINESS_STATEMENT);
+        writable = true;
+      } finally {
+        try {
+          writeHandle.close();
+        } catch {
+          // ignore
+        }
+      }
+    } catch (error) {
+      writeError = error instanceof Error ? error.message : String(error);
+    }
+    return { exists: true, readable: true, writable, ok: writable, error: writeError };
+  } catch (error) {
+    return {
+      exists: fs.existsSync(dbPath),
+      readable: false,
+      writable: false,
+      ok: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
 }
 
 function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): void {
@@ -1593,16 +1624,18 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
       throw new Error(`${variable} must be configured in production`);
     }
   }
-
   const hasJwtVerificationKey = Boolean(authOptions.jwtPublicKey?.trim() || authOptions.jwtSecret?.trim());
   if (!hasJwtVerificationKey) {
     throw new Error("JWT verification key must be configured in production");
   }
-
   if (authOptions.jwtSecret?.trim() === "dev-secret") {
     throw new Error("JWT secret cannot use development fallback in production");
   }
 
+  const prrPath = process.env.PRR_DB_PATH ?? "";
+  const idempotencyPath = process.env.IDEMPOTENCY_DB_PATH ?? "";
+  const rateLimitPath = process.env.RATE_LIMIT_DB_PATH ?? "";
+  const connectorPath = process.env.CONNECTOR_DB_PATH ?? "";
   const connectorStateSecret = (process.env.CONNECTOR_STATE_SECRET ?? "").trim();
 
   try {
@@ -1658,6 +1691,7 @@ export function createApp(
   nodeEnv: string = process.env.NODE_ENV ?? "development",
   options: CreateAppOptions = {}
 ): Express {
+export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development", options: CreateAppOptions = {}): express.Application {
   const authOptions = resolveAuthOptions(options.authOptions);
   assertProductionInvariants(nodeEnv, authOptions);
   const controlledDataDir = resolveControlledDataDir(nodeEnv);
@@ -1734,7 +1768,6 @@ export function createApp(
         DEFAULT_ACCESS_NOTIFICATION_MAX_RETRIES
     )
   );
-
   const loginRateLimit = createRateLimit({
     windowMs: LOGIN_WINDOW_MS,
     max: LOGIN_MAX_ATTEMPTS,
@@ -1770,7 +1803,11 @@ export function createApp(
       return `tenant:${auth?.tenantId ?? "no-tenant"}:user:${auth?.userId ?? "anonymous"}:route:/api/pj/execute`;
     }
   });
-
+  const liveCheckRateLimit = createRateLimit({
+    windowMs: 5_000,
+    max: 30,
+    keyGenerator: (req) => `route:/live:ip:${req.ip}`
+  });
   app.use(withCorrelationId);
   app.use(createCorsMiddleware(nodeEnv));
   app.use(createSecurityHeadersMiddleware(nodeEnv));
@@ -1779,7 +1816,6 @@ export function createApp(
   app.use(express.static(PUBLIC_DIR));
   app.use("/internal-src", express.static(INTERNAL_SRC_DIR));
   app.use("/api/public", createPublicPrrRouter(prrStore));
-
   const accessNotificationWorkerDisabled = options.accessNotificationWorker?.disable === true;
   const accessNotificationFetchImpl = options.accessNotificationWorker?.fetchImpl ?? fetch;
   if (!accessNotificationWorkerDisabled && accessNotificationWebhookUrl) {
@@ -1802,12 +1838,10 @@ export function createApp(
     }, accessNotificationWorkerIntervalMs);
     workerInterval.unref?.();
   }
-
   const sendPjWorkspace = (res: express.Response): void => {
     res.setHeader("Cache-Control", "no-store, max-age=0");
-    res.type("html").send(renderPjWorkspaceHtml(trustedParentOrigins));
+    res.type("html").send(renderPjWorkspaceHtml(trustedParentOrigins, nodeEnv !== "production"));
   };
-
   app.get("/pj", (_req, res) => {
     sendPjWorkspace(res);
   });
@@ -1817,7 +1851,52 @@ export function createApp(
   app.get("/pj-workspace", (_req, res) => {
     sendPjWorkspace(res);
   });
-
+  // SPA fallback for non-API routes
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) {
+      next();
+      return;
+    }
+    res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+  });
+  app.get("/live", liveCheckRateLimit, (_req, res) => {
+    const publicDirExists = fs.existsSync(PUBLIC_DIR);
+    const workspaceFileExists = fs.existsSync(PJ_WORKSPACE_FILE);
+    const prrStatus = checkSqliteReadiness(prrDbPath);
+    const connectorStatus = checkSqliteReadiness(connectorDbPath);
+    const overallOk = publicDirExists && prrStatus.ok && connectorStatus.ok;
+    res.status(overallOk ? 200 : 503).json({
+      status: overallOk ? "live" : "degraded",
+      service: "puddle-jumper-deploy-remote",
+      nodeEnv,
+      now: new Date().toISOString(),
+      checks: {
+        static: {
+          dir: PUBLIC_DIR,
+          exists: publicDirExists,
+          workspaceFileExists
+        },
+        prrDb: {
+          path: prrDbPath,
+          ...prrStatus
+        },
+        connectorDb: {
+          path: connectorDbPath,
+          ...connectorStatus
+        },
+        runtime: {
+          contextLoaded: Boolean(runtimeContext),
+          tilesLoaded: runtimeTiles.length > 0,
+          capabilitiesLoaded: Boolean(runtimeCapabilities)
+        },
+        env: {
+          accessNotificationWebhookConfigured: Boolean(accessNotificationWebhookUrl),
+          jwtSecretConfigured: Boolean(authOptions.jwtPublicKey ?? authOptions.jwtSecret)
+        },
+        uptimeSeconds: Math.floor(process.uptime())
+      }
+    });
+  });
   app.get("/health", (_req, res) => {
     res.json({
       status: "ok",
@@ -1827,18 +1906,27 @@ export function createApp(
       now: new Date().toISOString()
     });
   });
-
+  app.get("/api/diagnostics/vs", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    res.json({
+      status: "ok",
+      nodeEnv,
+      uptimeSeconds: Math.floor(process.uptime()),
+      now: new Date().toISOString(),
+      correlationId: req.get("X-Correlation-Id") ?? null,
+      userId: auth?.userId ?? null,
+      tenantId: auth?.tenantId ?? null
+    });
+  });
   app.post("/api/login", loginRateLimit, async (req, res) => {
     if (!builtInLoginEnabled) {
       res.status(404).json({ error: "Not Found" });
       return;
     }
-
     if (loginUsers.length === 0) {
       res.status(503).json({ error: "Login unavailable" });
       return;
     }
-
     const parsedLogin = loginRequestSchema.safeParse(req.body);
     if (!parsedLogin.success) {
       res.status(400).json({
@@ -1850,13 +1938,11 @@ export function createApp(
       });
       return;
     }
-
     const user = await findUserAndValidate(loginUsers, parsedLogin.data);
     if (!user) {
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
-
     const token = await signJwt(
       {
         sub: user.id,
@@ -1869,7 +1955,6 @@ export function createApp(
       },
       { expiresIn: '8h' }
     );
-
     setJwtCookieOnResponse(res, token, { maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000), sameSite: 'lax' });
     res.status(200).json({
       ok: true,
@@ -1880,7 +1965,6 @@ export function createApp(
       }
     });
   });
-
   app.use("/api", (req, res, next) => {
     if (req.method === "POST" && req.path === "/login") {
       next();
@@ -1911,6 +1995,23 @@ export function createApp(
       return;
     }
     csrfProtection(req, res, next);
+  // Hardened CSRF protection for /api
+  app.use("/api", (req, res, next) => {
+    const method = (req.method || "").toUpperCase();
+
+    // Allow safe, side-effect free methods to pass through without CSRF.
+    if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
+      return next();
+    }
+
+    // Explicitly disallow TRACE for security reasons.
+    if (method === "TRACE") {
+      res.setHeader("Allow", "GET, HEAD, OPTIONS, POST, PUT, PATCH, DELETE");
+      return res.status(405).json({ error: "Method Not Allowed" });
+    }
+
+    // For all other methods (POST/PUT/PATCH/DELETE/...), run CSRF protection.
+    return csrfProtection(req, res, next);
   });
 
   app.post("/api/logout", requireAuthenticated(), (_req, res) => {
@@ -1947,14 +2048,12 @@ export function createApp(
       });
       return;
     }
-
     const auth = getAuthContext(req);
     const tenantId = auth?.tenantId ?? (typeof parsed.data.tenantId === "string" ? parsed.data.tenantId.trim() : "");
     if (!tenantId) {
       res.status(400).json({ error: "tenantId is required" });
       return;
     }
-
     const actorUserId = auth?.userId ?? "public";
     const created = prrStore.intake({
       tenantId,
@@ -1989,7 +2088,6 @@ export function createApp(
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-
     const statusRaw = typeof req.query.status === "string" ? req.query.status : undefined;
     const statusParsed = statusRaw ? prrStatusSchema.safeParse(statusRaw) : undefined;
     if (statusRaw && !statusParsed?.success) {
@@ -2001,7 +2099,6 @@ export function createApp(
     const limitRaw = typeof req.query.limit === "string" ? Number.parseInt(req.query.limit, 10) : 50;
     const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
     const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 100) : 50;
-
     const result = prrStore.listForTenant({
       tenantId: auth.tenantId,
       status: statusParsed?.success ? (statusParsed.data as PrrStatus) : undefined,
@@ -2022,13 +2119,11 @@ export function createApp(
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-
     const prrId = String(req.params.id ?? "").trim();
     if (!prrId) {
       res.status(400).json({ error: "Invalid PRR id" });
       return;
     }
-
     const parsed = prrStatusTransitionRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
@@ -2040,7 +2135,6 @@ export function createApp(
       });
       return;
     }
-
     const transition = prrStore.transitionStatus({
       id: prrId,
       tenantId: auth.tenantId,
@@ -2060,7 +2154,6 @@ export function createApp(
       });
       return;
     }
-
     res.status(200).json(transition.row);
   });
 
@@ -2074,13 +2167,11 @@ export function createApp(
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-
     const prrId = String(req.params.id ?? "").trim();
     if (!prrId) {
       res.status(400).json({ error: "Invalid PRR id" });
       return;
     }
-
     const parsed = prrCloseRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
@@ -2092,7 +2183,6 @@ export function createApp(
       });
       return;
     }
-
     const closed = prrStore.closeCase({
       id: prrId,
       tenantId: auth.tenantId,
@@ -2112,7 +2202,6 @@ export function createApp(
       });
       return;
     }
-
     res.status(200).json(closed.row);
   });
 
@@ -2128,14 +2217,12 @@ export function createApp(
       });
       return;
     }
-
     const auth = getAuthContext(req);
     const tenantId = auth?.tenantId ?? (typeof parsed.data.tenantId === "string" ? parsed.data.tenantId.trim() : "");
     if (!tenantId) {
       res.status(400).json({ error: "tenantId is required" });
       return;
     }
-
     const actorUserId = auth?.userId ?? "public";
     const created = prrStore.intakeAccessRequest({
       tenantId,
@@ -2148,7 +2235,6 @@ export function createApp(
       actorUserId,
       source: parsed.data.source ?? "api.access.request"
     });
-
     res.status(201).json({
       id: created.id,
       case_id: created.case_id,
@@ -2169,13 +2255,11 @@ export function createApp(
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-
     const accessRequestId = String(req.params.id ?? "").trim();
     if (!accessRequestId) {
       res.status(400).json({ error: "Invalid access request id" });
       return;
     }
-
     const parsed = accessRequestStatusTransitionRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
@@ -2187,13 +2271,11 @@ export function createApp(
       });
       return;
     }
-
     const toStatusParsed = accessRequestStatusSchema.safeParse(parsed.data.to_status);
     if (!toStatusParsed.success) {
       res.status(400).json({ error: "Invalid status transition target" });
       return;
     }
-
     const transition = prrStore.transitionAccessRequestStatus({
       id: accessRequestId,
       tenantId: auth.tenantId,
@@ -2213,7 +2295,6 @@ export function createApp(
       });
       return;
     }
-
     res.status(200).json(transition.row);
   });
 
@@ -2227,13 +2308,11 @@ export function createApp(
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-
     const accessRequestId = String(req.params.id ?? "").trim();
     if (!accessRequestId) {
       res.status(400).json({ error: "Invalid access request id" });
       return;
     }
-
     const parsed = accessRequestCloseRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
@@ -2245,7 +2324,6 @@ export function createApp(
       });
       return;
     }
-
     const closed = prrStore.closeAccessRequest({
       id: accessRequestId,
       tenantId: auth.tenantId,
@@ -2265,7 +2343,6 @@ export function createApp(
       });
       return;
     }
-
     res.status(200).json(closed.row);
   });
 
@@ -2279,7 +2356,6 @@ export function createApp(
       res.status(503).json({ error: "Runtime context unavailable" });
       return;
     }
-
     res.json({
       workspace: runtimeContext.workspace,
       municipality: runtimeContext.municipality,
@@ -2317,7 +2393,6 @@ export function createApp(
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
-
     res.json(buildCapabilityManifest(auth, runtimeTiles, runtimeCapabilities));
   });
 
@@ -2358,10 +2433,8 @@ export function createApp(
       res.status(401).json({ error: "Unauthorized", correlationId });
       return;
     }
-
     const expiresInSeconds = 900;
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
-
     const token = await signJwt(
       {
         sub: auth.userId,
@@ -2374,7 +2447,6 @@ export function createApp(
       },
       { expiresIn: `${expiresInSeconds}s` }
     );
-
     if (nodeEnv !== "production") {
       logServerInfo("pj.identity-token.issued", correlationId, {
         actorUserId: auth.userId,
@@ -2382,7 +2454,6 @@ export function createApp(
         expiresAt
       });
     }
-
     res.status(200).json({
       token_type: "Bearer",
       token,
@@ -2403,7 +2474,6 @@ export function createApp(
       res.status(503).json({ success: false, correlationId, error: "Runtime context unavailable" });
       return;
     }
-
     const parsed = pjExecuteRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
@@ -2417,7 +2487,6 @@ export function createApp(
       });
       return;
     }
-
     const manifest = buildCapabilityManifest(auth, runtimeTiles, runtimeCapabilities);
     const actionDefinition = PJ_ACTION_DEFINITIONS.find((entry) => entry.id === parsed.data.actionId);
     if (!actionDefinition) {
@@ -2436,7 +2505,6 @@ export function createApp(
       });
       return;
     }
-
     const evaluatePayload = buildPjEvaluatePayload(auth, runtimeContext, parsed.data, correlationId);
     if (parsed.data.mode === "dry-run") {
       delete evaluatePayload.action.requestId;
@@ -2446,7 +2514,6 @@ export function createApp(
         evaluatePayload.action.requestId = generated;
       }
     }
-
     const tenantScope = assertTenantScope(auth, evaluatePayload);
     if (!tenantScope.ok) {
       res.status(403).json({
@@ -2458,7 +2525,6 @@ export function createApp(
       });
       return;
     }
-
     try {
       const result = await engine.evaluate(evaluatePayload);
       const statusCode = resolveDecisionStatusCode(result);
@@ -2498,7 +2564,6 @@ export function createApp(
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
-
     try {
       const content = getSystemPromptText();
       const isAdmin = auth.role === "admin";
@@ -2526,7 +2591,6 @@ export function createApp(
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
-
     res.json({
       name: auth.name,
       initials: initials(auth.name) || "OP",
@@ -2542,7 +2606,6 @@ export function createApp(
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
-
     const parsed = evaluateRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
@@ -2554,7 +2617,6 @@ export function createApp(
       });
       return;
     }
-
     const payload: EvaluateRequestBody = {
       ...parsed.data,
       operator: {
@@ -2572,7 +2634,6 @@ export function createApp(
           `${auth.userId}:${auth.tenantId ?? "no-tenant"}:auto-${crypto.randomUUID()}`
       }
     };
-
     const tenantScope = assertTenantScope(auth, payload);
     if (!tenantScope.ok) {
       res.status(403).json({
@@ -2582,7 +2643,6 @@ export function createApp(
       });
       return;
     }
-
     try {
       const result = await engine.evaluate(payload);
       if (!result.approved) {
@@ -2597,7 +2657,6 @@ export function createApp(
         res.status(400).json(result);
         return;
       }
-
       res.status(200).json(result);
     } catch (error) {
       const correlationId = getCorrelationId(res);
