@@ -1693,7 +1693,7 @@ export function createApp(
   // auth callback to set shared cookie after token exchange with Logic Commons
   app.get('/auth/callback', authCallback);
   const engine = createDefaultEngine({ canonicalSourceOptions: options.canonicalSourceOptions });
-  const prrStore = new PrrStore(prrDbPath);
+  const prrStore = new PrrStore(prrDbPath, controlledDataDir);
   const connectorStore = new ConnectorStore(connectorDbPath);
   const authMiddleware = createJwtAuthenticationMiddleware(authOptions);
   const optionalAuthMiddleware = createOptionalJwtAuthenticationMiddleware(authOptions);
