@@ -1580,8 +1580,7 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
   }
 }
 
-// @ts-ignore portability warning - safe in monorepo
-export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development", options: CreateAppOptions = {}) {
+export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development", options: CreateAppOptions = {}): express.Application {
   const authOptions = resolveAuthOptions(options.authOptions);
   assertProductionInvariants(nodeEnv, authOptions);
   const prrDbPath = path.resolve(process.env.PRR_DB_PATH ?? DEFAULT_PRR_DB_PATH);
