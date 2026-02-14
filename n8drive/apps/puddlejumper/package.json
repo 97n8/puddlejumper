@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "main": "dist/api/server.js",
+  "files": [
+    "dist",
+    "package.json"
+  ],
   "scripts": {
     "dev": "tsx watch src/api/server.ts",
     "build": "tsc --project ../../tsconfig.json --outDir dist",
@@ -11,8 +15,10 @@
     "start": "node dist/api/server.js"
   },
   "dependencies": {
-    "express": "^4.21.2",
+    "@publiclogic/core": "workspace:*",
+    "better-sqlite3": "^12.6.2",
     "cookie-parser": "^1.4.7",
+    "express": "^4.21.2",
     "jsonwebtoken": "^9.0.3"
   }
 }
