@@ -4,23 +4,32 @@ import { useState } from "react";
 
 type HealthPayload = Record<string, unknown>;
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
 
 const placeholderTiles = [
   {
     id: "mission-control",
     name: "Mission Control",
-    description: "Launch into the governance workspace",
+    icon: "🛰️",
+    description: "Tile coming soon...",
   },
   {
     id: "status-reports",
     name: "Status Reports",
-    description: "Review weekly automation summaries",
+    icon: "📊",
+    description: "Tile coming soon...",
   },
   {
     id: "connector-hub",
     name: "Connector Hub",
-    description: "Manage municipal integrations",
+    icon: "🔌",
+    description: "Tile coming soon...",
+  },
+  {
+    id: "insights",
+    name: "Insights",
+    icon: "💡",
+    description: "Tile coming soon...",
   },
 ];
 
@@ -33,7 +42,7 @@ export default function Home() {
     setIsChecking(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/health`, {
+      const response = await fetch(`${API_URL}/health`, {
         headers: {
           Accept: "application/json",
         },
@@ -58,10 +67,8 @@ export default function Home() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <header className="border-b border-zinc-800 bg-zinc-900/70">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
-          <h1 className="text-2xl font-semibold">PuddleJumper</h1>
-          <span className="text-sm text-zinc-400">
-            API Target: {API_BASE || "(set NEXT_PUBLIC_API_URL)"}
-          </span>
+          <h1 className="text-3xl font-semibold">PuddleJumper</h1>
+          <span className="text-sm text-zinc-400">API Target: {API_URL}</span>
         </div>
       </header>
 
@@ -116,8 +123,9 @@ export default function Home() {
             {placeholderTiles.map((tile) => (
               <article
                 key={tile.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 transition hover:border-emerald-500/60 hover:shadow-lg"
+                className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 text-center transition hover:border-emerald-500/60 hover:shadow-lg"
               >
+                <div className="mb-3 text-4xl">{tile.icon}</div>
                 <h3 className="text-lg font-medium text-zinc-100">
                   {tile.name}
                 </h3>
