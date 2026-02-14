@@ -3,3 +3,6 @@ node_modules/
 npm-debug.log*
 /tmp/
 data/publiclogic-audit.ndjson
+.env
+.env.local
+**/.env.local
