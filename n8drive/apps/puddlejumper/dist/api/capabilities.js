@@ -7,14 +7,15 @@ export const PJ_ACTION_DEFINITIONS = [
 ];
 // ── Manifest builder ────────────────────────────────────────────────────────
 export function buildCapabilityManifest(auth, runtimeTiles, runtimeCapabilities) {
-    const canEvaluate = auth.permissions.includes("deploy");
+    const permissions = Array.isArray(auth.permissions) ? auth.permissions : [];
+    const canEvaluate = permissions.includes("deploy");
     const canEditCorePrompt = auth.role === "admin";
     const hasTiles = runtimeTiles.length > 0;
     const hasCapabilities = runtimeCapabilities !== null &&
         (runtimeCapabilities.automations.length > 0 || runtimeCapabilities.quickActions.length > 0);
     return {
-        tenantId: auth.tenantId,
-        userId: auth.userId,
+        tenantId: auth.tenantId ?? auth.sub ?? "",
+        userId: auth.userId ?? auth.sub ?? "",
         capabilities: {
             "corePrompt.read": true,
             "corePrompt.edit": canEditCorePrompt,

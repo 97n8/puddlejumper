@@ -51,12 +51,12 @@ export function createAuthRoutes(opts) {
         }
         const token = await signJwt({ sub: user.id, name: user.name, role: user.role, permissions: user.permissions,
             tenants: user.tenants, tenantId: user.tenantId ?? undefined, delegations: [] }, { expiresIn: "8h" });
-        setJwtCookieOnResponse(res, token, { maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000), sameSite: "lax" });
+        setJwtCookieOnResponse(res, token, { maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000), sameSite: opts.nodeEnv === "production" ? "none" : "lax" });
         res.status(200).json({ ok: true, user: { id: user.id, name: user.name, role: user.role } });
     });
     router.post("/logout", requireAuthenticated(), (_req, res) => {
-        res.clearCookie(SESSION_COOKIE_NAME, { httpOnly: true, secure: opts.nodeEnv === "production", sameSite: "lax", path: "/" });
-        res.clearCookie("pj_refresh", { path: "/api" });
+        res.clearCookie(SESSION_COOKIE_NAME, { httpOnly: true, secure: opts.nodeEnv === "production", sameSite: opts.nodeEnv === "production" ? "none" : "lax", path: "/" });
+        res.clearCookie("pj_refresh", { path: "/api", sameSite: opts.nodeEnv === "production" ? "none" : "lax", secure: opts.nodeEnv === "production" });
         res.status(200).json({ ok: true });
     });
     router.get("/identity", requireAuthenticated(), (req, res) => {
@@ -73,7 +73,7 @@ export function createAuthRoutes(opts) {
             trustedParentOrigins: opts.trustedParentOrigins,
         });
     });
-    // ── Lightweight session probe (uses optional auth — no 401 on missing cookie) ──
+    // ── Lightweight session probe (uses optional auth — never 401) ────────────────
     router.get("/auth/status", (req, res) => {
         const auth = getAuthContext(req);
         if (auth?.sub) {
@@ -88,7 +88,7 @@ export function createAuthRoutes(opts) {
             });
         }
         else {
-            res.status(401).json({ authenticated: false });
+            res.json({ authenticated: false });
         }
     });
     // ── Refresh (rotation with replay detection) ──────────────────────────────
@@ -107,7 +107,7 @@ export function createAuthRoutes(opts) {
                 if (result.reason === "token_reuse_detected") {
                     // Breach: someone replayed an already-used token → family revoked
                     authEvent(req, "token_reuse_detected", { sub: payload.sub, family: payload.family });
-                    res.clearCookie("pj_refresh", { path: "/api" });
+                    res.clearCookie("pj_refresh", { path: "/api", sameSite: opts.nodeEnv === "production" ? "none" : "lax", secure: opts.nodeEnv === "production" });
                     return res.status(401).json({ error: "token_reuse_detected" });
                 }
                 authEvent(req, "refresh_failed", { sub: payload.sub, reason: result.reason });
@@ -144,8 +144,8 @@ export function createAuthRoutes(opts) {
             else {
                 authEvent(req, "logout", { sub: null });
             }
-            res.clearCookie("pj_refresh", { path: "/api" });
-            res.clearCookie("jwt", { path: "/" });
+            res.clearCookie("pj_refresh", { path: "/api", sameSite: opts.nodeEnv === "production" ? "none" : "lax", secure: opts.nodeEnv === "production" });
+            res.clearCookie("jwt", { path: "/", sameSite: opts.nodeEnv === "production" ? "none" : "lax", secure: opts.nodeEnv === "production" });
             return res.status(200).json({ ok: true });
         }
         catch (err) {
@@ -169,7 +169,7 @@ export function createAuthRoutes(opts) {
             }
             const count = revokeAllForUser(String(auth.sub));
             authEvent(req, "revoke", { actor: auth.sub, target: auth.sub, count });
-            res.clearCookie("pj_refresh", { path: "/api" });
+            res.clearCookie("pj_refresh", { path: "/api", sameSite: opts.nodeEnv === "production" ? "none" : "lax", secure: opts.nodeEnv === "production" });
             return res.json({ revoked: count });
         }
         catch (err) {

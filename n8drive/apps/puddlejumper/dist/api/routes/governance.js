@@ -94,6 +94,45 @@ export function createGovernanceRoutes(opts) {
             const result = await engine.evaluate(evaluatePayload);
             const statusCode = resolveDecisionStatusCode(result);
             const success = statusCode === 200 && result.approved;
+            // ── Approval gate: governed approved decisions require human sign-off ──
+            if (success &&
+                opts.approvalStore &&
+                parsed.data.mode !== "dry-run" &&
+                evaluatePayload.action.mode === "governed") {
+                try {
+                    const approval = opts.approvalStore.create({
+                        requestId: evaluatePayload.action.requestId ?? `pj-${correlationId}`,
+                        operatorId: auth.userId,
+                        workspaceId: evaluatePayload.workspace.id,
+                        municipalityId: evaluatePayload.municipality.id,
+                        actionIntent: evaluatePayload.action.intent,
+                        actionMode: evaluatePayload.action.mode,
+                        planHash: result.auditRecord.planHash,
+                        planSteps: result.actionPlan,
+                        auditRecord: result.auditRecord,
+                        decisionResult: result,
+                    });
+                    logServerInfo("pj.execute.approval_created", correlationId, {
+                        approvalId: approval.id, operatorId: auth.userId, intent: evaluatePayload.action.intent,
+                    });
+                    res.status(202).json({
+                        success: true,
+                        correlationId,
+                        approvalRequired: true,
+                        approvalId: approval.id,
+                        approvalStatus: "pending",
+                        data: buildPjExecuteData(parsed.data, evaluatePayload, result),
+                        warnings: result.warnings,
+                        message: "Decision approved by engine but requires human sign-off before dispatch.",
+                    });
+                    return;
+                }
+                catch (approvalError) {
+                    logServerError("pj.execute.approval_create_failed", correlationId, approvalError);
+                    // Fall through to normal response if approval creation fails
+                    // (e.g., duplicate requestId means the approval already exists)
+                }
+            }
             res.status(statusCode).json({ success, correlationId,
                 data: buildPjExecuteData(parsed.data, evaluatePayload, result), warnings: result.warnings });
         }

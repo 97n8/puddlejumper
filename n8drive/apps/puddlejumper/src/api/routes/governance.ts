@@ -11,6 +11,7 @@ import {
 import type { LiveCapabilities, LiveTile, RuntimeContext } from "../types.js";
 import { evaluateRequestSchema, pjExecuteRequestSchema } from "../schemas.js";
 import { createDefaultEngine } from "../../engine/governanceEngine.js";
+import type { ApprovalStore } from "../../engine/approvalStore.js";
 import { getSystemPromptText } from "../../prompt/systemPrompt.js";
 import type { CanonicalSourceOptions } from "../canonicalSource.js";
 import {
@@ -46,6 +47,8 @@ type GovernanceRoutesOptions = {
   evaluateRateLimit: express.RequestHandler;
   promptRateLimit: express.RequestHandler;
   pjExecuteRateLimit: express.RequestHandler;
+  /** When provided, approved governed decisions are routed through the approval gate. */
+  approvalStore?: ApprovalStore;
 };
 
 export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.Router {
@@ -129,6 +132,48 @@ export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.R
       const result = await engine.evaluate(evaluatePayload);
       const statusCode = resolveDecisionStatusCode(result);
       const success = statusCode === 200 && result.approved;
+
+      // ── Approval gate: governed approved decisions require human sign-off ──
+      if (
+        success &&
+        opts.approvalStore &&
+        parsed.data.mode !== "dry-run" &&
+        evaluatePayload.action.mode === "governed"
+      ) {
+        try {
+          const approval = opts.approvalStore.create({
+            requestId: evaluatePayload.action.requestId ?? `pj-${correlationId}`,
+            operatorId: auth.userId,
+            workspaceId: evaluatePayload.workspace.id,
+            municipalityId: evaluatePayload.municipality.id,
+            actionIntent: evaluatePayload.action.intent,
+            actionMode: evaluatePayload.action.mode,
+            planHash: result.auditRecord.planHash,
+            planSteps: result.actionPlan,
+            auditRecord: result.auditRecord,
+            decisionResult: result,
+          });
+          logServerInfo("pj.execute.approval_created", correlationId, {
+            approvalId: approval.id, operatorId: auth.userId, intent: evaluatePayload.action.intent,
+          });
+          res.status(202).json({
+            success: true,
+            correlationId,
+            approvalRequired: true,
+            approvalId: approval.id,
+            approvalStatus: "pending",
+            data: buildPjExecuteData(parsed.data, evaluatePayload, result),
+            warnings: result.warnings,
+            message: "Decision approved by engine but requires human sign-off before dispatch.",
+          });
+          return;
+        } catch (approvalError) {
+          logServerError("pj.execute.approval_create_failed", correlationId, approvalError);
+          // Fall through to normal response if approval creation fails
+          // (e.g., duplicate requestId means the approval already exists)
+        }
+      }
+
       res.status(statusCode).json({ success, correlationId,
         data: buildPjExecuteData(parsed.data, evaluatePayload, result), warnings: result.warnings });
     } catch (error) {

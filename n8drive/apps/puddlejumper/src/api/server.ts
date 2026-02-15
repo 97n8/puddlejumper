@@ -62,16 +62,23 @@ import {
 } from "./serverMiddleware.js";
 import { processAccessNotificationQueueOnce } from "./accessNotificationWorker.js";
 import { OAuthStateStore } from "./oauthStateStore.js";
+import {
+  createOAuthRoutes,
+  googleProvider,
+  githubProvider,
+  microsoftProvider,
+} from "@publiclogic/logic-commons";
 
 // Route modules
 import { createAuthRoutes } from "./routes/auth.js";
-import { createGitHubOAuthRoutes } from "./routes/githubOAuth.js";
-import { createGoogleOAuthRoutes } from "./routes/googleOAuth.js";
-import { createMicrosoftOAuthRoutes } from "./routes/microsoftOAuth.js";
 import { createConfigRoutes } from "./routes/config.js";
 import { createPrrRoutes } from "./routes/prr.js";
 import { createAccessRoutes } from "./routes/access.js";
 import { createGovernanceRoutes } from "./routes/governance.js";
+import { createApprovalRoutes } from "./routes/approvals.js";
+import { ApprovalStore } from "../engine/approvalStore.js";
+import { DispatcherRegistry } from "../engine/dispatch.js";
+import { GitHubDispatcher } from "../engine/dispatchers/github.js";
 
 // ── Directory layout ────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -84,6 +91,7 @@ const CONTROLLED_DATA_DIR = path.join(ROOT_DIR, "data");
 const PJ_WORKSPACE_FILE = path.join(PUBLIC_DIR, "puddlejumper-master-environment-control.html");
 const DEFAULT_PRR_DB_PATH = path.join(CONTROLLED_DATA_DIR, "prr.db");
 const DEFAULT_CONNECTOR_DB_PATH = path.join(CONTROLLED_DATA_DIR, "connectors.db");
+const DEFAULT_APPROVAL_DB_PATH = path.join(CONTROLLED_DATA_DIR, "approvals.db");
 
 // ── App factory options ─────────────────────────────────────────────────────
 type CreateAppOptions = {
@@ -121,6 +129,13 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   const connectorStore = new ConnectorStore(connectorDbPath);
   const oauthStateDbPath = path.join(CONTROLLED_DATA_DIR, "oauth_state.db");
   const oauthStateStore = new OAuthStateStore(oauthStateDbPath);
+  const approvalDbPath = path.resolve(process.env.APPROVAL_DB_PATH ?? DEFAULT_APPROVAL_DB_PATH);
+  if (!isPathInsideDirectory(approvalDbPath, CONTROLLED_DATA_DIR)) {
+    throw new Error("APPROVAL_DB_PATH must be inside the controlled data directory");
+  }
+  const approvalStore = new ApprovalStore(approvalDbPath);
+  const dispatcherRegistry = new DispatcherRegistry();
+  dispatcherRegistry.register(new GitHubDispatcher());
 
   // ── Auth middleware ───────────────────────────────────────────────────
   const authMiddleware = createJwtAuthenticationMiddleware(authOptions);
@@ -301,9 +316,11 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/auth/github/login", oauthLoginRateLimit);
   app.use("/api/auth/google/login", oauthLoginRateLimit);
   app.use("/api/auth/microsoft/login", oauthLoginRateLimit);
-  app.use("/api", createGitHubOAuthRoutes({ nodeEnv, oauthStateStore }));
-  app.use("/api", createGoogleOAuthRoutes({ nodeEnv, oauthStateStore }));
-  app.use("/api", createMicrosoftOAuthRoutes({ nodeEnv, oauthStateStore }));
+  // Mount generic OAuth routes for all three providers (via logic-commons factory)
+  const oauthRouteOpts = { nodeEnv, oauthStateStore };
+  app.use("/api", createOAuthRoutes(githubProvider, oauthRouteOpts));
+  app.use("/api", createOAuthRoutes(googleProvider, oauthRouteOpts));
+  app.use("/api", createOAuthRoutes(microsoftProvider, oauthRouteOpts));
   app.use("/api", createConfigRoutes({ runtimeContext, runtimeTiles, runtimeCapabilities }));
   app.use("/api", createPrrRoutes({ prrStore }));
   app.use("/api", createAccessRoutes({ prrStore }));
@@ -312,6 +329,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     canonicalSourceOptions: options.canonicalSourceOptions,
     msGraphFetchImpl, msGraphTokenExchangeEnabled, nodeEnv,
     evaluateRateLimit, promptRateLimit, pjExecuteRateLimit,
+    approvalStore,
+  }));
+  app.use("/api", createApprovalRoutes({
+    approvalStore, dispatcherRegistry, nodeEnv,
   }));
   app.use("/api/connectors", createConnectorsRouter({
     store: connectorStore, stateHmacKey: connectorStateSecret,

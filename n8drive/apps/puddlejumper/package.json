@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@publiclogic/core": "workspace:*",
+    "@publiclogic/logic-commons": "workspace:*",
     "better-sqlite3": "^12.6.2",
     "cookie-parser": "^1.4.7",
     "express": "^4.21.2",
