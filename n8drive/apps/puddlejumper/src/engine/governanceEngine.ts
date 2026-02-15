@@ -20,6 +20,7 @@ import {
 import { buildConnectorPlan } from "./connectors.js";
 import { getSystemPromptText } from "../prompt/systemPrompt.js";
 import { IdempotencyStore } from "./idempotencyStore.js";
+import type { PolicyProvider, AuthorizationQuery } from "./policyProvider.js";
 import {
   CanonicalSourceError,
   DEFAULT_CANONICAL_ALLOWED_HOSTS,
@@ -179,6 +180,8 @@ type EngineOptions = {
   idempotencyTtlHours?: number;
   canonicalSourceOptions?: Partial<CanonicalSourceOptions>;
   schemaVersion?: number;
+  /** When provided, authorization checks delegate to the policy provider. */
+  policyProvider?: PolicyProvider;
 };
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../");
@@ -759,6 +762,7 @@ export function createGovernanceEngine(options: EngineOptions = {}) {
     : ENGINE_SCHEMA_VERSION;
   const canonicalSourceOptions = resolveCanonicalSourceOptions(options.canonicalSourceOptions);
   const idempotencyStore = new IdempotencyStore<DecisionResult>(idempotencyStorePath);
+  const policyProvider = options.policyProvider ?? null;
   void options.auditLogPath;
 
   async function evaluate(input: unknown): Promise<DecisionResult> {
@@ -912,7 +916,17 @@ export function createGovernanceEngine(options: EngineOptions = {}) {
           new Set(launchPairs.map((pair) => pair.connector).filter((connector): connector is ConnectorName => connector !== "none"))
         );
 
-        const authority = checkAuthority(input, connectors);
+        const authority = policyProvider
+          ? policyProvider.checkAuthorization({
+              operatorId: input.operator.id,
+              operatorRole: input.operator.role,
+              operatorPermissions: input.operator.permissions ?? [],
+              operatorDelegations: input.operator.delegations ?? [],
+              intent: input.action.intent,
+              connectors,
+              timestamp: input.timestamp,
+            })
+          : checkAuthority(input, connectors);
         output.auditRecord.evidence.delegationUsed = authority.delegationUsed;
         output.auditRecord.evidence.permissionCheck = authority.required.join(",");
         output.auditRecord.evidence.delegationEvaluation = authority.delegationEvaluation;
@@ -1103,7 +1117,17 @@ export function createGovernanceEngine(options: EngineOptions = {}) {
       }
 
       const connectors = Array.from(new Set(connectorPairs.map((pair) => pair.connector as ConnectorName)));
-      const authority = checkAuthority(input, connectors);
+      const authority = policyProvider
+        ? policyProvider.checkAuthorization({
+            operatorId: input.operator.id,
+            operatorRole: input.operator.role,
+            operatorPermissions: input.operator.permissions ?? [],
+            operatorDelegations: input.operator.delegations ?? [],
+            intent: input.action.intent,
+            connectors,
+            timestamp: input.timestamp,
+          })
+        : checkAuthority(input, connectors);
       output.auditRecord.evidence.delegationUsed = authority.delegationUsed;
       output.auditRecord.evidence.permissionCheck = authority.required.join(",");
       output.auditRecord.evidence.delegationEvaluation = authority.delegationEvaluation;

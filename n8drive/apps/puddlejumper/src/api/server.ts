@@ -81,6 +81,7 @@ import { createAdminRoutes } from "./routes/admin.js";
 import { createWebhookActionRoutes } from "./routes/webhookAction.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
+import { LocalPolicyProvider } from "../engine/policyProvider.js";
 import { DispatcherRegistry } from "../engine/dispatch.js";
 import { GitHubDispatcher } from "../engine/dispatchers/github.js";
 import { SlackDispatcher } from "../engine/dispatchers/slack.js";
@@ -143,6 +144,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   }
   const approvalStore = new ApprovalStore(approvalDbPath);
   const chainStore = new ChainStore(approvalStore.db);
+  const policyProvider = new LocalPolicyProvider(approvalStore.db, chainStore);
   const dispatcherRegistry = new DispatcherRegistry();
   dispatcherRegistry.register(new GitHubDispatcher());
   dispatcherRegistry.register(new SlackDispatcher());
@@ -389,7 +391,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     canonicalSourceOptions: options.canonicalSourceOptions,
     msGraphFetchImpl, msGraphTokenExchangeEnabled, nodeEnv,
     evaluateRateLimit, promptRateLimit, pjExecuteRateLimit,
-    approvalStore, chainStore,
+    approvalStore, chainStore, policyProvider,
   }));
   app.use("/api", createApprovalRoutes({
     approvalStore, dispatcherRegistry, nodeEnv, chainStore,

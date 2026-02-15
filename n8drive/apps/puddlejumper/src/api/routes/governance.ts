@@ -13,6 +13,7 @@ import { evaluateRequestSchema, pjExecuteRequestSchema } from "../schemas.js";
 import { createDefaultEngine } from "../../engine/governanceEngine.js";
 import type { ApprovalStore } from "../../engine/approvalStore.js";
 import type { ChainStore } from "../../engine/chainStore.js";
+import type { PolicyProvider } from "../../engine/policyProvider.js";
 import { getSystemPromptText } from "../../prompt/systemPrompt.js";
 import type { CanonicalSourceOptions } from "../canonicalSource.js";
 import {
@@ -53,11 +54,16 @@ type GovernanceRoutesOptions = {
   approvalStore?: ApprovalStore;
   /** When provided, chains are created alongside governed approvals. */
   chainStore?: ChainStore;
+  /** When provided, authorization, chain template resolution, and audit events route through the policy provider. */
+  policyProvider?: PolicyProvider;
 };
 
 export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.Router {
   const router = express.Router();
-  const engine = createDefaultEngine({ canonicalSourceOptions: opts.canonicalSourceOptions });
+  const engine = createDefaultEngine({
+    canonicalSourceOptions: opts.canonicalSourceOptions,
+    policyProvider: opts.policyProvider,
+  });
 
   // ── Identity token (with optional MS Graph exchange) ────────────────────
   router.get("/pj/identity-token", async (req, res) => {
@@ -160,12 +166,45 @@ export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.R
           approvalMetrics.increment(METRIC.APPROVALS_CREATED);
           approvalMetrics.incrementGauge(METRIC.PENDING_GAUGE);
 
-          // Create chain steps for this approval (default single-step template)
+          // Create chain steps for this approval
           if (opts.chainStore) {
             try {
-              opts.chainStore.createChainForApproval(approval.id);
+              let templateId: string | undefined;
+              if (opts.policyProvider) {
+                const resolved = opts.policyProvider.getChainTemplate({
+                  actionIntent: evaluatePayload.action.intent,
+                  actionMode: evaluatePayload.action.mode ?? "governed",
+                  municipalityId: evaluatePayload.municipality.id,
+                  workspaceId: evaluatePayload.workspace.id,
+                });
+                if (resolved) templateId = resolved.id;
+              }
+              opts.chainStore.createChainForApproval(approval.id, templateId);
             } catch {
               // Chain creation failure is non-fatal — approval still exists
+            }
+          }
+
+          // Write audit event through policy provider
+          if (opts.policyProvider) {
+            try {
+              opts.policyProvider.writeAuditEvent({
+                eventId: crypto.randomUUID(),
+                eventType: "approval_created",
+                workspaceId: evaluatePayload.workspace.id,
+                operatorId: auth.userId,
+                municipalityId: evaluatePayload.municipality.id,
+                timestamp: new Date().toISOString(),
+                intent: evaluatePayload.action.intent,
+                outcome: "pending",
+                details: {
+                  approvalId: approval.id,
+                  planHash: result.auditRecord.planHash,
+                  correlationId,
+                },
+              });
+            } catch {
+              // Audit write failure is non-fatal
             }
           }
 
