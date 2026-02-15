@@ -53,6 +53,31 @@ export function createSessionRoutes(opts: SessionRoutesOptions): express.Router 
     }
   });
 
+  // ── Session endpoint — reads pj_sso cookie, verifies JWT, returns user ────
+  router.get("/session", async (req, res) => {
+    const token = req.cookies?.pj_sso || req.cookies?.jwt;
+    if (!token) {
+      return res.status(401).json({ ok: false, error: "no session cookie" });
+    }
+    try {
+      const payload = await verifyJwt(token) as Record<string, any>;
+      if (!payload?.sub) {
+        return res.status(401).json({ ok: false, error: "invalid token" });
+      }
+      return res.json({
+        ok: true,
+        user: {
+          sub: payload.sub,
+          email: payload.email,
+          name: payload.name,
+          provider: payload.provider,
+        },
+      });
+    } catch {
+      return res.status(401).json({ ok: false, error: "invalid or expired session" });
+    }
+  });
+
   // ── Refresh (rotation with replay detection) ──────────────────────────────
   router.post("/refresh", async (req, res) => {
     try {

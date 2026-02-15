@@ -115,5 +115,11 @@ export async function createSessionAndSetCookies(
   res.cookie("pj_refresh", refreshJwt, getRefreshCookieOpts(nodeEnv));
   res.cookie("jwt", accessJwt, getAccessCookieOpts(nodeEnv));
 
+  // Also set pj_sso — same JWT, cross-origin-friendly cookie for session probes
+  res.cookie("pj_sso", accessJwt, {
+    ...getAccessCookieOpts(nodeEnv),
+    domain: nodeEnv === "production" ? ".publiclogic.org" : undefined,
+  });
+
   return accessJwt;
 }

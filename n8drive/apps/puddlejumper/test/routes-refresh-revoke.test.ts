@@ -397,3 +397,88 @@ describe("GET /api/admin/audit", () => {
     expect(res2.body.events.length).toBe(1);
   });
 });
+
+// ── GET /api/session ────────────────────────────────────────────────────────
+
+describe("GET /api/session", () => {
+  it("returns user info when pj_sso cookie has valid JWT", async () => {
+    const { app, oauthStateStore } = await createTestAppWithOAuth();
+    const { jwtCookie } = await oauthLoginAndGetCookies(app, oauthStateStore);
+    // The OAuth callback sets pj_sso too — extract it
+    // For this test, use the jwt value as pj_sso (same JWT)
+    const jwtValue = jwtCookie.split("=")[1];
+
+    const res = await request(app)
+      .get("/api/session")
+      .set("Cookie", `pj_sso=${jwtValue}`);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.user.sub).toBeDefined();
+    expect(res.body.user.provider).toBe("github");
+    oauthStateStore.close();
+  });
+
+  it("falls back to jwt cookie when pj_sso is missing", async () => {
+    const { app, oauthStateStore } = await createTestAppWithOAuth();
+    const { jwtCookie } = await oauthLoginAndGetCookies(app, oauthStateStore);
+
+    const res = await request(app)
+      .get("/api/session")
+      .set("Cookie", jwtCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.user.sub).toBeDefined();
+    oauthStateStore.close();
+  });
+
+  it("returns 401 without any cookie", async () => {
+    const { app, oauthStateStore } = await createTestAppWithOAuth();
+    const res = await request(app).get("/api/session");
+    expect(res.status).toBe(401);
+    expect(res.body.ok).toBe(false);
+    oauthStateStore.close();
+  });
+
+  it("returns 401 with invalid JWT in pj_sso", async () => {
+    const { app, oauthStateStore } = await createTestAppWithOAuth();
+    const res = await request(app)
+      .get("/api/session")
+      .set("Cookie", "pj_sso=invalid-token");
+    expect(res.status).toBe(401);
+    expect(res.body.ok).toBe(false);
+    oauthStateStore.close();
+  });
+});
+
+// ── OAuth callback sets pj_sso cookie ───────────────────────────────────────
+
+describe("OAuth callback sets pj_sso cookie", () => {
+  it("callback response includes pj_sso cookie", async () => {
+    const { app, oauthStateStore } = await createTestAppWithOAuth();
+
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (String(url).includes("login/oauth/access_token")) {
+        return { ok: true, json: async () => ({ access_token: "gho_mock" }) };
+      }
+      return {
+        ok: true,
+        json: async () => ({ id: 99, login: "ssouser", name: "SSO", email: "sso@example.com" }),
+      };
+    });
+
+    const loginRes = await request(app).get("/api/auth/github/login");
+    const cookies = loginRes.headers["set-cookie"] as unknown as string[];
+    const stateCookie = cookies.find((c: string) => c.startsWith("oauth_state="));
+    const stateValue = stateCookie!.split("=")[1].split(";")[0];
+
+    const callbackRes = await request(app)
+      .get(`/api/auth/github/callback?code=test-code&state=${stateValue}`)
+      .set("Cookie", `oauth_state=${stateValue}`);
+
+    const responseCookies = callbackRes.headers["set-cookie"] as unknown as string[];
+    const pjSsoCookie = responseCookies.find((c: string) => c.startsWith("pj_sso="));
+    expect(pjSsoCookie).toBeDefined();
+    expect(pjSsoCookie).toContain("HttpOnly");
+    oauthStateStore.close();
+  });
+});
