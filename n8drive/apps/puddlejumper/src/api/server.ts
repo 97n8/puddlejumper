@@ -183,6 +183,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       return `tenant:${auth?.tenantId ?? "no-tenant"}:user:${auth?.userId ?? "anonymous"}:route:/api/pj/execute`;
     },
   });
+  const oauthLoginRateLimit = createRateLimit({
+    windowMs: 60_000, max: 10,
+    keyGenerator: (req) => `oauth-login:ip:${req.ip}`,
+  });
 
   // ── Express app ───────────────────────────────────────────────────────
   const app = express();
@@ -293,6 +297,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createAuthRoutes({
     builtInLoginEnabled, loginUsers, loginRateLimit, nodeEnv, trustedParentOrigins,
   }));
+  // Rate-limit OAuth login redirects (10 req/min per IP)
+  app.use("/api/auth/github/login", oauthLoginRateLimit);
+  app.use("/api/auth/google/login", oauthLoginRateLimit);
+  app.use("/api/auth/microsoft/login", oauthLoginRateLimit);
   app.use("/api", createGitHubOAuthRoutes({ nodeEnv, oauthStateStore }));
   app.use("/api", createGoogleOAuthRoutes({ nodeEnv, oauthStateStore }));
   app.use("/api", createMicrosoftOAuthRoutes({ nodeEnv, oauthStateStore }));

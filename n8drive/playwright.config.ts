@@ -8,7 +8,7 @@ export default defineConfig({
     headless: true,
   },
   webServer: {
-    command: 'PORT=3002 JWT_SECRET=test-secret AUTH_ISSUER=test-issuer AUTH_AUDIENCE=test-audience pnpm --filter @publiclogic/logic-commons dev',
+    command: 'PORT=3002 JWT_SECRET=test-secret AUTH_ISSUER=test-issuer AUTH_AUDIENCE=test-audience pnpm --filter @publiclogic/puddlejumper dev',
     port: 3002,
     reuseExistingServer: true,
     timeout: 15_000,
