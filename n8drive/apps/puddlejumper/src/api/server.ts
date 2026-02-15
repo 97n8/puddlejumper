@@ -76,6 +76,7 @@ import { createPrrRoutes } from "./routes/prr.js";
 import { createAccessRoutes } from "./routes/access.js";
 import { createGovernanceRoutes } from "./routes/governance.js";
 import { createApprovalRoutes } from "./routes/approvals.js";
+import { createChainTemplateRoutes } from "./routes/chainTemplates.js";
 import { createWebhookActionRoutes } from "./routes/webhookAction.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
@@ -366,6 +367,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createApprovalRoutes({
     approvalStore, dispatcherRegistry, nodeEnv, chainStore,
   }));
+  app.use("/api", createChainTemplateRoutes({ chainStore }));
   app.use("/api", createWebhookActionRoutes({
     approvalStore, dispatcherRegistry, chainStore,
   }));

@@ -58,7 +58,10 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
       success: true,
       correlationId,
       data: {
-        approvals: rows.map(sanitizeRow),
+        approvals: rows.map((row) => ({
+          ...sanitizeRow(row),
+          chainSummary: chainStore?.getChainSummary(row.id) ?? null,
+        })),
         pendingCount,
         total: rows.length,
       },
@@ -84,7 +87,14 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
       return;
     }
 
-    res.json({ success: true, correlationId, data: sanitizeRow(row) });
+    res.json({
+      success: true,
+      correlationId,
+      data: {
+        ...sanitizeRow(row),
+        chainSummary: chainStore?.getChainSummary(req.params.id) ?? null,
+      },
+    });
   });
 
   // ── Decide (approve or reject) ────────────────────────────────────────

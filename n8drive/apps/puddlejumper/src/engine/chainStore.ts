@@ -90,6 +90,17 @@ export type ChainProgress = {
   rejected: boolean;
 };
 
+/** Lightweight chain summary for embedding in approval list responses. */
+export type ChainSummary = {
+  templateId: string;
+  templateName: string;
+  totalSteps: number;
+  completedSteps: number;
+  currentStepLabel: string | null;
+  allApproved: boolean;
+  rejected: boolean;
+};
+
 // ── Constants ───────────────────────────────────────────────────────────────
 
 /** The default template used for legacy single-step approvals. */
@@ -243,6 +254,83 @@ export class ChainStore {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
+  }
+
+  /**
+   * Update an existing chain template.
+   * Only name, description, and steps can be updated.
+   * The default template cannot be updated.
+   */
+  updateTemplate(id: string, input: {
+    name?: string;
+    description?: string;
+    steps?: ChainTemplateStep[];
+  }): ChainTemplate {
+    if (id === DEFAULT_TEMPLATE_ID) {
+      throw new Error("The default template cannot be modified");
+    }
+
+    const existing = this.getTemplate(id);
+    if (!existing) {
+      throw new Error(`Chain template not found: ${id}`);
+    }
+
+    if (input.steps) {
+      if (input.steps.length === 0) {
+        throw new Error("Chain template must have at least one step");
+      }
+      const sorted = [...input.steps].sort((a, b) => a.order - b.order);
+      for (let i = 0; i < sorted.length; i++) {
+        if (sorted[i].order !== i) {
+          throw new Error(`Step orders must be sequential starting from 0. Expected ${i}, got ${sorted[i].order}`);
+        }
+      }
+    }
+
+    const now = new Date().toISOString();
+    const newName = input.name ?? existing.name;
+    const newDescription = input.description ?? existing.description;
+    const newSteps = input.steps ?? existing.steps;
+
+    this.db.prepare(`
+      UPDATE approval_chain_templates
+      SET name = ?, description = ?, steps_json = ?, updated_at = ?
+      WHERE id = ?
+    `).run(newName, newDescription, JSON.stringify(newSteps), now, id);
+
+    return this.getTemplate(id)!;
+  }
+
+  /**
+   * Delete a chain template.
+   * The default template cannot be deleted.
+   * Templates in use by active chains should be checked before calling this.
+   */
+  deleteTemplate(id: string): boolean {
+    if (id === DEFAULT_TEMPLATE_ID) {
+      throw new Error("The default template cannot be deleted");
+    }
+
+    const result = this.db
+      .prepare("DELETE FROM approval_chain_templates WHERE id = ?")
+      .run(id);
+
+    return result.changes > 0;
+  }
+
+  /**
+   * Count active chains (pending or active steps) using a given template.
+   * Used to prevent deletion of templates that are in use.
+   */
+  countActiveChainsByTemplate(templateId: string): number {
+    const row = this.db
+      .prepare(`
+        SELECT COUNT(DISTINCT approval_id) as cnt
+        FROM approval_chain_steps
+        WHERE template_id = ? AND status IN ('pending', 'active')
+      `)
+      .get(templateId) as { cnt: number };
+    return row.cnt;
   }
 
   // ── Chain Instance Lifecycle ──────────────────────────────────────────
@@ -424,6 +512,30 @@ export class ChainStore {
       steps,
       allApproved,
       rejected,
+    };
+  }
+
+  /**
+   * Get a lightweight chain summary for embedding in approval list responses.
+   * Returns null if no chain exists.
+   */
+  getChainSummary(approvalId: string): ChainSummary | null {
+    const steps = this.getStepsForApproval(approvalId);
+    if (steps.length === 0) return null;
+
+    const templateId = steps[0].templateId;
+    const template = this.getTemplate(templateId);
+    const completedSteps = steps.filter((s) => s.status === "approved").length;
+    const currentStep = steps.find((s) => s.status === "active") ?? null;
+
+    return {
+      templateId,
+      templateName: template?.name ?? "Unknown",
+      totalSteps: steps.length,
+      completedSteps,
+      currentStepLabel: currentStep?.label ?? null,
+      allApproved: steps.every((s) => s.status === "approved"),
+      rejected: steps.some((s) => s.status === "rejected"),
     };
   }
 
