@@ -1,6 +1,10 @@
-import path from 'path';
-import fs from 'fs';
-import Database from 'better-sqlite3';
+// ── SQLite-backed audit event persistence ───────────────────────────────────
+//
+// Adapted from logic-commons for the consolidated puddlejumper app.
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import Database from "better-sqlite3";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -35,17 +39,18 @@ export type AuditQueryOptions = {
 
 // ── Store ───────────────────────────────────────────────────────────────────
 
-const DATA_DIR = process.env.LOGIC_COMMONS_DATA_DIR
-  || path.resolve(import.meta.dirname ?? __dirname, '../../data');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = process.env.CONTROLLED_DATA_DIR
+  || path.resolve(__dirname, "../../data");
 
 let _db: Database.Database | null = null;
 
 function getDb(): Database.Database {
   if (_db) return _db;
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  const dbPath = path.join(DATA_DIR, 'audit.db');
+  const dbPath = path.join(DATA_DIR, "audit.db");
   _db = new Database(dbPath);
-  _db.pragma('journal_mode = WAL');
+  _db.pragma("journal_mode = WAL");
   _db.exec(`
     CREATE TABLE IF NOT EXISTS audit_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,7 +73,7 @@ function getDb(): Database.Database {
 /** For tests: close the DB and reset so next call re-opens a fresh store. */
 export function resetAuditDb(): void {
   if (_db) {
-    try { _db.exec('DELETE FROM audit_events'); } catch { /* table may not exist yet */ }
+    try { _db.exec("DELETE FROM audit_events"); } catch { /* table may not exist yet */ }
     _db.close();
     _db = null;
   }
@@ -95,7 +100,7 @@ export function insertAuditEvent(event: InsertAuditEvent): AuditEventRow {
     event.request_id ?? null,
     metadataStr,
   );
-  return db.prepare('SELECT * FROM audit_events WHERE id = ?')
+  return db.prepare("SELECT * FROM audit_events WHERE id = ?")
     .get(result.lastInsertRowid) as AuditEventRow;
 }
 
@@ -108,19 +113,19 @@ export function queryAuditEvents(opts: AuditQueryOptions = {}): AuditEventRow[] 
   const params: unknown[] = [];
 
   if (opts.event_type) {
-    conditions.push('event_type = ?');
+    conditions.push("event_type = ?");
     params.push(opts.event_type);
   }
   if (opts.actor_id) {
-    conditions.push('actor_id = ?');
+    conditions.push("actor_id = ?");
     params.push(opts.actor_id);
   }
   if (opts.after) {
-    conditions.push('timestamp >= ?');
+    conditions.push("timestamp >= ?");
     params.push(opts.after);
   }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   const limit = Math.min(opts.limit ?? 50, 500);
 
   return db.prepare(

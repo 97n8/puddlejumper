@@ -14,7 +14,6 @@ RUN corepack prepare pnpm@8.15.8 --activate
 # Copy package manifests first for better layer caching
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/puddlejumper/package.json apps/puddlejumper/
-COPY apps/logic-commons/package.json apps/logic-commons/
 COPY packages/core/package.json packages/core/
 COPY web/package.json web/
 

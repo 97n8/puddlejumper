@@ -1,8 +1,8 @@
 // ── Google OAuth redirect flow ──────────────────────────────────────────────
 import crypto from "node:crypto";
 import express from "express";
-import { signJwt } from "@publiclogic/core";
 import type { OAuthStateStore } from "../oauthStateStore.js";
+import { authEvent, createSessionAndSetCookies } from "../authHelpers.js";
 
 export type GoogleUser = { sub: string; email?: string; name?: string };
 
@@ -103,26 +103,14 @@ export function createGoogleOAuthRoutes(opts: GoogleOAuthOptions): express.Route
       // Verify token and get user info
       const userInfo = await verifyGoogleToken(tokenBody.access_token);
 
-      // Create access token
-      const accessJwt = await signJwt(
-        {
-          sub: userInfo.sub,
-          email: userInfo.email,
-          name: userInfo.name,
-          provider: "google",
-          role: "user",
-        },
-        { expiresIn: "8h" },
+      // Create session: 1h access JWT + 7d refresh token (httpOnly cookies)
+      await createSessionAndSetCookies(
+        res,
+        { sub: userInfo.sub, email: userInfo.email, name: userInfo.name, provider: "google" },
+        opts.nodeEnv,
       );
 
-      // Set session cookie
-      res.cookie("jwt", accessJwt, {
-        httpOnly: true,
-        secure: opts.nodeEnv === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 8 * 60 * 60 * 1000, // 8 hours
-      });
+      authEvent(req, "login", { sub: userInfo.sub, provider: "google", method: "oauth_redirect" });
 
       // Redirect to frontend (cookie carries the session — no token in URL)
       const frontendUrl = process.env.FRONTEND_URL || "https://pj.publiclogic.org";
@@ -130,6 +118,7 @@ export function createGoogleOAuthRoutes(opts: GoogleOAuthOptions): express.Route
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error("Google OAuth callback error:", err?.message);
+      authEvent(req, "login_failed", { provider: "google", method: "oauth_redirect", reason: err?.message ?? "unknown" });
       const frontendUrl = process.env.FRONTEND_URL || "https://pj.publiclogic.org";
       return res.redirect(`${frontendUrl}/#error=authentication_failed`);
     }

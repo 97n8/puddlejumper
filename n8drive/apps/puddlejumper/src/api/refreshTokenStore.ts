@@ -1,7 +1,11 @@
-import crypto from 'crypto';
-import path from 'path';
-import fs from 'fs';
-import Database from 'better-sqlite3';
+// ── SQLite-backed refresh token store with family rotation & replay detection
+//
+// Adapted from logic-commons for the consolidated puddlejumper app.
+import crypto from "node:crypto";
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import Database from "better-sqlite3";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -17,17 +21,18 @@ export type RefreshTokenRow = {
 
 // ── Store ───────────────────────────────────────────────────────────────────
 
-const DATA_DIR = process.env.LOGIC_COMMONS_DATA_DIR
-  || path.resolve(import.meta.dirname ?? __dirname, '../../data');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = process.env.CONTROLLED_DATA_DIR
+  || path.resolve(__dirname, "../../data");
 
 let _db: Database.Database | null = null;
 
 function getDb(): Database.Database {
   if (_db) return _db;
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  const dbPath = path.join(DATA_DIR, 'refresh_tokens.db');
+  const dbPath = path.join(DATA_DIR, "refresh_tokens.db");
   _db = new Database(dbPath);
-  _db.pragma('journal_mode = WAL');
+  _db.pragma("journal_mode = WAL");
   _db.exec(`
     CREATE TABLE IF NOT EXISTS refresh_tokens (
       id TEXT PRIMARY KEY,
@@ -82,7 +87,7 @@ export function createRefreshToken(
 /** Look up a token by jti. Returns null if not found. */
 export function findRefreshToken(jti: string): RefreshTokenRow | null {
   const db = getDb();
-  return (db.prepare('SELECT * FROM refresh_tokens WHERE id = ?').get(jti) as RefreshTokenRow | undefined) ?? null;
+  return (db.prepare("SELECT * FROM refresh_tokens WHERE id = ?").get(jti) as RefreshTokenRow | undefined) ?? null;
 }
 
 /** Verify a token is active: exists, not revoked, not expired. */
@@ -98,7 +103,7 @@ export function verifyRefreshToken(jti: string): RefreshTokenRow | null {
 export function revokeRefreshToken(jti: string): boolean {
   const db = getDb();
   const result = db.prepare(
-    'UPDATE refresh_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL',
+    "UPDATE refresh_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL",
   ).run(nowSec(), jti);
   return result.changes > 0;
 }
@@ -107,7 +112,7 @@ export function revokeRefreshToken(jti: string): boolean {
 export function revokeFamily(family: string): number {
   const db = getDb();
   const result = db.prepare(
-    'UPDATE refresh_tokens SET revoked_at = ? WHERE family = ? AND revoked_at IS NULL',
+    "UPDATE refresh_tokens SET revoked_at = ? WHERE family = ? AND revoked_at IS NULL",
   ).run(nowSec(), family);
   return result.changes;
 }
@@ -116,7 +121,7 @@ export function revokeFamily(family: string): number {
 export function revokeAllForUser(userId: string): number {
   const db = getDb();
   const result = db.prepare(
-    'UPDATE refresh_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL',
+    "UPDATE refresh_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL",
   ).run(nowSec(), userId);
   return result.changes;
 }
@@ -135,24 +140,24 @@ export function revokeAllForUser(userId: string): number {
 export function rotateRefreshToken(
   jti: string,
   ttlSec: number,
-): { ok: true; token: RefreshTokenRow } | { ok: false; reason: 'token_reuse_detected' | 'invalid' } {
+): { ok: true; token: RefreshTokenRow } | { ok: false; reason: "token_reuse_detected" | "invalid" } {
   const db = getDb();
   const row = findRefreshToken(jti);
-  if (!row) return { ok: false, reason: 'invalid' };
+  if (!row) return { ok: false, reason: "invalid" };
 
   // Expired
-  if (nowSec() > row.expires_at) return { ok: false, reason: 'invalid' };
+  if (nowSec() > row.expires_at) return { ok: false, reason: "invalid" };
 
   // Replay detection — token was already revoked (used before)
   if (row.revoked_at !== null) {
     revokeFamily(row.family);
-    return { ok: false, reason: 'token_reuse_detected' };
+    return { ok: false, reason: "token_reuse_detected" };
   }
 
   // Normal rotation — revoke old, create new in same family
   const newToken = createRefreshToken(row.user_id, row.family, ttlSec);
   db.prepare(
-    'UPDATE refresh_tokens SET revoked_at = ?, replaced_by = ? WHERE id = ?',
+    "UPDATE refresh_tokens SET revoked_at = ?, replaced_by = ? WHERE id = ?",
   ).run(nowSec(), newToken.id, jti);
 
   return { ok: true, token: newToken };
@@ -166,7 +171,7 @@ export function purgeExpired(olderThanSec: number = 86400 * 30): number {
   const db = getDb();
   const cutoff = nowSec() - olderThanSec;
   const result = db.prepare(
-    'DELETE FROM refresh_tokens WHERE expires_at < ?',
+    "DELETE FROM refresh_tokens WHERE expires_at < ?",
   ).run(cutoff);
   return result.changes;
 }

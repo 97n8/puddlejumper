@@ -270,6 +270,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   // ── Auth gating for /api ──────────────────────────────────────────────
   app.use("/api", (req, res, next) => {
     if (req.method === "POST" && req.path === "/login") { next(); return; }
+    if (req.method === "POST" && req.path === "/refresh") { next(); return; }
+    if (req.method === "POST" && req.path === "/auth/logout") { next(); return; }
+    if (req.method === "POST" && req.path === "/auth/revoke") { optionalAuthMiddleware(req, res, next); return; }
     if (req.method === "POST" && req.path === "/prr/intake") { optionalAuthMiddleware(req, res, next); return; }
     if (req.method === "POST" && req.path === "/access/request") { optionalAuthMiddleware(req, res, next); return; }
     if (req.method === "GET" && /^\/connectors\/(?:microsoft|google|github)\/auth\/callback$/.test(req.path)) {
