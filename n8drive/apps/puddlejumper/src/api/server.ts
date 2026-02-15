@@ -78,6 +78,7 @@ import { createGovernanceRoutes } from "./routes/governance.js";
 import { createApprovalRoutes } from "./routes/approvals.js";
 import { createWebhookActionRoutes } from "./routes/webhookAction.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
+import { ChainStore } from "../engine/chainStore.js";
 import { DispatcherRegistry } from "../engine/dispatch.js";
 import { GitHubDispatcher } from "../engine/dispatchers/github.js";
 import { SlackDispatcher } from "../engine/dispatchers/slack.js";
@@ -139,6 +140,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     throw new Error("APPROVAL_DB_PATH must be inside the controlled data directory");
   }
   const approvalStore = new ApprovalStore(approvalDbPath);
+  const chainStore = new ChainStore(approvalStore.db);
   const dispatcherRegistry = new DispatcherRegistry();
   dispatcherRegistry.register(new GitHubDispatcher());
   dispatcherRegistry.register(new SlackDispatcher());
@@ -359,13 +361,13 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     canonicalSourceOptions: options.canonicalSourceOptions,
     msGraphFetchImpl, msGraphTokenExchangeEnabled, nodeEnv,
     evaluateRateLimit, promptRateLimit, pjExecuteRateLimit,
-    approvalStore,
+    approvalStore, chainStore,
   }));
   app.use("/api", createApprovalRoutes({
-    approvalStore, dispatcherRegistry, nodeEnv,
+    approvalStore, dispatcherRegistry, nodeEnv, chainStore,
   }));
   app.use("/api", createWebhookActionRoutes({
-    approvalStore, dispatcherRegistry,
+    approvalStore, dispatcherRegistry, chainStore,
   }));
   app.use("/api/connectors", createConnectorsRouter({
     store: connectorStore, stateHmacKey: connectorStateSecret,

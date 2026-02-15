@@ -15,6 +15,7 @@ import {
   requireAuthenticated,
 } from "@publiclogic/core";
 import type { ApprovalStore } from "../../engine/approvalStore.js";
+import type { ChainStore } from "../../engine/chainStore.js";
 import type { DispatcherRegistry, PlanStepInput, RetryPolicy } from "../../engine/dispatch.js";
 import { dispatchPlan } from "../../engine/dispatch.js";
 import { getCorrelationId } from "../serverMiddleware.js";
@@ -38,13 +39,15 @@ const webhookActionSchema = z.object({
 export type WebhookActionRouteOptions = {
   approvalStore: ApprovalStore;
   dispatcherRegistry: DispatcherRegistry;
+  /** When provided, chains are created alongside governed approvals. */
+  chainStore?: ChainStore;
 };
 
 // ── Router ──────────────────────────────────────────────────────────────────
 
 export function createWebhookActionRoutes(opts: WebhookActionRouteOptions): express.Router {
   const router = express.Router();
-  const { approvalStore, dispatcherRegistry } = opts;
+  const { approvalStore, dispatcherRegistry, chainStore } = opts;
 
   // POST /api/pj/actions/webhook
   router.post("/pj/actions/webhook", requireAuthenticated(), async (req, res) => {
@@ -129,6 +132,16 @@ export function createWebhookActionRoutes(opts: WebhookActionRouteOptions): expr
 
       approvalMetrics.increment(METRIC.APPROVALS_CREATED);
       approvalMetrics.incrementGauge(METRIC.PENDING_GAUGE);
+
+      // Create chain steps for this approval (default single-step template)
+      if (chainStore) {
+        try {
+          chainStore.createChainForApproval(approval.id);
+        } catch {
+          // Chain creation failure is non-fatal — approval still exists
+        }
+      }
+
       emitApprovalEvent("created", {
         approvalId: approval.id,
         operatorId: auth.userId ?? auth.sub,

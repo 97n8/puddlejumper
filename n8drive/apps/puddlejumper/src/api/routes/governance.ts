@@ -12,6 +12,7 @@ import type { LiveCapabilities, LiveTile, RuntimeContext } from "../types.js";
 import { evaluateRequestSchema, pjExecuteRequestSchema } from "../schemas.js";
 import { createDefaultEngine } from "../../engine/governanceEngine.js";
 import type { ApprovalStore } from "../../engine/approvalStore.js";
+import type { ChainStore } from "../../engine/chainStore.js";
 import { getSystemPromptText } from "../../prompt/systemPrompt.js";
 import type { CanonicalSourceOptions } from "../canonicalSource.js";
 import {
@@ -50,6 +51,8 @@ type GovernanceRoutesOptions = {
   pjExecuteRateLimit: express.RequestHandler;
   /** When provided, approved governed decisions are routed through the approval gate. */
   approvalStore?: ApprovalStore;
+  /** When provided, chains are created alongside governed approvals. */
+  chainStore?: ChainStore;
 };
 
 export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.Router {
@@ -156,6 +159,16 @@ export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.R
           });
           approvalMetrics.increment(METRIC.APPROVALS_CREATED);
           approvalMetrics.incrementGauge(METRIC.PENDING_GAUGE);
+
+          // Create chain steps for this approval (default single-step template)
+          if (opts.chainStore) {
+            try {
+              opts.chainStore.createChainForApproval(approval.id);
+            } catch {
+              // Chain creation failure is non-fatal — approval still exists
+            }
+          }
+
           emitApprovalEvent("created", {
             approvalId: approval.id, operatorId: auth.userId,
             intent: evaluatePayload.action.intent, planHash: result.auditRecord.planHash,
