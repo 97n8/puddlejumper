@@ -9,9 +9,19 @@ export function resolveAuthOptions(opts) {
         ...(opts || {})
     };
 }
+/** Extract JWT from cookie or Authorization: Bearer header. */
+function extractToken(req) {
+    if (req.cookies?.jwt)
+        return req.cookies.jwt;
+    const authHeader = req.headers?.authorization;
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+        return authHeader.slice(7);
+    }
+    return null;
+}
 export function createJwtAuthenticationMiddleware(_opts) {
     return async (req, res, next) => {
-        const token = req.cookies?.jwt;
+        const token = extractToken(req);
         if (!token)
             return res.status(401).json({ error: 'Authentication required' });
         try {
@@ -26,7 +36,7 @@ export function createJwtAuthenticationMiddleware(_opts) {
 }
 export function createOptionalJwtAuthenticationMiddleware(_opts) {
     return async (req, _res, next) => {
-        const token = req.cookies?.jwt;
+        const token = extractToken(req);
         if (!token)
             return next();
         try {
@@ -65,9 +75,13 @@ export function requireRole(role) {
         next();
     };
 }
+const CSRF_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const CSRF_HEADER = 'x-puddlejumper-request';
 export function csrfProtection() {
-    return (_req, _res, next) => {
-        // noop placeholder; integrate real CSRF protection as needed
+    return (req, res, next) => {
+        if (CSRF_METHODS.has(req.method) && req.headers[CSRF_HEADER] !== 'true') {
+            return res.status(403).json({ error: 'Missing CSRF header' });
+        }
         next();
     };
 }

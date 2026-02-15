@@ -22,12 +22,22 @@ export function resolveAuthOptions(opts?: Partial<AuthOptions>): AuthOptions {
   };
 }
 
+/** Extract JWT from cookie or Authorization: Bearer header. */
+function extractToken(req: any): string | null {
+  if (req.cookies?.jwt) return req.cookies.jwt as string;
+  const authHeader = req.headers?.authorization;
+  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+  return null;
+}
+
 export function createJwtAuthenticationMiddleware(_opts?: Partial<AuthOptions>): RequestHandler {
   return async (req: any, res, next) => {
-    const token = req.cookies?.jwt;
+    const token = extractToken(req);
     if (!token) return res.status(401).json({ error: 'Authentication required' });
     try {
-      const payload = await verifyJwt(token as string);
+      const payload = await verifyJwt(token);
       req.auth = payload;
       next();
     } catch (err) {
@@ -38,10 +48,10 @@ export function createJwtAuthenticationMiddleware(_opts?: Partial<AuthOptions>):
 
 export function createOptionalJwtAuthenticationMiddleware(_opts?: Partial<AuthOptions>): RequestHandler {
   return async (req: any, _res, next) => {
-    const token = req.cookies?.jwt;
+    const token = extractToken(req);
     if (!token) return next();
     try {
-      const payload = await verifyJwt(token as string);
+      const payload = await verifyJwt(token);
       req.auth = payload;
     } catch {
       // ignore invalid token for optional middleware
@@ -77,9 +87,14 @@ export function requireRole(role: string): RequestHandler {
   };
 }
 
+const CSRF_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const CSRF_HEADER = 'x-puddlejumper-request';
+
 export function csrfProtection(): RequestHandler {
-  return (_req, _res, next) => {
-    // noop placeholder; integrate real CSRF protection as needed
+  return (req, res, next) => {
+    if (CSRF_METHODS.has(req.method) && req.headers[CSRF_HEADER] !== 'true') {
+      return res.status(403).json({ error: 'Missing CSRF header' });
+    }
     next();
   };
 }

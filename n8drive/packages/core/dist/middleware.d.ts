@@ -1,3 +1,6 @@
 import type { RequestHandler } from 'express';
-export declare function cookieParserMiddleware(): RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
+/** Extract JWT from cookie or Authorization: Bearer header. */
+declare function extractToken(req: any): string | null;
+export declare function cookieParserMiddleware(): RequestHandler;
 export declare function validateJwt(): RequestHandler;
+export { extractToken };
