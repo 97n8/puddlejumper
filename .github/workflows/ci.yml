@@ -77,9 +77,9 @@ jobs:
           IDEMPOTENCY_DB_PATH=/app/data/idempotency.db
           RATE_LIMIT_DB_PATH=/app/data/ratelimit.db
           FRONTEND_URL=http://localhost:3000
-          PJ_RUNTIME_CONTEXT_JSON={"env":"ci","label":"CI Smoke Test"}
-          PJ_RUNTIME_TILES_JSON=[{"id":"ci","label":"CI","url":"http://localhost:3000"}]
-          PJ_RUNTIME_CAPABILITIES_JSON={"automations":[],"quickActions":[{"id":"ci","label":"CI Action","route":"/ci"}]}
+          PJ_RUNTIME_CONTEXT_JSON={"workspace":{"id":"ci-workspace","name":"CI","charter":{"authority":true,"accountability":true,"boundary":true,"continuity":true}},"municipality":{"id":"ci-municipality","name":"CI Town","state":"MA"}}
+          PJ_RUNTIME_TILES_JSON=[{"id":"ci-tile","label":"CI Tile","icon":"🔧","mode":"governed","intent":"deploy_policy","target":"ci-workspace","tone":"operational","description":"CI smoke test tile"}]
+          PJ_RUNTIME_CAPABILITIES_JSON={"automations":[],"quickActions":[{"type":"action","trigger":["manual"],"title":"CI Action","icon":"🔧","desc":"CI quick action","hint":"Run CI action"}]}
           EOF
           sed -i 's/^[[:space:]]*//' .env.ci
 

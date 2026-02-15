@@ -33,10 +33,23 @@ export type RuntimeContext = {
   operator?: string;
 } | null;
 
+export type LiveTile = {
+  id: string;
+  label: string;
+  icon: string;
+  mode: "launch" | "governed";
+  intent: string;
+  target: string;
+  tone: string;
+  description: string;
+  emergency?: boolean;
+};
+
 type AuthState = {
   user: User;
   manifest: CapabilityManifest;
   runtimeCtx: RuntimeContext;
+  tiles: LiveTile[];
   loading: boolean;
   error: string | null;
   login: (provider: string, providerToken: string) => Promise<void>;
@@ -48,6 +61,7 @@ const AuthCtx = createContext<AuthState>({
   user: null,
   manifest: null,
   runtimeCtx: null,
+  tiles: [],
   loading: false,
   error: null,
   login: async () => {},
@@ -82,19 +96,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(null);
   const [manifest, setManifest] = useState<CapabilityManifest>(null);
   const [runtimeCtx, setRuntimeCtx] = useState<RuntimeContext>(null);
+  const [tiles, setTiles] = useState<LiveTile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch manifest + runtime context once authenticated
+  // Fetch manifest + runtime context + tiles once authenticated
   const fetchProtectedData = useCallback(async () => {
     try {
-      const [mRes, cRes] = await Promise.all([
+      const [mRes, cRes, tRes] = await Promise.all([
         pjFetch("/api/capabilities/manifest"),
         pjFetch("/api/runtime/context"),
+        pjFetch("/api/config/tiles"),
       ]);
       if (mRes.ok) setManifest(await mRes.json());
       if (cRes.ok) setRuntimeCtx(await cRes.json());
+      if (tRes.ok) {
+        const tData = await tRes.json();
+        setTiles(Array.isArray(tData) ? tData : []);
+      }
     } catch {
       // non-fatal — tiles will just show as unavailable
     }
@@ -219,6 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setManifest(null);
     setRuntimeCtx(null);
+    setTiles([]);
     setError(null);
   }, [clearRefreshTimer]);
 
@@ -278,8 +299,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh, fetchProtectedData, scheduleRefresh]);
 
   const value = useMemo<AuthState>(
-    () => ({ user, manifest, runtimeCtx, loading, error, login, logout, refresh }),
-    [user, manifest, runtimeCtx, loading, error, login, logout, refresh],
+    () => ({ user, manifest, runtimeCtx, tiles, loading, error, login, logout, refresh }),
+    [user, manifest, runtimeCtx, tiles, loading, error, login, logout, refresh],
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

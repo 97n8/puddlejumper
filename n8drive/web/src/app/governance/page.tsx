@@ -2,11 +2,20 @@
 
 import Link from "next/link";
 import { useAuth } from "../../lib/auth";
+import { RequireAuth } from "../../lib/RequireAuth";
 import { pjFetch } from "../../lib/pjFetch";
 import { useState } from "react";
 
 export default function GovernancePage() {
-  const { user, manifest, loading: authLoading } = useAuth();
+  return (
+    <RequireAuth>
+      <GovernanceContent />
+    </RequireAuth>
+  );
+}
+
+function GovernanceContent() {
+  const { manifest } = useAuth();
   const [prompt, setPrompt] = useState<string | null>(null);
   const [promptError, setPromptError] = useState<string | null>(null);
   const [promptLoading, setPromptLoading] = useState(false);
@@ -46,23 +55,6 @@ export default function GovernancePage() {
       setActionsLoading(false);
     }
   };
-
-  if (authLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-500">
-        Loading…
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-zinc-950 text-zinc-400">
-        <p>Please sign in to access governance tools.</p>
-        <Link href="/" className="text-emerald-400 hover:underline">Go to Home</Link>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">

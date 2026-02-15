@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "../../lib/auth";
+import { RequireAuth } from "../../lib/RequireAuth";
 import { pjFetch } from "../../lib/pjFetch";
 import { useCallback, useEffect, useState } from "react";
 
@@ -15,7 +16,15 @@ type PrrRow = {
 };
 
 export default function DashboardPage() {
-  const { user, loading: authLoading } = useAuth();
+  return (
+    <RequireAuth>
+      <DashboardContent />
+    </RequireAuth>
+  );
+}
+
+function DashboardContent() {
+  const { user } = useAuth();
   const [records, setRecords] = useState<PrrRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,9 +47,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user) fetchRecords();
   }, [user, fetchRecords]);
-
-  if (authLoading) return <Loading />;
-  if (!user) return <Redirect />;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -116,22 +122,5 @@ function StatusBadge({ status }: { status: string }) {
     <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[status] ?? "bg-zinc-700/40 text-zinc-400"}`}>
       {status.replace(/_/g, " ")}
     </span>
-  );
-}
-
-function Loading() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-500">
-      Loading…
-    </div>
-  );
-}
-
-function Redirect() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-zinc-950 text-zinc-400">
-      <p>Please sign in to view the dashboard.</p>
-      <Link href="/" className="text-emerald-400 hover:underline">Go to Home</Link>
-    </div>
   );
 }

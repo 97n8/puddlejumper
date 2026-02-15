@@ -3,57 +3,27 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../lib/auth";
+import type { LiveTile } from "../lib/auth";
 import { pjFetch } from "../lib/pjFetch";
 
 type HealthPayload = Record<string, unknown>;
 
-// ── Capability-to-tile mapping ─────────────────────────────────
-// The system contract says: "UI driven entirely by manifest; hidden if flag is false."
-// Each tile is shown only when its capability key is true in the manifest.
-const TILE_DEFS: {
+// ── Capability-gated navigation links ──────────────────────────
+// These map manifest capability keys to frontend routes.
+// They are always defined here because routes are a frontend concern;
+// the manifest merely gates visibility.
+const NAV_LINKS: {
   capability: string;
-  id: string;
-  name: string;
+  label: string;
   icon: string;
-  description: string;
   href: string;
 }[] = [
-  {
-    capability: "missionControl.capabilities.read",
-    id: "mission-control",
-    name: "Mission Control",
-    icon: "\u{1F6F0}\uFE0F",
-    description: "View live system capabilities and operational status.",
-    href: "/governance",
-  },
-  {
-    capability: "popout.launch",
-    id: "popout",
-    name: "Pop-out Launcher",
-    icon: "\u{1F680}",
-    description: "Launch governed pop-out windows.",
-    href: "/governance",
-  },
-  {
-    capability: "missionControl.tiles.read",
-    id: "tiles",
-    name: "Tile Manager",
-    icon: "\u{1F4CB}",
-    description: "Browse and manage live tiles.",
-    href: "/dashboard",
-  },
-  {
-    capability: "evaluate.execute",
-    id: "evaluate",
-    name: "Governance Engine",
-    icon: "\u2696\uFE0F",
-    description: "Submit and evaluate governance decisions.",
-    href: "/governance",
-  },
+  { capability: "missionControl.capabilities.read", label: "Governance", icon: "\u2696\uFE0F", href: "/governance" },
+  { capability: "missionControl.tiles.read",        label: "Dashboard",  icon: "\u{1F4CB}", href: "/dashboard" },
 ];
 
 export default function Home() {
-  const { user, manifest, runtimeCtx, loading, error: authError, login, logout } = useAuth();
+  const { user, manifest, runtimeCtx, tiles, loading, error: authError, login, logout } = useAuth();
   const [isChecking, setIsChecking] = useState(false);
   const [health, setHealth] = useState<HealthPayload | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
@@ -62,6 +32,10 @@ export default function Home() {
   const [showManualLogin, setShowManualLogin] = useState(false);
   const [provider, setProvider] = useState<"google" | "github">("github");
   const [providerToken, setProviderToken] = useState("");
+
+  // Intent execution state
+  const [executingTile, setExecutingTile] = useState<string | null>(null);
+  const [executeResult, setExecuteResult] = useState<{ tileId: string; ok: boolean; data: unknown } | null>(null);
 
   const handleHealthCheck = async () => {
     setIsChecking(true);
@@ -89,9 +63,35 @@ export default function Home() {
     }
   };
 
-  // Filter tiles to only those the manifest grants
-  const visibleTiles = manifest
-    ? TILE_DEFS.filter((t) => manifest.capabilities[t.capability] === true)
+  /** Execute a governed tile intent via PJ. */
+  const handleTileExecute = async (tile: LiveTile) => {
+    setExecutingTile(tile.id);
+    setExecuteResult(null);
+    try {
+      const res = await pjFetch("/api/pj/execute", {
+        method: "POST",
+        body: JSON.stringify({
+          actionId: tile.intent,
+          mode: tile.mode,
+          payload: { target: tile.target },
+        }),
+      });
+      const data = await res.json();
+      setExecuteResult({ tileId: tile.id, ok: res.ok, data });
+    } catch (err) {
+      setExecuteResult({
+        tileId: tile.id,
+        ok: false,
+        data: { error: err instanceof Error ? err.message : "Unknown error" },
+      });
+    } finally {
+      setExecutingTile(null);
+    }
+  };
+
+  // Capability-gated nav links
+  const visibleNavLinks = manifest
+    ? NAV_LINKS.filter((n) => manifest.capabilities[n.capability] === true)
     : [];
 
   return (
@@ -273,7 +273,7 @@ export default function Home() {
               <h2 className="text-xl font-semibold">Capabilities</h2>
               {manifest && (
                 <span className="text-xs text-zinc-500">
-                  {visibleTiles.length} available
+                  {visibleNavLinks.length + tiles.length} available
                 </span>
               )}
             </div>
@@ -282,26 +282,92 @@ export default function Home() {
               <p className="text-sm text-zinc-500">Loading capabilities…</p>
             )}
 
-            {manifest && visibleTiles.length === 0 && (
+            {manifest && visibleNavLinks.length === 0 && tiles.length === 0 && (
               <p className="text-sm text-zinc-500">
                 No capabilities granted. Contact your administrator.
               </p>
             )}
 
-            {visibleTiles.length > 0 && (
+            {/* Navigation tiles — capability-gated routes */}
+            {visibleNavLinks.length > 0 && (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {visibleTiles.map((tile) => (
+                {visibleNavLinks.map((nav) => (
                   <Link
-                    key={tile.id}
-                    href={tile.href}
+                    key={nav.href}
+                    href={nav.href}
                     className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 text-center transition hover:border-emerald-500/60 hover:shadow-lg block"
                   >
-                    <div className="mb-3 text-4xl">{tile.icon}</div>
-                    <h3 className="text-lg font-medium text-zinc-100">{tile.name}</h3>
-                    <p className="mt-2 text-sm text-zinc-400">{tile.description}</p>
+                    <div className="mb-3 text-4xl">{nav.icon}</div>
+                    <h3 className="text-lg font-medium text-zinc-100">{nav.label}</h3>
                   </Link>
                 ))}
               </div>
+            )}
+
+            {/* Live tiles — server-driven operational tiles */}
+            {tiles.length > 0 && (
+              <>
+                {visibleNavLinks.length > 0 && (
+                  <div className="my-4 border-t border-zinc-800" />
+                )}
+                <h3 className="mb-3 text-sm font-medium text-zinc-400">Live Tiles</h3>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {tiles.map((tile) => (
+                    <button
+                      key={tile.id}
+                      type="button"
+                      onClick={() => handleTileExecute(tile)}
+                      disabled={executingTile === tile.id}
+                      className={`rounded-xl border p-4 text-left transition hover:shadow-lg block w-full ${
+                        tile.emergency
+                          ? "border-red-700 bg-red-950/30 hover:border-red-500/80"
+                          : "border-zinc-800 bg-zinc-950/60 hover:border-emerald-500/60"
+                      } disabled:opacity-60 disabled:cursor-wait`}
+                    >
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="text-2xl">{tile.icon}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${
+                          tile.mode === "governed"
+                            ? "bg-amber-500/20 text-amber-300"
+                            : "bg-emerald-500/20 text-emerald-300"
+                        }`}>
+                          {tile.mode}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-medium text-zinc-100">{tile.label}</h3>
+                      <p className="mt-1 text-sm text-zinc-400">{tile.description}</p>
+                      <p className="mt-2 text-xs text-zinc-600">
+                        intent: {tile.intent} → {tile.target}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Execution result toast */}
+                {executeResult && (
+                  <div className={`mt-4 rounded-xl border p-4 text-sm ${
+                    executeResult.ok
+                      ? "border-emerald-800 bg-emerald-950/40 text-emerald-200"
+                      : "border-red-800 bg-red-950/40 text-red-200"
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {executeResult.ok ? "✓ Action executed" : "✗ Action failed"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setExecuteResult(null)}
+                        className="text-xs text-zinc-500 hover:text-zinc-300"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                    <pre className="mt-2 whitespace-pre-wrap break-all text-xs">
+                      {JSON.stringify(executeResult.data, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </>
             )}
           </section>
         )}
