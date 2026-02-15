@@ -12,10 +12,12 @@ dist/
 **/dist/
 prod-test/
 
-# SQLite database files
-*.db
-*.db-shm
-*.db-wal
+# SQLite database files - development data
+**/data/*.db
+**/data/*.db-shm
+**/data/*.db-wal
+**/test-data/*.db
 
+# Temporary files
 web/.tmp_webhook_secret.txt
-web/.env.production.local
+*.log
