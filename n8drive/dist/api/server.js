@@ -57,7 +57,15 @@ const DEFAULT_ACCESS_NOTIFICATION_MAX_RETRIES = 8;
 const MS_GRAPH_TOKEN_HEADER = "x-ms-graph-token";
 const DEFAULT_GRAPH_PROFILE_URL = "https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName";
 function isBuiltInLoginEnabled(nodeEnv) {
-    return process.env.ALLOW_ADMIN_LOGIN === "true" && nodeEnv !== "production";
+    const allowAdminLogin = process.env.ALLOW_ADMIN_LOGIN === "true";
+    const allowProductionOverride = process.env.ALLOW_PROD_ADMIN_LOGIN === "true";
+    if (!allowAdminLogin) {
+        return false;
+    }
+    if (nodeEnv !== "production") {
+        return true;
+    }
+    return allowProductionOverride;
 }
 function parseJsonFromEnv(name) {
     const raw = process.env[name];
@@ -1183,8 +1191,12 @@ function assertProductionInvariants(nodeEnv, authOptions) {
     if (nodeEnv !== "production") {
         return;
     }
-    if (process.env.ALLOW_ADMIN_LOGIN === "true") {
+    const allowProductionAdminLogin = process.env.ALLOW_PROD_ADMIN_LOGIN === "true";
+    if (process.env.ALLOW_ADMIN_LOGIN === "true" && !allowProductionAdminLogin) {
         throw new Error("ALLOW_ADMIN_LOGIN must not be true in production");
+    }
+    if (allowProductionAdminLogin && process.env.ALLOW_ADMIN_LOGIN !== "true") {
+        throw new Error("ALLOW_PROD_ADMIN_LOGIN requires ALLOW_ADMIN_LOGIN to also be true");
     }
     const requiredEnvVars = [
         "PJ_RUNTIME_CONTEXT_JSON",

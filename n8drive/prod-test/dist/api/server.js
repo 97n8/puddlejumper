@@ -5,8 +5,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
-import { createOptionalJwtAuthenticationMiddleware, createJwtAuthenticationMiddleware, csrfProtection, getAuthContext, requireAuthenticated, requirePermission, requireRole, resolveAuthOptions, signJwt, setJwtCookieOnResponse } from "@publiclogic/core";
-import authCallback from "./authCallback.js";
+import { createOptionalJwtAuthenticationMiddleware, createJwtAuthenticationMiddleware, csrfProtection, getAuthContext, requireAuthenticated, requirePermission, requireRole, resolveAuthOptions, signJwt } from "./auth.js";
 import { createRateLimit } from "./rateLimit.js";
 import { accessRequestCloseRequestSchema, accessRequestIntakeRequestSchema, accessRequestStatusSchema, accessRequestStatusTransitionRequestSchema, evaluateRequestSchema, loginRequestSchema, pjExecuteRequestSchema, prrCloseRequestSchema, prrIntakeRequestSchema, prrStatusSchema, prrStatusTransitionRequestSchema } from "./schemas.js";
 import { createDefaultEngine } from "../engine/governanceEngine.js";
@@ -58,7 +57,15 @@ const DEFAULT_ACCESS_NOTIFICATION_MAX_RETRIES = 8;
 const MS_GRAPH_TOKEN_HEADER = "x-ms-graph-token";
 const DEFAULT_GRAPH_PROFILE_URL = "https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName";
 function isBuiltInLoginEnabled(nodeEnv) {
-    return process.env.ALLOW_ADMIN_LOGIN === "true" && nodeEnv !== "production";
+    const allowAdminLogin = process.env.ALLOW_ADMIN_LOGIN === "true";
+    const allowProductionOverride = process.env.ALLOW_PROD_ADMIN_LOGIN === "true";
+    if (!allowAdminLogin) {
+        return false;
+    }
+    if (nodeEnv !== "production") {
+        return true;
+    }
+    return allowProductionOverride;
 }
 function parseJsonFromEnv(name) {
     const raw = process.env[name];
@@ -1184,8 +1191,12 @@ function assertProductionInvariants(nodeEnv, authOptions) {
     if (nodeEnv !== "production") {
         return;
     }
-    if (process.env.ALLOW_ADMIN_LOGIN === "true") {
+    const allowProductionAdminLogin = process.env.ALLOW_PROD_ADMIN_LOGIN === "true";
+    if (process.env.ALLOW_ADMIN_LOGIN === "true" && !allowProductionAdminLogin) {
         throw new Error("ALLOW_ADMIN_LOGIN must not be true in production");
+    }
+    if (allowProductionAdminLogin && process.env.ALLOW_ADMIN_LOGIN !== "true") {
+        throw new Error("ALLOW_PROD_ADMIN_LOGIN requires ALLOW_ADMIN_LOGIN to also be true");
     }
     const requiredEnvVars = [
         "PJ_RUNTIME_CONTEXT_JSON",
@@ -1246,8 +1257,6 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         throw new Error("CONNECTOR_STATE_SECRET is required");
     }
     const app = express();
-    // auth callback to set shared cookie after token exchange with Logic Commons
-    app.get('/auth/callback', authCallback);
     const engine = createDefaultEngine({ canonicalSourceOptions: options.canonicalSourceOptions });
     const prrStore = new PrrStore(prrDbPath);
     const connectorStore = new ConnectorStore(connectorDbPath);
@@ -1386,7 +1395,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             res.status(401).json({ error: "Invalid credentials" });
             return;
         }
-        const token = await signJwt({
+        const token = signJwt({
             sub: user.id,
             name: user.name,
             role: user.role,
@@ -1394,8 +1403,14 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             tenants: user.tenants,
             tenantId: user.tenantId ?? undefined,
             delegations: []
-        }, { expiresIn: '8h' });
-        setJwtCookieOnResponse(res, token, { maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000), sameSite: 'lax' });
+        }, authOptions, { expiresIn: "8h" });
+        res.cookie(SESSION_COOKIE_NAME, token, {
+            httpOnly: true,
+            secure: nodeEnv === "production",
+            sameSite: "lax",
+            maxAge: SESSION_MAX_AGE_MS,
+            path: "/"
+        });
         res.status(200).json({
             ok: true,
             user: {
@@ -1833,7 +1848,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
         }
         const expiresInSeconds = 900;
         const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
-        const token = await signJwt({
+        const token = signJwt({
             sub: auth.userId,
             name: auth.name,
             role: auth.role,
@@ -1841,7 +1856,7 @@ export function createApp(nodeEnv = process.env.NODE_ENV ?? "development", optio
             tenants: auth.tenants,
             tenantId: auth.tenantId ?? undefined,
             delegations: auth.delegations
-        }, { expiresIn: `${expiresInSeconds}s` });
+        }, authOptions, { expiresIn: `${expiresInSeconds}s` });
         if (nodeEnv !== "production") {
             logServerInfo("pj.identity-token.issued", correlationId, {
                 actorUserId: auth.userId,
