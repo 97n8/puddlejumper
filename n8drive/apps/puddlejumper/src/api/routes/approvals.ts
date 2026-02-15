@@ -13,7 +13,7 @@ import {
   requireAuthenticated,
 } from "@publiclogic/core";
 import type { ApprovalStore } from "../../engine/approvalStore.js";
-import type { DispatcherRegistry, PlanStepInput } from "../../engine/dispatch.js";
+import type { DispatcherRegistry, PlanStepInput, RetryPolicy } from "../../engine/dispatch.js";
 import { dispatchPlan } from "../../engine/dispatch.js";
 import { getCorrelationId } from "../serverMiddleware.js";
 import { approvalMetrics, emitApprovalEvent, METRIC } from "../../engine/approvalMetrics.js";
@@ -182,12 +182,21 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
     try {
       const planSteps: PlanStepInput[] = JSON.parse(row.plan_json);
 
+      const retryPolicy: RetryPolicy = {
+        maxAttempts: 3,
+        baseDelayMs: 1000,
+        onRetry: (attempt, error, stepId) => {
+          approvalMetrics.increment(METRIC.DISPATCH_RETRY);
+          emitApprovalEvent("dispatch_retry", { approvalId: row.id, stepId, attempt, error, correlationId });
+        },
+      };
+
       const result = await dispatchPlan(planSteps, {
         approvalId: row.id,
         requestId: row.request_id,
         operatorId: row.operator_id,
         dryRun,
-      }, dispatcherRegistry);
+      }, dispatcherRegistry, retryPolicy);
 
       if (result.success) {
         approvalStore.markDispatched(row.id, result);

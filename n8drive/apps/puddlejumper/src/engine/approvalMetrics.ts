@@ -187,6 +187,7 @@ export const METRIC = {
   DISPATCH_FAILURE: "dispatch_failure_total",
   CONSUME_CAS_SUCCESS: "consume_for_dispatch_success_total",
   CONSUME_CAS_CONFLICT: "consume_for_dispatch_conflict_total",
+  DISPATCH_RETRY: "dispatch_retry_total",
 
   // Gauges
   PENDING_GAUGE: "approval_pending_gauge",
@@ -206,6 +207,7 @@ export const METRIC_HELP: Record<string, string> = {
   [METRIC.DISPATCH_FAILURE]:    "Total failed dispatches to connectors",
   [METRIC.CONSUME_CAS_SUCCESS]: "Successful CAS operations for dispatch lock",
   [METRIC.CONSUME_CAS_CONFLICT]:"CAS conflicts when acquiring dispatch lock (double-dispatch prevented)",
+  dispatch_retry_total:          "Total retry attempts across all dispatcher dispatch calls",
   [METRIC.PENDING_GAUGE]:       "Current number of approvals in pending state",
   [METRIC.APPROVAL_TIME]:       "Time in seconds from approval creation to decision",
   [METRIC.DISPATCH_LATENCY]:    "Time in seconds for dispatch plan execution",

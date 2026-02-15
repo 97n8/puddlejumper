@@ -15,7 +15,8 @@ import express from "express";
 import request from "supertest";
 import { signJwt, cookieParserMiddleware, csrfProtection } from "@publiclogic/core";
 import { ApprovalStore } from "../src/engine/approvalStore.js";
-import { DispatcherRegistry } from "../src/engine/dispatch.js";
+import { DispatcherRegistry, dispatchWithRetry, isTransientFailure } from "../src/engine/dispatch.js";
+import type { RetryPolicy, DispatchStepResult, PlanStepInput, DispatchContext } from "../src/engine/dispatch.js";
 import { WebhookDispatcher } from "../src/engine/dispatchers/webhook.js";
 import { createApprovalRoutes } from "../src/api/routes/approvals.js";
 import { createWebhookActionRoutes } from "../src/api/routes/webhookAction.js";
@@ -323,6 +324,270 @@ describe("Governed Webhook Action", () => {
         .set(h)
         .send({ mode: "governed" });
       expect(res.status).toBe(400);
+    });
+  });
+
+  describe("Retry with exponential backoff", () => {
+    const STEP: PlanStepInput = {
+      stepId: "rs-1",
+      description: "retry test step",
+      requiresApproval: false,
+      connector: "webhook",
+      status: "ready",
+      plan: { url: "https://retry-test.example.com/hook" },
+    };
+    const CTX: DispatchContext = {
+      approvalId: "a-retry",
+      requestId: "r-retry",
+      operatorId: "op-retry",
+      dryRun: false,
+    };
+
+    it("succeeds after transient 503 failures then 200", async () => {
+      const dispatcher = new WebhookDispatcher();
+      const originalFetch = globalThis.fetch;
+      let callCount = 0;
+      globalThis.fetch = (async () => {
+        callCount++;
+        if (callCount <= 2) return new Response("Service Unavailable", { status: 503 });
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }) as typeof fetch;
+
+      const retryAttempts: number[] = [];
+      const policy: RetryPolicy = {
+        maxAttempts: 3,
+        baseDelayMs: 10, // fast for tests
+        onRetry: (attempt) => { retryAttempts.push(attempt); },
+      };
+
+      try {
+        const { result, retries } = await dispatchWithRetry(dispatcher, STEP, CTX, policy);
+        expect(result.status).toBe("dispatched");
+        expect(retries).toBe(2);
+        expect(retryAttempts).toEqual([1, 2]);
+        expect(callCount).toBe(3);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it("fails after exhausting all retry attempts on 503", async () => {
+      const dispatcher = new WebhookDispatcher();
+      const originalFetch = globalThis.fetch;
+      let callCount = 0;
+      globalThis.fetch = (async () => {
+        callCount++;
+        return new Response("Service Unavailable", { status: 503 });
+      }) as typeof fetch;
+
+      const retryAttempts: number[] = [];
+      const policy: RetryPolicy = {
+        maxAttempts: 3,
+        baseDelayMs: 10,
+        onRetry: (attempt) => { retryAttempts.push(attempt); },
+      };
+
+      try {
+        const { result, retries } = await dispatchWithRetry(dispatcher, STEP, CTX, policy);
+        expect(result.status).toBe("failed");
+        expect(result.error).toContain("503");
+        expect(retries).toBe(2); // maxAttempts-1 retries
+        expect(retryAttempts).toEqual([1, 2]);
+        expect(callCount).toBe(3);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it("does NOT retry on permanent 400 failure", async () => {
+      const dispatcher = new WebhookDispatcher();
+      const originalFetch = globalThis.fetch;
+      let callCount = 0;
+      globalThis.fetch = (async () => {
+        callCount++;
+        return new Response("Bad Request", { status: 400 });
+      }) as typeof fetch;
+
+      const retryAttempts: number[] = [];
+      const policy: RetryPolicy = {
+        maxAttempts: 3,
+        baseDelayMs: 10,
+        onRetry: (attempt) => { retryAttempts.push(attempt); },
+      };
+
+      try {
+        const { result, retries } = await dispatchWithRetry(dispatcher, STEP, CTX, policy);
+        expect(result.status).toBe("failed");
+        expect(retries).toBe(0);
+        expect(retryAttempts).toEqual([]);
+        expect(callCount).toBe(1); // no retries for 4xx
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it("does NOT retry on validation failure (missing url)", async () => {
+      const dispatcher = new WebhookDispatcher();
+      const noUrlStep: PlanStepInput = { ...STEP, plan: {} };
+
+      const retryAttempts: number[] = [];
+      const policy: RetryPolicy = {
+        maxAttempts: 3,
+        baseDelayMs: 10,
+        onRetry: (attempt) => { retryAttempts.push(attempt); },
+      };
+
+      const { result, retries } = await dispatchWithRetry(dispatcher, noUrlStep, CTX, policy);
+      expect(result.status).toBe("failed");
+      expect(result.error).toContain("Missing url");
+      expect(retries).toBe(0);
+      expect(retryAttempts).toEqual([]);
+    });
+
+    it("retries network errors (fetch throws)", async () => {
+      const dispatcher = new WebhookDispatcher();
+      const originalFetch = globalThis.fetch;
+      let callCount = 0;
+      globalThis.fetch = (async () => {
+        callCount++;
+        if (callCount === 1) throw new TypeError("fetch failed");
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }) as typeof fetch;
+
+      const retryAttempts: number[] = [];
+      const policy: RetryPolicy = {
+        maxAttempts: 3,
+        baseDelayMs: 10,
+        onRetry: (attempt) => { retryAttempts.push(attempt); },
+      };
+
+      try {
+        const { result, retries } = await dispatchWithRetry(dispatcher, STEP, CTX, policy);
+        // The fetch error is caught inside the WebhookDispatcher and returned
+        // as a failed step. dispatchWithRetry then wraps throws as well.
+        // Either way, the error should be retryable and succeed on attempt 2.
+        expect(result.status).toBe("dispatched");
+        expect(retries).toBe(1);
+        expect(callCount).toBe(2);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it("observes exponential backoff timing", async () => {
+      const dispatcher = new WebhookDispatcher();
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = (async () => {
+        return new Response("Server Error", { status: 500 });
+      }) as typeof fetch;
+
+      const timestamps: number[] = [];
+      const policy: RetryPolicy = {
+        maxAttempts: 3,
+        baseDelayMs: 50,
+        onRetry: () => { timestamps.push(Date.now()); },
+      };
+
+      try {
+        const start = Date.now();
+        await dispatchWithRetry(dispatcher, STEP, CTX, policy);
+        const elapsed = Date.now() - start;
+        // 50ms (attempt1→2) + 100ms (attempt2→3) = 150ms minimum
+        expect(elapsed).toBeGreaterThanOrEqual(130); // allow small timing variance
+        expect(timestamps.length).toBe(2);
+        // Second delay should be ~2x the first
+        const gap1 = timestamps[0] - start;
+        const gap2 = timestamps[1] - timestamps[0];
+        expect(gap2).toBeGreaterThan(gap1 * 1.5); // exponential, not linear
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+  });
+
+  describe("isTransientFailure classification", () => {
+    const base: DispatchStepResult = {
+      stepId: "s1",
+      connector: "webhook",
+      status: "failed",
+      completedAt: new Date().toISOString(),
+    };
+
+    it("classifies 500 as transient", () => {
+      expect(isTransientFailure({ ...base, error: "Webhook failed: 500" })).toBe(true);
+    });
+
+    it("classifies 502 as transient", () => {
+      expect(isTransientFailure({ ...base, error: "Webhook failed: 502" })).toBe(true);
+    });
+
+    it("classifies 503 as transient", () => {
+      expect(isTransientFailure({ ...base, error: "Webhook failed: 503" })).toBe(true);
+    });
+
+    it("classifies 400 as permanent", () => {
+      expect(isTransientFailure({ ...base, error: "Webhook failed: 400" })).toBe(false);
+    });
+
+    it("classifies 404 as permanent", () => {
+      expect(isTransientFailure({ ...base, error: "Webhook failed: 404" })).toBe(false);
+    });
+
+    it("classifies ECONNREFUSED as transient", () => {
+      expect(isTransientFailure({ ...base, error: "ECONNREFUSED" })).toBe(true);
+    });
+
+    it("classifies fetch failed as transient", () => {
+      expect(isTransientFailure({ ...base, error: "fetch failed" })).toBe(true);
+    });
+
+    it("classifies Missing url as permanent", () => {
+      expect(isTransientFailure({ ...base, error: "Missing url in plan" })).toBe(false);
+    });
+
+    it("returns false for non-failed status", () => {
+      expect(isTransientFailure({ ...base, status: "dispatched", error: "Webhook failed: 500" })).toBe(false);
+    });
+  });
+
+  describe("Integration: retry metrics through governed dispatch", () => {
+    it("increments dispatch_retry_total on transient failures", async () => {
+      const app = buildApp();
+      const adminToken = await tokenFor(ADMIN);
+      const h = { Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" };
+
+      // Mock fetch: 500 three times (all retries exhausted)
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = (async () => {
+        return new Response("Internal Server Error", { status: 500 });
+      }) as typeof fetch;
+
+      try {
+        const createRes = await request(app)
+          .post("/api/pj/actions/webhook")
+          .set(h)
+          .send({ mode: "governed", action: { type: "webhook", url: "https://retry-metric.example.com/hook" } });
+        expect(createRes.status).toBe(202);
+        const approvalId = createRes.body.approvalId;
+
+        await request(app)
+          .post(`/api/approvals/${approvalId}/decide`)
+          .set(h)
+          .send({ status: "approved" });
+
+        const dispatchRes = await request(app)
+          .post(`/api/approvals/${approvalId}/dispatch`)
+          .set(h)
+          .send({});
+        expect(dispatchRes.status).toBe(200);
+        expect(dispatchRes.body.success).toBe(false);
+
+        // Dispatch retried 2 times (maxAttempts=3 → 2 retries)
+        expect(counter(METRIC.DISPATCH_RETRY)).toBe(2);
+        expect(counter(METRIC.DISPATCH_FAILURE)).toBe(1);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
     });
   });
 

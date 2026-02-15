@@ -15,7 +15,7 @@ import {
   requireAuthenticated,
 } from "@publiclogic/core";
 import type { ApprovalStore } from "../../engine/approvalStore.js";
-import type { DispatcherRegistry, PlanStepInput } from "../../engine/dispatch.js";
+import type { DispatcherRegistry, PlanStepInput, RetryPolicy } from "../../engine/dispatch.js";
 import { dispatchPlan } from "../../engine/dispatch.js";
 import { getCorrelationId } from "../serverMiddleware.js";
 import { approvalMetrics, emitApprovalEvent, METRIC } from "../../engine/approvalMetrics.js";
@@ -149,6 +149,15 @@ export function createWebhookActionRoutes(opts: WebhookActionRouteOptions): expr
     }
 
     // ── Launch: dispatch immediately ────────────────────────────────────
+    const retryPolicy: RetryPolicy = {
+      maxAttempts: 3,
+      baseDelayMs: 1000,
+      onRetry: (attempt, error, stepId) => {
+        approvalMetrics.increment(METRIC.DISPATCH_RETRY);
+        emitApprovalEvent("dispatch_retry", { stepId, attempt, error, correlationId });
+      },
+    };
+
     const result = await dispatchPlan(
       [planStep],
       {
@@ -158,6 +167,7 @@ export function createWebhookActionRoutes(opts: WebhookActionRouteOptions): expr
         dryRun: false,
       },
       dispatcherRegistry,
+      retryPolicy,
     );
 
     if (result.success) {

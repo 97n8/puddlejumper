@@ -113,6 +113,104 @@ export class DispatcherRegistry {
   }
 }
 
+// ── Retry Policy ────────────────────────────────────────────────────────────
+
+export type RetryPolicy = {
+  /** Maximum number of attempts (including the first). Default: 3. */
+  maxAttempts: number;
+  /** Base delay in milliseconds before first retry. Default: 1000. */
+  baseDelayMs: number;
+  /** Called on each retry attempt (for logging/metrics). */
+  onRetry?: (attempt: number, error: string, stepId: string) => void;
+};
+
+const DEFAULT_RETRY_POLICY: RetryPolicy = {
+  maxAttempts: 3,
+  baseDelayMs: 1000,
+};
+
+/**
+ * Classify whether a dispatch failure is transient (retryable).
+ *
+ * Transient: 5xx HTTP status, network errors, timeouts.
+ * Permanent: 4xx HTTP status, missing URL, validation errors.
+ */
+export function isTransientFailure(result: DispatchStepResult): boolean {
+  if (result.status !== "failed" || !result.error) return false;
+
+  // 5xx HTTP status from webhook/HTTP dispatchers
+  if (/failed: 5\d{2}$/i.test(result.error)) return true;
+
+  // Network / timeout errors
+  const networkPatterns = [
+    "fetch failed",
+    "network",
+    "ECONNREFUSED",
+    "ECONNRESET",
+    "ETIMEDOUT",
+    "EHOSTUNREACH",
+    "socket hang up",
+    "UND_ERR",
+    "ABORT_ERR",
+    "timeout",
+  ];
+  const lower = result.error.toLowerCase();
+  return networkPatterns.some((p) => lower.includes(p.toLowerCase()));
+}
+
+/** Sleep helper for retry backoff. */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Execute a dispatcher with retry + exponential backoff.
+ *
+ * Only retries on transient failures (5xx, network errors).
+ * Permanent failures (4xx, validation) return immediately.
+ */
+export async function dispatchWithRetry(
+  dispatcher: ConnectorDispatcher,
+  step: PlanStepInput,
+  context: DispatchContext,
+  policy: RetryPolicy = DEFAULT_RETRY_POLICY,
+): Promise<{ result: DispatchStepResult; retries: number }> {
+  let lastResult: DispatchStepResult;
+  let retries = 0;
+
+  for (let attempt = 1; attempt <= policy.maxAttempts; attempt++) {
+    try {
+      lastResult = await dispatcher.dispatch(step, context);
+    } catch (err) {
+      // Unexpected throw — wrap as a failed result
+      lastResult = {
+        stepId: step.stepId,
+        connector: step.connector,
+        status: "failed",
+        error: err instanceof Error ? err.message : String(err),
+        completedAt: new Date().toISOString(),
+      };
+    }
+
+    // Success or permanent failure — return immediately
+    if (lastResult!.status !== "failed" || !isTransientFailure(lastResult!)) {
+      return { result: lastResult!, retries };
+    }
+
+    // Transient failure — retry if we have attempts remaining
+    if (attempt < policy.maxAttempts) {
+      retries++;
+      policy.onRetry?.(attempt, lastResult!.error ?? "unknown", step.stepId);
+      const delay = policy.baseDelayMs * Math.pow(2, attempt - 1);
+      await sleep(delay);
+    }
+  }
+
+  // Exhausted all retries
+  retries = policy.maxAttempts - 1;
+  return { result: lastResult!, retries };
+}
+
 // ── Plan Dispatcher ─────────────────────────────────────────────────────────
 
 /**
@@ -120,11 +218,13 @@ export class DispatcherRegistry {
  *
  * Steps are dispatched sequentially (fail-fast on critical errors).
  * Steps whose connector has no registered dispatcher are skipped.
+ * Each step is retried with exponential backoff on transient failures.
  */
 export async function dispatchPlan(
   steps: PlanStepInput[],
   context: DispatchContext,
   registry: DispatcherRegistry,
+  retryPolicy?: RetryPolicy,
 ): Promise<DispatchResult> {
   const startedAt = new Date().toISOString();
   const results: DispatchStepResult[] = [];
@@ -167,20 +267,11 @@ export async function dispatchPlan(
       continue;
     }
 
-    try {
-      const stepResult = await dispatcher.dispatch(step, context);
-      results.push(stepResult);
-      if (stepResult.status === "failed") {
-        allSuccess = false;
-      }
-    } catch (err) {
-      results.push({
-        stepId: step.stepId,
-        connector: step.connector,
-        status: "failed",
-        error: err instanceof Error ? err.message : String(err),
-        completedAt: new Date().toISOString(),
-      });
+    const { result: stepResult } = await dispatchWithRetry(
+      dispatcher, step, context, retryPolicy,
+    );
+    results.push(stepResult);
+    if (stepResult.status === "failed") {
       allSuccess = false;
     }
   }
