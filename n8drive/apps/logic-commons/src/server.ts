@@ -1,12 +1,14 @@
 import express from 'express';
-import bodyParser from 'body-parser';
 import serverless from 'serverless-http';
-import { cookieParserMiddleware, validateJwt } from '@publiclogic/core';
+import { cookieParserMiddleware, csrfProtection, validateJwt } from '@publiclogic/core';
 import loginRouter from './routes/login.js';
 
-const app = express();
+const app: express.Express = express();
 app.use(cookieParserMiddleware());
-app.use(bodyParser.json());
+app.use(express.json());
+
+// Enforce X-PuddleJumper-Request header on all mutating /api requests
+app.use('/api', csrfProtection());
 
 app.post('/internal/dev-token', async (req, res) => {
   if (process.env.DEV_MODE !== 'true') return res.status(403).json({ error: 'Forbidden' });
@@ -37,4 +39,23 @@ app.get('/api/runtime/context', validateJwt(), (req: any, res) => {
 // register login route under /api/login
 app.use('/api', loginRouter);
 
+// Health endpoint (no auth required)
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', service: 'logic-commons' });
+});
+
+// Export for serverless (Vercel)
 export default serverless(app);
+
+// When run directly (dev / test), start an HTTP server
+export { app };
+const isDirectRun = process.argv[1] && (
+  process.argv[1].endsWith('server.ts') || process.argv[1].endsWith('server.js')
+);
+if (isDirectRun) {
+  const port = parseInt(process.env.PORT || '3002', 10);
+  app.listen(port, () => {
+    // eslint-disable-next-line no-console
+    console.log(`logic-commons listening on :${port}`);
+  });
+}

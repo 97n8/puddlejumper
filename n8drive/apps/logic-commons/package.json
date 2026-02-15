@@ -7,13 +7,19 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc --project tsconfig.json --outDir dist",
-    "vercel-build": "npm run build && node dist/server.js",
-    "start": "node dist/server.js"
+    "vercel-build": "npm run build",
+    "start": "node dist/server.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "express": "^4.21.2",
     "cookie-parser": "^1.4.7",
     "serverless-http": "^2.2.0",
     "jose": "^4.14.0"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "supertest": "^7.1.4",
+    "@types/supertest": "^6.0.2"
   }
 }
