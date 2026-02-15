@@ -126,15 +126,10 @@ export function createSecurityHeadersMiddleware(nodeEnv, pjWorkspaceFile) {
             res.setHeader("X-Frame-Options", "SAMEORIGIN");
         }
         const normalizedPath = normalizePathname(req.path);
-        const allowsInlineAssets = inlinePjPaths.has(normalizedPath);
         const allowsParentApiConnect = trustedConnectPaths.has(normalizedPath);
-        const inlineHashes = allowsInlineAssets ? resolvePjInlineCspHashes(pjWorkspaceFile) : { scriptHash: null, styleHash: null };
-        const scriptSrc = allowsInlineAssets && inlineHashes.scriptHash
-            ? `script-src 'self' 'sha256-${inlineHashes.scriptHash}'`
-            : "script-src 'self'";
-        const styleSrc = allowsInlineAssets && inlineHashes.styleHash
-            ? `style-src 'self' 'sha256-${inlineHashes.styleHash}'`
-            : "style-src 'self' https://fonts.googleapis.com";
+        // Use simple 'self' for styles now that we use external CSS files
+        const scriptSrc = "script-src 'self'";
+        const styleSrc = "style-src 'self' https://fonts.googleapis.com";
         const connectSrc = buildConnectSrcDirective(trustedParentOrigins, allowsParentApiConnect);
         res.setHeader("Content-Security-Policy", [
             "default-src 'self'", scriptSrc, styleSrc,

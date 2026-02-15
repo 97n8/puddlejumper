@@ -1,0 +1,432 @@
+<style>
+/* ── Reset + Variables ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0e14;
+  --surface: #1a1f2e;
+  --surface-hover: #252b3d;
+  --border: #2d3548;
+  --text: #f0f4f8;
+  --text-dim: #94a3b8;
+  --accent: #3b82f6;
+  --accent-bright: #60a5fa;
+  --green: #10b981;
+  --green-bright: #34d399;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --purple: #8b5cf6;
+  --radius: 12px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+body { 
+  font-family: var(--font); 
+  background: linear-gradient(135deg, #0a0e14 0%, #1a1f2e 50%, #0f1419 100%);
+  background-attachment: fixed;
+  color: var(--text); 
+  min-height: 100vh; 
+}
+a { color: var(--accent-bright); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Layout ────────────────────────────────────────────────────────── */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 28px; border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--surface) 0%, rgba(26, 31, 46, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+.header h1 { 
+  font-size: 22px; 
+  font-weight: 700; 
+  background: linear-gradient(135deg, var(--accent-bright), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.header .subtitle { font-size: 13px; color: var(--text-dim); margin-left: 12px; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.header .refresh-btn {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+  color: #fff; border: none; border-radius: var(--radius);
+  padding: 8px 16px; font-size: 13px; cursor: pointer; font-family: var(--font);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  transition: all 0.2s;
+}
+.header .refresh-btn:hover { 
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+.header .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.header .guide-link {
+  font-size: 13px; color: var(--text-dim); padding: 6px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.header .guide-link:hover { color: var(--text); border-color: var(--text-dim); text-decoration: none; }
+
+.tabs {
+  display: flex; gap: 0; background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 24px; overflow-x: auto;
+}
+.tab {
+  padding: 10px 20px; font-size: 14px; cursor: pointer; border: none;
+  background: transparent; color: var(--text-dim); border-bottom: 2px solid transparent;
+  font-family: var(--font); transition: color 0.15s, border-color 0.15s; white-space: nowrap;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.main { padding: 24px; max-width: 1200px; }
+
+/* ── Auth gate ─────────────────────────────────────────────────────── */
+#auth-gate {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 60vh; gap: 16px;
+}
+#auth-gate h2 { font-size: 20px; }
+#auth-gate p { color: var(--text-dim); font-size: 14px; }
+
+/* ── Stats cards ───────────────────────────────────────────────────── */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px; margin-bottom: 24px;
+}
+.stat-card {
+  background: linear-gradient(135deg, var(--surface) 0%, rgba(26, 31, 46, 0.8) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px;
+  transition: all 0.3s;
+  animation: slideIn 0.5s ease-out;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+.stat-card .label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card .value { font-size: 28px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.stat-card .value.pending { color: var(--yellow); filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.3)); }
+.stat-card .value.success { color: var(--green-bright); filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.3)); }
+.stat-card .value.failure { color: var(--red); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.3)); }
+.stat-card .value.neutral { color: var(--text); }
+
+/* ── Table ─────────────────────────────────────────────────────────── */
+.table-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.table-header h2 { font-size: 16px; font-weight: 600; }
+.filter-group { display: flex; gap: 8px; align-items: center; }
+.filter-group select, .filter-group input {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  border-radius: var(--radius); padding: 6px 10px; font-size: 13px;
+  font-family: var(--font);
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  text-align: left; padding: 10px 12px; font-weight: 600;
+  border-bottom: 1px solid var(--border); color: var(--text-dim);
+  font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px;
+  cursor: pointer; user-select: none;
+}
+thead th:hover { color: var(--text); }
+tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody tr:hover { background: var(--surface-hover); }
+
+.status-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 12px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+}
+.status-badge.pending { background: rgba(251,191,36,0.15); color: var(--yellow); }
+.status-badge.approved { background: rgba(52,211,153,0.15); color: var(--green); }
+.status-badge.rejected { background: rgba(248,113,113,0.15); color: var(--red); }
+.status-badge.dispatched { background: rgba(79,143,247,0.15); color: var(--accent); }
+.status-badge.dispatching { background: rgba(79,143,247,0.15); color: var(--accent); }
+.status-badge.dispatch_failed { background: rgba(248,113,113,0.15); color: var(--red); }
+.status-badge.expired { background: rgba(139,143,163,0.15); color: var(--text-dim); }
+.status-badge.active { background: rgba(251,191,36,0.15); color: var(--yellow); }
+.status-badge.skipped { background: rgba(139,143,163,0.15); color: var(--text-dim); }
+
+.chain-progress {
+  display: flex; align-items: center; gap: 6px; font-size: 12px;
+}
+.chain-bar {
+  display: flex; height: 6px; border-radius: 3px; overflow: hidden;
+  flex: 1; max-width: 80px; background: var(--border);
+}
+.chain-bar-fill { background: var(--green); transition: width 0.3s; }
+
+.actions { display: flex; gap: 6px; }
+.btn {
+  border: none; border-radius: var(--radius); padding: 5px 12px;
+  font-size: 12px; cursor: pointer; font-family: var(--font); font-weight: 500;
+}
+.btn-approve { background: var(--green); color: #000; }
+.btn-reject { background: var(--red); color: #fff; }
+.btn-dispatch { background: var(--accent); color: #fff; }
+.btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.btn-danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.empty-state {
+  text-align: center; padding: 48px 24px;
+  color: var(--text-dim); font-size: 14px;
+}
+
+/* ── Detail panel ──────────────────────────────────────────────────── */
+.detail-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  z-index: 100; display: none;
+}
+.detail-overlay.open { display: flex; justify-content: flex-end; }
+.detail-panel {
+  width: min(520px, 100%); background: var(--bg);
+  border-left: 1px solid var(--border);
+  height: 100%; overflow-y: auto; padding: 24px;
+}
+.detail-panel h3 { font-size: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+.detail-close { background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; }
+.detail-close:hover { color: var(--text); }
+.detail-section { margin-bottom: 20px; }
+.detail-section h4 { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.3px; }
+.detail-field { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+.detail-field .lbl { color: var(--text-dim); }
+.chain-steps-list { list-style: none; }
+.chain-steps-list li {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.step-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.step-dot.approved { background: var(--green); }
+.step-dot.active { background: var(--yellow); }
+.step-dot.pending { background: var(--border); }
+.step-dot.rejected { background: var(--red); }
+.step-dot.skipped { background: var(--text-dim); }
+
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 10px 20px; border-radius: var(--radius); font-size: 13px;
+  z-index: 200; opacity: 0; transition: opacity 0.3s;
+}
+.toast.show { opacity: 1; }
+.toast.success { border-color: var(--green); }
+.toast.error { border-color: var(--red); }
+
+/* ── Pagination ────────────────────────────────────────────────────── */
+.pagination {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 12px; font-size: 13px; color: var(--text-dim);
+}
+.pagination button {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  border-radius: var(--radius); padding: 5px 12px; font-size: 12px;
+  cursor: pointer; font-family: var(--font);
+}
+.pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Chain template cards ──────────────────────────────────────────── */
+.template-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px; margin-bottom: 24px;
+}
+.template-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; position: relative;
+}
+.template-card .template-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.template-card .template-id { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
+.template-card .template-meta { font-size: 12px; color: var(--text-dim); margin-top: 8px; }
+.template-steps-viz {
+  display: flex; align-items: center; gap: 0; margin-top: 12px; flex-wrap: wrap;
+}
+.step-group {
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+.step-pill {
+  background: rgba(79,143,247,0.12); color: var(--accent); border: 1px solid rgba(79,143,247,0.25);
+  border-radius: 14px; padding: 3px 10px; font-size: 11px; white-space: nowrap;
+}
+.step-pill.parallel { background: rgba(167,139,250,0.12); color: var(--purple); border-color: rgba(167,139,250,0.25); }
+.step-arrow { color: var(--text-dim); font-size: 14px; margin: 0 6px; }
+.parallel-bracket {
+  font-size: 11px; color: var(--purple); margin-bottom: 2px; font-weight: 600;
+}
+.template-actions {
+  display: flex; gap: 6px; margin-top: 14px; padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.template-default { position: absolute; top: 12px; right: 14px; font-size: 10px; color: var(--green); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+
+/* ── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .main { padding: 16px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .template-grid { grid-template-columns: 1fr; }
+  table { font-size: 12px; }
+  thead th, tbody td { padding: 8px 6px; }
+  .header { padding: 12px 16px; flex-wrap: wrap; gap: 12px; }
+  .header h1 { font-size: 16px; }
+  .header .subtitle { font-size: 12px; margin-left: 8px; }
+  .header-right { gap: 8px; }
+}
+/* ── Viewer role: hide mutations ───────────────────────────────────── */
+body.role-viewer .btn-approve,
+body.role-viewer .btn-reject,
+body.role-viewer .btn-dispatch,
+body.role-viewer .btn-danger,
+body.role-viewer .template-actions { display: none !important; }
+
+.viewer-banner {
+  background: rgba(79,143,247,0.1); border: 1px solid rgba(79,143,247,0.25);
+  color: var(--accent); padding: 10px 24px; font-size: 13px;
+  display: none; align-items: center; justify-content: space-between;
+}
+body.role-viewer .viewer-banner { display: flex; }
+.viewer-banner a { color: var(--accent); font-weight: 600; }</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:baseline;gap:10px;">
+    <h1>PuddleJumper Admin</h1>
+    <span class="subtitle">Control Plane</span>
+    <span id="workspace-name" class="subtitle" style="color:var(--green);display:none;"></span>
+  </div>
+  <div class="header-right">
+    <a class="guide-link" href="/pj/guide">Quick Start</a>
+    <button class="refresh-btn" onclick="refresh()" id="refresh-btn">⟳ Refresh</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="queue" onclick="switchTab('queue')">Approval Queue</button>
+  <button class="tab" data-tab="chains" onclick="switchTab('chains')">Chain Templates</button>
+  <button class="tab" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+</div>
+
+<!-- Auth gate (shown when user isn't authenticated) -->
+<div id="auth-gate" style="display:none;">
+  <h2>Welcome to PuddleJumper</h2>
+  <p>Sign in to view governed operations and approval workflows.</p>
+  <a href="/api/auth/github/login" style="display:inline-flex;align-items:center;gap:8px;background:#24292e;color:#fff;padding:10px 20px;border-radius:var(--radius);font-size:14px;font-weight:500;text-decoration:none;margin-top:8px">
+    <svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    Sign in with GitHub
+  </a>
+</div>
+
+<!-- Viewer banner -->
+<div class="viewer-banner">
+  <span>Viewing as guest — <a href="/api/auth/github/login">sign up</a> to govern your own operations</span>
+</div>
+
+<!-- Approval Queue Tab -->
+<div class="main" id="tab-queue">
+  <div class="table-header">
+    <h2>Approvals</h2>
+    <div class="filter-group">
+      <select id="status-filter" onchange="loadApprovals()">
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+        <option value="dispatched">Dispatched</option>
+        <option value="dispatch_failed">Dispatch Failed</option>
+        <option value="expired">Expired</option>
+        <option value="">All</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="approvals-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('action_intent')">Intent</th>
+          <th onclick="sortBy('approval_status')">Status</th>
+          <th onclick="sortBy('chain')">Chain Progress</th>
+          <th onclick="sortBy('operator_id')">Operator</th>
+          <th onclick="sortBy('created_at')">Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="approvals-body"></tbody>
+    </table>
+    <div id="empty-state" class="empty-state" style="display:none;">No approvals found.</div>
+  </div>
+
+  <div class="pagination">
+    <span id="page-info"></span>
+    <div style="display:flex;gap:8px;">
+      <button id="prev-btn" onclick="prevPage()" disabled>← Previous</button>
+      <button id="next-btn" onclick="nextPage()">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chain Templates Tab -->
+<div class="main" id="tab-chains" style="display:none;">
+  <div class="table-header">
+    <h2>Chain Templates</h2>
+    <div style="font-size:13px;color:var(--text-dim)">Define multi-step approval routing with sequential and parallel steps</div>
+  </div>
+  <div id="templates-grid" class="template-grid"></div>
+  <div id="templates-empty" class="empty-state" style="display:none;">No chain templates configured.</div>
+</div>
+
+<!-- Dashboard Tab -->
+<div class="main" id="tab-dashboard" style="display:none;">
+  <h2 style="font-size:16px;font-weight:600;margin-bottom:16px;">Operational Dashboard</h2>
+
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card"><div class="label">Pending Approvals</div><div class="value pending" id="s-pending">—</div></div>
+    <div class="stat-card"><div class="label">Success Rate</div><div class="value success" id="s-success-rate">—</div></div>
+    <div class="stat-card"><div class="label">Dispatch Retries</div><div class="value neutral" id="s-retries">—</div></div>
+    <div class="stat-card"><div class="label">Avg Approval Time</div><div class="value neutral" id="s-avg-time">—</div></div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="label">Approvals Created</div><div class="value neutral" id="s-created">—</div></div>
+    <div class="stat-card"><div class="label">Approved</div><div class="value success" id="s-approved">—</div></div>
+    <div class="stat-card"><div class="label">Rejected</div><div class="value failure" id="s-rejected">—</div></div>
+    <div class="stat-card"><div class="label">Expired</div><div class="value neutral" id="s-expired">—</div></div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="label">Dispatch Success</div><div class="value success" id="s-d-success">—</div></div>
+    <div class="stat-card"><div class="label">Dispatch Failure</div><div class="value failure" id="s-d-failure">—</div></div>
+    <div class="stat-card"><div class="label">Avg Dispatch Latency</div><div class="value neutral" id="s-d-latency">—</div></div>
+    <div class="stat-card"><div class="label">Active Chain Steps</div><div class="value pending" id="s-chain-steps">—</div></div>
+  </div>
+
+  <h2 style="font-size:16px;font-weight:600;margin:24px 0 12px;">Recent Dispatches</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Intent</th>
+        <th>Status</th>
+        <th>Operator</th>
+        <th>Dispatched</th>
+      </tr>
+    </thead>
+    <tbody id="dispatch-body"></tbody>
+  </table>
+  <div id="dispatch-empty" class="empty-state" style="display:none;">No recent dispatches.</div>
+</div>
+
+<!-- Detail slide-out panel -->
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetail(event)">
+  <div class="detail-panel" id="detail-panel" onclick="event.stopPropagation()">
+    <h3>
+      <span id="detail-title">Approval Detail</span>
