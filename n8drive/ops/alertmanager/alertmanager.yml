@@ -1,0 +1,114 @@
+# ── Alertmanager Configuration ────────────────────────────────────────────────
+#
+# Example routing config for the PuddleJumper approval & dispatch alerts.
+# Drop into your alertmanager.yml or merge into an existing config.
+#
+# Alert names (from ops/alerts/approval-alerts.yml):
+#   ApprovalsBacklogHigh, DispatchFailuresSpike, ConsumeForDispatchConflictsSpike,
+#   ApprovalTimeTooHigh, DispatchLatencyHigh, NoApprovalsProcessed
+#
+# Docs: https://prometheus.io/docs/alerting/latest/configuration/
+
+global:
+  resolve_timeout: 5m
+  # ── Slack (global, optional) ──
+  # slack_api_url: "https://hooks.slack.com/services/T00000000/B00000000/XXXXXX"
+
+  # ── PagerDuty (global, optional) ──
+  # pagerduty_url: "https://events.pagerduty.com/v2/enqueue"
+
+templates:
+  - "/etc/alertmanager/templates/*.tmpl"
+
+# ── Inhibition rules ──────────────────────────────────────────────────────────
+# Suppress warn-severity alerts when a page-severity alert is already firing
+# for the same service.
+inhibit_rules:
+  - source_matchers:
+      - severity = page
+    target_matchers:
+      - severity = warn
+    equal: [service]
+
+# ── Routing tree ──────────────────────────────────────────────────────────────
+route:
+  receiver: default-slack
+  group_by: [alertname, service]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+  routes:
+    # ── Page-severity → PagerDuty ──────────────────────────────────────────
+    - matchers:
+        - severity = page
+      receiver: pagerduty-ops
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: true          # also send to Slack for visibility
+
+    # ── Page-severity → Slack (ops-critical) ───────────────────────────────
+    - matchers:
+        - severity = page
+      receiver: slack-ops-critical
+
+    # ── Warn-severity → Slack (ops-warnings) ──────────────────────────────
+    - matchers:
+        - severity = warn
+      receiver: slack-ops-warnings
+
+# ── Receivers ─────────────────────────────────────────────────────────────────
+receivers:
+
+  # ── Default fallback ────────────────────────────────────────────────────
+  - name: default-slack
+    slack_configs:
+      - channel: "#puddlejumper-alerts"
+        send_resolved: true
+        title: '{{ template "slack.default.title" . }}'
+        text: >-
+          {{ range .Alerts }}
+          *{{ .Labels.alertname }}* ({{ .Labels.severity }})
+          {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          Runbook: {{ .Annotations.runbook }}
+          {{ end }}
+
+  # ── PagerDuty for page-severity ─────────────────────────────────────────
+  - name: pagerduty-ops
+    pagerduty_configs:
+      - routing_key: "<YOUR_PAGERDUTY_INTEGRATION_KEY>"
+        severity: '{{ if eq .CommonLabels.severity "page" }}critical{{ else }}warning{{ end }}'
+        description: "{{ .CommonAnnotations.summary }}"
+        details:
+          alertname: "{{ .CommonLabels.alertname }}"
+          service: "puddlejumper"
+          description: "{{ .CommonAnnotations.description }}"
+          runbook: "{{ .CommonAnnotations.runbook }}"
+
+  # ── Slack for page-severity ─────────────────────────────────────────────
+  - name: slack-ops-critical
+    slack_configs:
+      - channel: "#puddlejumper-critical"
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        title: ":rotating_light: {{ .CommonLabels.alertname }}"
+        text: >-
+          {{ range .Alerts }}
+          *{{ .Labels.alertname }}* — {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          Runbook: {{ .Annotations.runbook }}
+          {{ end }}
+
+  # ── Slack for warn-severity ─────────────────────────────────────────────
+  - name: slack-ops-warnings
+    slack_configs:
+      - channel: "#puddlejumper-alerts"
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+        title: ":warning: {{ .CommonLabels.alertname }}"
+        text: >-
+          {{ range .Alerts }}
+          *{{ .Labels.alertname }}* — {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          {{ end }}

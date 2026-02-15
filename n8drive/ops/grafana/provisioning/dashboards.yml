@@ -1,0 +1,29 @@
+# ── Grafana Dashboard Provisioning ───────────────────────────────────────────
+#
+# Place this file at:
+#   /etc/grafana/provisioning/dashboards/puddlejumper.yml
+#
+# And ensure the dashboard JSON is accessible at the path below.
+# In Docker / Kubernetes, mount the ops/grafana/ directory into the container.
+#
+# Docs: https://grafana.com/docs/grafana/latest/administration/provisioning/#dashboards
+#
+# Example Docker volume:
+#   -v ./ops/grafana:/var/lib/grafana/dashboards/puddlejumper:ro
+#   -v ./ops/grafana/provisioning/dashboards.yml:/etc/grafana/provisioning/dashboards/puddlejumper.yml:ro
+
+apiVersion: 1
+
+providers:
+  - name: "PuddleJumper"
+    orgId: 1
+    folder: "PuddleJumper Ops"
+    folderUid: "pj-ops"
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/puddlejumper
+      foldersFromFilesStructure: false
