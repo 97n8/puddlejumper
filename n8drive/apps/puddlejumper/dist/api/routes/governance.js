@@ -9,6 +9,7 @@ import { buildCapabilityManifest, PJ_ACTION_DEFINITIONS, isPjActionAllowed, buil
 import { extractMsGraphToken, fetchMsGraphProfile, buildMsGraphAuthContext, } from "../msGraph.js";
 import { getCorrelationId, logServerError, logServerInfo, summarizePrompt, } from "../serverMiddleware.js";
 import { approvalMetrics, emitApprovalEvent, METRIC } from "../../engine/approvalMetrics.js";
+import { incrementApprovalCount } from "../../engine/workspaceStore.js";
 export function createGovernanceRoutes(opts) {
     const router = express.Router();
     const engine = createDefaultEngine({
@@ -103,6 +104,27 @@ export function createGovernanceRoutes(opts) {
                 opts.approvalStore &&
                 parsed.data.mode !== "dry-run" &&
                 evaluatePayload.action.mode === "governed") {
+                // Check tier limit before creating approval
+                const dataDir = process.env.DATA_DIR || "./data";
+                const { getWorkspace } = await import("../../engine/workspaceStore.js");
+                const { getTierLimits } = await import("../../config/tierLimits.js");
+                const workspace = getWorkspace(dataDir, evaluatePayload.workspace.id);
+                if (workspace) {
+                    const limits = getTierLimits(workspace.plan);
+                    const currentCount = workspace.approval_count || 0;
+                    if (currentCount >= limits.approvals) {
+                        res.status(403).json({
+                            success: false,
+                            correlationId,
+                            error: "tier_limit",
+                            plan: workspace.plan,
+                            limit: limits.approvals,
+                            current: currentCount,
+                            upgrade_url: "/upgrade",
+                        });
+                        return;
+                    }
+                }
                 try {
                     const approval = opts.approvalStore.create({
                         requestId: evaluatePayload.action.requestId ?? `pj-${correlationId}`,
@@ -118,6 +140,12 @@ export function createGovernanceRoutes(opts) {
                     });
                     approvalMetrics.increment(METRIC.APPROVALS_CREATED);
                     approvalMetrics.incrementGauge(METRIC.PENDING_GAUGE);
+                    try {
+                        incrementApprovalCount(dataDir, evaluatePayload.workspace.id);
+                    }
+                    catch {
+                        // Workspace doesn't exist - skip counter update (legacy/test behavior)
+                    }
                     // Create chain steps for this approval
                     if (opts.chainStore) {
                         try {

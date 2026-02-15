@@ -17,6 +17,7 @@ import type { ChainStore } from "../../engine/chainStore.js";
 import { DEFAULT_TEMPLATE_ID } from "../../engine/chainStore.js";
 import { getCorrelationId } from "../serverMiddleware.js";
 import { enforceTierLimit } from "../middleware/enforceTierLimit.js";
+import { requireRole } from "../middleware/checkWorkspaceRole.js";
 import { incrementTemplateCount, decrementTemplateCount } from "../../engine/workspaceStore.js";
 
 export type ChainTemplateRouteOptions = {
@@ -26,18 +27,6 @@ export type ChainTemplateRouteOptions = {
 export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): express.Router {
   const router = express.Router();
   const { chainStore } = opts;
-
-  // ── Require admin for mutation operations on templates ────────────────
-  const requireAdmin: express.RequestHandler = (req, res, next) => {
-    const auth = getAuthContext(req);
-    const correlationId = getCorrelationId(res);
-    if (!auth) { res.status(401).json({ success: false, correlationId, error: "Unauthorized" }); return; }
-    if (auth.role !== "admin") {
-      res.status(403).json({ success: false, correlationId, error: "Only admins can manage chain templates" });
-      return;
-    }
-    next();
-  };
 
   // ── List templates (workspace-scoped) ────────────────────────────────
   router.get("/chain-templates", requireAuthenticated(), (req, res) => {
@@ -62,7 +51,7 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
   });
 
   // ── Create template (workspace-scoped) ───────────────────────────────
-  router.post("/chain-templates", requireAuthenticated(), requireAdmin, enforceTierLimit("template"), (req, res) => {
+  router.post("/chain-templates", requireAuthenticated(), requireRole("owner", "admin"), enforceTierLimit("template"), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
     const { id, name, description, steps } = req.body ?? {};
@@ -108,7 +97,7 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
   });
 
   // ── Update template ───────────────────────────────────────────────────
-  router.put("/chain-templates/:id", requireAuthenticated(), requireAdmin, (req, res) => {
+  router.put("/chain-templates/:id", requireAuthenticated(), requireRole("owner", "admin"), (req, res) => {
     const correlationId = getCorrelationId(res);
     const templateId = req.params.id;
 
@@ -164,7 +153,7 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
   });
 
   // ── Delete template ───────────────────────────────────────────────────
-  router.delete("/chain-templates/:id", requireAuthenticated(), requireAdmin, (req, res) => {
+  router.delete("/chain-templates/:id", requireAuthenticated(), requireRole("owner", "admin"), (req, res) => {
     const correlationId = getCorrelationId(res);
     const templateId = req.params.id;
     const auth = getAuthContext(req);
