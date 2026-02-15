@@ -8,6 +8,7 @@ import {
   revokeRefreshToken,
   revokeAllForUser,
 } from '../lib/refreshTokenStore.js';
+import { insertAuditEvent, queryAuditEvents } from '../lib/auditStore.js';
 
 // ── Structured auth event logger ────────────────────────────────────────────
 function authEvent(req: any, event: string, data: Record<string, unknown> = {}) {
@@ -20,6 +21,21 @@ function authEvent(req: any, event: string, data: Record<string, unknown> = {}) 
   };
   // eslint-disable-next-line no-console
   console.log(JSON.stringify(entry));
+
+  // Persist to audit DB
+  try {
+    insertAuditEvent({
+      event_type: `auth.${event}`,
+      actor_id: (data.sub ?? data.actor ?? null) as string | null,
+      target_id: (data.target ?? null) as string | null,
+      ip_address: req.ip ?? null,
+      user_agent: req.headers?.['user-agent'] ?? null,
+      request_id: req.correlationId ?? null,
+      metadata: data,
+    });
+  } catch {
+    // best-effort — don't let audit writes break auth flows
+  }
 }
 
 const REFRESH_TTL_SEC = 7 * 24 * 60 * 60; // 7 days in seconds
@@ -172,6 +188,25 @@ router.post('/auth/revoke', async (req, res) => {
     return res.json({ revoked: count });
   } catch (err) {
     authEvent(req, 'revoke_error', { error: String(err) });
+    return res.status(500).json({ error: 'server error' });
+  }
+});
+
+// ── Admin audit query ────────────────────────────────────────────
+router.get('/admin/audit', (req, res) => {
+  try {
+    const auth = (req as any).auth as Record<string, any> | undefined;
+    if (!auth?.sub) return res.status(401).json({ error: 'Unauthorized' });
+    if (auth.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+
+    const event_type = typeof req.query.event_type === 'string' ? req.query.event_type : undefined;
+    const actor_id = typeof req.query.actor_id === 'string' ? req.query.actor_id : undefined;
+    const after = typeof req.query.after === 'string' ? req.query.after : undefined;
+    const limit = typeof req.query.limit === 'string' ? parseInt(req.query.limit, 10) : 50;
+
+    const events = queryAuditEvents({ event_type, actor_id, after, limit: isNaN(limit) ? 50 : limit });
+    return res.json({ events });
+  } catch (err) {
     return res.status(500).json({ error: 'server error' });
   }
 });

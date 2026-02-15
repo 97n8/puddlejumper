@@ -1,6 +1,6 @@
 import express from 'express';
 import serverless from 'serverless-http';
-import { cookieParserMiddleware, csrfProtection, validateJwt, createOptionalJwtAuthenticationMiddleware, correlationId } from '@publiclogic/core';
+import { cookieParserMiddleware, csrfProtection, validateJwt, createOptionalJwtAuthenticationMiddleware, createJwtAuthenticationMiddleware, correlationId } from '@publiclogic/core';
 import loginRouter from './routes/login.js';
 
 const app: express.Express = express();
@@ -14,6 +14,9 @@ app.use('/api', csrfProtection());
 // Optional JWT decode — populates req.auth when a token is present
 // (required for /api/auth/revoke which checks req.auth.sub)
 app.use('/api/auth', createOptionalJwtAuthenticationMiddleware());
+
+// Admin routes require a valid JWT
+app.use('/api/admin', createJwtAuthenticationMiddleware());
 
 app.post('/internal/dev-token', async (req, res) => {
   if (process.env.DEV_MODE !== 'true') return res.status(403).json({ error: 'Forbidden' });
