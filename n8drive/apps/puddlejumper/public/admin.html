@@ -24,6 +24,7 @@
   <button class="tab active" data-tab="queue" onclick="switchTab('queue')">Approval Queue</button>
   <button class="tab" data-tab="chains" onclick="switchTab('chains')">Chain Templates</button>
   <button class="tab" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+  <button class="tab" data-tab="members" onclick="switchTab('members')">Members</button>
 </div>
 
 <!-- Auth gate (shown when user isn't authenticated) -->
@@ -134,6 +135,78 @@
   <div id="dispatch-empty" class="empty-state" style="display:none;">No recent dispatches.</div>
 </div>
 
+<!-- Members Tab -->
+<div class="main" id="tab-members" style="display:none;">
+  <div class="table-header">
+    <h2>Workspace Members</h2>
+    <button class="btn btn-primary" onclick="showInviteModal()">✉️ Invite Member</button>
+  </div>
+
+  <div id="members-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>User ID</th>
+          <th>Role</th>
+          <th>Joined</th>
+          <th>Invited By</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="members-body"></tbody>
+    </table>
+    <div id="members-empty" class="empty-state" style="display:none;">No members found.</div>
+  </div>
+
+  <div class="table-header" style="margin-top:40px;">
+    <h2>Pending Invitations</h2>
+  </div>
+
+  <div id="invitations-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Created</th>
+          <th>Expires</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="invitations-body"></tbody>
+    </table>
+    <div id="invitations-empty" class="empty-state" style="display:none;">No pending invitations.</div>
+  </div>
+</div>
+
+<!-- Invite Member Modal -->
+<div class="detail-overlay" id="invite-modal" onclick="closeInviteModal(event)">
+  <div class="detail-panel" onclick="event.stopPropagation()">
+    <h3>
+      <span>Invite Member</span>
+      <button class="detail-close" onclick="closeInviteModal()">✕</button>
+    </h3>
+    <div style="padding:20px;">
+      <div class="detail-field" style="margin-bottom:16px;">
+        <label style="display:block;margin-bottom:4px;font-weight:600;">Email</label>
+        <input type="email" id="invite-email" placeholder="user@example.com" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);">
+      </div>
+      <div class="detail-field" style="margin-bottom:16px;">
+        <label style="display:block;margin-bottom:4px;font-weight:600;">Role</label>
+        <select id="invite-role" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);">
+          <option value="member">Member (can create/decide approvals)</option>
+          <option value="admin">Admin (can also manage templates & invites)</option>
+          <option value="viewer">Viewer (read-only access)</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="sendInvite()">Send Invitation</button>
+        <button class="btn btn-secondary" onclick="closeInviteModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Detail slide-out panel -->
 <div class="detail-overlay" id="detail-overlay" onclick="closeDetail(event)">
   <div class="detail-panel" id="detail-panel" onclick="event.stopPropagation()">
@@ -213,6 +286,7 @@ function switchTab(tab) {
   if (el) el.style.display = "block";
   if (tab === "dashboard") loadStats();
   if (tab === "chains") loadTemplates();
+  if (tab === "members") loadMembers();
 }
 
 // ── Approval Queue ────────────────────────────────────────────────────────
@@ -635,10 +709,167 @@ async function refresh() {
     if (active === "queue") await loadApprovals();
     if (active === "dashboard") await loadStats();
     if (active === "chains") await loadTemplates();
+    if (active === "members") await loadMembers();
   } finally {
     btn.disabled = false;
     btn.textContent = "⟳ Refresh";
   }
+}
+
+// ── Workspace Members ─────────────────────────────────────────────────────
+async function loadMembers() {
+  try {
+    const [membersRes, invitesRes] = await Promise.all([
+      api("/api/workspace/members"),
+      api("/api/workspace/invitations"),
+    ]);
+
+    if (membersRes.success) {
+      renderMembers(membersRes.data);
+    }
+    if (invitesRes.success) {
+      renderInvitations(invitesRes.data);
+    }
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to load members", "error");
+  }
+}
+
+function renderMembers(members) {
+  const tbody = document.getElementById("members-body");
+  const empty = document.getElementById("members-empty");
+  
+  if (!members || members.length === 0) {
+    tbody.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  
+  empty.style.display = "none";
+  tbody.innerHTML = members.map(m => `
+    <tr>
+      <td>${esc(m.user_id)}</td>
+      <td><span class="status-badge ${m.role}">${m.role}</span></td>
+      <td>${timeAgo(m.joined_at)}</td>
+      <td>${esc(m.invited_by || "—")}</td>
+      <td>
+        ${m.role !== "owner" ? `<button class="btn btn-sm btn-danger" onclick="removeMember('${esc(m.user_id)}')">Remove</button>` : ""}
+      </td>
+    </tr>
+  `).join("");
+}
+
+function renderInvitations(invitations) {
+  const tbody = document.getElementById("invitations-body");
+  const empty = document.getElementById("invitations-empty");
+  
+  if (!invitations || invitations.length === 0) {
+    tbody.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  
+  empty.style.display = "none";
+  tbody.innerHTML = invitations.map(inv => `
+    <tr>
+      <td>${esc(inv.email)}</td>
+      <td><span class="status-badge ${inv.role}">${inv.role}</span></td>
+      <td>${timeAgo(inv.created_at)}</td>
+      <td>${new Date(inv.expires_at).toLocaleDateString()}</td>
+      <td>
+        <button class="btn btn-sm btn-secondary" onclick="copyInviteLink('${esc(inv.token)}')">Copy Link</button>
+        <button class="btn btn-sm btn-danger" onclick="revokeInvite('${esc(inv.id)}')">Revoke</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function showInviteModal() {
+  document.getElementById("invite-modal").classList.add("open");
+  document.getElementById("invite-email").value = "";
+  document.getElementById("invite-role").value = "member";
+}
+
+function closeInviteModal(e) {
+  if (e && e.target !== document.getElementById("invite-modal")) return;
+  document.getElementById("invite-modal").classList.remove("open");
+}
+
+async function sendInvite() {
+  const email = document.getElementById("invite-email").value.trim();
+  const role = document.getElementById("invite-role").value;
+  
+  if (!email) {
+    showToast("Email is required", "error");
+    return;
+  }
+  
+  try {
+    const json = await api("/api/workspace/invite", {
+      method: "POST",
+      body: JSON.stringify({ email, role }),
+    });
+    
+    if (!json.success) {
+      showToast(json.error || "Failed to send invitation", "error");
+      return;
+    }
+    
+    showToast(`Invitation sent to ${email}`, "success");
+    closeInviteModal();
+    loadMembers();
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to send invitation", "error");
+  }
+}
+
+async function removeMember(userId) {
+  if (!confirm(`Remove user ${userId} from workspace?`)) return;
+  
+  try {
+    const json = await api(`/api/workspace/members/${encodeURIComponent(userId)}`, {
+      method: "DELETE",
+    });
+    
+    if (!json.success) {
+      showToast(json.error || "Failed to remove member", "error");
+      return;
+    }
+    
+    showToast("Member removed", "success");
+    loadMembers();
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to remove member", "error");
+  }
+}
+
+async function revokeInvite(inviteId) {
+  if (!confirm("Revoke this invitation?")) return;
+  
+  try {
+    const json = await api(`/api/workspace/invitations/${encodeURIComponent(inviteId)}`, {
+      method: "DELETE",
+    });
+    
+    if (!json.success) {
+      showToast(json.error || "Failed to revoke invitation", "error");
+      return;
+    }
+    
+    showToast("Invitation revoked", "success");
+    loadMembers();
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to revoke invitation", "error");
+  }
+}
+
+function copyInviteLink(token) {
+  const link = `${window.location.origin}/pj/invite/${token}`;
+  navigator.clipboard.writeText(link).then(() => {
+    showToast("Invitation link copied to clipboard", "success");
+  }).catch(() => {
+    showToast("Failed to copy link", "error");
+  });
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────

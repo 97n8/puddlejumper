@@ -296,3 +296,26 @@ body.role-viewer .template-actions { display: none !important; }
 }
 body.role-viewer .viewer-banner { display: flex; }
 .viewer-banner a { color: var(--accent); font-weight: 600; }
+
+/* ── Role badges ────────────────────────────────────────────────────── */
+.status-badge.owner { background: rgba(251,191,36,0.15); color: #fbbf24; border-color: rgba(251,191,36,0.3); }
+.status-badge.admin { background: rgba(139,92,246,0.15); color: var(--purple); border-color: rgba(139,92,246,0.3); }
+.status-badge.member { background: rgba(79,143,247,0.15); color: var(--accent); border-color: rgba(79,143,247,0.3); }
+.status-badge.viewer { background: rgba(148,163,184,0.15); color: var(--text-dim); border-color: rgba(148,163,184,0.3); }
+
+/* ── Button styles ───────────────────────────────────────────────────── */
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+.btn-primary:hover {
+  background: var(--accent-bright);
+}
+.btn-secondary {
+  background: var(--surface-hover);
+  color: var(--text);
+}
