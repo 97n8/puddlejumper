@@ -187,7 +187,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use(createCorsMiddleware(nodeEnv));
 
   // Pre-auth routes
-  app.get("/health", (_req, res) => res.sendStatus(200));
+  app.get("/health", (_req, res) => {
+    res.json({ status: "ok", service: "puddle-jumper-deploy-remote", nodeEnv, now: new Date().toISOString() });
+  });
   app.get("/auth/callback", authCallback);
   app.use(createSecurityHeadersMiddleware(nodeEnv, PJ_WORKSPACE_FILE));
   app.use(express.json({ limit: "2mb" }));
@@ -226,11 +228,6 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.get("/pj", (_req, res) => sendPjWorkspace(res));
   app.get("/puddle-jumper", (_req, res) => sendPjWorkspace(res));
   app.get("/pj-workspace", (_req, res) => sendPjWorkspace(res));
-
-  // Detailed health (overrides the 200-only handler above for JSON clients)
-  app.get("/health", (_req, res) => {
-    res.json({ status: "ok", service: "puddle-jumper-deploy-remote", nodeEnv, now: new Date().toISOString() });
-  });
 
   // ── Auth gating for /api ──────────────────────────────────────────────
   app.use("/api", (req, res, next) => {
