@@ -8,13 +8,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && ln -s /usr/bin/python3 /usr/bin/python || true \
   && rm -rf /var/lib/apt/lists/*
 
-COPY . .
-
 RUN corepack enable
 RUN corepack prepare pnpm@8.15.8 --activate
-ENV CI=true
 
+# Copy package manifests first for better layer caching
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/puddlejumper/package.json apps/puddlejumper/
+COPY apps/logic-commons/package.json apps/logic-commons/
+COPY packages/core/package.json packages/core/
+COPY web/package.json web/
+
+ENV CI=true
 RUN pnpm install --frozen-lockfile
+
+# Now copy source (changes here won't bust the install cache)
+COPY . .
 
 # Root build — produces /app/dist/api/server.js (and auth.js, etc.)
 RUN pnpm run build
