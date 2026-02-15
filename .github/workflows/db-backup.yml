@@ -1,0 +1,73 @@
+name: DB Backup
+
+on:
+  schedule:
+    # Every 6 hours
+    - cron: "0 */6 * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  backup:
+    name: Backup SQLite databases
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Run SQLite backup on Fly machine
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          APP="publiclogic-puddlejumper"
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+          BACKUP_DIR="/app/data/backups"
+
+          echo "Creating backup directory and running SQLite .backup..."
+          flyctl ssh console --app "$APP" --command "
+            mkdir -p $BACKUP_DIR
+            for db in prr.db connectors.db oauth_state.db; do
+              SRC=/app/data/\$db
+              if [ -f \$SRC ]; then
+                sqlite3 \$SRC \".backup '$BACKUP_DIR/\${db%.db}-${TIMESTAMP}.bak'\"
+                echo \"Backed up \$db\"
+              else
+                echo \"SKIP: \$SRC not found\"
+              fi
+            done
+            ls -lh $BACKUP_DIR/
+          "
+
+      - name: Download backups from Fly
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          APP="publiclogic-puddlejumper"
+          mkdir -p ./backups
+
+          for db in prr connectors oauth_state; do
+            LATEST=$(flyctl ssh console --app "$APP" --command "ls -t /app/data/backups/${db}-*.bak 2>/dev/null | head -1" | tr -d '\r')
+            if [ -n "$LATEST" ]; then
+              echo "Downloading $LATEST..."
+              flyctl sftp get --app "$APP" "$LATEST" "./backups/$(basename "$LATEST")"
+            fi
+          done
+          ls -lh ./backups/
+
+      - name: Upload backup artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: ./backups/
+          retention-days: 30
+
+      - name: Cleanup old backups on Fly
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl ssh console --app publiclogic-puddlejumper --command "
+            find /app/data/backups -name '*.bak' -mtime +2 -delete 2>/dev/null || true
+            echo 'Cleanup done'
+          "
