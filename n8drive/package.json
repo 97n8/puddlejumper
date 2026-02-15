@@ -9,7 +9,6 @@
   ],
   "scripts": {
     "dev": "pnpm --filter @publiclogic/puddlejumper run dev",
-    "dev:lc": "pnpm --filter @publiclogic/logic-commons run dev",
     "dev:web": "pnpm --filter web run dev",
     "start": "pnpm --filter @publiclogic/puddlejumper run start",
     "build": "pnpm -r run build",
@@ -21,7 +20,6 @@
     "test:root": "tsx --test test/**/*.test.ts",
     "test:core": "pnpm --filter @publiclogic/core run test",
     "test:pj": "pnpm --filter @publiclogic/puddlejumper run test",
-    "test:lc": "pnpm --filter @publiclogic/logic-commons run test",
     "typecheck": "tsc --build --noEmit",
     "check:pj-contract": "node scripts/check-pj-contract.mjs",
     "ci": "pnpm run typecheck && pnpm run check:pj-contract && pnpm run test",

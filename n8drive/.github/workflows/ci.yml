@@ -50,9 +50,8 @@ jobs:
       - name: Unit tests – core
         run: pnpm --filter @publiclogic/core run test
 
-      - name: Unit tests – logic-commons
-        working-directory: ./apps/logic-commons
-        run: pnpm run test
+      - name: Unit tests – puddlejumper
+        run: pnpm --filter @publiclogic/puddlejumper run test
 
       - name: Monorepo build (root)
         run: pnpm run build

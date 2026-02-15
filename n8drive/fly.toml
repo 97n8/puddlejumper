@@ -1,5 +1,5 @@
 app = "publiclogic-puddlejumper"
-primary_region = "bos"
+primary_region = "ewr"
 
 [build]
   dockerfile = "Dockerfile"
