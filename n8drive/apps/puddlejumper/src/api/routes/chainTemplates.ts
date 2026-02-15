@@ -25,7 +25,7 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
   const router = express.Router();
   const { chainStore } = opts;
 
-  // ── Require admin for all template management ─────────────────────────
+  // ── Require admin for mutation operations on templates ────────────────
   const requireAdmin: express.RequestHandler = (req, res, next) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
@@ -37,15 +37,15 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
     next();
   };
 
-  // ── List templates ────────────────────────────────────────────────────
-  router.get("/chain-templates", requireAuthenticated(), requireAdmin, (_req, res) => {
+  // ── List templates (viewer + admin) ───────────────────────────────────
+  router.get("/chain-templates", requireAuthenticated(), (_req, res) => {
     const correlationId = getCorrelationId(res);
     const templates = chainStore.listTemplates();
     res.json({ success: true, correlationId, data: templates });
   });
 
-  // ── Get single template ───────────────────────────────────────────────
-  router.get("/chain-templates/:id", requireAuthenticated(), requireAdmin, (req, res) => {
+  // ── Get single template (viewer + admin) ──────────────────────────────
+  router.get("/chain-templates/:id", requireAuthenticated(), (req, res) => {
     const correlationId = getCorrelationId(res);
     const template = chainStore.getTemplate(req.params.id);
     if (!template) {

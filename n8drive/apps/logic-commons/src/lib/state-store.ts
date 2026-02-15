@@ -23,9 +23,16 @@ export class OAuthStateStore {
         state      TEXT PRIMARY KEY,
         provider   TEXT NOT NULL,
         created_at INTEGER NOT NULL,
-        expires_at INTEGER NOT NULL
+        expires_at INTEGER NOT NULL,
+        used       INTEGER NOT NULL DEFAULT 0
       )
     `);
+
+    // Migrate existing tables that lack the 'used' column
+    const cols = this.db.pragma("table_info(oauth_state)") as { name: string }[];
+    if (!cols.some((c) => c.name === "used")) {
+      this.db.exec("ALTER TABLE oauth_state ADD COLUMN used INTEGER NOT NULL DEFAULT 0");
+    }
 
     // Auto-prune expired rows
     this.pruneTimer = setInterval(() => this.prune(), PRUNE_INTERVAL_MS);
@@ -45,37 +52,41 @@ export class OAuthStateStore {
   }
 
   /**
-   * Consume a state token (single-use).
-   * Returns the provider string if valid and not expired, or `null` otherwise.
+   * Consume a state token (single-use, atomic).
+   * Uses UPDATE ... WHERE used=0 AND expires_at > now for atomic CAS.
+   * Returns the provider string if the state is valid and not expired,
+   * or `null` if it doesn't exist, was already consumed, or has expired.
    */
   consume(state: string): string | null {
+    const now = Date.now();
+
+    // Atomic single-use: only marks as used if not already used and not expired
+    const result = this.db
+      .prepare("UPDATE oauth_state SET used = 1 WHERE state = ? AND used = 0 AND expires_at > ?")
+      .run(state, now);
+
+    if (result.changes === 0) return null;
+
+    // Fetch the provider after successful CAS
     const row = this.db
-      .prepare("SELECT provider, expires_at FROM oauth_state WHERE state = ?")
-      .get(state) as { provider: string; expires_at: number } | undefined;
+      .prepare("SELECT provider FROM oauth_state WHERE state = ?")
+      .get(state) as { provider: string } | undefined;
 
-    if (!row) return null;
-
-    // Always delete (single-use)
-    this.db.prepare("DELETE FROM oauth_state WHERE state = ?").run(state);
-
-    // Check expiry after deletion so the row is consumed regardless
-    if (row.expires_at < Date.now()) return null;
-
-    return row.provider;
+    return row?.provider ?? null;
   }
 
-  /** Remove all expired state tokens. */
+  /** Remove all expired or already-used state tokens. */
   prune(): number {
     const result = this.db
-      .prepare("DELETE FROM oauth_state WHERE expires_at < ?")
+      .prepare("DELETE FROM oauth_state WHERE expires_at < ? OR used = 1")
       .run(Date.now());
     return result.changes;
   }
 
-  /** Number of active (non-expired) states. Useful for tests/diagnostics. */
+  /** Number of active (non-expired, non-used) states. Useful for tests/diagnostics. */
   count(): number {
     const row = this.db
-      .prepare("SELECT COUNT(*) as cnt FROM oauth_state WHERE expires_at >= ?")
+      .prepare("SELECT COUNT(*) as cnt FROM oauth_state WHERE expires_at >= ? AND used = 0")
       .get(Date.now()) as { cnt: number };
     return row.cnt;
   }

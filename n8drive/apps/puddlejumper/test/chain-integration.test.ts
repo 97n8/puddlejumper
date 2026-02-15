@@ -354,7 +354,7 @@ describe("Chain integration — chain progress API", () => {
     expect(res.status).toBe(404);
   });
 
-  it("viewer cannot access chain endpoint", async () => {
+  it("viewer can access chain endpoint (read-only)", async () => {
     const app = buildApp();
     const viewerToken = await tokenFor(VIEWER);
     const adminToken = await tokenFor(ADMIN);
@@ -366,11 +366,12 @@ describe("Chain integration — chain progress API", () => {
       .send({ requestId: "chain-viewer-1" });
     const approvalId = execRes.body.approvalId;
 
-    // Viewer tries to access chain — forbidden (non-admin, not owner)
+    // Viewer can now access chain endpoint (read-only)
     const res = await request(app)
       .get(`/api/approvals/${approvalId}/chain`)
       .set({ Authorization: `Bearer ${viewerToken}`, "X-PuddleJumper-Request": "true" });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
   });
 });
 

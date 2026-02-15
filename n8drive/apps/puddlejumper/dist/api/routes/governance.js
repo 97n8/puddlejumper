@@ -11,7 +11,10 @@ import { getCorrelationId, logServerError, logServerInfo, summarizePrompt, } fro
 import { approvalMetrics, emitApprovalEvent, METRIC } from "../../engine/approvalMetrics.js";
 export function createGovernanceRoutes(opts) {
     const router = express.Router();
-    const engine = createDefaultEngine({ canonicalSourceOptions: opts.canonicalSourceOptions });
+    const engine = createDefaultEngine({
+        canonicalSourceOptions: opts.canonicalSourceOptions,
+        policyProvider: opts.policyProvider,
+    });
     // ── Identity token (with optional MS Graph exchange) ────────────────────
     router.get("/pj/identity-token", async (req, res) => {
         let auth = getAuthContext(req);
@@ -115,6 +118,49 @@ export function createGovernanceRoutes(opts) {
                     });
                     approvalMetrics.increment(METRIC.APPROVALS_CREATED);
                     approvalMetrics.incrementGauge(METRIC.PENDING_GAUGE);
+                    // Create chain steps for this approval
+                    if (opts.chainStore) {
+                        try {
+                            let templateId;
+                            if (opts.policyProvider) {
+                                const resolved = opts.policyProvider.getChainTemplate({
+                                    actionIntent: evaluatePayload.action.intent,
+                                    actionMode: evaluatePayload.action.mode ?? "governed",
+                                    municipalityId: evaluatePayload.municipality.id,
+                                    workspaceId: evaluatePayload.workspace.id,
+                                });
+                                if (resolved)
+                                    templateId = resolved.id;
+                            }
+                            opts.chainStore.createChainForApproval(approval.id, templateId);
+                        }
+                        catch {
+                            // Chain creation failure is non-fatal — approval still exists
+                        }
+                    }
+                    // Write audit event through policy provider
+                    if (opts.policyProvider) {
+                        try {
+                            opts.policyProvider.writeAuditEvent({
+                                eventId: crypto.randomUUID(),
+                                eventType: "approval_created",
+                                workspaceId: evaluatePayload.workspace.id,
+                                operatorId: auth.userId,
+                                municipalityId: evaluatePayload.municipality.id,
+                                timestamp: new Date().toISOString(),
+                                intent: evaluatePayload.action.intent,
+                                outcome: "pending",
+                                details: {
+                                    approvalId: approval.id,
+                                    planHash: result.auditRecord.planHash,
+                                    correlationId,
+                                },
+                            });
+                        }
+                        catch {
+                            // Audit write failure is non-fatal
+                        }
+                    }
                     emitApprovalEvent("created", {
                         approvalId: approval.id, operatorId: auth.userId,
                         intent: evaluatePayload.action.intent, planHash: result.auditRecord.planHash,

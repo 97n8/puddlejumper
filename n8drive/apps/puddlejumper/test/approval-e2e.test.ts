@@ -399,7 +399,7 @@ describe("Approval lifecycle end-to-end", () => {
     expect(dispatchRes.status).toBe(403);
   });
 
-  it("non-admin list shows only own approvals", async () => {
+  it("viewer can list all approvals (read-only access)", async () => {
     const app = buildApp({ dispatcher: createMockDispatcher() });
     const adminToken = await tokenFor(ADMIN);
     const viewerToken = await tokenFor(VIEWER);
@@ -410,14 +410,14 @@ describe("Approval lifecycle end-to-end", () => {
       .set({ Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" })
       .send({ mode: "execute", requestId: "e2e-vis-1" });
 
-    // Viewer lists — should NOT see admin's approval
+    // Viewer lists — viewers can now see all approvals (read-only)
     const listRes = await request(app)
       .get("/api/approvals")
       .set({ Authorization: `Bearer ${viewerToken}`, "X-PuddleJumper-Request": "true" });
     expect(listRes.status).toBe(200);
-    // Viewer (viewer-1) shouldn't see admin-1's approval
-    const viewerApprovals = listRes.body.data.approvals.filter((r: any) => r.operator_id === "admin-1");
-    expect(viewerApprovals).toHaveLength(0);
+    // Viewer should see admin-created approvals (read-only)
+    const allApprovals = listRes.body.data.approvals.filter((r: any) => r.operator_id === "admin-1");
+    expect(allApprovals.length).toBeGreaterThanOrEqual(1);
   });
 
   it("consumeForDispatch CAS prevents concurrent dispatch", async () => {

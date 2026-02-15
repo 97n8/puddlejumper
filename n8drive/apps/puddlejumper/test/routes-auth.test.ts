@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import bcrypt from 'bcryptjs';
 import { signJwt, cookieParserMiddleware, csrfProtection, validateJwt } from '@publiclogic/core';
 import { createAuthRoutes } from '../src/api/routes/auth.js';
+import { createSessionRoutes } from '@publiclogic/logic-commons';
 
 // ── Test helpers ────────────────────────────────────────────────────────────
 
@@ -56,6 +57,8 @@ function buildApp(overrides: Record<string, any> = {}) {
     ...overrides,
   });
   app.use('/api', router);
+  // Session lifecycle routes from logic-commons (auth/status, refresh, etc.)
+  app.use('/api', createSessionRoutes({ nodeEnv: 'test' }));
   return app;
 }
 

@@ -156,7 +156,7 @@ describe("GET /api/admin/stats", () => {
     expect(d.activeChainSteps).toBe(2); // 2 chains, each with 1 active step
   });
 
-  it("rejects non-admin users with 403", async () => {
+  it("allows viewer read-only access to stats", async () => {
     const app = buildApp();
     const token = await tokenFor(VIEWER);
     const h = { Authorization: `Bearer ${token}`, "X-PuddleJumper-Request": "true" };
@@ -164,10 +164,10 @@ describe("GET /api/admin/stats", () => {
     const res = await request(app)
       .get("/api/admin/stats")
       .set(h)
-      .expect(403);
+      .expect(200);
 
-    expect(res.body.success).toBe(false);
-    expect(res.body.error).toMatch(/admin/i);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.pending).toBeDefined();
   });
 
   it("rejects unauthenticated requests with 401", async () => {

@@ -13,7 +13,9 @@
     "baseUrl": ".",
     "paths": {
       "@publiclogic/core": ["packages/core/dist/index.d.ts"],
-      "@publiclogic/core/*": ["packages/core/dist/*"]
+      "@publiclogic/core/*": ["packages/core/dist/*"],
+      "@publiclogic/logic-commons": ["apps/logic-commons/dist/index.d.ts"],
+      "@publiclogic/logic-commons/*": ["apps/logic-commons/dist/*"]
     },
     "typeRoots": ["./types", "./node_modules/@types"]
   }

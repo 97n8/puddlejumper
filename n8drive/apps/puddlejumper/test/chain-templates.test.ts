@@ -360,14 +360,17 @@ describe("Template management API — validation", () => {
     expect(res.status).toBe(400);
   });
 
-  it("viewers cannot manage templates", async () => {
+  it("viewers can list templates but cannot create", async () => {
     const app = buildApp();
     const viewerToken = await tokenFor(VIEWER);
     const h = { Authorization: `Bearer ${viewerToken}`, "X-PuddleJumper-Request": "true" };
 
+    // Viewers can read templates (read-only access)
     const listRes = await request(app).get("/api/chain-templates").set(h);
-    expect(listRes.status).toBe(403);
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.success).toBe(true);
 
+    // But cannot create templates (mutation — admin only)
     const createRes = await request(app)
       .post("/api/chain-templates")
       .set(h)

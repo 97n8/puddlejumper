@@ -26,8 +26,8 @@ export function createAdminRoutes(opts: AdminRouteOptions): express.Router {
   router.get("/admin/stats", requireAuthenticated(), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
-    if (!auth || auth.role !== "admin") {
-      res.status(403).json({ success: false, correlationId, error: "Admin access required" });
+    if (!auth || !auth.role || (auth.role !== "admin" && auth.role !== "viewer")) {
+      res.status(403).json({ success: false, correlationId, error: "Access denied" });
       return;
     }
 

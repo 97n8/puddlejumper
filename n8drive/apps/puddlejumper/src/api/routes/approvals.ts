@@ -42,8 +42,8 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
     const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 50;
     const offset = typeof req.query.offset === "string" ? parseInt(req.query.offset, 10) : 0;
 
-    // Non-admins can only see their own approvals
-    const operatorId = auth.role === "admin" ? undefined : auth.userId ?? auth.sub;
+    // Admins and viewers see all approvals; other roles see only their own
+    const operatorId = (auth.role === "admin" || auth.role === "viewer") ? undefined : auth.userId ?? auth.sub;
 
     const rows = approvalStore.query({
       approvalStatus: approvalStatus as any,
@@ -81,8 +81,8 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
       return;
     }
 
-    // Non-admins can only see their own
-    if (auth.role !== "admin" && row.operator_id !== (auth.userId ?? auth.sub)) {
+    // Admins and viewers see all; other roles see only their own
+    if (auth.role !== "admin" && auth.role !== "viewer" && row.operator_id !== (auth.userId ?? auth.sub)) {
       res.status(403).json({ success: false, correlationId, error: "Forbidden" });
       return;
     }
@@ -378,8 +378,8 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
       return;
     }
 
-    // Non-admins can only see their own
-    if (auth.role !== "admin" && row.operator_id !== (auth.userId ?? auth.sub)) {
+    // Admins and viewers see all; other roles see only their own
+    if (auth.role !== "admin" && auth.role !== "viewer" && row.operator_id !== (auth.userId ?? auth.sub)) {
       res.status(403).json({ success: false, correlationId, error: "Forbidden" });
       return;
     }

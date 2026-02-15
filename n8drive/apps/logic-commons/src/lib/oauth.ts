@@ -71,6 +71,13 @@ export interface OAuthRouteOptions {
   oauthStateStore: IOAuthStateStore;
   /** Override the frontend redirect target. Defaults to FRONTEND_URL env-var. */
   frontendUrl?: string;
+  /**
+   * Optional hook called after fetching the user profile from the OAuth provider.
+   * Use this to look up / create a user record and resolve the role.
+   * The returned UserInfo is used for session creation (JWT claims).
+   * When omitted, the raw provider profile is used with no role override.
+   */
+  onUserAuthenticated?: (userInfo: import('./session.js').UserInfo) => import('./session.js').UserInfo | Promise<import('./session.js').UserInfo>;
 }
 
 // ── Factory ─────────────────────────────────────────────────────────────────
@@ -208,17 +215,22 @@ export function createOAuthRoutes(
       }
 
       // Fetch user profile from provider
-      const userInfo = await provider.fetchUserInfo(tokenBody.access_token);
+      const rawUserInfo = await provider.fetchUserInfo(tokenBody.access_token);
+
+      // Allow the host app to resolve/create user records and assign roles
+      const sessionUser = opts.onUserAuthenticated
+        ? await opts.onUserAuthenticated({ sub: rawUserInfo.sub, email: rawUserInfo.email, name: rawUserInfo.name, provider: provider.name })
+        : { sub: rawUserInfo.sub, email: rawUserInfo.email, name: rawUserInfo.name, provider: provider.name };
 
       // Create session: 1h access JWT + 7d refresh token (httpOnly cookies)
       await createSessionAndSetCookies(
         res,
-        { sub: userInfo.sub, email: userInfo.email, name: userInfo.name, provider: provider.name },
+        sessionUser,
         opts.nodeEnv,
       );
 
       authEvent(req, "login", {
-        sub: userInfo.sub,
+        sub: sessionUser.sub,
         provider: provider.name,
         method: "oauth_redirect",
       });

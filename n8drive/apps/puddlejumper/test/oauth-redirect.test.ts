@@ -32,10 +32,7 @@ const { cookieParserMiddleware, createOptionalJwtAuthenticationMiddleware } = aw
 
 async function createTestApp() {
   const { createAuthRoutes } = await import("../src/api/routes/auth.js");
-  const { createGitHubOAuthRoutes } = await import("../src/api/routes/githubOAuth.js");
-  const { createGoogleOAuthRoutes } = await import("../src/api/routes/googleOAuth.js");
-  const { createMicrosoftOAuthRoutes } = await import("../src/api/routes/microsoftOAuth.js");
-  const { OAuthStateStore } = await import("../src/api/oauthStateStore.js");
+  const { createOAuthRoutes, githubProvider, googleProvider, microsoftProvider, OAuthStateStore, createSessionRoutes } = await import("@publiclogic/logic-commons");
 
   const oauthStateDbPath = path.join(tmpDir, "oauth_state.db");
   const oauthStateStore = new OAuthStateStore(oauthStateDbPath);
@@ -52,9 +49,12 @@ async function createTestApp() {
     nodeEnv: "test",
     trustedParentOrigins: ["http://localhost:3000"],
   }));
-  app.use("/api", createGitHubOAuthRoutes({ nodeEnv: "test", oauthStateStore }));
-  app.use("/api", createGoogleOAuthRoutes({ nodeEnv: "test", oauthStateStore }));
-  app.use("/api", createMicrosoftOAuthRoutes({ nodeEnv: "test", oauthStateStore }));
+  // Session lifecycle routes from logic-commons
+  app.use("/api", createSessionRoutes({ nodeEnv: "test" }));
+  const oauthRouteOpts = { nodeEnv: "test", oauthStateStore };
+  app.use("/api", createOAuthRoutes(githubProvider, oauthRouteOpts));
+  app.use("/api", createOAuthRoutes(googleProvider, oauthRouteOpts));
+  app.use("/api", createOAuthRoutes(microsoftProvider, oauthRouteOpts));
 
   return app;
 }

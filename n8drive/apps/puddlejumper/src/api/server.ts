@@ -62,16 +62,21 @@ import {
   logServerInfo,
 } from "./serverMiddleware.js";
 import { processAccessNotificationQueueOnce } from "./accessNotificationWorker.js";
-import { OAuthStateStore } from "./oauthStateStore.js";
+import { OAuthStateStore } from "@publiclogic/logic-commons";
 import {
   createOAuthRoutes,
   googleProvider,
   githubProvider,
   microsoftProvider,
+  configureRefreshStore,
+  configureAuditStore,
+  createSessionRoutes,
+  type UserInfo,
 } from "@publiclogic/logic-commons";
 
 // Route modules
 import { createAuthRoutes } from "./routes/auth.js";
+import { upsertUser } from "./userStore.js";
 import { createConfigRoutes } from "./routes/config.js";
 import { createPrrRoutes } from "./routes/prr.js";
 import { createAccessRoutes } from "./routes/access.js";
@@ -122,6 +127,10 @@ type CreateAppOptions = {
 export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development", options: CreateAppOptions = {}): express.Express {
   const authOptions = resolveAuthOptions(options.authOptions);
   assertProductionInvariants(nodeEnv, authOptions, CONTROLLED_DATA_DIR);
+
+  // Configure logic-commons stores to use PJ's controlled data directory
+  configureRefreshStore(CONTROLLED_DATA_DIR);
+  configureAuditStore(CONTROLLED_DATA_DIR);
 
   // ── Stores ────────────────────────────────────────────────────────────
   const prrDbPath = path.resolve(process.env.PRR_DB_PATH ?? DEFAULT_PRR_DB_PATH);
@@ -385,16 +394,41 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   // /api/health — unauthenticated alias for /health (bypassed in auth gate above)
   app.get("/api/health", (_req, res) => { res.json({ status: "ok" }); });
 
+  // GET /api/me — returns current user's profile + role from JWT
+  app.get("/api/me", (req, res) => {
+    const auth = getAuthContext(req);
+    if (!auth?.sub) { res.status(401).json({ error: "Unauthorized" }); return; }
+    res.json({
+      sub: auth.sub,
+      email: auth.email ?? null,
+      name: auth.name ?? null,
+      role: auth.role ?? "viewer",
+      provider: auth.provider ?? null,
+    });
+  });
+
   // ── Mount route modules ───────────────────────────────────────────────
   app.use("/api", createAuthRoutes({
     builtInLoginEnabled, loginUsers, loginRateLimit, nodeEnv, trustedParentOrigins,
   }));
+  // Session lifecycle routes (refresh, /auth/logout, /auth/revoke, /auth/status,
+  // /session, /admin/audit) — provided by logic-commons
+  app.use("/api", createSessionRoutes({ nodeEnv }));
   // Rate-limit OAuth login redirects (10 req/min per IP)
   app.use("/api/auth/github/login", oauthLoginRateLimit);
   app.use("/api/auth/google/login", oauthLoginRateLimit);
   app.use("/api/auth/microsoft/login", oauthLoginRateLimit);
   // Mount generic OAuth routes for all three providers (via logic-commons factory)
-  const oauthRouteOpts = { nodeEnv, oauthStateStore };
+  const onUserAuthenticated = (userInfo: UserInfo): UserInfo => {
+    const row = upsertUser(CONTROLLED_DATA_DIR, {
+      sub: userInfo.sub,
+      email: userInfo.email,
+      name: userInfo.name,
+      provider: userInfo.provider,
+    });
+    return { ...userInfo, role: row.role };
+  };
+  const oauthRouteOpts = { nodeEnv, oauthStateStore, onUserAuthenticated };
   app.use("/api", createOAuthRoutes(githubProvider, oauthRouteOpts));
   app.use("/api", createOAuthRoutes(googleProvider, oauthRouteOpts));
   app.use("/api", createOAuthRoutes(microsoftProvider, oauthRouteOpts));

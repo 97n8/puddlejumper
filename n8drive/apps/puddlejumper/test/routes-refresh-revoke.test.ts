@@ -26,6 +26,7 @@ const { cookieParserMiddleware, createOptionalJwtAuthenticationMiddleware, creat
 // Build a lightweight test app wiring auth routes like server.ts does
 function createTestApp() {
   const { createAuthRoutes } = require("../src/api/routes/auth.js") as typeof import("../src/api/routes/auth.js");
+  const { createSessionRoutes } = require("@publiclogic/logic-commons") as typeof import("@publiclogic/logic-commons");
   const app = express();
   app.use(cookieParserMiddleware());
   app.use(express.json());
@@ -43,14 +44,15 @@ function createTestApp() {
     trustedParentOrigins: ["http://localhost:3000"],
   });
   app.use("/api", router);
+  // Session lifecycle routes (refresh, /auth/logout, /auth/revoke, /auth/status, /session, /admin/audit)
+  app.use("/api", createSessionRoutes({ nodeEnv: "test" }));
   return app;
 }
 
 // We also need the GitHub OAuth routes for login integration
 async function createTestAppWithOAuth() {
   const { createAuthRoutes } = await import("../src/api/routes/auth.js");
-  const { createGitHubOAuthRoutes } = await import("../src/api/routes/githubOAuth.js");
-  const { OAuthStateStore } = await import("../src/api/oauthStateStore.js");
+  const { createOAuthRoutes, githubProvider, createSessionRoutes, OAuthStateStore } = await import("@publiclogic/logic-commons");
 
   const oauthStateDbPath = path.join(tmpDir, "oauth_state.db");
   const oauthStateStore = new OAuthStateStore(oauthStateDbPath);
@@ -71,7 +73,9 @@ async function createTestAppWithOAuth() {
     nodeEnv: "test",
     trustedParentOrigins: ["http://localhost:3000"],
   }));
-  app.use("/api", createGitHubOAuthRoutes({ nodeEnv: "test", oauthStateStore }));
+  // Session lifecycle routes from logic-commons
+  app.use("/api", createSessionRoutes({ nodeEnv: "test" }));
+  app.use("/api", createOAuthRoutes(githubProvider, { nodeEnv: "test", oauthStateStore }));
 
   return { app, oauthStateStore };
 }
