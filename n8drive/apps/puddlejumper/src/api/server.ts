@@ -97,7 +97,7 @@ import { WebhookDispatcher } from "../engine/dispatchers/webhook.js";
 import { SharePointDispatcher } from "../engine/dispatchers/sharepoint.js";
 import { approvalMetrics, METRIC, METRIC_HELP } from "../engine/approvalMetrics.js";
 import { loadConfig, StartupConfigError } from "./startupConfig.js";
-import { ensurePersonalWorkspace } from "../engine/workspaceStore.js";
+import { ensurePersonalWorkspace, getDb, acceptInvitation } from "../engine/workspaceStore.js";
 
 // ── Directory layout ────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -447,6 +447,28 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     const ws = ensurePersonalWorkspace(CONTROLLED_DATA_DIR, row.id, row.name || row.sub);
     // Clone default template into new workspace if not present
     chainStore.cloneDefaultTemplateToWorkspace(ws.id);
+    
+    // Check for pending invitations for this user's email and auto-accept
+    if (userInfo.email) {
+      try {
+        const db = getDb(CONTROLLED_DATA_DIR);
+        const pendingInvites = db.prepare(`
+          SELECT * FROM workspace_invitations 
+          WHERE email = ? AND accepted_at IS NULL AND expires_at > datetime('now')
+        `).all(userInfo.email.toLowerCase());
+        
+        for (const invite of pendingInvites as any[]) {
+          try {
+            acceptInvitation(CONTROLLED_DATA_DIR, invite.token, row.id);
+          } catch (err) {
+            // Ignore errors (user might already be a member)
+          }
+        }
+      } catch (err) {
+        // Ignore invitation check errors
+      }
+    }
+    
     // Extend the returned object to include workspaceId and workspaceName
     return { ...userInfo, role: row.role, workspaceId: ws.id, workspaceName: ws.name } as typeof userInfo & { role: string; workspaceId: string; workspaceName: string };
   };
