@@ -21,7 +21,13 @@ export function createConfigRoutes(opts: ConfigRoutesOptions): express.Router {
       workspace: opts.runtimeContext.workspace,
       municipality: opts.runtimeContext.municipality,
       actionDefaults: opts.runtimeContext.actionDefaults ?? {},
-      operator: { id: auth.userId, name: auth.name, role: auth.role, permissions: auth.permissions, delegations: auth.delegations },
+      operator: {
+        id: auth.userId ?? auth.sub ?? "",
+        name: auth.name ?? "",
+        role: auth.role ?? "user",
+        permissions: Array.isArray(auth.permissions) ? auth.permissions : [],
+        delegations: Array.isArray(auth.delegations) ? auth.delegations : [],
+      },
       timestamp: new Date().toISOString(),
     });
   });

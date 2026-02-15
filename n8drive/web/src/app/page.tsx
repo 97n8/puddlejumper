@@ -65,6 +65,12 @@ export default function Home() {
 
   /** Execute a governed tile intent via PJ. */
   const handleTileExecute = async (tile: LiveTile) => {
+    // "launch" tiles navigate to the target URL instead of calling the execute API
+    if (tile.mode === "launch") {
+      window.location.href = tile.target;
+      return;
+    }
+
     setExecutingTile(tile.id);
     setExecuteResult(null);
     try {
