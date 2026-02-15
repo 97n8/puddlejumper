@@ -38,6 +38,7 @@ import {
   summarizePrompt,
 } from "../serverMiddleware.js";
 import { approvalMetrics, emitApprovalEvent, METRIC } from "../../engine/approvalMetrics.js";
+import { incrementApprovalCount } from "../../engine/workspaceStore.js";
 
 type GovernanceRoutesOptions = {
   runtimeContext: RuntimeContext | null;
@@ -150,6 +151,30 @@ export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.R
         parsed.data.mode !== "dry-run" &&
         evaluatePayload.action.mode === "governed"
       ) {
+        // Check tier limit before creating approval
+        const dataDir = process.env.DATA_DIR || "./data";
+        const { getWorkspace } = await import("../../engine/workspaceStore.js");
+        const { getTierLimits } = await import("../../config/tierLimits.js");
+        const workspace = getWorkspace(dataDir, evaluatePayload.workspace.id);
+        
+        if (workspace) {
+          const limits = getTierLimits(workspace.plan);
+          const currentCount = workspace.approval_count || 0;
+          
+          if (currentCount >= limits.approvals) {
+            res.status(403).json({
+              success: false,
+              correlationId,
+              error: "tier_limit",
+              plan: workspace.plan,
+              limit: limits.approvals,
+              current: currentCount,
+              upgrade_url: "/upgrade",
+            });
+            return;
+          }
+        }
+        
         try {
           const approval = opts.approvalStore.create({
             requestId: evaluatePayload.action.requestId ?? `pj-${correlationId}`,
@@ -165,6 +190,11 @@ export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.R
           });
           approvalMetrics.increment(METRIC.APPROVALS_CREATED);
           approvalMetrics.incrementGauge(METRIC.PENDING_GAUGE);
+          try {
+            incrementApprovalCount(dataDir, evaluatePayload.workspace.id);
+          } catch {
+            // Workspace doesn't exist - skip counter update (legacy/test behavior)
+          }
 
           // Create chain steps for this approval
           if (opts.chainStore) {

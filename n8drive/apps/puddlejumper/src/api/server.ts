@@ -85,6 +85,7 @@ import { createApprovalRoutes } from "./routes/approvals.js";
 import { createChainTemplateRoutes } from "./routes/chainTemplates.js";
 import { createAdminRoutes } from "./routes/admin.js";
 import { createWebhookActionRoutes } from "./routes/webhookAction.js";
+import { createWorkspaceUsageRoutes } from "./routes/workspaceUsage.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
@@ -467,6 +468,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   }));
   app.use("/api", createChainTemplateRoutes({ chainStore }));
   app.use("/api", createAdminRoutes({ approvalStore, chainStore }));
+  app.use("/api", createWorkspaceUsageRoutes());
   app.use("/api", createWebhookActionRoutes({
     approvalStore, dispatcherRegistry, chainStore,
   }));

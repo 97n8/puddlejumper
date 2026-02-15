@@ -16,6 +16,8 @@ import {
 import type { ChainStore } from "../../engine/chainStore.js";
 import { DEFAULT_TEMPLATE_ID } from "../../engine/chainStore.js";
 import { getCorrelationId } from "../serverMiddleware.js";
+import { enforceTierLimit } from "../middleware/enforceTierLimit.js";
+import { incrementTemplateCount, decrementTemplateCount } from "../../engine/workspaceStore.js";
 
 export type ChainTemplateRouteOptions = {
   chainStore: ChainStore;
@@ -60,7 +62,7 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
   });
 
   // ── Create template (workspace-scoped) ───────────────────────────────
-  router.post("/chain-templates", requireAuthenticated(), requireAdmin, (req, res) => {
+  router.post("/chain-templates", requireAuthenticated(), requireAdmin, enforceTierLimit("template"), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
     const { id, name, description, steps } = req.body ?? {};
@@ -91,6 +93,12 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
         steps,
         workspaceId: auth.workspaceId,
       });
+      const dataDir = process.env.DATA_DIR || "./data";
+      try {
+        incrementTemplateCount(dataDir, auth.workspaceId);
+      } catch {
+        // Workspace doesn't exist - skip counter update (legacy/test behavior)
+      }
       res.status(201).json({ success: true, correlationId, data: template });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -159,6 +167,7 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
   router.delete("/chain-templates/:id", requireAuthenticated(), requireAdmin, (req, res) => {
     const correlationId = getCorrelationId(res);
     const templateId = req.params.id;
+    const auth = getAuthContext(req);
 
     // Protect default template
     if (templateId === DEFAULT_TEMPLATE_ID) {
@@ -186,6 +195,14 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
     }
 
     chainStore.deleteTemplate(templateId);
+    if (auth) {
+      const dataDir = process.env.DATA_DIR || "./data";
+      try {
+        decrementTemplateCount(dataDir, auth.workspaceId);
+      } catch {
+        // Workspace doesn't exist - skip counter update (legacy/test behavior)
+      }
+    }
     res.json({ success: true, correlationId, data: { deleted: true, id: templateId } });
   });
 

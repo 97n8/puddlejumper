@@ -11,6 +11,10 @@ export type WorkspaceRow = {
   name: string;
   owner_id: string;
   created_at: string;
+  plan: string;
+  approval_count: number;
+  template_count: number;
+  member_count: number;
 };
 
 let _db: Database.Database | null = null;
@@ -32,6 +36,19 @@ function getDb(dataDir: string): Database.Database {
     );
     CREATE INDEX IF NOT EXISTS idx_workspaces_owner ON workspaces(owner_id);
   `);
+  
+  // Add usage tracking columns (idempotent migration)
+  const columns = _db.pragma("table_info(workspaces)") as Array<{ name: string }>;
+  const hasUsageColumns = columns.some(c => c.name === "plan");
+  
+  if (!hasUsageColumns) {
+    _db.exec(`
+      ALTER TABLE workspaces ADD COLUMN plan TEXT NOT NULL DEFAULT 'free';
+      ALTER TABLE workspaces ADD COLUMN approval_count INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE workspaces ADD COLUMN template_count INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE workspaces ADD COLUMN member_count INTEGER NOT NULL DEFAULT 1;
+    `);
+  }
   return _db;
 }
 
@@ -74,4 +91,42 @@ export function resetWorkspaceDb(): void {
     _db.close();
     _db = null;
   }
+}
+
+// ── Usage Counter Functions ────────────────────────────────────────
+// Atomic increment/decrement of workspace usage counters
+
+export function incrementApprovalCount(dataDir: string, workspaceId: string): void {
+  const db = getDb(dataDir);
+  db.prepare(`UPDATE workspaces SET approval_count = approval_count + 1 WHERE id = ?`).run(workspaceId);
+}
+
+export function decrementApprovalCount(dataDir: string, workspaceId: string): void {
+  const db = getDb(dataDir);
+  db.prepare(`UPDATE workspaces SET approval_count = MAX(0, approval_count - 1) WHERE id = ?`).run(workspaceId);
+}
+
+export function incrementTemplateCount(dataDir: string, workspaceId: string): void {
+  const db = getDb(dataDir);
+  db.prepare(`UPDATE workspaces SET template_count = template_count + 1 WHERE id = ?`).run(workspaceId);
+}
+
+export function decrementTemplateCount(dataDir: string, workspaceId: string): void {
+  const db = getDb(dataDir);
+  db.prepare(`UPDATE workspaces SET template_count = MAX(0, template_count - 1) WHERE id = ?`).run(workspaceId);
+}
+
+export function incrementMemberCount(dataDir: string, workspaceId: string): void {
+  const db = getDb(dataDir);
+  db.prepare(`UPDATE workspaces SET member_count = member_count + 1 WHERE id = ?`).run(workspaceId);
+}
+
+export function decrementMemberCount(dataDir: string, workspaceId: string): void {
+  const db = getDb(dataDir);
+  db.prepare(`UPDATE workspaces SET member_count = MAX(1, member_count - 1) WHERE id = ?`).run(workspaceId);
+}
+
+export function updateWorkspacePlan(dataDir: string, workspaceId: string, plan: string): void {
+  const db = getDb(dataDir);
+  db.prepare(`UPDATE workspaces SET plan = ? WHERE id = ?`).run(plan, workspaceId);
 }

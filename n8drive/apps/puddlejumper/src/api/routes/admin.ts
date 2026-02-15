@@ -11,6 +11,7 @@ import { approvalMetrics, METRIC } from "../../engine/approvalMetrics.js";
 import { getCorrelationId } from "../serverMiddleware.js";
 import type { ApprovalStore } from "../../engine/approvalStore.js";
 import type { ChainStore } from "../../engine/chainStore.js";
+import { updateWorkspacePlan } from "../../engine/workspaceStore.js";
 
 export type AdminRouteOptions = {
   approvalStore: ApprovalStore;
@@ -57,6 +58,28 @@ export function createAdminRoutes(opts: AdminRouteOptions): express.Router {
         activeChainSteps: chainStore?.countActiveSteps() ?? 0,
       },
     });
+  });
+
+  // ── Plan upgrade endpoint ─────────────────────────────────────────────
+  // PATCH /api/admin/workspace/:id/plan
+  router.patch("/admin/workspace/:id/plan", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    const correlationId = getCorrelationId(res);
+    if (!auth || auth.role !== "admin") {
+      res.status(403).json({ success: false, correlationId, error: "Admin only" });
+      return;
+    }
+    
+    const { plan } = req.body;
+    if (plan !== "free" && plan !== "pro") {
+      res.status(400).json({ success: false, correlationId, error: "Invalid plan" });
+      return;
+    }
+    
+    const dataDir = process.env.DATA_DIR || "./data";
+    updateWorkspacePlan(dataDir, req.params.id, plan);
+    
+    res.json({ success: true, correlationId, data: { workspaceId: req.params.id, plan } });
   });
 
   return router;
