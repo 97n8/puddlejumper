@@ -95,3 +95,61 @@ describe("/pj workspace HTML", () => {
     expect(res.headers["content-type"]).toMatch(/html/);
   });
 });
+
+// ── /metrics token enforcement ──────────────────────────────────────────────
+
+describe("/metrics endpoint", () => {
+  it("returns 200 when METRICS_TOKEN is not set", async () => {
+    delete process.env.METRICS_TOKEN;
+    const dataDir = path.resolve(__dirname, "../data");
+    fs.mkdirSync(dataDir, { recursive: true });
+    process.env.CONNECTOR_STATE_SECRET = "test-metrics-secret";
+    const app = createApp("test");
+
+    const res = await request(app).get("/metrics");
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("text/plain");
+  });
+
+  it("returns 401 without token when METRICS_TOKEN is set", async () => {
+    process.env.METRICS_TOKEN = "test-metrics-bearer";
+    process.env.CONNECTOR_STATE_SECRET = "test-metrics-secret";
+    const dataDir = path.resolve(__dirname, "../data");
+    fs.mkdirSync(dataDir, { recursive: true });
+    const app = createApp("test");
+
+    const res = await request(app).get("/metrics");
+    expect(res.status).toBe(401);
+    expect(res.body.error).toContain("metrics token");
+  });
+
+  it("returns 401 with wrong token when METRICS_TOKEN is set", async () => {
+    process.env.METRICS_TOKEN = "test-metrics-bearer";
+    process.env.CONNECTOR_STATE_SECRET = "test-metrics-secret";
+    const dataDir = path.resolve(__dirname, "../data");
+    fs.mkdirSync(dataDir, { recursive: true });
+    const app = createApp("test");
+
+    const res = await request(app)
+      .get("/metrics")
+      .set("Authorization", "Bearer wrong-token");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 200 with correct token when METRICS_TOKEN is set", async () => {
+    process.env.METRICS_TOKEN = "test-metrics-bearer";
+    process.env.CONNECTOR_STATE_SECRET = "test-metrics-secret";
+    const dataDir = path.resolve(__dirname, "../data");
+    fs.mkdirSync(dataDir, { recursive: true });
+    const app = createApp("test");
+
+    const res = await request(app)
+      .get("/metrics")
+      .set("Authorization", "Bearer test-metrics-bearer");
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("text/plain");
+
+    // Clean up
+    delete process.env.METRICS_TOKEN;
+  });
+});
