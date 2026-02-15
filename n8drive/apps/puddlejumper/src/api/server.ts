@@ -327,12 +327,16 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.method === "GET" && req.path === "/pj/identity-token") { optionalAuthMiddleware(req, res, next); return; }
     if (req.method === "GET" && req.path === "/auth/status") { optionalAuthMiddleware(req, res, next); return; }
     if (req.method === "GET" && req.path === "/session") { next(); return; }
+    if (req.method === "GET" && req.path === "/health") { next(); return; }
     if (req.path.startsWith("/auth/github/")) { next(); return; }
     if (req.path.startsWith("/auth/google/")) { next(); return; }
     if (req.path.startsWith("/auth/microsoft/")) { next(); return; }
     authMiddleware(req, res, next);
   });
   app.use("/api", csrfProtection());
+
+  // /api/health — unauthenticated alias for /health (bypassed in auth gate above)
+  app.get("/api/health", (_req, res) => { res.json({ status: "ok" }); });
 
   // ── Mount route modules ───────────────────────────────────────────────
   app.use("/api", createAuthRoutes({
