@@ -10,6 +10,7 @@ import {
   revokeAllForUser,
 } from '../lib/refreshTokenStore.js';
 import { insertAuditEvent, queryAuditEvents } from '../lib/auditStore.js';
+import { getOAuthStateStore } from '../lib/oauthStateStore.js';
 
 // ── Structured auth event logger ────────────────────────────────────────────
 function authEvent(req: any, event: string, data: Record<string, unknown> = {}) {
@@ -214,26 +215,13 @@ router.get('/admin/audit', (req, res) => {
 
 // ── GitHub OAuth redirect flow ─────────────────────────────────
 
-// In-memory state store with 5-minute TTL
-const oauthStates = new Map<string, number>();
-
-/** Purge expired states (called lazily). */
-function pruneStates() {
-  const now = Date.now();
-  for (const [key, exp] of oauthStates) {
-    if (exp < now) oauthStates.delete(key);
-  }
-}
-
 router.get('/auth/github/login', (_req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
   if (!clientId) {
     return res.status(500).json({ error: 'GitHub OAuth not configured' });
   }
 
-  pruneStates();
-  const state = crypto.randomUUID();
-  oauthStates.set(state, Date.now() + 5 * 60 * 1000);
+  const state = getOAuthStateStore().create('github');
 
   const redirectUri =
     process.env.GITHUB_REDIRECT_URI || 'http://localhost:3002/api/auth/github/callback';
@@ -258,16 +246,10 @@ router.get('/auth/github/login', (_req, res) => {
 router.get('/auth/github/callback', async (req, res) => {
   const { code, state } = req.query as { code?: string; state?: string };
 
-  // Validate state — must exist in in-memory store (single-use)
-  // Cookie is set as defense-in-depth but memory is authoritative
-  const memoryValid = state && oauthStates.has(state) && oauthStates.get(state)! > Date.now();
-
-  if (!state || !memoryValid) {
+  // Validate + consume state (single-use, SQLite-backed)
+  if (!state || !getOAuthStateStore().consume(state)) {
     return res.status(400).json({ error: 'Invalid or expired state parameter' });
   }
-
-  // Consume state (one-time use)
-  oauthStates.delete(state);
   res.clearCookie('oauth_state');
 
   if (!code) {
@@ -330,26 +312,13 @@ router.get('/auth/github/callback', async (req, res) => {
   }
 });
 
-// ── Google OAuth redirect flow ─────────────────────────────────
-
-const googleOauthStates = new Map<string, number>();
-
-function pruneGoogleStates() {
-  const now = Date.now();
-  for (const [key, exp] of googleOauthStates) {
-    if (exp < now) googleOauthStates.delete(key);
-  }
-}
-
 router.get('/auth/google/login', (_req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) {
     return res.status(500).json({ error: 'Google OAuth not configured' });
   }
 
-  pruneGoogleStates();
-  const state = crypto.randomUUID();
-  googleOauthStates.set(state, Date.now() + 5 * 60 * 1000);
+  const state = getOAuthStateStore().create('google');
 
   const redirectUri =
     process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3002/api/auth/google/callback';
@@ -374,12 +343,9 @@ router.get('/auth/google/login', (_req, res) => {
 router.get('/auth/google/callback', async (req, res) => {
   const { code, state } = req.query as { code?: string; state?: string };
 
-  const memoryValid = state && googleOauthStates.has(state) && googleOauthStates.get(state)! > Date.now();
-  if (!state || !memoryValid) {
+  if (!state || !getOAuthStateStore().consume(state)) {
     return res.status(400).json({ error: 'Invalid or expired state parameter' });
   }
-
-  googleOauthStates.delete(state);
   res.clearCookie('google_oauth_state');
 
   if (!code) {
@@ -446,20 +412,6 @@ router.get('/auth/google/callback', async (req, res) => {
   }
 });
 
-// Expose oauthStates for testing
-export { oauthStates as _oauthStates };
-export { googleOauthStates as _googleOauthStates };
-export { microsoftOauthStates as _microsoftOauthStates };
-
-// ── Microsoft (Entra ID) OAuth ──────────────────────────────────────────────
-const microsoftOauthStates = new Map<string, number>();
-
-function pruneMicrosoftStates() {
-  const now = Date.now();
-  for (const [key, exp] of microsoftOauthStates) {
-    if (exp < now) microsoftOauthStates.delete(key);
-  }
-}
 
 router.get('/auth/microsoft/login', (_req, res) => {
   const clientId = process.env.MICROSOFT_CLIENT_ID;
@@ -467,9 +419,7 @@ router.get('/auth/microsoft/login', (_req, res) => {
     return res.status(500).json({ error: 'Microsoft OAuth not configured' });
   }
 
-  pruneMicrosoftStates();
-  const state = crypto.randomUUID();
-  microsoftOauthStates.set(state, Date.now() + 5 * 60 * 1000);
+  const state = getOAuthStateStore().create('microsoft');
 
   const tenantId = process.env.MICROSOFT_TENANT_ID || 'common';
   const redirectUri =
@@ -507,12 +457,9 @@ router.get('/auth/microsoft/callback', async (req, res) => {
     return res.status(400).json({ error, error_description: error_description || 'Microsoft auth error' });
   }
 
-  const memoryValid = state && microsoftOauthStates.has(state) && microsoftOauthStates.get(state)! > Date.now();
-  if (!state || !memoryValid) {
+  if (!state || !getOAuthStateStore().consume(state)) {
     return res.status(400).json({ error: 'Invalid or expired state parameter' });
   }
-
-  microsoftOauthStates.delete(state);
   res.clearCookie('microsoft_oauth_state');
 
   if (!code) {

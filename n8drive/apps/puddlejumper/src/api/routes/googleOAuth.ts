@@ -2,6 +2,7 @@
 import crypto from "node:crypto";
 import express from "express";
 import { signJwt } from "@publiclogic/core";
+import type { OAuthStateStore } from "../oauthStateStore.js";
 
 export type GoogleUser = { sub: string; email?: string; name?: string };
 
@@ -27,18 +28,9 @@ async function verifyGoogleToken(accessToken: string): Promise<GoogleUser> {
   };
 }
 
-// In-memory state store with 5-minute TTL
-const oauthStates = new Map<string, number>();
-
-function pruneStates() {
-  const now = Date.now();
-  for (const [key, exp] of oauthStates) {
-    if (exp < now) oauthStates.delete(key);
-  }
-}
-
 export type GoogleOAuthOptions = {
   nodeEnv: string;
+  oauthStateStore: OAuthStateStore;
 };
 
 export function createGoogleOAuthRoutes(opts: GoogleOAuthOptions): express.Router {
@@ -51,9 +43,7 @@ export function createGoogleOAuthRoutes(opts: GoogleOAuthOptions): express.Route
       return res.status(500).json({ error: "Google OAuth not configured" });
     }
 
-    pruneStates();
-    const state = crypto.randomUUID();
-    oauthStates.set(state, Date.now() + 5 * 60 * 1000);
+    const state = opts.oauthStateStore.create("google");
 
     const redirectUri =
       process.env.GOOGLE_REDIRECT_URI || "http://localhost:3002/api/auth/google/callback";
@@ -79,14 +69,10 @@ export function createGoogleOAuthRoutes(opts: GoogleOAuthOptions): express.Route
   router.get("/auth/google/callback", async (req, res) => {
     const { code, state } = req.query as { code?: string; state?: string };
 
-    // Validate state — in-memory store is authoritative (single-use)
-    const memoryValid = state && oauthStates.has(state) && oauthStates.get(state)! > Date.now();
-    if (!state || !memoryValid) {
+    // Validate + consume state (single-use, SQLite-backed)
+    if (!state || !opts.oauthStateStore.consume(state)) {
       return res.status(400).json({ error: "Invalid or expired state parameter" });
     }
-
-    // Consume state (one-time use)
-    oauthStates.delete(state);
     res.clearCookie("google_oauth_state");
 
     if (!code) {
@@ -152,5 +138,3 @@ export function createGoogleOAuthRoutes(opts: GoogleOAuthOptions): express.Route
   return router;
 }
 
-// Export for testing
-export { oauthStates as _googleOauthStates };

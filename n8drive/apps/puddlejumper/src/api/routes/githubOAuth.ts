@@ -2,6 +2,7 @@
 import crypto from "node:crypto";
 import express from "express";
 import { signJwt } from "@publiclogic/core";
+import type { OAuthStateStore } from "../oauthStateStore.js";
 
 export type GitHubUser = { sub: string; email?: string; name?: string; login?: string };
 
@@ -29,18 +30,9 @@ async function verifyGitHubToken(accessToken: string): Promise<GitHubUser> {
   };
 }
 
-// In-memory state store with 5-minute TTL
-const oauthStates = new Map<string, number>();
-
-function pruneStates() {
-  const now = Date.now();
-  for (const [key, exp] of oauthStates) {
-    if (exp < now) oauthStates.delete(key);
-  }
-}
-
 export type GitHubOAuthOptions = {
   nodeEnv: string;
+  oauthStateStore: OAuthStateStore;
 };
 
 export function createGitHubOAuthRoutes(opts: GitHubOAuthOptions): express.Router {
@@ -53,9 +45,7 @@ export function createGitHubOAuthRoutes(opts: GitHubOAuthOptions): express.Route
       return res.status(500).json({ error: "GitHub OAuth not configured" });
     }
 
-    pruneStates();
-    const state = crypto.randomUUID();
-    oauthStates.set(state, Date.now() + 5 * 60 * 1000);
+    const state = opts.oauthStateStore.create("github");
 
     const redirectUri =
       process.env.GITHUB_REDIRECT_URI || "http://localhost:3002/api/auth/github/callback";
@@ -80,14 +70,10 @@ export function createGitHubOAuthRoutes(opts: GitHubOAuthOptions): express.Route
   router.get("/auth/github/callback", async (req, res) => {
     const { code, state } = req.query as { code?: string; state?: string };
 
-    // Validate state — in-memory store is authoritative (single-use)
-    const memoryValid = state && oauthStates.has(state) && oauthStates.get(state)! > Date.now();
-    if (!state || !memoryValid) {
+    // Validate + consume state (single-use, SQLite-backed)
+    if (!state || !opts.oauthStateStore.consume(state)) {
       return res.status(400).json({ error: "Invalid or expired state parameter" });
     }
-
-    // Consume state (one-time use)
-    oauthStates.delete(state);
     res.clearCookie("oauth_state");
 
     if (!code) {
@@ -151,5 +137,3 @@ export function createGitHubOAuthRoutes(opts: GitHubOAuthOptions): express.Route
   return router;
 }
 
-// Export for testing
-export { oauthStates as _oauthStates };

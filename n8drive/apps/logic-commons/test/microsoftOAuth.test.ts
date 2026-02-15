@@ -21,6 +21,7 @@ beforeAll(() => {
 });
 
 const { resetDb } = await import('../src/lib/refreshTokenStore.js');
+const { resetOAuthStateStore } = await import('../src/lib/oauthStateStore.js');
 const { cookieParserMiddleware, createOptionalJwtAuthenticationMiddleware } = await import('@publiclogic/core');
 
 async function createTestApp() {
@@ -41,6 +42,7 @@ afterEach(() => {
 });
 afterAll(async () => {
   resetDb();
+  resetOAuthStateStore();
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
 

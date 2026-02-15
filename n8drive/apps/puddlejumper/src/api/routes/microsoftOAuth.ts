@@ -2,6 +2,7 @@
 import crypto from "node:crypto";
 import express from "express";
 import { signJwt } from "@publiclogic/core";
+import type { OAuthStateStore } from "../oauthStateStore.js";
 
 export type MicrosoftUser = { sub: string; email?: string; name?: string };
 
@@ -27,18 +28,9 @@ async function verifyMicrosoftToken(accessToken: string): Promise<MicrosoftUser>
   };
 }
 
-// In-memory state store with 5-minute TTL
-const oauthStates = new Map<string, number>();
-
-function pruneStates() {
-  const now = Date.now();
-  for (const [key, exp] of oauthStates) {
-    if (exp < now) oauthStates.delete(key);
-  }
-}
-
 export type MicrosoftOAuthOptions = {
   nodeEnv: string;
+  oauthStateStore: OAuthStateStore;
 };
 
 export function createMicrosoftOAuthRoutes(opts: MicrosoftOAuthOptions): express.Router {
@@ -51,9 +43,7 @@ export function createMicrosoftOAuthRoutes(opts: MicrosoftOAuthOptions): express
       return res.status(500).json({ error: "Microsoft OAuth not configured" });
     }
 
-    pruneStates();
-    const state = crypto.randomUUID();
-    oauthStates.set(state, Date.now() + 5 * 60 * 1000);
+    const state = opts.oauthStateStore.create("microsoft");
 
     const tenantId = process.env.MICROSOFT_TENANT_ID || "common";
     const redirectUri =
@@ -91,14 +81,10 @@ export function createMicrosoftOAuthRoutes(opts: MicrosoftOAuthOptions): express
       return res.status(400).json({ error, error_description: error_description || "Microsoft auth error" });
     }
 
-    // Validate state — in-memory store is authoritative (single-use)
-    const memoryValid = state && oauthStates.has(state) && oauthStates.get(state)! > Date.now();
-    if (!state || !memoryValid) {
+    // Validate + consume state (single-use, SQLite-backed)
+    if (!state || !opts.oauthStateStore.consume(state)) {
       return res.status(400).json({ error: "Invalid or expired state parameter" });
     }
-
-    // Consume state (one-time use)
-    oauthStates.delete(state);
     res.clearCookie("microsoft_oauth_state");
 
     if (!code) {
@@ -172,5 +158,3 @@ export function createMicrosoftOAuthRoutes(opts: MicrosoftOAuthOptions): express
   return router;
 }
 
-// Export for testing
-export { oauthStates as _microsoftOauthStates };

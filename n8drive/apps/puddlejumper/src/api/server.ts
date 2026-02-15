@@ -60,6 +60,7 @@ import {
   logServerError,
 } from "./serverMiddleware.js";
 import { processAccessNotificationQueueOnce } from "./accessNotificationWorker.js";
+import { OAuthStateStore } from "./oauthStateStore.js";
 
 // Route modules
 import { createAuthRoutes } from "./routes/auth.js";
@@ -116,6 +117,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   if (!connectorStateSecret) throw new Error("CONNECTOR_STATE_SECRET is required");
   const prrStore = new PrrStore(prrDbPath);
   const connectorStore = new ConnectorStore(connectorDbPath);
+  const oauthStateDbPath = path.join(CONTROLLED_DATA_DIR, "oauth_state.db");
+  const oauthStateStore = new OAuthStateStore(oauthStateDbPath);
 
   // ── Auth middleware ───────────────────────────────────────────────────
   const authMiddleware = createJwtAuthenticationMiddleware(authOptions);
@@ -284,9 +287,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createAuthRoutes({
     builtInLoginEnabled, loginUsers, loginRateLimit, nodeEnv, trustedParentOrigins,
   }));
-  app.use("/api", createGitHubOAuthRoutes({ nodeEnv }));
-  app.use("/api", createGoogleOAuthRoutes({ nodeEnv }));
-  app.use("/api", createMicrosoftOAuthRoutes({ nodeEnv }));
+  app.use("/api", createGitHubOAuthRoutes({ nodeEnv, oauthStateStore }));
+  app.use("/api", createGoogleOAuthRoutes({ nodeEnv, oauthStateStore }));
+  app.use("/api", createMicrosoftOAuthRoutes({ nodeEnv, oauthStateStore }));
   app.use("/api", createConfigRoutes({ runtimeContext, runtimeTiles, runtimeCapabilities }));
   app.use("/api", createPrrRoutes({ prrStore }));
   app.use("/api", createAccessRoutes({ prrStore }));
