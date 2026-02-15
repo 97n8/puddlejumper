@@ -76,6 +76,35 @@ function msUntilExpiry(jwt: string): number {
 /** Refresh 60 seconds before expiry (or immediately if less than 60s left). */
 const REFRESH_LEAD_MS = 60_000;
 
+/** Shared SSO cookie name — readable by all *.publiclogic.org apps. */
+const SSO_COOKIE = "pj_sso";
+
+/**
+ * Set the shared SSO cookie on .publiclogic.org so all subdomains share the session.
+ * Falls back to current hostname in dev (localhost).
+ */
+function setSsoCookie(jwt: string): void {
+  const isPublicLogic = window.location.hostname.endsWith("publiclogic.org");
+  const domain = isPublicLogic ? ".publiclogic.org" : "";
+  const secure = window.location.protocol === "https:";
+  const maxAge = Math.floor(msUntilExpiry(jwt) / 1000);
+  if (maxAge <= 0) return;
+  document.cookie = `${SSO_COOKIE}=${jwt}; path=/; max-age=${maxAge}; samesite=lax${secure ? "; secure" : ""}${domain ? `; domain=${domain}` : ""}`;
+}
+
+/** Clear the shared SSO cookie. */
+function clearSsoCookie(): void {
+  const isPublicLogic = window.location.hostname.endsWith("publiclogic.org");
+  const domain = isPublicLogic ? ".publiclogic.org" : "";
+  document.cookie = `${SSO_COOKIE}=; path=/; max-age=0${domain ? `; domain=${domain}` : ""}`;
+}
+
+/** Read the shared SSO cookie value (if any). */
+function getSsoCookie(): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${SSO_COOKIE}=([^;]*)`));
+  return match ? match[1] : null;
+}
+
 // ── Provider ───────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -138,6 +167,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         provider: payload.provider as string | undefined,
       });
 
+      // Share session across all *.publiclogic.org subdomains
+      setSsoCookie(jwt);
+
       // Schedule next silent refresh before this token expires
       const remaining = msUntilExpiry(jwt);
       if (remaining > REFRESH_LEAD_MS) {
@@ -175,6 +207,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           provider: payload.provider as string | undefined,
         });
 
+        // Share session across all *.publiclogic.org subdomains
+        setSsoCookie(jwt);
+
         // Schedule silent refresh before this access token expires
         const remaining = msUntilExpiry(jwt);
         if (remaining > REFRESH_LEAD_MS) {
@@ -196,6 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Logout ─────────────────────────────────────────────────
   const logout = useCallback(async () => {
     clearRefreshTimer();
+    clearSsoCookie();
     try {
       await pjFetch("/api/auth/logout", { method: "POST" });
     } catch {
@@ -227,6 +263,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               provider: payload.provider as string | undefined,
             });
 
+            // Share session across all *.publiclogic.org subdomains
+            setSsoCookie(token);
+
             // Schedule silent refresh before this access token expires
             const remaining = msUntilExpiry(token);
             if (remaining > REFRESH_LEAD_MS) {
@@ -247,6 +286,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError("Authentication failed. Please try again.");
         window.history.replaceState(null, "", window.location.pathname);
         return;
+      }
+
+      // Check for shared SSO cookie from another *.publiclogic.org app
+      const ssoCookie = getSsoCookie();
+      if (ssoCookie) {
+        const payload = decodeJwtPayload(ssoCookie);
+        const remaining = msUntilExpiry(ssoCookie);
+        if (payload.sub && remaining > 0) {
+          setUser({
+            sub: payload.sub as string,
+            email: payload.email as string | undefined,
+            name: payload.name as string | undefined,
+            provider: payload.provider as string | undefined,
+          });
+          if (remaining > REFRESH_LEAD_MS) {
+            scheduleRefresh(remaining - REFRESH_LEAD_MS, refresh);
+          }
+          fetchProtectedData();
+          return;
+        }
       }
     }
 
