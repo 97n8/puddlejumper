@@ -1,6 +1,6 @@
 import express from 'express';
 import serverless from 'serverless-http';
-import { cookieParserMiddleware, csrfProtection, validateJwt } from '@publiclogic/core';
+import { cookieParserMiddleware, csrfProtection, validateJwt, createOptionalJwtAuthenticationMiddleware } from '@publiclogic/core';
 import loginRouter from './routes/login.js';
 
 const app: express.Express = express();
@@ -9,6 +9,10 @@ app.use(express.json());
 
 // Enforce X-PuddleJumper-Request header on all mutating /api requests
 app.use('/api', csrfProtection());
+
+// Optional JWT decode — populates req.auth when a token is present
+// (required for /api/auth/revoke which checks req.auth.sub)
+app.use('/api/auth', createOptionalJwtAuthenticationMiddleware());
 
 app.post('/internal/dev-token', async (req, res) => {
   if (process.env.DEV_MODE !== 'true') return res.status(403).json({ error: 'Forbidden' });

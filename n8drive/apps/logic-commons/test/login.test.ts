@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeAll, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest';
 import express from 'express';
-import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import fs from 'fs/promises';
 import path from 'path';
@@ -17,24 +16,54 @@ beforeAll(() => {
   process.env.AUTH_AUDIENCE = process.env.AUTH_AUDIENCE || 'test-audience';
 });
 
+// Import after env is set
+const { resetDb } = await import('../src/lib/refreshTokenStore.js');
+const { cookieParserMiddleware, createOptionalJwtAuthenticationMiddleware, signJwt } = await import('@publiclogic/core');
+
 // Build a lightweight test app that mirrors server.ts wiring
 async function createTestApp() {
   const loginRouter = (await import('../src/routes/login.js')).default;
   const app = express();
-  app.use(cookieParser());
+  app.use(cookieParserMiddleware());
   app.use(express.json());
+  // Optional JWT for /api/auth/revoke
+  app.use('/api/auth', createOptionalJwtAuthenticationMiddleware());
   app.use('/api', loginRouter);
   return app;
 }
 
+beforeEach(() => {
+  resetDb();
+});
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
 afterAll(async () => {
+  resetDb();
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
 
+// ── Helper: mock GitHub fetch and perform login ─────────────────────────
+function mockGitHubOk() {
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ id: 42, login: 'testuser', name: 'Test', email: 'test@example.com' }),
+  } as any);
+}
+
+async function loginAndGetCookie(app: express.Express): Promise<string> {
+  mockGitHubOk();
+  const res = await request(app)
+    .post('/api/login')
+    .send({ provider: 'github', providerToken: 'ghp_valid' });
+  expect(res.status).toBe(200);
+  const cookies = res.headers['set-cookie'] as unknown as string[];
+  const rc = cookies.find((c: string) => c.startsWith('pj_refresh='));
+  expect(rc).toBeDefined();
+  return rc!.split(';')[0]; // "pj_refresh=<token>"
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 describe('POST /api/login', () => {
   it('returns 400 when provider is missing', async () => {
     const app = await createTestApp();
@@ -53,7 +82,6 @@ describe('POST /api/login', () => {
   });
 
   it('returns 401 for github with invalid token', async () => {
-    // Mock fetch to simulate GitHub rejecting the token
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 401,
@@ -68,12 +96,7 @@ describe('POST /api/login', () => {
   });
 
   it('returns jwt and sets pj_refresh cookie for valid github login', async () => {
-    // Mock fetch to simulate a valid GitHub user
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ id: 42, login: 'testuser', name: 'Test', email: 'test@example.com' }),
-    } as any);
-
+    mockGitHubOk();
     const app = await createTestApp();
     const res = await request(app)
       .post('/api/login')
@@ -91,10 +114,11 @@ describe('POST /api/login', () => {
       : (cookies as string);
     expect(refreshCookie).toContain('pj_refresh=');
     expect(refreshCookie).toContain('HttpOnly');
-    expect(refreshCookie).toContain('Path=/api/refresh');
+    expect(refreshCookie).toContain('Path=/api');
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────
 describe('POST /api/refresh', () => {
   it('returns 401 when no refresh cookie is present', async () => {
     const app = await createTestApp();
@@ -104,118 +128,170 @@ describe('POST /api/refresh', () => {
   });
 
   it('returns a new access jwt when given a valid refresh cookie', async () => {
-    // First, do a login to get a refresh cookie
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ id: 42, login: 'testuser', name: 'Test', email: 'test@example.com' }),
-    } as any);
-
     const app = await createTestApp();
-    const loginRes = await request(app)
-      .post('/api/login')
-      .send({ provider: 'github', providerToken: 'ghp_valid' });
-
-    // Extract pj_refresh cookie value
-    const cookies = loginRes.headers['set-cookie'] as unknown as string[];
-    const refreshCookie = cookies.find((c: string) => c.startsWith('pj_refresh='));
-    expect(refreshCookie).toBeDefined();
-
-    // Parse just the cookie value
-    const cookieValue = refreshCookie!.split(';')[0]; // "pj_refresh=<token>"
+    const cookie = await loginAndGetCookie(app);
 
     const refreshRes = await request(app)
       .post('/api/refresh')
-      .set('Cookie', cookieValue);
+      .set('Cookie', cookie);
 
     expect(refreshRes.status).toBe(200);
     expect(refreshRes.body).toHaveProperty('jwt');
     expect(typeof refreshRes.body.jwt).toBe('string');
-    // Verify the refreshed token is a valid JWT (header.payload.signature)
     expect(refreshRes.body.jwt.split('.').length).toBe(3);
   });
 
   it('rotates refresh token and returns new cookie', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ id: 42, login: 'testuser', name: 'Test', email: 'test@example.com' }),
-    } as any);
-
     const app = await createTestApp();
+    const cookie1 = await loginAndGetCookie(app);
 
-    // Login to get initial refresh cookie
-    const loginRes = await request(app)
-      .post('/api/login')
-      .send({ provider: 'github', providerToken: 'ghp_valid' });
-    const cookies = loginRes.headers['set-cookie'] as unknown as string[];
-    const cookie1 = cookies.find((c: string) => c.startsWith('pj_refresh='))!.split(';')[0];
-
-    // Refresh — should rotate and return new cookie
     const refreshRes = await request(app)
       .post('/api/refresh')
       .set('Cookie', cookie1);
     expect(refreshRes.status).toBe(200);
-    expect(refreshRes.body).toHaveProperty('jwt');
 
     const newCookies = refreshRes.headers['set-cookie'] as unknown as string[];
     const cookie2 = newCookies.find((c: string) => c.startsWith('pj_refresh='))!.split(';')[0];
     expect(cookie2).toBeDefined();
-    expect(cookie2).not.toBe(cookie1); // must be a different token
+    expect(cookie2).not.toBe(cookie1);
   });
 
   it('invalidates old refresh token after rotation', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ id: 42, login: 'testuser', name: 'Test', email: 'test@example.com' }),
-    } as any);
-
     const app = await createTestApp();
-
-    const loginRes = await request(app)
-      .post('/api/login')
-      .send({ provider: 'github', providerToken: 'ghp_valid' });
-    const cookies = loginRes.headers['set-cookie'] as unknown as string[];
-    const oldCookie = cookies.find((c: string) => c.startsWith('pj_refresh='))!.split(';')[0];
+    const oldCookie = await loginAndGetCookie(app);
 
     // First refresh succeeds
     await request(app).post('/api/refresh').set('Cookie', oldCookie);
 
-    // Second use of old cookie should fail (revoked)
+    // Second use of old cookie — replay detected
     const retryRes = await request(app).post('/api/refresh').set('Cookie', oldCookie);
     expect(retryRes.status).toBe(401);
+    expect(retryRes.body.error).toBe('token_reuse_detected');
+  });
+
+  it('replay detection revokes entire family chain', async () => {
+    const app = await createTestApp();
+    const cookie1 = await loginAndGetCookie(app);
+
+    // Rotate: cookie1 → cookie2
+    const r1 = await request(app).post('/api/refresh').set('Cookie', cookie1);
+    expect(r1.status).toBe(200);
+    const cookie2 = (r1.headers['set-cookie'] as unknown as string[])
+      .find((c: string) => c.startsWith('pj_refresh='))!.split(';')[0];
+
+    // Replay cookie1 — triggers family revocation
+    const replay = await request(app).post('/api/refresh').set('Cookie', cookie1);
+    expect(replay.status).toBe(401);
+
+    // cookie2 should also be revoked (same family)
+    const r2 = await request(app).post('/api/refresh').set('Cookie', cookie2);
+    expect(r2.status).toBe(401);
   });
 });
 
-describe('POST /api/revoke', () => {
-  it('returns 204 and prevents subsequent refresh', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ id: 42, login: 'testuser', name: 'Test', email: 'test@example.com' }),
-    } as any);
-
+// ─────────────────────────────────────────────────────────────────────────
+describe('POST /api/auth/logout', () => {
+  it('revokes token and clears cookie', async () => {
     const app = await createTestApp();
+    const cookie = await loginAndGetCookie(app);
 
-    const loginRes = await request(app)
-      .post('/api/login')
-      .send({ provider: 'github', providerToken: 'ghp_valid' });
-    const cookies = loginRes.headers['set-cookie'] as unknown as string[];
-    const cookie = cookies.find((c: string) => c.startsWith('pj_refresh='))!.split(';')[0];
-
-    // Revoke
-    const revokeRes = await request(app)
-      .post('/api/revoke')
+    const res = await request(app)
+      .post('/api/auth/logout')
       .set('Cookie', cookie);
-    expect(revokeRes.status).toBe(204);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+
+    // Cookie should be cleared
+    const setCookies = res.headers['set-cookie'] as unknown as string[];
+    const cleared = setCookies?.find((c: string) => c.startsWith('pj_refresh='));
+    expect(cleared).toContain('pj_refresh=');
 
     // Refresh with same cookie should fail
-    const afterRes = await request(app)
+    const refreshRes = await request(app)
       .post('/api/refresh')
       .set('Cookie', cookie);
-    expect(afterRes.status).toBe(401);
+    expect(refreshRes.status).toBe(401);
   });
 
-  it('returns 204 even when no cookie is present (idempotent)', async () => {
+  it('returns 200 even when no cookie is present', async () => {
     const app = await createTestApp();
-    const res = await request(app).post('/api/revoke');
-    expect(res.status).toBe(204);
+    const res = await request(app).post('/api/auth/logout');
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+describe('POST /api/auth/revoke', () => {
+  it('returns 401 without a Bearer token', async () => {
+    const app = await createTestApp();
+    const res = await request(app).post('/api/auth/revoke');
+    expect(res.status).toBe(401);
+  });
+
+  it('revokes all tokens for the calling user', async () => {
+    const app = await createTestApp();
+    const cookie = await loginAndGetCookie(app);
+
+    // Create an access token for user 42
+    const accessToken = await signJwt(
+      { sub: '42', name: 'Test', role: 'user' } as any,
+      { expiresIn: '1h' } as any,
+    );
+
+    const res = await request(app)
+      .post('/api/auth/revoke')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('revoked');
+    expect(res.body.revoked).toBeGreaterThanOrEqual(1);
+
+    // Refresh with same cookie should fail
+    const refreshRes = await request(app)
+      .post('/api/refresh')
+      .set('Cookie', cookie);
+    expect(refreshRes.status).toBe(401);
+  });
+
+  it('non-admin cannot revoke another user', async () => {
+    const app = await createTestApp();
+    const accessToken = await signJwt(
+      { sub: '42', name: 'Test', role: 'user' } as any,
+      { expiresIn: '1h' } as any,
+    );
+
+    const res = await request(app)
+      .post('/api/auth/revoke')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ user_id: 'other-user' });
+    expect(res.status).toBe(403);
+  });
+
+  it('admin can revoke another user', async () => {
+    const app = await createTestApp();
+
+    // Login as "other-user" to create tokens for them
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 999, login: 'otheruser', name: 'Other', email: 'other@example.com' }),
+    } as any);
+    const otherLoginRes = await request(app)
+      .post('/api/login')
+      .send({ provider: 'github', providerToken: 'ghp_other' });
+    expect(otherLoginRes.status).toBe(200);
+
+    // Admin access token
+    const adminToken = await signJwt(
+      { sub: '1', name: 'Admin', role: 'admin' } as any,
+      { expiresIn: '1h' } as any,
+    );
+
+    const res = await request(app)
+      .post('/api/auth/revoke')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ user_id: '999' });
+    expect(res.status).toBe(200);
+    expect(res.body.revoked).toBeGreaterThanOrEqual(1);
   });
 });
