@@ -31,7 +31,7 @@ jobs:
             flyctl ssh console --app "$APP" -C "sqlite3 /app/data/${db}.db \".backup '${DIR}/${db}-${TS}.bak'\"" || echo "SKIP: ${db}.db not found"
           done
 
-          flyctl ssh console --app "$APP" -C "ls -lh ${DIR}/"
+          flyctl ssh console --app "$APP" -C "sh -c 'ls -lh ${DIR}/'"
 
       - name: Download backups from Fly
         env:
@@ -42,7 +42,7 @@ jobs:
           mkdir -p ./backups
 
           for db in prr connectors oauth_state; do
-            LATEST=$(flyctl ssh console --app "$APP" -C "ls -t /app/data/backups/${db}-*.bak 2>/dev/null | head -1" | tr -d '\r')
+            LATEST=$(flyctl ssh console --app "$APP" -C "sh -c 'ls -t /app/data/backups/${db}-*.bak 2>/dev/null | head -1'" | tr -d '\r')
             if [ -n "$LATEST" ]; then
               echo "Downloading $LATEST..."
               flyctl sftp get --app "$APP" "$LATEST" "./backups/$(basename "$LATEST")"
@@ -61,4 +61,4 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          flyctl ssh console --app publiclogic-puddlejumper -C "find /app/data/backups -name '*.bak' -mtime +2 -delete 2>/dev/null; echo cleanup-done"
+          flyctl ssh console --app publiclogic-puddlejumper -C "sh -c 'find /app/data/backups -name *.bak -mtime +2 -delete 2>/dev/null; echo cleanup-done'"

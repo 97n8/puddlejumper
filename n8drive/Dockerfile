@@ -38,7 +38,7 @@ FROM node:20-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gosu libsqlite3-0 \
+    gosu libsqlite3-0 sqlite3 \
   && rm -rf /var/lib/apt/lists/*
 
 # Copy deployment bundle produced by pnpm deploy
