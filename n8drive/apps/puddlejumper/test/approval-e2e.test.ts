@@ -19,6 +19,7 @@ import {
   type DispatchStepResult,
 } from "../src/engine/dispatch.js";
 import { createApprovalRoutes } from "../src/api/routes/approvals.js";
+import { approvalMetrics, METRIC, METRIC_HELP } from "../src/engine/approvalMetrics.js";
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -144,6 +145,7 @@ beforeEach(() => {
   store = new ApprovalStore(path.join(tmpDir, "approvals.db"));
   registry = new DispatcherRegistry();
   dispatchLog = [];
+  approvalMetrics.reset();
 });
 
 afterEach(() => {
@@ -222,6 +224,17 @@ describe("Approval lifecycle end-to-end", () => {
     expect(final.approval_status).toBe("dispatched");
     expect(final.dispatched_at).toBeTruthy();
     expect(JSON.parse(final.dispatch_result_json!).success).toBe(true);
+
+    // ── Step 8: Verify metrics counters ──
+    const snap = approvalMetrics.snapshot();
+    const counter = (name: string) => snap.find(m => m.name === name && m.type === "counter")?.value ?? 0;
+    const gauge   = (name: string) => snap.find(m => m.name === name && m.type === "gauge")?.value ?? 0;
+    expect(counter(METRIC.APPROVALS_APPROVED)).toBe(1);
+    expect(counter(METRIC.DISPATCH_SUCCESS)).toBe(1);
+    expect(counter(METRIC.CONSUME_CAS_SUCCESS)).toBe(1);
+    expect(counter(METRIC.CONSUME_CAS_CONFLICT)).toBe(0);
+    expect(counter(METRIC.DISPATCH_FAILURE)).toBe(0);
+    expect(gauge(METRIC.PENDING_GAUGE)).toBe(0);
   });
 
   it("reject path: execute → 202 → reject → cannot dispatch", async () => {
@@ -251,6 +264,12 @@ describe("Approval lifecycle end-to-end", () => {
       .send({});
     expect(dispatchRes.status).toBe(409);
     expect(dispatchRes.body.error).toContain("rejected");
+
+    // Metrics: rejected counter incremented, approved unchanged
+    const snap = approvalMetrics.snapshot();
+    const counter = (name: string) => snap.find(m => m.name === name && m.type === "counter")?.value ?? 0;
+    expect(counter(METRIC.APPROVALS_REJECTED)).toBe(1);
+    expect(counter(METRIC.APPROVALS_APPROVED)).toBe(0);
   });
 
   it("dispatch failure path: connector fails → dispatch_failed status", async () => {
@@ -283,6 +302,12 @@ describe("Approval lifecycle end-to-end", () => {
     // DB state
     const row = store.findById(approvalId)!;
     expect(row.approval_status).toBe("dispatch_failed");
+
+    // Metrics: dispatch failure counter incremented
+    const snap = approvalMetrics.snapshot();
+    const counter = (name: string) => snap.find(m => m.name === name && m.type === "counter")?.value ?? 0;
+    expect(counter(METRIC.DISPATCH_FAILURE)).toBe(1);
+    expect(counter(METRIC.DISPATCH_SUCCESS)).toBe(0);
   });
 
   it("dry-run dispatch does not mutate state", async () => {
@@ -423,5 +448,30 @@ describe("Approval lifecycle end-to-end", () => {
     expect(successes).toHaveLength(1);
     expect(failures).toHaveLength(1);
     expect(successes[0]!.approval_status).toBe("dispatching");
+  });
+
+  it("prometheus() output includes HELP and TYPE lines", () => {
+    // Simulate some activity
+    approvalMetrics.increment(METRIC.APPROVALS_CREATED);
+    approvalMetrics.increment(METRIC.APPROVALS_APPROVED);
+    approvalMetrics.setGauge(METRIC.PENDING_GAUGE, 3);
+    approvalMetrics.observe(METRIC.APPROVAL_TIME, 12.5);
+
+    const output = approvalMetrics.prometheus(METRIC_HELP);
+
+    // Must contain HELP + TYPE + values
+    expect(output).toContain("# HELP approvals_created_total");
+    expect(output).toContain("# TYPE approvals_created_total counter");
+    expect(output).toContain("approvals_created_total 1");
+
+    expect(output).toContain("# HELP approval_pending_gauge");
+    expect(output).toContain("# TYPE approval_pending_gauge gauge");
+    expect(output).toContain("approval_pending_gauge 3");
+
+    expect(output).toContain("# HELP approval_time_seconds");
+    expect(output).toContain("# TYPE approval_time_seconds histogram");
+    expect(output).toContain("approval_time_seconds_count 1");
+    expect(output).toContain("approval_time_seconds_sum 12.5");
+    expect(output).toContain('approval_time_seconds_bucket{le="+Inf"} 1');
   });
 });

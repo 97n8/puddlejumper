@@ -209,3 +209,65 @@ If dispatch fails at the connector level:
 - SQLite is single-writer — adequate for current throughput but watch write contention if scaling to many concurrent dispatchers.
 - If dispatch throughput exceeds ~100 writes/sec or you need multi-region writes, consider migrating approval store to Postgres.
 - `consumeForDispatch()` CAS remains correct under SQLite's serialized write model.
+
+---
+
+## Metrics & Observability
+
+### Prometheus endpoint
+
+```
+GET /metrics          (text/plain; Prometheus exposition format)
+Authorization: Bearer <METRICS_TOKEN>   (required if METRICS_TOKEN env is set)
+```
+
+### Key metrics
+
+| Name | Type | Description |
+|------|------|-------------|
+| `approvals_created_total` | counter | Approvals created via governance gate |
+| `approvals_approved_total` | counter | Approvals decided as approved |
+| `approvals_rejected_total` | counter | Approvals decided as rejected |
+| `approvals_expired_total` | counter | Approvals that expired before decision |
+| `approval_pending_gauge` | gauge | Current pending approvals |
+| `approval_time_seconds` | histogram | Seconds from creation to decision |
+| `dispatch_success_total` | counter | Successful dispatches to connectors |
+| `dispatch_failure_total` | counter | Failed dispatches to connectors |
+| `dispatch_latency_seconds` | histogram | Duration of dispatch plan execution |
+| `consume_for_dispatch_success_total` | counter | Successful CAS lock acquisitions |
+| `consume_for_dispatch_conflict_total` | counter | CAS conflicts (double-dispatch prevented) |
+
+### Quick checks
+
+```bash
+# 1. Verify metrics endpoint returns Prometheus format
+curl -s $BASE/metrics | head -20
+
+# 2. Grep for approval counters
+curl -s $BASE/metrics | grep -E "approvals_(created|approved|rejected)_total"
+
+# 3. Check pending gauge
+curl -s $BASE/metrics | grep approval_pending_gauge
+
+# 4. After exercising a workflow, verify counters incremented
+curl -s $BASE/metrics | grep -E "dispatch_(success|failure)_total"
+```
+
+### Alerts
+
+See [`ops/alerts/approval-alerts.yml`](../alerts/approval-alerts.yml) for Prometheus alert rules:
+
+| Alert | Condition | Severity |
+|-------|-----------|----------|
+| `ApprovalsBacklogHigh` | pending > 10 for 10m | page |
+| `DispatchFailuresSpike` | >5 failures in 5m | page |
+| `ConsumeForDispatchConflictsSpike` | >5 CAS conflicts in 5m | warn |
+| `ApprovalTimeTooHigh` | p95 decision time > 10m | page |
+| `DispatchLatencyHigh` | p95 dispatch > 60s | warn |
+| `NoApprovalsProcessed` | created but none decided in 24h | warn |
+
+### Label cardinality rules
+
+- **Do NOT** add `user_id`, `actor`, or other high-cardinality labels to counters/histograms.
+- Safe labels: `action_type` (URN), `result` (success|failure), `status` (approved|rejected).
+- Per-user telemetry belongs in structured logs, not Prometheus metrics.

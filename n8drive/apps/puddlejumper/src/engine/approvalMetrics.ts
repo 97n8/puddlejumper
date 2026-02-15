@@ -111,19 +111,26 @@ export class ApprovalMetrics {
     return entries;
   }
 
-  /** Return Prometheus text exposition format. */
-  prometheus(): string {
+  /** Return Prometheus text exposition format with HELP and TYPE annotations. */
+  prometheus(helpMap?: Record<string, string>): string {
     const lines: string[] = [];
+    const help = (name: string) => helpMap?.[name] ?? "";
 
     for (const [name, value] of this.counters) {
+      const h = help(name);
+      if (h) lines.push(`# HELP ${name} ${h}`);
       lines.push(`# TYPE ${name} counter`);
       lines.push(`${name} ${value}`);
     }
     for (const [name, value] of this.gauges) {
+      const h = help(name);
+      if (h) lines.push(`# HELP ${name} ${h}`);
       lines.push(`# TYPE ${name} gauge`);
       lines.push(`${name} ${value}`);
     }
     for (const [name, state] of this.histograms) {
+      const h = help(name);
+      if (h) lines.push(`# HELP ${name} ${h}`);
       lines.push(`# TYPE ${name} histogram`);
       for (const bucket of state.buckets) {
         lines.push(`${name}_bucket{le="${bucket.le}"} ${bucket.count}`);
@@ -188,3 +195,18 @@ export const METRIC = {
   APPROVAL_TIME: "approval_time_seconds",
   DISPATCH_LATENCY: "dispatch_latency_seconds",
 } as const;
+
+/** Human-readable HELP strings for each metric (used in Prometheus output). */
+export const METRIC_HELP: Record<string, string> = {
+  [METRIC.APPROVALS_CREATED]:   "Total approvals created via governance gate",
+  [METRIC.APPROVALS_APPROVED]:  "Total approvals decided as approved",
+  [METRIC.APPROVALS_REJECTED]:  "Total approvals decided as rejected",
+  [METRIC.APPROVALS_EXPIRED]:   "Total approvals that expired before decision",
+  [METRIC.DISPATCH_SUCCESS]:    "Total successful dispatches to connectors",
+  [METRIC.DISPATCH_FAILURE]:    "Total failed dispatches to connectors",
+  [METRIC.CONSUME_CAS_SUCCESS]: "Successful CAS operations for dispatch lock",
+  [METRIC.CONSUME_CAS_CONFLICT]:"CAS conflicts when acquiring dispatch lock (double-dispatch prevented)",
+  [METRIC.PENDING_GAUGE]:       "Current number of approvals in pending state",
+  [METRIC.APPROVAL_TIME]:       "Time in seconds from approval creation to decision",
+  [METRIC.DISPATCH_LATENCY]:    "Time in seconds for dispatch plan execution",
+};

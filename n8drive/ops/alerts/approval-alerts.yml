@@ -1,0 +1,103 @@
+# ── PuddleJumper Approval & Dispatch Alert Rules ─────────────────────────────
+#
+# Drop into your Prometheus rules directory or include via `rule_files:`
+# in prometheus.yml.
+#
+# Metric names match METRIC constants in src/engine/approvalMetrics.ts:
+#   approvals_created_total, approvals_approved_total, approvals_rejected_total,
+#   approval_pending_gauge, approval_time_seconds, dispatch_success_total,
+#   dispatch_failure_total, dispatch_latency_seconds,
+#   consume_for_dispatch_conflict_total
+#
+# Tune thresholds to your SLA. These are conservative starting points.
+
+groups:
+  - name: approvals.rules
+    rules:
+
+      # ── Backlog ──────────────────────────────────────────────────────────
+      - alert: ApprovalsBacklogHigh
+        expr: approval_pending_gauge > 10
+        for: 10m
+        labels:
+          severity: page
+        annotations:
+          summary: "Approval backlog > 10 for 10m"
+          description: >-
+            approval_pending_gauge is {{ $value }}.
+            Investigate approver capacity or dispatcher health.
+          runbook: https://github.com/97n8/puddlejumper/blob/main/ops/runbooks/approvals.md
+
+      # ── Dispatch failures ────────────────────────────────────────────────
+      - alert: DispatchFailuresSpike
+        expr: increase(dispatch_failure_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "Dispatch failures spike"
+          description: >-
+            More than 5 dispatch failures in 5m (current: {{ $value }}).
+            Check connector health and Fly logs.
+          runbook: https://github.com/97n8/puddlejumper/blob/main/ops/runbooks/approvals.md
+
+      # ── CAS conflict spike (double-dispatch attempts) ────────────────────
+      - alert: ConsumeForDispatchConflictsSpike
+        expr: increase(consume_for_dispatch_conflict_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: warn
+        annotations:
+          summary: "CAS conflict spike on consumeForDispatch"
+          description: >-
+            High conflict rate ({{ $value }} in 5m) could indicate racing
+            producers or misconfigured workers.
+          runbook: https://github.com/97n8/puddlejumper/blob/main/ops/runbooks/approvals.md
+
+      # ── Approval latency too high ────────────────────────────────────────
+      - alert: ApprovalTimeTooHigh
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(approval_time_seconds_bucket[5m])) by (le)
+          ) > 600
+        for: 10m
+        labels:
+          severity: page
+        annotations:
+          summary: "p95 approval decision time > 10 minutes"
+          description: >-
+            The 95th-percentile time from creation to decision is
+            {{ $value | humanizeDuration }}. Approvers may be unresponsive.
+          runbook: https://github.com/97n8/puddlejumper/blob/main/ops/runbooks/approvals.md
+
+      # ── Dispatch latency too high ────────────────────────────────────────
+      - alert: DispatchLatencyHigh
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(dispatch_latency_seconds_bucket[5m])) by (le)
+          ) > 60
+        for: 5m
+        labels:
+          severity: warn
+        annotations:
+          summary: "p95 dispatch latency > 60s"
+          description: >-
+            Connector dispatch is taking {{ $value | humanizeDuration }} at p95.
+            Check GitHub API rate limits, network health.
+          runbook: https://github.com/97n8/puddlejumper/blob/main/ops/runbooks/approvals.md
+
+      # ── No approvals processed in 24h (if creating) ─────────────────────
+      - alert: NoApprovalsProcessed
+        expr: >
+          increase(approvals_created_total[24h]) > 0
+          and increase(approvals_approved_total[24h]) == 0
+          and increase(approvals_rejected_total[24h]) == 0
+        for: 30m
+        labels:
+          severity: warn
+        annotations:
+          summary: "Approvals being created but none decided in 24h"
+          description: >-
+            {{ $value }} approvals created but zero approved/rejected.
+            Approval pipeline may be stalled.
+          runbook: https://github.com/97n8/puddlejumper/blob/main/ops/runbooks/approvals.md

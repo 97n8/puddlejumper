@@ -79,7 +79,7 @@ import { createApprovalRoutes } from "./routes/approvals.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { DispatcherRegistry } from "../engine/dispatch.js";
 import { GitHubDispatcher } from "../engine/dispatchers/github.js";
-import { approvalMetrics } from "../engine/approvalMetrics.js";
+import { approvalMetrics, METRIC_HELP } from "../engine/approvalMetrics.js";
 
 // ── Directory layout ────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -250,8 +250,17 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       secrets,
     });
   });
-  app.get("/metrics", (_req, res) => {
-    res.type("text/plain; version=0.0.4; charset=utf-8").send(approvalMetrics.prometheus());
+  app.get("/metrics", (req, res) => {
+    // Optional bearer-token auth: set METRICS_TOKEN env to restrict scraping
+    const metricsToken = process.env.METRICS_TOKEN;
+    if (metricsToken) {
+      const authHeader = req.headers.authorization;
+      if (authHeader !== `Bearer ${metricsToken}`) {
+        res.status(401).json({ error: "Invalid or missing metrics token" });
+        return;
+      }
+    }
+    res.type("text/plain; version=0.0.4; charset=utf-8").send(approvalMetrics.prometheus(METRIC_HELP));
   });
   app.get("/auth/callback", authCallback);
   app.use(createSecurityHeadersMiddleware(nodeEnv, PJ_WORKSPACE_FILE));
