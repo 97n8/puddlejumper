@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PuddleJumper — Quick Start &amp; Systems Map</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface-hover: #22252f;
+  --border: #2a2d37;
+  --text: #e4e6eb;
+  --text-dim: #8b8fa3;
+  --accent: #4f8ff7;
+  --green: #34d399;
+  --red: #f87171;
+  --yellow: #fbbf24;
+  --purple: #a78bfa;
+  --orange: #fb923c;
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+}
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code { font-family: var(--mono); background: var(--surface); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+pre { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; overflow-x: auto; font-size: 13px; font-family: var(--mono); line-height: 1.5; margin: 12px 0; }
+pre code { background: none; padding: 0; }
+
+/* ── Header ────────────────────────────────────────────── */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px; border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.header h1 { font-size: 18px; font-weight: 600; }
+.header .subtitle { font-size: 13px; color: var(--text-dim); margin-left: 12px; }
+.nav-links { display: flex; gap: 12px; font-size: 13px; }
+.nav-links a {
+  color: var(--text-dim); padding: 4px 10px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.nav-links a:hover { color: var(--text); border-color: var(--text-dim); text-decoration: none; }
+
+/* ── Layout ────────────────────────────────────────────── */
+.page { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+.page h2 {
+  font-size: 20px; font-weight: 700; margin: 36px 0 10px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.page h2:first-child { margin-top: 0; }
+.page h3 { font-size: 15px; font-weight: 600; margin: 20px 0 6px; color: var(--accent); }
+.page p { margin: 8px 0; font-size: 14px; }
+.page ul, .page ol { margin: 8px 0 8px 20px; font-size: 14px; }
+.page li { margin: 4px 0; }
+
+/* ── Quick-start grid ──────────────────────────────────── */
+.qs-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px; margin: 16px 0;
+}
+.qs-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px;
+}
+.qs-card .qs-num {
+  display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center;
+  background: var(--accent); color: #fff; border-radius: 50%; font-size: 12px; font-weight: 700;
+  margin-right: 8px; flex-shrink: 0;
+}
+.qs-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; }
+.qs-card p { font-size: 13px; color: var(--text-dim); margin: 0; }
+.qs-card code { font-size: 12px; }
+
+/* ── Systems map ───────────────────────────────────────── */
+.sys-map {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px; margin: 16px 0;
+}
+.sys-layer {
+  margin-bottom: 20px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.sys-layer:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
+.sys-layer-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px;
+  font-weight: 700; margin-bottom: 10px;
+}
+.sys-layer-label.clients { color: var(--green); }
+.sys-layer-label.api { color: var(--accent); }
+.sys-layer-label.engine { color: var(--purple); }
+.sys-layer-label.stores { color: var(--orange); }
+.sys-layer-label.dispatch { color: var(--yellow); }
+
+.sys-nodes { display: flex; flex-wrap: wrap; gap: 8px; }
+.sys-node {
+  background: rgba(79,143,247,0.08); border: 1px solid rgba(79,143,247,0.2);
+  border-radius: 6px; padding: 6px 12px; font-size: 12px;
+}
+.sys-node.green { background: rgba(52,211,153,0.08); border-color: rgba(52,211,153,0.2); }
+.sys-node.purple { background: rgba(167,139,250,0.08); border-color: rgba(167,139,250,0.2); }
+.sys-node.orange { background: rgba(251,146,60,0.08); border-color: rgba(251,146,60,0.2); }
+.sys-node.yellow { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.2); }
+
+.sys-arrow {
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim); font-size: 14px; padding: 6px 0;
+}
+
+/* ── API reference table ───────────────────────────────── */
+.api-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0; }
+.api-table th {
+  text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.3px; color: var(--text-dim); border-bottom: 1px solid var(--border);
+}
+.api-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.api-table .method {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  padding: 1px 6px; border-radius: 4px; display: inline-block;
+}
+.api-table .method.get { background: rgba(52,211,153,0.15); color: var(--green); }
+.api-table .method.post { background: rgba(79,143,247,0.15); color: var(--accent); }
+.api-table .method.put { background: rgba(251,191,36,0.15); color: var(--yellow); }
+.api-table .method.delete { background: rgba(248,113,113,0.15); color: var(--red); }
+.api-table .path { font-family: var(--mono); font-size: 12px; }
+.api-table .auth-badge {
+  font-size: 10px; padding: 1px 6px; border-radius: 10px;
+  background: rgba(139,143,163,0.15); color: var(--text-dim); white-space: nowrap;
+}
+.api-table .auth-badge.admin { background: rgba(248,113,113,0.12); color: var(--red); }
+.api-table .auth-badge.public { background: rgba(52,211,153,0.12); color: var(--green); }
+
+/* ── Env table ─────────────────────────────────────────── */
+.env-grid {
+  display: grid; grid-template-columns: 1fr 2fr; gap: 0; margin: 12px 0;
+  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+.env-grid .ek, .env-grid .ev {
+  padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border);
+}
+.env-grid .ek { font-family: var(--mono); font-size: 12px; background: var(--surface); font-weight: 500; }
+.env-grid .ev { color: var(--text-dim); }
+
+/* ── Responsive ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .page { padding: 20px 16px 48px; }
+  .qs-grid { grid-template-columns: 1fr; }
+  .env-grid { grid-template-columns: 1fr; }
+  .env-grid .ek { border-bottom: none; padding-bottom: 2px; }
+  .env-grid .ev { padding-top: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:baseline;">
+    <h1>PuddleJumper</h1>
+    <span class="subtitle">Quick Start &amp; Systems Map</span>
+  </div>
+  <div class="nav-links">
+    <a href="/pj/admin">Admin</a>
+    <a href="/pj">Workspace</a>
+  </div>
+</div>
+
+<div class="page">
+
+<!-- ─────────────── QUICK START ─────────────── -->
+<h2>Quick Start</h2>
+
+<p>PuddleJumper is a <strong>governance control plane</strong> that sits between AI agents (or human operators) and production systems. Every action passes through an approval gate before being dispatched to its target connector.</p>
+
+<div class="qs-grid">
+  <div class="qs-card">
+    <h4><span class="qs-num">1</span> Authenticate</h4>
+    <p>Sign in via GitHub, Google, or Microsoft OAuth at <code>/pj</code>. Tokens are JWT-based with role + tenant scoping.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">2</span> Submit an action</h4>
+    <p>POST to <code>/api/pj/execute</code> with an intent, mode, and plan. The governance engine evaluates it and creates an approval request.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">3</span> Approval chain</h4>
+    <p>If a chain template is assigned, approval routes through sequential or parallel steps. Each step is decided independently. All steps at the same order must approve before the next order activates.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">4</span> Decide</h4>
+    <p>Approve or reject via the Admin UI or <code>POST /api/approvals/:id/decide</code>. Rejections are terminal — all subsequent steps are skipped.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">5</span> Dispatch</h4>
+    <p>Once fully approved, dispatch sends the action to a registered connector: GitHub, Slack, or a generic webhook. Retries use exponential backoff.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">6</span> Monitor</h4>
+    <p>Track metrics on the <a href="/pj/admin">Admin Dashboard</a>. Prometheus-format metrics are available at <code>/metrics</code>. Health checks at <code>/health</code>.</p>
+  </div>
+</div>
+
+<h3>Local development</h3>
+<pre><code># From monorepo root
+pnpm install
+cd apps/puddlejumper
+
+# Set minimum env vars
+export JWT_SECRET=dev-secret
+export AUTH_ISSUER=dev
+export AUTH_AUDIENCE=dev
+
+# Start
+npx tsx src/api/server.ts
+# → http://localhost:3002/pj</code></pre>
+
+<h3>Deploy (Fly.io)</h3>
+<pre><code># From monorepo root (/n8drive)
+fly deploy --app publiclogic-puddlejumper</code></pre>
+
+<!-- ─────────────── SYSTEMS MAP ─────────────── -->
+<h2>Systems Map</h2>
+
+<div class="sys-map">
+
+  <div class="sys-layer">
+    <div class="sys-layer-label clients">Clients</div>
+    <div class="sys-nodes">
+      <div class="sys-node green">PJ Workspace UI</div>
+      <div class="sys-node green">Admin UI</div>
+      <div class="sys-node green">AI Agent / CLI</div>
+      <div class="sys-node green">Webhook Consumer</div>
+    </div>
+  </div>
+
+  <div class="sys-arrow">↕ HTTPS + JWT</div>
+
+  <div class="sys-layer">
+    <div class="sys-layer-label api">API Layer (Express)</div>
+    <div class="sys-nodes">
+      <div class="sys-node">Auth &amp; OAuth</div>
+      <div class="sys-node">Config &amp; Capabilities</div>
+      <div class="sys-node">PRR Intake</div>
+      <div class="sys-node">Access Requests</div>
+      <div class="sys-node">Governance / Execute</div>
+      <div class="sys-node">Approvals</div>
+      <div class="sys-node">Chain Templates</div>
+      <div class="sys-node">Webhook Actions</div>
+      <div class="sys-node">Admin Stats</div>
+      <div class="sys-node">Connectors</div>
+    </div>
+  </div>
+
+  <div class="sys-arrow">↕</div>
+
+  <div class="sys-layer">
+    <div class="sys-layer-label engine">Engine</div>
+    <div class="sys-nodes">
+      <div class="sys-node purple">Governance Engine</div>
+      <div class="sys-node purple">Approval Store</div>
+      <div class="sys-node purple">Chain Store</div>
+      <div class="sys-node purple">Dispatcher Registry</div>
+      <div class="sys-node purple">Approval Metrics</div>
+      <div class="sys-node purple">Validation</div>
+      <div class="sys-node purple">Idempotency Store</div>
+    </div>
+  </div>
+
+  <div class="sys-arrow">↕</div>
+
+  <div class="sys-layer">
+    <div class="sys-layer-label stores">Data Stores (SQLite WAL)</div>
+    <div class="sys-nodes">
+      <div class="sys-node orange">prr.db</div>
+      <div class="sys-node orange">approvals.db</div>
+      <div class="sys-node orange">connectors.db</div>
+      <div class="sys-node orange">oauth_state.db</div>
+    </div>
+  </div>
+
+  <div class="sys-arrow">↕</div>
+
+  <div class="sys-layer">
+    <div class="sys-layer-label dispatch">Dispatch Targets</div>
+    <div class="sys-nodes">
+      <div class="sys-node yellow">GitHub (Issues/PRs)</div>
+      <div class="sys-node yellow">Slack (Messages)</div>
+      <div class="sys-node yellow">Webhook (HTTP POST)</div>
+    </div>
+  </div>
+
+</div>
+
+<h3>Monorepo structure</h3>
+<pre><code>n8drive/
+├── packages/core/          @publiclogic/core — JWT auth, middleware, CSRF
+├── apps/logic-commons/     @publiclogic/logic-commons — OAuth providers, session routes
+├── apps/puddlejumper/      The control plane application
+│   ├── public/             Static assets (admin.html, guide.html, workspace)
+│   ├── src/api/            Express server, routes, middleware
+│   │   ├── server.ts       App factory + route wiring
+│   │   └── routes/         auth, config, prr, access, governance,
+│   │                       approvals, chainTemplates, admin, webhookAction
+│   ├── src/engine/         Business logic
+│   │   ├── approvalStore   Approval CRUD + status machine
+│   │   ├── chainStore      Chain templates, steps, parallel progression
+│   │   ├── dispatch        DispatcherRegistry + GitHub/Slack/Webhook dispatchers
+│   │   ├── governanceEngine  Policy evaluation + approval gate
+│   │   └── approvalMetrics Prometheus-format counters &amp; histograms
+│   └── test/               309 tests across 22 files
+├── Dockerfile              Multi-stage build (Fly.io)
+└── fly.toml                Deployment config (app: publiclogic-puddlejumper)</code></pre>
+
+<!-- ─────────────── API REFERENCE ─────────────── -->
+<h2>API Reference</h2>
+
+<h3>Authentication</h3>
+<table class="api-table">
+  <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/login</td><td><span class="auth-badge public">public</span></td><td>Built-in login (dev/test)</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/auth/github/login</td><td><span class="auth-badge public">public</span></td><td>GitHub OAuth redirect</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/auth/google/login</td><td><span class="auth-badge public">public</span></td><td>Google OAuth redirect</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/auth/microsoft/login</td><td><span class="auth-badge public">public</span></td><td>Microsoft OAuth redirect</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/auth/status</td><td><span class="auth-badge public">public</span></td><td>Current auth state</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/session</td><td><span class="auth-badge public">public</span></td><td>Session info</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/refresh</td><td><span class="auth-badge public">public</span></td><td>Refresh JWT</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/identity</td><td><span class="auth-badge">user</span></td><td>Current identity</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/auth/logout</td><td><span class="auth-badge public">public</span></td><td>Logout + revoke</td></tr>
+  </tbody>
+</table>
+
+<h3>Governance</h3>
+<table class="api-table">
+  <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/pj/execute</td><td><span class="auth-badge">user</span></td><td>Submit action for governance evaluation</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/prompt</td><td><span class="auth-badge admin">admin</span></td><td>System prompt</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/core-prompt</td><td><span class="auth-badge">user</span></td><td>Core prompt</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/evaluate</td><td><span class="auth-badge">deploy</span></td><td>Evaluate action against policies</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/pj/identity-token</td><td><span class="auth-badge public">optional</span></td><td>MS Graph identity exchange</td></tr>
+  </tbody>
+</table>
+
+<h3>Approvals</h3>
+<table class="api-table">
+  <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/approvals</td><td><span class="auth-badge">user</span></td><td>List approvals (filter by status)</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/approvals/:id</td><td><span class="auth-badge">user</span></td><td>Get approval detail</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/approvals/:id/decide</td><td><span class="auth-badge">user</span></td><td>Approve or reject (chain-aware)</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/approvals/:id/dispatch</td><td><span class="auth-badge">user</span></td><td>Dispatch approved action to connector</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/approvals/:id/chain</td><td><span class="auth-badge">user</span></td><td>Chain progress for approval</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/approvals/count/pending</td><td><span class="auth-badge">user</span></td><td>Count of pending approvals</td></tr>
+  </tbody>
+</table>
+
+<h3>Chain Templates</h3>
+<table class="api-table">
+  <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/chain-templates</td><td><span class="auth-badge admin">admin</span></td><td>List all templates</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/chain-templates/:id</td><td><span class="auth-badge admin">admin</span></td><td>Get single template</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/chain-templates</td><td><span class="auth-badge admin">admin</span></td><td>Create template (supports parallel steps)</td></tr>
+    <tr><td><span class="method put">PUT</span></td><td class="path">/api/chain-templates/:id</td><td><span class="auth-badge admin">admin</span></td><td>Update template</td></tr>
+    <tr><td><span class="method delete">DELETE</span></td><td class="path">/api/chain-templates/:id</td><td><span class="auth-badge admin">admin</span></td><td>Delete template</td></tr>
+  </tbody>
+</table>
+
+<h3>Config &amp; Operational</h3>
+<table class="api-table">
+  <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/runtime/context</td><td><span class="auth-badge">user</span></td><td>Runtime context</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/config/tiles</td><td><span class="auth-badge">user</span></td><td>UI tiles config</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/config/capabilities</td><td><span class="auth-badge">user</span></td><td>Capabilities list</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/capabilities/manifest</td><td><span class="auth-badge">user</span></td><td>Full capability manifest</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/pj/actions</td><td><span class="auth-badge">user</span></td><td>Available actions</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/admin/stats</td><td><span class="auth-badge admin">admin</span></td><td>Operational dashboard stats</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/admin/audit</td><td><span class="auth-badge admin">admin</span></td><td>Auth audit log</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/health</td><td><span class="auth-badge public">public</span></td><td>Health check (db + secrets)</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/metrics</td><td><span class="auth-badge public">token</span></td><td>Prometheus metrics</td></tr>
+  </tbody>
+</table>
+
+<h3>PRR &amp; Access</h3>
+<table class="api-table">
+  <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/prr/intake</td><td><span class="auth-badge public">optional</span></td><td>Submit PRR</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/prr</td><td><span class="auth-badge">user</span></td><td>List PRRs</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/prr/:id/status</td><td><span class="auth-badge">user</span></td><td>Update PRR status</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/prr/:id/close</td><td><span class="auth-badge">user</span></td><td>Close PRR</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/access/request</td><td><span class="auth-badge public">optional</span></td><td>Submit access request</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/access/request/:id/status</td><td><span class="auth-badge">user</span></td><td>Update access request status</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/access/request/:id/close</td><td><span class="auth-badge">user</span></td><td>Close access request</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/pj/actions/webhook</td><td><span class="auth-badge">user</span></td><td>Fire webhook action</td></tr>
+  </tbody>
+</table>
+
+<!-- ─────────────── PARALLEL APPROVAL ─────────────── -->
+<h2>Parallel Approval Chains</h2>
+
+<p>Chain templates support both <strong>sequential</strong> and <strong>parallel</strong> step routing. Steps sharing the same <code>order</code> value run in parallel.</p>
+
+<h3>How it works</h3>
+<ul>
+  <li>Steps at order <code>N</code> all activate simultaneously when order <code>N</code> is reached</li>
+  <li>Each step is decided independently (different approvers can act concurrently)</li>
+  <li>All steps at order <code>N</code> must be <strong>approved</strong> before order <code>N+1</code> activates</li>
+  <li>A <strong>rejection</strong> at any step is terminal — active siblings and all subsequent steps are skipped</li>
+</ul>
+
+<h3>Example template</h3>
+<pre><code>{
+  "name": "Dual-review then release",
+  "steps": [
+    { "label": "Security Review", "approverRole": "security", "order": 0 },
+    { "label": "Legal Review",    "approverRole": "legal",    "order": 0 },
+    { "label": "Release Manager", "approverRole": "release",  "order": 1 }
+  ]
+}
+// Step 0: Security + Legal run in parallel
+// Step 1: Release Manager runs only after both order-0 steps approve</code></pre>
+
+<!-- ─────────────── ENV VARS ─────────────── -->
+<h2>Key Environment Variables</h2>
+
+<div class="env-grid">
+  <div class="ek">JWT_SECRET</div><div class="ev">Secret for signing JWTs (required)</div>
+  <div class="ek">AUTH_ISSUER</div><div class="ev">JWT issuer claim</div>
+  <div class="ek">AUTH_AUDIENCE</div><div class="ev">JWT audience claim</div>
+  <div class="ek">GITHUB_CLIENT_ID / _SECRET</div><div class="ev">GitHub OAuth app credentials</div>
+  <div class="ek">GOOGLE_CLIENT_ID / _SECRET</div><div class="ev">Google OAuth credentials</div>
+  <div class="ek">MICROSOFT_CLIENT_ID / _SECRET</div><div class="ev">Microsoft OAuth credentials</div>
+  <div class="ek">CONNECTOR_STATE_SECRET</div><div class="ev">HMAC key for connector state integrity</div>
+  <div class="ek">METRICS_TOKEN</div><div class="ev">Bearer token for /metrics scraping (optional)</div>
+  <div class="ek">PORT</div><div class="ev">Server port (default: 3002)</div>
+  <div class="ek">NODE_ENV</div><div class="ev">production | development | test</div>
+</div>
+
+<p style="margin-top:32px;font-size:12px;color:var(--text-dim);text-align:center;">
+  PuddleJumper Control Plane · 309 tests · Deployed on <a href="https://fly.io">Fly.io</a> as publiclogic-puddlejumper
+</p>
+
+</div>
+</body>
+</html>

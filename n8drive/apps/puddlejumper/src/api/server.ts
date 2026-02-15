@@ -330,6 +330,19 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     }
   });
 
+  // ── Quick Start / Systems Map ─────────────────────────────────────────
+  const GUIDE_HTML_FILE = path.join(PUBLIC_DIR, "guide.html");
+  app.get("/pj/guide", (_req, res) => {
+    try {
+      res.setHeader("Cache-Control", "no-store, max-age=0");
+      res.type("html").sendFile(GUIDE_HTML_FILE);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to serve guide HTML:", (err as Error).message);
+      res.status(503).json({ error: "Guide HTML not available" });
+    }
+  });
+
   // ── Auth gating for /api ──────────────────────────────────────────────
   app.use("/api", (req, res, next) => {
     if (req.method === "POST" && req.path === "/login") { next(); return; }

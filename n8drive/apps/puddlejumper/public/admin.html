@@ -18,6 +18,7 @@
   --green: #34d399;
   --red: #f87171;
   --yellow: #fbbf24;
+  --purple: #a78bfa;
   --radius: 8px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
@@ -34,21 +35,27 @@ a:hover { text-decoration: underline; }
 }
 .header h1 { font-size: 18px; font-weight: 600; }
 .header .subtitle { font-size: 13px; color: var(--text-dim); margin-left: 12px; }
+.header-right { display: flex; align-items: center; gap: 10px; }
 .header .refresh-btn {
   background: var(--accent); color: #fff; border: none; border-radius: var(--radius);
   padding: 6px 14px; font-size: 13px; cursor: pointer; font-family: var(--font);
 }
 .header .refresh-btn:hover { opacity: 0.9; }
 .header .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.header .guide-link {
+  font-size: 13px; color: var(--text-dim); padding: 6px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.header .guide-link:hover { color: var(--text); border-color: var(--text-dim); text-decoration: none; }
 
 .tabs {
   display: flex; gap: 0; background: var(--surface); border-bottom: 1px solid var(--border);
-  padding: 0 24px;
+  padding: 0 24px; overflow-x: auto;
 }
 .tab {
   padding: 10px 20px; font-size: 14px; cursor: pointer; border: none;
   background: transparent; color: var(--text-dim); border-bottom: 2px solid transparent;
-  font-family: var(--font); transition: color 0.15s, border-color 0.15s;
+  font-family: var(--font); transition: color 0.15s, border-color 0.15s; white-space: nowrap;
 }
 .tab:hover { color: var(--text); }
 .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
@@ -134,6 +141,8 @@ tbody tr:hover { background: var(--surface-hover); }
 .btn-approve { background: var(--green); color: #000; }
 .btn-reject { background: var(--red); color: #fff; }
 .btn-dispatch { background: var(--accent); color: #fff; }
+.btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.btn-danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
 .btn:hover { opacity: 0.85; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -196,10 +205,44 @@ tbody tr:hover { background: var(--surface-hover); }
 }
 .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── Chain template cards ──────────────────────────────────────────── */
+.template-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px; margin-bottom: 24px;
+}
+.template-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; position: relative;
+}
+.template-card .template-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.template-card .template-id { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
+.template-card .template-meta { font-size: 12px; color: var(--text-dim); margin-top: 8px; }
+.template-steps-viz {
+  display: flex; align-items: center; gap: 0; margin-top: 12px; flex-wrap: wrap;
+}
+.step-group {
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+.step-pill {
+  background: rgba(79,143,247,0.12); color: var(--accent); border: 1px solid rgba(79,143,247,0.25);
+  border-radius: 14px; padding: 3px 10px; font-size: 11px; white-space: nowrap;
+}
+.step-pill.parallel { background: rgba(167,139,250,0.12); color: var(--purple); border-color: rgba(167,139,250,0.25); }
+.step-arrow { color: var(--text-dim); font-size: 14px; margin: 0 6px; }
+.parallel-bracket {
+  font-size: 11px; color: var(--purple); margin-bottom: 2px; font-weight: 600;
+}
+.template-actions {
+  display: flex; gap: 6px; margin-top: 14px; padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.template-default { position: absolute; top: 12px; right: 14px; font-size: 10px; color: var(--green); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .main { padding: 16px; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .template-grid { grid-template-columns: 1fr; }
   table { font-size: 12px; }
   thead th, tbody td { padding: 8px 6px; }
 }
@@ -212,11 +255,15 @@ tbody tr:hover { background: var(--surface-hover); }
     <h1>PuddleJumper Admin</h1>
     <span class="subtitle">Control Plane</span>
   </div>
-  <button class="refresh-btn" onclick="refresh()" id="refresh-btn">⟳ Refresh</button>
+  <div class="header-right">
+    <a class="guide-link" href="/pj/guide">Quick Start</a>
+    <button class="refresh-btn" onclick="refresh()" id="refresh-btn">⟳ Refresh</button>
+  </div>
 </div>
 
 <div class="tabs">
   <button class="tab active" data-tab="queue" onclick="switchTab('queue')">Approval Queue</button>
+  <button class="tab" data-tab="chains" onclick="switchTab('chains')">Chain Templates</button>
   <button class="tab" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
 </div>
 
@@ -268,6 +315,16 @@ tbody tr:hover { background: var(--surface-hover); }
       <button id="next-btn" onclick="nextPage()">Next →</button>
     </div>
   </div>
+</div>
+
+<!-- Chain Templates Tab -->
+<div class="main" id="tab-chains" style="display:none;">
+  <div class="table-header">
+    <h2>Chain Templates</h2>
+    <div style="font-size:13px;color:var(--text-dim)">Define multi-step approval routing with sequential and parallel steps</div>
+  </div>
+  <div id="templates-grid" class="template-grid"></div>
+  <div id="templates-empty" class="empty-state" style="display:none;">No chain templates configured.</div>
 </div>
 
 <!-- Dashboard Tab -->
@@ -361,8 +418,7 @@ async function api(path, opts = {}) {
 function showAuthGate() {
   authenticated = false;
   document.getElementById("auth-gate").style.display = "flex";
-  document.getElementById("tab-queue").style.display = "none";
-  document.getElementById("tab-dashboard").style.display = "none";
+  document.querySelectorAll(".main").forEach(el => el.style.display = "none");
   document.querySelector(".tabs").style.display = "none";
 }
 
@@ -378,9 +434,11 @@ function hideAuthGate() {
 // ── Tabs ──────────────────────────────────────────────────────────────────
 function switchTab(tab) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
-  document.getElementById("tab-queue").style.display = tab === "queue" ? "block" : "none";
-  document.getElementById("tab-dashboard").style.display = tab === "dashboard" ? "block" : "none";
+  document.querySelectorAll(".main").forEach(el => el.style.display = "none");
+  const el = document.getElementById("tab-" + tab);
+  if (el) el.style.display = "block";
   if (tab === "dashboard") loadStats();
+  if (tab === "chains") loadTemplates();
 }
 
 // ── Approval Queue ────────────────────────────────────────────────────────
@@ -424,13 +482,19 @@ function renderApprovals() {
 
   tbody.innerHTML = sorted.map(a => {
     const chain = a.chainSummary;
-    const chainHtml = chain
-      ? `<div class="chain-progress">
+    let chainHtml;
+    if (chain) {
+      // Show parallel-aware progress: multiple active steps shown
+      const activeCount = chain.activeSteps || 0;
+      const parallelHint = activeCount > 1 ? ` <span style="color:var(--purple);font-size:10px" title="${activeCount} steps active in parallel">⊕${activeCount}</span>` : "";
+      chainHtml = `<div class="chain-progress">
            <div class="chain-bar"><div class="chain-bar-fill" style="width:${(chain.completedSteps / chain.totalSteps * 100)}%"></div></div>
-           <span>${chain.completedSteps}/${chain.totalSteps}</span>
+           <span>${chain.completedSteps}/${chain.totalSteps}${parallelHint}</span>
            ${chain.currentStepLabel ? `<span style="color:var(--text-dim)">· ${esc(chain.currentStepLabel)}</span>` : ""}
-         </div>`
-      : `<span style="color:var(--text-dim)">—</span>`;
+         </div>`;
+    } else {
+      chainHtml = `<span style="color:var(--text-dim)">—</span>`;
+    }
 
     const actions = [];
     if (a.approval_status === "pending") {
@@ -529,6 +593,13 @@ async function showDetail(id) {
       </div>`;
 
     if (chain) {
+      // Group steps by order for parallel visualization
+      const stepsByOrder = {};
+      chain.steps.forEach(s => {
+        if (!stepsByOrder[s.order]) stepsByOrder[s.order] = [];
+        stepsByOrder[s.order].push(s);
+      });
+
       html += `
         <div class="detail-section">
           <h4>Chain Progress — ${esc(chain.templateName)}</h4>
@@ -537,13 +608,20 @@ async function showDetail(id) {
             <span>${chain.completedSteps} of ${chain.totalSteps} steps complete</span>
           </div>
           <ul class="chain-steps-list">
-            ${chain.steps.map(s => `
+            ${chain.steps.map(s => {
+              const siblings = stepsByOrder[s.order];
+              const isParallel = siblings && siblings.length > 1;
+              return `
               <li>
                 <span class="step-dot ${s.status}"></span>
-                <span><strong>${esc(s.label)}</strong> — <span class="status-badge ${s.status}">${s.status}</span></span>
+                <span>
+                  <strong>${esc(s.label)}</strong>
+                  ${isParallel ? '<span style="color:var(--purple);font-size:10px;margin-left:4px" title="Parallel step">⊕</span>' : ''}
+                  — <span class="status-badge ${s.status}">${s.status}</span>
+                </span>
                 ${s.deciderId ? `<span style="color:var(--text-dim);margin-left:auto;font-size:12px">${esc(s.deciderId)} · ${timeAgo(s.decidedAt)}</span>` : ""}
-              </li>
-            `).join("")}
+              </li>`;
+            }).join("")}
           </ul>
         </div>`;
     }
@@ -588,6 +666,108 @@ async function showDetail(id) {
 function closeDetail(e) {
   if (e && e.target !== document.getElementById("detail-overlay")) return;
   document.getElementById("detail-overlay").classList.remove("open");
+}
+
+// ── Chain Templates ───────────────────────────────────────────────────────
+async function loadTemplates() {
+  try {
+    const json = await api("/api/chain-templates");
+    if (!json.success) { showToast(json.error || "Failed to load templates", "error"); return; }
+    hideAuthGate();
+    renderTemplates(json.data);
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to load templates", "error");
+  }
+}
+
+function renderTemplates(templates) {
+  const grid = document.getElementById("templates-grid");
+  const empty = document.getElementById("templates-empty");
+  if (!templates || templates.length === 0) {
+    grid.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  grid.innerHTML = templates.map(t => {
+    const steps = t.steps || [];
+    // Group by order for parallel visualization
+    const byOrder = {};
+    steps.forEach(s => {
+      if (!byOrder[s.order]) byOrder[s.order] = [];
+      byOrder[s.order].push(s);
+    });
+    const orders = Object.keys(byOrder).sort((a, b) => Number(a) - Number(b));
+
+    let vizHtml = "";
+    orders.forEach((ord, i) => {
+      const group = byOrder[ord];
+      if (i > 0) vizHtml += `<span class="step-arrow">→</span>`;
+      if (group.length > 1) {
+        // Parallel group
+        vizHtml += `<div class="step-group">
+          <span class="parallel-bracket">⊕ parallel</span>
+          ${group.map(s => `<span class="step-pill parallel">${esc(s.label)}</span>`).join("")}
+        </div>`;
+      } else {
+        vizHtml += `<span class="step-pill">${esc(group[0].label)}</span>`;
+      }
+    });
+
+    const isDefault = t.id === "default";
+    const created = t.created_at ? new Date(t.created_at).toLocaleDateString() : "";
+
+    return `<div class="template-card">
+      ${isDefault ? '<span class="template-default">Default</span>' : ""}
+      <div class="template-name">${esc(t.name)}</div>
+      <div class="template-id">${esc(t.id)}</div>
+      <div class="template-meta">${steps.length} step${steps.length !== 1 ? "s" : ""} · ${orders.length} stage${orders.length !== 1 ? "s" : ""}${created ? " · Created " + created : ""}</div>
+      <div class="template-steps-viz">${vizHtml}</div>
+      <div class="template-actions">
+        <button class="btn btn-secondary" onclick="showTemplateDetail('${esc(t.id)}')">View JSON</button>
+        ${!isDefault ? `<button class="btn btn-danger" onclick="deleteTemplate('${esc(t.id)}')">Delete</button>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function showTemplateDetail(id) {
+  const overlay = document.getElementById("detail-overlay");
+  const content = document.getElementById("detail-content");
+  document.getElementById("detail-title").textContent = "Template Detail";
+  overlay.classList.add("open");
+  content.innerHTML = "<p>Loading…</p>";
+  try {
+    const json = await api(`/api/chain-templates/${encodeURIComponent(id)}`);
+    if (!json.success) { content.innerHTML = "<p>Failed to load</p>"; return; }
+    const t = json.data;
+    content.innerHTML = `
+      <div class="detail-section">
+        <h4>Template</h4>
+        <div class="detail-field"><span class="lbl">ID</span><span style="font-family:var(--mono);font-size:12px">${esc(t.id)}</span></div>
+        <div class="detail-field"><span class="lbl">Name</span><span>${esc(t.name)}</span></div>
+        <div class="detail-field"><span class="lbl">Steps</span><span>${(t.steps || []).length}</span></div>
+      </div>
+      <div class="detail-section">
+        <h4>Definition</h4>
+        <pre style="background:var(--surface);padding:12px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);overflow-x:auto;max-height:400px;white-space:pre-wrap">${esc(JSON.stringify(t, null, 2))}</pre>
+      </div>`;
+  } catch (e) {
+    if (e.message !== "Unauthorized") content.innerHTML = "<p>Failed to load</p>";
+  }
+}
+
+async function deleteTemplate(id) {
+  if (!confirm(`Delete template "${id}"?`)) return;
+  try {
+    const json = await api(`/api/chain-templates/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!json.success) { showToast(json.error || "Delete failed", "error"); return; }
+    showToast("Template deleted", "success");
+    loadTemplates();
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Delete failed", "error");
+  }
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────
@@ -677,9 +857,10 @@ async function refresh() {
   btn.disabled = true;
   btn.textContent = "⟳ Loading…";
   try {
-    await loadApprovals();
     const active = document.querySelector(".tab.active").dataset.tab;
+    if (active === "queue") await loadApprovals();
     if (active === "dashboard") await loadStats();
+    if (active === "chains") await loadTemplates();
   } finally {
     btn.disabled = false;
     btn.textContent = "⟳ Refresh";
