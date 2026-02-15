@@ -10,6 +10,7 @@
 - All protected `/api/*` routes accept either:
   - `Authorization: Bearer <JWT>` (debug/external caller compatibility), or
   - `jwt` cookie (browser session path).
+- Token extraction order: cookie first, then `Authorization: Bearer` header (see `extractToken` in `@publiclogic/core`).
 - Tokens are verified server-side only.
 - Supported verification modes:
   - `RS256` using `JWT_PUBLIC_KEY` (preferred).
@@ -21,11 +22,21 @@
 - Client-supplied identity headers (for example `x-user-*`, `x-session-*`) are ignored.
 - `/api/logout` clears the `jwt` cookie.
 
+### Multi-Provider OAuth (Logic Commons)
+- Logic Commons (`apps/logic-commons`) supports Google and GitHub OAuth token exchange:
+  - `POST /api/login` with `{ provider: "google", token }` — verified via `jose` OIDC ID-token validation.
+  - `POST /api/login` with `{ provider: "github", token }` — verified via GitHub `GET /user` API.
+- Access tokens (1h) are returned in the JSON response body.
+- Refresh tokens (7d, `token_type: "refresh"`) are set as `HttpOnly` `pj_refresh` cookie (`Path=/api/refresh`, `SameSite=Lax`).
+- `POST /api/refresh` validates the refresh cookie and issues a new access token; the refresh token itself is not rotated.
+
 ## CSRF Protection
 - Mutating `/api/*` methods (`POST`, `PUT`, `PATCH`, `DELETE`) require:
   - `X-PuddleJumper-Request: true`
 - Safe methods (`GET`, `HEAD`, `OPTIONS`) are exempt.
 - Missing marker on a mutating request returns `403`.
+- The CSRF middleware is implemented in `@publiclogic/core` (`csrfProtection()`) and mounted on both the PuddleJumper and Logic Commons servers.
+- The frontend fetch wrapper (`pjFetch`) automatically attaches the CSRF header on all mutating requests.
 
 ## Authorization
 - `/api/identity`: authenticated user required.
@@ -67,6 +78,13 @@
   - `X-Content-Type-Options: nosniff`
   - `X-Frame-Options: SAMEORIGIN`
   - restrictive baseline `Content-Security-Policy`
+- Next.js frontend (`web/`) security headers (via `next.config.ts`):
+  - `Content-Security-Policy`: `default-src 'self'`; `object-src 'none'`; `base-uri 'none'`; `frame-ancestors 'none'`.
+  - `X-Content-Type-Options: nosniff`
+  - `X-Frame-Options: DENY`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+  - `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
 - Route-level rate limiting:
   - `/api/login`
   - `/api/evaluate`

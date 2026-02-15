@@ -51,6 +51,11 @@
 - Default: unset/false (built-in login endpoint returns 404).
 - Read in: `/Users/n8/Documents/New project/n8drive/src/api/server.ts`.
 
+## `ALLOW_PROD_ADMIN_LOGIN`
+- Purpose: Allow built-in `/api/login` credentials to operate when `NODE_ENV=production` (requires `ALLOW_ADMIN_LOGIN=true`).
+- Default: unset/false (production instances must rely on delegated identity providers).
+- Read in: `/Users/n8/Documents/New project/n8drive/src/api/server.ts`.
+
 ## `PJ_CANONICAL_HOST_ALLOWLIST`
 - Purpose: Additional allowed hosts for canonical integrity fetches.
 - Default: empty (core allowlist still includes `raw.githubusercontent.com` and `github.com`).

@@ -7,4 +7,10 @@ export default defineConfig({
     baseURL: 'http://localhost:3002',
     headless: true,
   },
+  webServer: {
+    command: 'PORT=3002 JWT_SECRET=test-secret AUTH_ISSUER=test-issuer AUTH_AUDIENCE=test-audience pnpm --filter @publiclogic/logic-commons dev',
+    port: 3002,
+    reuseExistingServer: true,
+    timeout: 15_000,
+  },
 });

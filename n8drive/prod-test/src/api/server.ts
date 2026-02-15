@@ -228,7 +228,15 @@ type MsGraphProfile = {
 };
 
 function isBuiltInLoginEnabled(nodeEnv: string): boolean {
-  return process.env.ALLOW_ADMIN_LOGIN === "true" && nodeEnv !== "production";
+  const allowAdminLogin = process.env.ALLOW_ADMIN_LOGIN === "true";
+  const allowProductionOverride = process.env.ALLOW_PROD_ADMIN_LOGIN === "true";
+  if (!allowAdminLogin) {
+    return false;
+  }
+  if (nodeEnv !== "production") {
+    return true;
+  }
+  return allowProductionOverride;
 }
 
 function parseJsonFromEnv(name: string): unknown | null {
@@ -1508,8 +1516,12 @@ function assertProductionInvariants(nodeEnv: string, authOptions: AuthOptions): 
   if (nodeEnv !== "production") {
     return;
   }
-  if (process.env.ALLOW_ADMIN_LOGIN === "true") {
+  const allowProductionAdminLogin = process.env.ALLOW_PROD_ADMIN_LOGIN === "true";
+  if (process.env.ALLOW_ADMIN_LOGIN === "true" && !allowProductionAdminLogin) {
     throw new Error("ALLOW_ADMIN_LOGIN must not be true in production");
+  }
+  if (allowProductionAdminLogin && process.env.ALLOW_ADMIN_LOGIN !== "true") {
+    throw new Error("ALLOW_PROD_ADMIN_LOGIN requires ALLOW_ADMIN_LOGIN to also be true");
   }
 
   const requiredEnvVars = [

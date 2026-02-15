@@ -90,6 +90,16 @@ importers:
       serverless-http:
         specifier: ^2.2.0
         version: 2.7.0
+    devDependencies:
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      supertest:
+        specifier: ^7.1.4
+        version: 7.2.2
+      vitest:
+        specifier: ^1.0.0
+        version: 1.6.1(@types/node@22.19.11)(jsdom@28.0.0)
 
   apps/puddlejumper:
     dependencies:
@@ -108,6 +118,19 @@ importers:
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
+    devDependencies:
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      bcryptjs:
+        specifier: ^2.4.3
+        version: 2.4.3
+      supertest:
+        specifier: ^7.1.4
+        version: 7.2.2
+      vitest:
+        specifier: ^1.0.0
+        version: 1.6.1(@types/node@22.19.11)(jsdom@28.0.0)
 
   apps/website:
     dependencies:
@@ -1691,7 +1714,6 @@ packages:
 
   /bcryptjs@2.4.3:
     resolution: {integrity: sha512-V/Hy/X9Vt7f3BbPJEi8BdVFMByHi+jNXrYkW3huaybV/kQ0KJg0Y6PkEMbn+zeT+i+SiKZ/HMqJGIIt4LZDqNQ==}
-    dev: false
 
   /better-sqlite3@11.10.0:
     resolution: {integrity: sha512-EwhOpyXiOEL/lKzHz9AW1msWFNzGc/z+LzeB3/jnFJpxu+th2yqvzsSWas1v9jgs9+xiXJcD5A8CJxAG2TaghQ==}
