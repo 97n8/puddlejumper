@@ -4,8 +4,9 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 const ROOT = process.cwd();
-const masterHtmlPath = path.join(ROOT, "public", "puddlejumper-master-environment-control.html");
-const serverPath = path.join(ROOT, "src", "api", "server.ts");
+const PJ_ROOT = path.join(ROOT, "apps", "puddlejumper");
+const masterHtmlPath = path.join(PJ_ROOT, "public", "puddlejumper-master-environment-control.html");
+const serverPath = path.join(PJ_ROOT, "src", "api", "server.ts");
 
 function readFile(filePath) {
   try {
