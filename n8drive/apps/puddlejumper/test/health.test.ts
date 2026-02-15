@@ -61,3 +61,37 @@ describe("/health endpoint", () => {
     expect(res.status).toBe(200);
   });
 });
+
+// ── /pj workspace HTML ──────────────────────────────────────────────────────
+
+describe("/pj workspace HTML", () => {
+  let app: ReturnType<typeof createApp>;
+
+  beforeAll(() => {
+    const dataDir = path.resolve(__dirname, "../data");
+    fs.mkdirSync(dataDir, { recursive: true });
+    process.env.CONNECTOR_STATE_SECRET = "test-pj-secret";
+    app = createApp("test");
+  });
+
+  it("returns 200 with HTML content", async () => {
+    const res = await request(app).get("/pj").expect(200);
+    expect(res.headers["content-type"]).toMatch(/html/);
+    expect(res.text).toContain("<html");
+  });
+
+  it("sets Cache-Control: no-store", async () => {
+    const res = await request(app).get("/pj").expect(200);
+    expect(res.headers["cache-control"]).toContain("no-store");
+  });
+
+  it("/puddle-jumper alias also works", async () => {
+    const res = await request(app).get("/puddle-jumper").expect(200);
+    expect(res.headers["content-type"]).toMatch(/html/);
+  });
+
+  it("/pj-workspace alias also works", async () => {
+    const res = await request(app).get("/pj-workspace").expect(200);
+    expect(res.headers["content-type"]).toMatch(/html/);
+  });
+});

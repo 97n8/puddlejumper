@@ -295,8 +295,14 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   // ── PJ workspace HTML routes ──────────────────────────────────────────
   const sendPjWorkspace = (res: express.Response): void => {
-    res.setHeader("Cache-Control", "no-store, max-age=0");
-    res.type("html").send(renderPjWorkspaceHtml(PJ_WORKSPACE_FILE, trustedParentOrigins));
+    try {
+      res.setHeader("Cache-Control", "no-store, max-age=0");
+      res.type("html").send(renderPjWorkspaceHtml(PJ_WORKSPACE_FILE, trustedParentOrigins));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to serve PJ workspace HTML:", (err as Error).message);
+      res.status(503).json({ error: "Workspace HTML not available" });
+    }
   };
   app.get("/pj", (_req, res) => sendPjWorkspace(res));
   app.get("/puddle-jumper", (_req, res) => sendPjWorkspace(res));

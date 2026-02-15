@@ -6,6 +6,7 @@
   "main": "dist/api/server.js",
   "files": [
     "dist",
+    "public",
     "package.json"
   ],
   "scripts": {
