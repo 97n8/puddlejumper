@@ -70,6 +70,16 @@ jobs:
           CONNECTOR_STATE_SECRET=ci-test-connector-secret
           ACCESS_NOTIFICATION_WEBHOOK_URL=http://localhost:9999/noop
           CONTROLLED_DATA_DIR=/app/data
+          AUTH_ISSUER=ci-test-issuer
+          AUTH_AUDIENCE=ci-test-audience
+          PRR_DB_PATH=/app/data/prr.db
+          CONNECTOR_DB_PATH=/app/data/connectors.db
+          IDEMPOTENCY_DB_PATH=/app/data/idempotency.db
+          RATE_LIMIT_DB_PATH=/app/data/ratelimit.db
+          FRONTEND_URL=http://localhost:3000
+          PJ_RUNTIME_CONTEXT_JSON={"env":"ci","label":"CI Smoke Test"}
+          PJ_RUNTIME_TILES_JSON=[{"id":"ci","label":"CI","url":"http://localhost:3000"}]
+          PJ_RUNTIME_CAPABILITIES_JSON={"automations":[],"quickActions":[{"id":"ci","label":"CI Action","route":"/ci"}]}
           EOF
 
       - name: Build Docker image
