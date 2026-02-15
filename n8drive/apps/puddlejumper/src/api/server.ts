@@ -63,6 +63,7 @@ import { processAccessNotificationQueueOnce } from "./accessNotificationWorker.j
 
 // Route modules
 import { createAuthRoutes } from "./routes/auth.js";
+import { createGitHubOAuthRoutes } from "./routes/githubOAuth.js";
 import { createConfigRoutes } from "./routes/config.js";
 import { createPrrRoutes } from "./routes/prr.js";
 import { createAccessRoutes } from "./routes/access.js";
@@ -238,6 +239,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       optionalAuthMiddleware(req, res, next); return;
     }
     if (req.method === "GET" && req.path === "/pj/identity-token") { optionalAuthMiddleware(req, res, next); return; }
+    if (req.path.startsWith("/auth/github/")) { next(); return; }
     authMiddleware(req, res, next);
   });
   app.use("/api", csrfProtection());
@@ -246,6 +248,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createAuthRoutes({
     builtInLoginEnabled, loginUsers, loginRateLimit, nodeEnv, trustedParentOrigins,
   }));
+  app.use("/api", createGitHubOAuthRoutes({ nodeEnv }));
   app.use("/api", createConfigRoutes({ runtimeContext, runtimeTiles, runtimeCapabilities }));
   app.use("/api", createPrrRoutes({ prrStore }));
   app.use("/api", createAccessRoutes({ prrStore }));
