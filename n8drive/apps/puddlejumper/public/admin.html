@@ -5,6 +5,437 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PuddleJumper — Control Plane Admin</title>
 <link rel="stylesheet" href="/styles/pj-admin.css">
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:baseline;gap:10px;">
+    <h1>PuddleJumper Admin</h1>
+    <span class="subtitle">Control Plane</span>
+    <span id="workspace-name" class="subtitle" style="color:var(--green);display:none;"></span>
+  </div>
+  <div class="header-right">
+    <a class="guide-link" href="/pj/guide">Quick Start</a>
+    <button class="refresh-btn" onclick="refresh()" id="refresh-btn">⟳ Refresh</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="queue" onclick="switchTab('queue')">Approval Queue</button>
+  <button class="tab" data-tab="chains" onclick="switchTab('chains')">Chain Templates</button>
+  <button class="tab" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+</div>
+
+<!-- Auth gate (shown when user isn't authenticated) -->
+<div id="auth-gate" style="display:none;">
+  <h2>Welcome to PuddleJumper</h2>
+  <p>Sign in to view governed operations and approval workflows.</p>
+  <a href="/api/auth/github/login" style="display:inline-flex;align-items:center;gap:8px;background:#24292e;color:#fff;padding:10px 20px;border-radius:var(--radius);font-size:14px;font-weight:500;text-decoration:none;margin-top:8px">
+    <svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    Sign in with GitHub
+  </a>
+</div>
+
+<!-- Viewer banner -->
+<div class="viewer-banner">
+  <span>Viewing as guest — <a href="/api/auth/github/login">sign up</a> to govern your own operations</span>
+</div>
+
+<!-- Approval Queue Tab -->
+<div class="main" id="tab-queue">
+  <div class="table-header">
+    <h2>Approvals</h2>
+    <div class="filter-group">
+      <select id="status-filter" onchange="loadApprovals()">
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+        <option value="dispatched">Dispatched</option>
+        <option value="dispatch_failed">Dispatch Failed</option>
+        <option value="expired">Expired</option>
+        <option value="">All</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="approvals-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('action_intent')">Intent</th>
+          <th onclick="sortBy('approval_status')">Status</th>
+          <th onclick="sortBy('chain')">Chain Progress</th>
+          <th onclick="sortBy('operator_id')">Operator</th>
+          <th onclick="sortBy('created_at')">Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="approvals-body"></tbody>
+    </table>
+    <div id="empty-state" class="empty-state" style="display:none;">No approvals found.</div>
+  </div>
+
+  <div class="pagination">
+    <span id="page-info"></span>
+    <div style="display:flex;gap:8px;">
+      <button id="prev-btn" onclick="prevPage()" disabled>← Previous</button>
+      <button id="next-btn" onclick="nextPage()">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chain Templates Tab -->
+<div class="main" id="tab-chains" style="display:none;">
+  <div class="table-header">
+    <h2>Chain Templates</h2>
+    <div style="font-size:13px;color:var(--text-dim)">Define multi-step approval routing with sequential and parallel steps</div>
+  </div>
+  <div id="templates-grid" class="template-grid"></div>
+  <div id="templates-empty" class="empty-state" style="display:none;">No chain templates configured.</div>
+</div>
+
+<!-- Dashboard Tab -->
+<div class="main" id="tab-dashboard" style="display:none;">
+  <h2 style="font-size:16px;font-weight:600;margin-bottom:16px;">Operational Dashboard</h2>
+
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card"><div class="label">Pending Approvals</div><div class="value pending" id="s-pending">—</div></div>
+    <div class="stat-card"><div class="label">Success Rate</div><div class="value success" id="s-success-rate">—</div></div>
+    <div class="stat-card"><div class="label">Dispatch Retries</div><div class="value neutral" id="s-retries">—</div></div>
+    <div class="stat-card"><div class="label">Avg Approval Time</div><div class="value neutral" id="s-avg-time">—</div></div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="label">Approvals Created</div><div class="value neutral" id="s-created">—</div></div>
+    <div class="stat-card"><div class="label">Approved</div><div class="value success" id="s-approved">—</div></div>
+    <div class="stat-card"><div class="label">Rejected</div><div class="value failure" id="s-rejected">—</div></div>
+    <div class="stat-card"><div class="label">Expired</div><div class="value neutral" id="s-expired">—</div></div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="label">Dispatch Success</div><div class="value success" id="s-d-success">—</div></div>
+    <div class="stat-card"><div class="label">Dispatch Failure</div><div class="value failure" id="s-d-failure">—</div></div>
+    <div class="stat-card"><div class="label">Avg Dispatch Latency</div><div class="value neutral" id="s-d-latency">—</div></div>
+    <div class="stat-card"><div class="label">Active Chain Steps</div><div class="value pending" id="s-chain-steps">—</div></div>
+  </div>
+
+  <h2 style="font-size:16px;font-weight:600;margin:24px 0 12px;">Recent Dispatches</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Intent</th>
+        <th>Status</th>
+        <th>Operator</th>
+        <th>Dispatched</th>
+      </tr>
+    </thead>
+    <tbody id="dispatch-body"></tbody>
+  </table>
+  <div id="dispatch-empty" class="empty-state" style="display:none;">No recent dispatches.</div>
+</div>
+
+<!-- Detail slide-out panel -->
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetail(event)">
+  <div class="detail-panel" id="detail-panel" onclick="event.stopPropagation()">
+    <h3>
+      <span id="detail-title">Approval Detail</span>
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+    </h3>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+let currentPage = 0;
+const PAGE_SIZE = 20;
+let sortField = "created_at";
+let sortDir = -1; // -1 = newest first
+let approvals = [];
+let authenticated = false;
+let userRole = null; // 'admin' | 'viewer' | null
+
+// ── API helpers ───────────────────────────────────────────────────────────
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+function authHeaders() {
+  const headers = { "Content-Type": "application/json" };
+  const token = getCookie("pj_token") || localStorage.getItem("pj_token");
+  if (token) headers["Authorization"] = "Bearer " + token;
+  const csrf = getCookie("csrf_token");
+  if (csrf) headers["x-csrf-token"] = csrf;
+  return headers;
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { headers: authHeaders(), ...opts });
+  if (res.status === 401 || res.status === 403) {
+    showAuthGate();
+    throw new Error("Unauthorized");
+  }
+  return res.json();
+}
+
+// ── Auth gate ─────────────────────────────────────────────────────────────
+function showAuthGate() {
+  authenticated = false;
+  document.getElementById("auth-gate").style.display = "flex";
+  document.querySelectorAll(".main").forEach(el => el.style.display = "none");
+  document.querySelector(".tabs").style.display = "none";
+}
+
+function hideAuthGate() {
+  authenticated = true;
+  document.getElementById("auth-gate").style.display = "none";
+  document.querySelector(".tabs").style.display = "flex";
+  // Apply role class
+  if (userRole && userRole !== "admin") {
+    document.body.classList.add("role-viewer");
+  } else {
+    document.body.classList.remove("role-viewer");
+  }
+  // Show the active tab
+  const active = document.querySelector(".tab.active").dataset.tab;
+  switchTab(active);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+  document.querySelectorAll(".main").forEach(el => el.style.display = "none");
+  const el = document.getElementById("tab-" + tab);
+  if (el) el.style.display = "block";
+  if (tab === "dashboard") loadStats();
+  if (tab === "chains") loadTemplates();
+}
+
+// ── Approval Queue ────────────────────────────────────────────────────────
+async function loadApprovals() {
+  const status = document.getElementById("status-filter").value;
+  const qs = status ? `?status=${status}&limit=${PAGE_SIZE}&offset=${currentPage * PAGE_SIZE}` :
+                       `?limit=${PAGE_SIZE}&offset=${currentPage * PAGE_SIZE}`;
+  try {
+    const json = await api("/api/approvals" + qs);
+    if (!json.success) { showToast(json.error || "Failed to load", "error"); return; }
+    hideAuthGate();
+    approvals = json.data.approvals;
+    renderApprovals();
+    renderPagination(json.data.pendingCount, json.data.total);
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to load approvals", "error");
+  }
+}
+
+function renderApprovals() {
+  const tbody = document.getElementById("approvals-body");
+  const empty = document.getElementById("empty-state");
+  if (approvals.length === 0) {
+    tbody.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  // Sort client-side
+  const sorted = [...approvals].sort((a, b) => {
+    let va = a[sortField], vb = b[sortField];
+    if (sortField === "chain") {
+      va = a.chainSummary ? a.chainSummary.completedSteps : -1;
+      vb = b.chainSummary ? b.chainSummary.completedSteps : -1;
+    }
+    if (va < vb) return -1 * sortDir;
+    if (va > vb) return 1 * sortDir;
+    return 0;
+  });
+
+  tbody.innerHTML = sorted.map(a => {
+    const chain = a.chainSummary;
+    let chainHtml;
+    if (chain) {
+      // Show parallel-aware progress: multiple active steps shown
+      const activeCount = chain.activeSteps || 0;
+      const parallelHint = activeCount > 1 ? ` <span style="color:var(--purple);font-size:10px" title="${activeCount} steps active in parallel">⊕${activeCount}</span>` : "";
+      chainHtml = `<div class="chain-progress">
+           <div class="chain-bar"><div class="chain-bar-fill" style="width:${(chain.completedSteps / chain.totalSteps * 100)}%"></div></div>
+           <span>${chain.completedSteps}/${chain.totalSteps}${parallelHint}</span>
+           ${chain.currentStepLabel ? `<span style="color:var(--text-dim)">· ${esc(chain.currentStepLabel)}</span>` : ""}
+         </div>`;
+    } else {
+      chainHtml = `<span style="color:var(--text-dim)">—</span>`;
+    }
+
+    const actions = [];
+    if (a.approval_status === "pending") {
+      actions.push(`<button class="btn btn-approve" onclick="decide('${a.id}','approved')">Approve</button>`);
+      actions.push(`<button class="btn btn-reject" onclick="decide('${a.id}','rejected')">Reject</button>`);
+    }
+    if (a.approval_status === "approved") {
+      actions.push(`<button class="btn btn-dispatch" onclick="dispatch('${a.id}')">Dispatch</button>`);
+    }
+
+    return `<tr onclick="showDetail('${a.id}')" style="cursor:pointer">
+      <td>${esc(a.action_intent || "—")}</td>
+      <td><span class="status-badge ${a.approval_status}">${a.approval_status}</span></td>
+      <td>${chainHtml}</td>
+      <td>${esc(a.operator_id || "—")}</td>
+      <td>${timeAgo(a.created_at)}</td>
+      <td class="actions" onclick="event.stopPropagation()">${actions.join("") || "—"}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderPagination(pendingCount, total) {
+  document.getElementById("page-info").textContent =
+    `Showing ${approvals.length} result${approvals.length !== 1 ? "s" : ""} · ${pendingCount} pending total`;
+  document.getElementById("prev-btn").disabled = currentPage === 0;
+  document.getElementById("next-btn").disabled = approvals.length < PAGE_SIZE;
+}
+
+function prevPage() { if (currentPage > 0) { currentPage--; loadApprovals(); } }
+function nextPage() { currentPage++; loadApprovals(); }
+function sortBy(field) {
+  if (sortField === field) sortDir *= -1;
+  else { sortField = field; sortDir = field === "created_at" ? -1 : 1; }
+  renderApprovals();
+}
+
+// ── Decide / Dispatch ─────────────────────────────────────────────────────
+async function decide(id, status) {
+  try {
+    const json = await api(`/api/approvals/${id}/decide`, {
+      method: "POST",
+      body: JSON.stringify({ status }),
+    });
+    if (!json.success) { showToast(json.error || "Decision failed", "error"); return; }
+    showToast(`Approval ${status}`, "success");
+    loadApprovals();
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Decision failed", "error");
+  }
+}
+
+async function dispatch(id) {
+  try {
+    const json = await api(`/api/approvals/${id}/dispatch`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    if (!json.success) { showToast(json.error || "Dispatch failed", "error"); return; }
+    showToast("Dispatched successfully", "success");
+    loadApprovals();
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Dispatch failed", "error");
+  }
+}
+
+// ── Detail panel ──────────────────────────────────────────────────────────
+async function showDetail(id) {
+  const overlay = document.getElementById("detail-overlay");
+  const content = document.getElementById("detail-content");
+  overlay.classList.add("open");
+
+  content.innerHTML = "<p>Loading…</p>";
+
+  try {
+    const [approvalJson, chainJson] = await Promise.all([
+      api(`/api/approvals/${id}`),
+      api(`/api/approvals/${id}/chain`).catch(() => null),
+    ]);
+
+    if (!approvalJson.success) { content.innerHTML = "<p>Failed to load</p>"; return; }
+    const a = approvalJson.data;
+    const chain = chainJson?.data;
+
+    let html = `
+      <div class="detail-section">
+        <h4>Overview</h4>
+        <div class="detail-field"><span class="lbl">ID</span><span style="font-family:var(--mono);font-size:12px">${esc(a.id)}</span></div>
+        <div class="detail-field"><span class="lbl">Status</span><span class="status-badge ${a.approval_status}">${a.approval_status}</span></div>
+        <div class="detail-field"><span class="lbl">Intent</span><span>${esc(a.action_intent || "—")}</span></div>
+        <div class="detail-field"><span class="lbl">Mode</span><span>${esc(a.action_mode || "—")}</span></div>
+        <div class="detail-field"><span class="lbl">Operator</span><span>${esc(a.operator_id || "—")}</span></div>
+        <div class="detail-field"><span class="lbl">Created</span><span>${new Date(a.created_at).toLocaleString()}</span></div>
+        <div class="detail-field"><span class="lbl">Expires</span><span>${new Date(a.expires_at).toLocaleString()}</span></div>
+        ${a.approver_id ? `<div class="detail-field"><span class="lbl">Approver</span><span>${esc(a.approver_id)}</span></div>` : ""}
+        ${a.approval_note ? `<div class="detail-field"><span class="lbl">Note</span><span>${esc(a.approval_note)}</span></div>` : ""}
+      </div>`;
+
+    if (chain) {
+      // Group steps by order for parallel visualization
+      const stepsByOrder = {};
+      chain.steps.forEach(s => {
+        if (!stepsByOrder[s.order]) stepsByOrder[s.order] = [];
+        stepsByOrder[s.order].push(s);
+      });
+
+      html += `
+        <div class="detail-section">
+          <h4>Chain Progress — ${esc(chain.templateName)}</h4>
+          <div class="chain-progress" style="margin-bottom:8px">
+            <div class="chain-bar" style="max-width:100%"><div class="chain-bar-fill" style="width:${(chain.completedSteps / chain.totalSteps * 100)}%"></div></div>
+            <span>${chain.completedSteps} of ${chain.totalSteps} steps complete</span>
+          </div>
+          <ul class="chain-steps-list">
+            ${chain.steps.map(s => {
+              const siblings = stepsByOrder[s.order];
+              const isParallel = siblings && siblings.length > 1;
+              return `
+              <li>
+                <span class="step-dot ${s.status}"></span>
+                <span>
+                  <strong>${esc(s.label)}</strong>
+                  ${isParallel ? '<span style="color:var(--purple);font-size:10px;margin-left:4px" title="Parallel step">⊕</span>' : ''}
+                  — <span class="status-badge ${s.status}">${s.status}</span>
+                </span>
+                ${s.deciderId ? `<span style="color:var(--text-dim);margin-left:auto;font-size:12px">${esc(s.deciderId)} · ${timeAgo(s.decidedAt)}</span>` : ""}
+              </li>`;
+            }).join("")}
+          </ul>
+        </div>`;
+    }
+
+    if (a.plan && Array.isArray(a.plan)) {
+      html += `
+        <div class="detail-section">
+          <h4>Plan (${a.plan.length} step${a.plan.length !== 1 ? "s" : ""})</h4>
+          <pre style="background:var(--surface);padding:12px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);overflow-x:auto;max-height:300px;white-space:pre-wrap">${esc(JSON.stringify(a.plan, null, 2))}</pre>
+        </div>`;
+    }
+
+    if (a.dispatchResult) {
+      html += `
+        <div class="detail-section">
+          <h4>Dispatch Result</h4>
+          <pre style="background:var(--surface);padding:12px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);overflow-x:auto;max-height:300px;white-space:pre-wrap">${esc(JSON.stringify(a.dispatchResult, null, 2))}</pre>
+        </div>`;
+    }
+
+    // Action buttons in detail
+    if (a.approval_status === "pending") {
+      html += `
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn btn-approve" onclick="decide('${a.id}','approved');closeDetail()">Approve</button>
+          <button class="btn btn-reject" onclick="decide('${a.id}','rejected');closeDetail()">Reject</button>
+        </div>`;
+    }
+    if (a.approval_status === "approved") {
+      html += `
+        <div style="margin-top:16px">
+          <button class="btn btn-dispatch" onclick="dispatch('${a.id}');closeDetail()">Dispatch</button>
+        </div>`;
+    }
+
+    content.innerHTML = html;
+  } catch (e) {
+    if (e.message !== "Unauthorized") content.innerHTML = "<p>Failed to load details</p>";
+  }
+}
 
 function closeDetail(e) {
   if (e && e.target !== document.getElementById("detail-overlay")) return;
