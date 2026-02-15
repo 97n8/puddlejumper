@@ -276,6 +276,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       optionalAuthMiddleware(req, res, next); return;
     }
     if (req.method === "GET" && req.path === "/pj/identity-token") { optionalAuthMiddleware(req, res, next); return; }
+    if (req.method === "GET" && req.path === "/auth/status") { optionalAuthMiddleware(req, res, next); return; }
     if (req.path.startsWith("/auth/github/")) { next(); return; }
     if (req.path.startsWith("/auth/google/")) { next(); return; }
     if (req.path.startsWith("/auth/microsoft/")) { next(); return; }

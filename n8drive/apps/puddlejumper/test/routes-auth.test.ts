@@ -27,13 +27,19 @@ function buildApp(overrides: Record<string, any> = {}) {
   app.use(cookieParserMiddleware());
   app.use(express.json());
 
-  // Decode JWT from Bearer header (simulates the server's auth gating)
+  // Decode JWT from Bearer header or cookie (simulates the server's auth gating)
   app.use(async (req: any, _res: any, next: any) => {
+    let token: string | undefined;
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.slice(7);
+    } else if (req.cookies?.jwt) {
+      token = req.cookies.jwt;
+    }
+    if (token) {
       try {
         const { verifyJwt } = await import('@publiclogic/core');
-        req.auth = await verifyJwt(authHeader.slice(7));
+        req.auth = await verifyJwt(token);
       } catch { /* unauthenticated */ }
     }
     next();
@@ -176,6 +182,43 @@ describe('Auth routes', () => {
       const app = buildApp();
       const res = await request(app).get('/api/identity');
       expect(res.status).toBe(401);
+    });
+  });
+
+  describe('GET /api/auth/status', () => {
+    it('returns authenticated=true with user info when valid JWT cookie', async () => {
+      const app = buildApp();
+      const token = await signJwt(
+        { sub: 'u1', email: 'admin@test.com', name: 'Test Admin', provider: 'github' },
+        { expiresIn: '1h' },
+      );
+      const res = await request(app)
+        .get('/api/auth/status')
+        .set('Cookie', `jwt=${token}`);
+      expect(res.status).toBe(200);
+      expect(res.body.authenticated).toBe(true);
+      expect(res.body.user.sub).toBe('u1');
+      expect(res.body.user.email).toBe('admin@test.com');
+      expect(res.body.user.name).toBe('Test Admin');
+      expect(res.body.user.provider).toBe('github');
+    });
+
+    it('returns authenticated=true when using Bearer header', async () => {
+      const app = buildApp();
+      const token = await getAuthToken();
+      const res = await request(app)
+        .get('/api/auth/status')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(200);
+      expect(res.body.authenticated).toBe(true);
+      expect(res.body.user.sub).toBe('u1');
+    });
+
+    it('returns 401 with authenticated=false when no auth', async () => {
+      const app = buildApp();
+      const res = await request(app).get('/api/auth/status');
+      expect(res.status).toBe(401);
+      expect(res.body.authenticated).toBe(false);
     });
   });
 });

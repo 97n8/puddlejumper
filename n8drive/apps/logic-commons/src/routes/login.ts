@@ -141,8 +141,21 @@ router.post('/refresh', async (req, res) => {
       { sub: payload.sub, email: payload.email, name: payload.name, provider: payload.provider },
       { expiresIn: '1h' } as any,
     );
+
+    // Set httpOnly session cookie
+    res.cookie('jwt', newAccess, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      path: '/',
+      maxAge: 60 * 60 * 1000, // 1 hour
+    });
+
     authEvent(req, 'refresh', { sub: payload.sub });
-    return res.json({ jwt: newAccess });
+    return res.json({
+      jwt: newAccess,
+      user: { sub: payload.sub, email: payload.email, name: payload.name, provider: payload.provider },
+    });
   } catch (err) {
     authEvent(req, 'refresh_error', { error: String(err) });
     return res.status(500).json({ error: 'server error' });
@@ -161,6 +174,7 @@ router.post('/auth/logout', async (req, res) => {
       authEvent(req, 'logout', { sub: null });
     }
     res.clearCookie('pj_refresh', { path: '/api' });
+    res.clearCookie('jwt', { path: '/' });
     return res.status(200).json({ ok: true });
   } catch (err) {
     authEvent(req, 'logout_error', { error: String(err) });
@@ -296,11 +310,20 @@ router.get('/auth/github/callback', async (req, res) => {
 
     res.cookie('pj_refresh', refreshJwt, REFRESH_COOKIE_OPTS);
 
+    // Set session cookie (httpOnly — no token in URL)
+    res.cookie('jwt', accessJwt, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      path: '/',
+      maxAge: 60 * 60 * 1000, // 1 hour (matches access token expiry)
+    });
+
     authEvent(req, 'login', { sub: userInfo.sub, provider: 'github', method: 'oauth_redirect' });
 
-    // Redirect to frontend with access token in URL hash
+    // Redirect to frontend (cookie carries the session — no token in URL)
     const frontendUrl = process.env.FRONTEND_URL || 'https://pj.publiclogic.org';
-    return res.redirect(`${frontendUrl}/#access_token=${accessJwt}`);
+    return res.redirect(frontendUrl);
   } catch (err: any) {
     authEvent(req, 'login_failed', {
       provider: 'github',
@@ -397,10 +420,21 @@ router.get('/auth/google/callback', async (req, res) => {
     );
 
     res.cookie('pj_refresh', refreshJwt, REFRESH_COOKIE_OPTS);
+
+    // Set session cookie (httpOnly — no token in URL)
+    res.cookie('jwt', accessJwt, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      path: '/',
+      maxAge: 60 * 60 * 1000, // 1 hour (matches access token expiry)
+    });
+
     authEvent(req, 'login', { sub: userInfo.sub, provider: 'google', method: 'oauth_redirect' });
 
+    // Redirect to frontend (cookie carries the session — no token in URL)
     const frontendUrl = process.env.FRONTEND_URL || 'https://pj.publiclogic.org';
-    return res.redirect(`${frontendUrl}/#access_token=${accessJwt}`);
+    return res.redirect(frontendUrl);
   } catch (err: any) {
     authEvent(req, 'login_failed', {
       provider: 'google',
@@ -521,10 +555,21 @@ router.get('/auth/microsoft/callback', async (req, res) => {
     );
 
     res.cookie('pj_refresh', refreshJwt, REFRESH_COOKIE_OPTS);
+
+    // Set session cookie (httpOnly — no token in URL)
+    res.cookie('jwt', accessJwt, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      path: '/',
+      maxAge: 60 * 60 * 1000, // 1 hour (matches access token expiry)
+    });
+
     authEvent(req, 'login', { sub: userInfo.sub, provider: 'microsoft', method: 'oauth_redirect' });
 
+    // Redirect to frontend (cookie carries the session — no token in URL)
     const frontendUrl = process.env.FRONTEND_URL || 'https://pj.publiclogic.org';
-    return res.redirect(`${frontendUrl}/#access_token=${accessJwt}`);
+    return res.redirect(frontendUrl);
   } catch (err: any) {
     authEvent(req, 'login_failed', {
       provider: 'microsoft',

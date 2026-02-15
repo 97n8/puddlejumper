@@ -76,35 +76,6 @@ function msUntilExpiry(jwt: string): number {
 /** Refresh 60 seconds before expiry (or immediately if less than 60s left). */
 const REFRESH_LEAD_MS = 60_000;
 
-/** Shared SSO cookie name — readable by all *.publiclogic.org apps. */
-const SSO_COOKIE = "pj_sso";
-
-/**
- * Set the shared SSO cookie on .publiclogic.org so all subdomains share the session.
- * Falls back to current hostname in dev (localhost).
- */
-function setSsoCookie(jwt: string): void {
-  const isPublicLogic = window.location.hostname.endsWith("publiclogic.org");
-  const domain = isPublicLogic ? ".publiclogic.org" : "";
-  const secure = window.location.protocol === "https:";
-  const maxAge = Math.floor(msUntilExpiry(jwt) / 1000);
-  if (maxAge <= 0) return;
-  document.cookie = `${SSO_COOKIE}=${jwt}; path=/; max-age=${maxAge}; samesite=lax${secure ? "; secure" : ""}${domain ? `; domain=${domain}` : ""}`;
-}
-
-/** Clear the shared SSO cookie. */
-function clearSsoCookie(): void {
-  const isPublicLogic = window.location.hostname.endsWith("publiclogic.org");
-  const domain = isPublicLogic ? ".publiclogic.org" : "";
-  document.cookie = `${SSO_COOKIE}=; path=/; max-age=0${domain ? `; domain=${domain}` : ""}`;
-}
-
-/** Read the shared SSO cookie value (if any). */
-function getSsoCookie(): string | null {
-  const match = document.cookie.match(new RegExp(`(?:^|; )${SSO_COOKIE}=([^;]*)`));
-  return match ? match[1] : null;
-}
-
 // ── Provider ───────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -158,20 +129,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await pjFetch("/api/refresh", { method: "POST" });
       if (!res.ok) return false;
-      const { jwt } = (await res.json()) as { jwt: string };
-      const payload = decodeJwtPayload(jwt);
+      const body = (await res.json()) as {
+        jwt?: string;
+        user?: { sub: string; email?: string; name?: string; provider?: string };
+      };
+
+      // Prefer structured user info; fall back to decoding JWT for compat
+      const user = body.user ?? (body.jwt ? decodeJwtPayload(body.jwt) : null);
+      if (!user?.sub) return false;
+
       setUser({
-        sub: payload.sub as string,
-        email: payload.email as string | undefined,
-        name: payload.name as string | undefined,
-        provider: payload.provider as string | undefined,
+        sub: user.sub as string,
+        email: user.email as string | undefined,
+        name: user.name as string | undefined,
+        provider: user.provider as string | undefined,
       });
 
-      // Share session across all *.publiclogic.org subdomains
-      setSsoCookie(jwt);
-
-      // Schedule next silent refresh before this token expires
-      const remaining = msUntilExpiry(jwt);
+      // Schedule next silent refresh before the session cookie expires
+      const remaining = body.jwt ? msUntilExpiry(body.jwt) : 50 * 60 * 1000;
       if (remaining > REFRESH_LEAD_MS) {
         scheduleRefresh(remaining - REFRESH_LEAD_MS, refresh);
       } else if (remaining > 0) {
@@ -198,20 +173,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error || `Login failed (${res.status})`);
         }
-        const { jwt } = (await res.json()) as { jwt: string };
-        const payload = decodeJwtPayload(jwt);
-        setUser({
-          sub: payload.sub as string,
-          email: payload.email as string | undefined,
-          name: payload.name as string | undefined,
-          provider: payload.provider as string | undefined,
-        });
+        const body = (await res.json()) as {
+          jwt?: string;
+          user?: { sub: string; email?: string; name?: string; provider?: string };
+          ok?: boolean;
+        };
 
-        // Share session across all *.publiclogic.org subdomains
-        setSsoCookie(jwt);
+        // Prefer structured user; fall back to decoding JWT for compat
+        const u = body.user ?? (body.jwt ? decodeJwtPayload(body.jwt) : null);
+        if (u?.sub) {
+          setUser({
+            sub: u.sub as string,
+            email: u.email as string | undefined,
+            name: u.name as string | undefined,
+            provider: u.provider as string | undefined,
+          });
+        }
 
-        // Schedule silent refresh before this access token expires
-        const remaining = msUntilExpiry(jwt);
+        // Schedule silent refresh before the session cookie expires
+        const remaining = body.jwt ? msUntilExpiry(body.jwt) : 50 * 60 * 1000;
         if (remaining > REFRESH_LEAD_MS) {
           scheduleRefresh(remaining - REFRESH_LEAD_MS, refresh);
         }
@@ -231,7 +211,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Logout ─────────────────────────────────────────────────
   const logout = useCallback(async () => {
     clearRefreshTimer();
-    clearSsoCookie();
     try {
       await pjFetch("/api/auth/logout", { method: "POST" });
     } catch {
@@ -246,72 +225,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Clean up timer on unmount
   useEffect(() => clearRefreshTimer, [clearRefreshTimer]);
 
-  // Attempt silent refresh on mount (if refresh cookie exists)
+  // Attempt session restore on mount
   useEffect(() => {
-    // Check for OAuth callback with access token in URL hash
-    if (typeof window !== "undefined") {
-      const hash = window.location.hash;
-      if (hash.startsWith("#access_token=")) {
-        const token = hash.replace("#access_token=", "");
-        try {
-          const payload = decodeJwtPayload(token);
-          if (payload.sub) {
-            setUser({
-              sub: payload.sub as string,
-              email: payload.email as string | undefined,
-              name: payload.name as string | undefined,
-              provider: payload.provider as string | undefined,
-            });
+    if (typeof window === "undefined") return;
 
-            // Share session across all *.publiclogic.org subdomains
-            setSsoCookie(token);
-
-            // Schedule silent refresh before this access token expires
-            const remaining = msUntilExpiry(token);
-            if (remaining > REFRESH_LEAD_MS) {
-              scheduleRefresh(remaining - REFRESH_LEAD_MS, refresh);
-            }
-
-            fetchProtectedData();
-          }
-        } catch {
-          // ignore invalid token in hash
-        }
-        // Clear the hash from the URL
-        window.history.replaceState(null, "", window.location.pathname);
-        return; // skip normal refresh — we already have a fresh token
-      }
-
-      if (hash === "#error=authentication_failed") {
-        setError("Authentication failed. Please try again.");
-        window.history.replaceState(null, "", window.location.pathname);
-        return;
-      }
-
-      // Check for shared SSO cookie from another *.publiclogic.org app
-      const ssoCookie = getSsoCookie();
-      if (ssoCookie) {
-        const payload = decodeJwtPayload(ssoCookie);
-        const remaining = msUntilExpiry(ssoCookie);
-        if (payload.sub && remaining > 0) {
-          setUser({
-            sub: payload.sub as string,
-            email: payload.email as string | undefined,
-            name: payload.name as string | undefined,
-            provider: payload.provider as string | undefined,
-          });
-          if (remaining > REFRESH_LEAD_MS) {
-            scheduleRefresh(remaining - REFRESH_LEAD_MS, refresh);
-          }
-          fetchProtectedData();
-          return;
-        }
-      }
+    // Check for OAuth error in URL hash
+    const hash = window.location.hash;
+    if (hash === "#error=authentication_failed") {
+      setError("Authentication failed. Please try again.");
+      window.history.replaceState(null, "", window.location.pathname);
+      return;
     }
 
-    refresh().then((ok) => {
+    // Clear any leftover hash (e.g. stale #access_token from old flow)
+    if (hash) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+
+    // Probe the httpOnly session cookie via /api/auth/status
+    (async () => {
+      try {
+        const res = await pjFetch("/api/auth/status");
+        if (res.ok) {
+          const body = (await res.json()) as {
+            authenticated: boolean;
+            user: { sub: string; email?: string; name?: string; provider?: string };
+          };
+          if (body.authenticated && body.user?.sub) {
+            setUser({
+              sub: body.user.sub,
+              email: body.user.email,
+              name: body.user.name,
+              provider: body.user.provider,
+            });
+
+            // Schedule silent refresh well before the cookie/JWT expires
+            // (we don't know the exact expiry from here, so use a safe default)
+            scheduleRefresh(50 * 60 * 1000, refresh); // 50 min for a 1h token
+
+            fetchProtectedData();
+            return;
+          }
+        }
+      } catch {
+        // status probe failed — fall through to silent refresh
+      }
+
+      // No valid session cookie — try silent refresh (uses pj_refresh cookie)
+      const ok = await refresh();
       if (ok) fetchProtectedData();
-    });
+    })();
   }, [refresh, fetchProtectedData, scheduleRefresh]);
 
   const value = useMemo<AuthState>(

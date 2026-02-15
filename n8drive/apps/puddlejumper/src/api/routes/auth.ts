@@ -86,5 +86,23 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
     });
   });
 
+  // ── Lightweight session probe (uses optional auth — no 401 on missing cookie) ──
+  router.get("/auth/status", (req, res) => {
+    const auth = getAuthContext(req);
+    if (auth?.sub) {
+      res.json({
+        authenticated: true,
+        user: {
+          sub: auth.sub,
+          email: auth.email,
+          name: auth.name,
+          provider: auth.provider,
+        },
+      });
+    } else {
+      res.status(401).json({ authenticated: false });
+    }
+  });
+
   return router;
 }

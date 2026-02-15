@@ -144,9 +144,9 @@ export function createMicrosoftOAuthRoutes(opts: MicrosoftOAuthOptions): express
         maxAge: 8 * 60 * 60 * 1000,
       });
 
-      // Redirect to frontend
+      // Redirect to frontend (cookie carries the session — no token in URL)
       const frontendUrl = process.env.FRONTEND_URL || "https://pj.publiclogic.org";
-      return res.redirect(`${frontendUrl}/#access_token=${accessJwt}`);
+      return res.redirect(frontendUrl);
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error("Microsoft OAuth callback error:", err?.message);

@@ -144,12 +144,15 @@ describe('Google OAuth redirect flow', () => {
       .get(`/api/auth/google/callback?code=test-auth-code&state=${stateValue}`)
       .set('Cookie', `google_oauth_state=${stateValue}`);
 
-    // Should redirect to frontend with access token in hash
+    // Should redirect to frontend (no token in URL — session carried via cookie)
     expect(callbackRes.status).toBe(302);
-    expect(callbackRes.headers.location).toContain('http://localhost:3000/#access_token=');
+    expect(callbackRes.headers.location).toBe('http://localhost:3000');
 
-    // Should set pj_refresh cookie
+    // Should set jwt httpOnly cookie + pj_refresh cookie
     const responseCookies = callbackRes.headers['set-cookie'] as unknown as string[];
+    const jwtCookie = responseCookies.find((c: string) => c.startsWith('jwt='));
+    expect(jwtCookie).toBeDefined();
+    expect(jwtCookie).toContain('HttpOnly');
     const refreshCookie = responseCookies.find((c: string) => c.startsWith('pj_refresh='));
     expect(refreshCookie).toBeDefined();
     expect(refreshCookie).toContain('HttpOnly');
@@ -206,7 +209,7 @@ describe('Google OAuth redirect flow', () => {
       .get(`/api/auth/google/callback?code=code1&state=${stateValue}`)
       .set('Cookie', `google_oauth_state=${stateValue}`);
     expect(first.status).toBe(302);
-    expect(first.headers.location).toContain('#access_token=');
+    expect(first.headers.location).toBe('http://localhost:3000');
 
     // Replay with same state — rejected
     const replay = await request(app)

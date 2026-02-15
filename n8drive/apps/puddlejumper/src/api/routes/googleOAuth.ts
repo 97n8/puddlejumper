@@ -124,9 +124,9 @@ export function createGoogleOAuthRoutes(opts: GoogleOAuthOptions): express.Route
         maxAge: 8 * 60 * 60 * 1000, // 8 hours
       });
 
-      // Redirect to frontend
+      // Redirect to frontend (cookie carries the session — no token in URL)
       const frontendUrl = process.env.FRONTEND_URL || "https://pj.publiclogic.org";
-      return res.redirect(`${frontendUrl}/#access_token=${accessJwt}`);
+      return res.redirect(frontendUrl);
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error("Google OAuth callback error:", err?.message);
