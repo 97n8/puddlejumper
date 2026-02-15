@@ -1,6 +1,6 @@
+import express from "express";
 import { type AuthOptions } from "@publiclogic/core";
 import type { CanonicalSourceOptions } from "./canonicalSource.js";
-import { PrrStore } from "./prrStore.js";
 type CreateAppOptions = {
     authOptions?: Partial<AuthOptions>;
     canonicalSourceOptions?: Partial<CanonicalSourceOptions>;
@@ -13,14 +13,6 @@ type CreateAppOptions = {
         disable?: boolean;
     };
 };
-type AccessNotificationWorkerOptions = {
-    prrStore: PrrStore;
-    webhookUrl: string;
-    fetchImpl: typeof fetch;
-    batchSize: number;
-    maxRetries: number;
-};
-export declare function processAccessNotificationQueueOnce(options: AccessNotificationWorkerOptions): Promise<void>;
-export declare function createApp(nodeEnv?: string, options?: CreateAppOptions): import("express-serve-static-core").Express;
+export declare function createApp(nodeEnv?: string, options?: CreateAppOptions): express.Express;
 export declare function startServer(): void;
-export {};
+export { processAccessNotificationQueueOnce } from "./accessNotificationWorker.js";
