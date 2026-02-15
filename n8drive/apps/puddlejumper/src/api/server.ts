@@ -80,6 +80,7 @@ import { ApprovalStore } from "../engine/approvalStore.js";
 import { DispatcherRegistry } from "../engine/dispatch.js";
 import { GitHubDispatcher } from "../engine/dispatchers/github.js";
 import { SlackDispatcher } from "../engine/dispatchers/slack.js";
+import { WebhookDispatcher } from "../engine/dispatchers/webhook.js";
 import { approvalMetrics, METRIC_HELP } from "../engine/approvalMetrics.js";
 import { loadConfig, StartupConfigError } from "./startupConfig.js";
 
@@ -140,6 +141,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   const dispatcherRegistry = new DispatcherRegistry();
   dispatcherRegistry.register(new GitHubDispatcher());
   dispatcherRegistry.register(new SlackDispatcher());
+  dispatcherRegistry.register(new WebhookDispatcher());
 
   // ── Auth middleware ───────────────────────────────────────────────────
   const authMiddleware = createJwtAuthenticationMiddleware(authOptions);

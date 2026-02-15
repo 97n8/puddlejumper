@@ -34,7 +34,8 @@ export type ConnectorName =
   | "civicplus"
   | "google"
   | "github"
-  | "vault";
+  | "vault"
+  | "webhook";
 
 type TriggerType = "form" | "timer" | "state" | "calendar" | "manual" | "drift" | "webhook";
 
