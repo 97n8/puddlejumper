@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  puddlejumper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: publiclogic/puddlejumper:latest
+    container_name: puddlejumper
+    ports:
+      - "${PORT:-3002}:3002"
+    env_file:
+      - .env
+    volumes:
+      - puddlejumper-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3002/health').then(r=>{if(!r.ok)throw 1})"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  puddlejumper-data:

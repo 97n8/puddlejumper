@@ -4,16 +4,28 @@
   "private": true,
   "type": "module",
   "main": "dist/api/server.js",
+  "files": [
+    "dist",
+    "package.json"
+  ],
   "scripts": {
     "dev": "tsx watch src/api/server.ts",
-    "build": "tsc -b",
+    "build": "tsc",
     "vercel-build": "npm run build",
-    "start": "node dist/api/server.js"
+    "start": "node dist/api/server.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "@publiclogic/core": "workspace:*",
-    "express": "^4.21.2",
+    "better-sqlite3": "^12.6.2",
     "cookie-parser": "^1.4.7",
+    "express": "^4.21.2",
     "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "@types/supertest": "^6.0.2",
+    "bcryptjs": "^2.4.3",
+    "supertest": "^7.1.4",
+    "vitest": "^1.0.0"
   }
 }

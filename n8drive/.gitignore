@@ -3,8 +3,19 @@ node_modules/
 npm-debug.log*
 /tmp/
 data/publiclogic-audit.ndjson
+.env
+.env.local
+**/.env.local
+
+# Build artifacts
 dist/
-*/dist/
-*.tsbuildinfo
-*/tsconfig.tsbuildinfo
-pnpm-lock.yaml
+**/dist/
+prod-test/
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+
+web/.tmp_webhook_secret.txt
+web/.env.production.local
