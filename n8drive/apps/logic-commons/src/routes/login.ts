@@ -330,7 +330,124 @@ router.get('/auth/github/callback', async (req, res) => {
   }
 });
 
+// ── Google OAuth redirect flow ─────────────────────────────────
+
+const googleOauthStates = new Map<string, number>();
+
+function pruneGoogleStates() {
+  const now = Date.now();
+  for (const [key, exp] of googleOauthStates) {
+    if (exp < now) googleOauthStates.delete(key);
+  }
+}
+
+router.get('/auth/google/login', (_req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    return res.status(500).json({ error: 'Google OAuth not configured' });
+  }
+
+  pruneGoogleStates();
+  const state = crypto.randomUUID();
+  googleOauthStates.set(state, Date.now() + 5 * 60 * 1000);
+
+  const redirectUri =
+    process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3002/api/auth/google/callback';
+
+  res.cookie('google_oauth_state', state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 5 * 60 * 1000,
+    sameSite: 'lax',
+  });
+
+  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  authUrl.searchParams.set('client_id', clientId);
+  authUrl.searchParams.set('redirect_uri', redirectUri);
+  authUrl.searchParams.set('response_type', 'code');
+  authUrl.searchParams.set('scope', 'openid email profile');
+  authUrl.searchParams.set('state', state);
+
+  return res.redirect(authUrl.toString());
+});
+
+router.get('/auth/google/callback', async (req, res) => {
+  const { code, state } = req.query as { code?: string; state?: string };
+
+  const memoryValid = state && googleOauthStates.has(state) && googleOauthStates.get(state)! > Date.now();
+  if (!state || !memoryValid) {
+    return res.status(400).json({ error: 'Invalid or expired state parameter' });
+  }
+
+  googleOauthStates.delete(state);
+  res.clearCookie('google_oauth_state');
+
+  if (!code) {
+    return res.status(400).json({ error: 'Missing authorization code' });
+  }
+
+  try {
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        code,
+        redirect_uri:
+          process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3002/api/auth/google/callback',
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    const tokenBody = (await tokenResponse.json()) as Record<string, any>;
+    if (tokenBody.error || !tokenBody.access_token) {
+      throw new Error(tokenBody.error_description || tokenBody.error || 'Token exchange failed');
+    }
+
+    // Get user info from Google
+    const userinfoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${tokenBody.access_token}` },
+    });
+    if (!userinfoRes.ok) throw new Error(`Google userinfo error ${userinfoRes.status}`);
+    const gi = (await userinfoRes.json()) as Record<string, any>;
+    if (!gi.id) throw new Error('Missing google id');
+
+    const userInfo = { sub: String(gi.id), email: gi.email, name: gi.name ?? gi.email };
+
+    const baseClaims = {
+      sub: userInfo.sub,
+      email: userInfo.email,
+      name: userInfo.name,
+      provider: 'google',
+    } as Record<string, any>;
+
+    const accessJwt = await signJwt(baseClaims, { expiresIn: '1h' } as any);
+
+    const refreshRow = createRefreshToken(String(userInfo.sub), null, REFRESH_TTL_SEC);
+    const refreshJwt = await signJwt(
+      { ...baseClaims, jti: refreshRow.id, family: refreshRow.family, token_type: 'refresh' },
+      { expiresIn: '7d' } as any,
+    );
+
+    res.cookie('pj_refresh', refreshJwt, REFRESH_COOKIE_OPTS);
+    authEvent(req, 'login', { sub: userInfo.sub, provider: 'google', method: 'oauth_redirect' });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'https://pj.publiclogic.org';
+    return res.redirect(`${frontendUrl}/#access_token=${accessJwt}`);
+  } catch (err: any) {
+    authEvent(req, 'login_failed', {
+      provider: 'google',
+      method: 'oauth_redirect',
+      reason: err?.message ?? 'unknown',
+    });
+    const frontendUrl = process.env.FRONTEND_URL || 'https://pj.publiclogic.org';
+    return res.redirect(`${frontendUrl}/#error=authentication_failed`);
+  }
+});
+
 // Expose oauthStates for testing
 export { oauthStates as _oauthStates };
+export { googleOauthStates as _googleOauthStates };
 
 export default router;
