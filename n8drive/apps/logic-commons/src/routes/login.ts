@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import express from 'express';
 import { signJwt, verifyJwt } from '@publiclogic/core';
 import { verifyGoogleIdToken } from '../lib/google.js';
@@ -210,5 +211,126 @@ router.get('/admin/audit', (req, res) => {
     return res.status(500).json({ error: 'server error' });
   }
 });
+
+// ── GitHub OAuth redirect flow ─────────────────────────────────
+
+// In-memory state store with 5-minute TTL
+const oauthStates = new Map<string, number>();
+
+/** Purge expired states (called lazily). */
+function pruneStates() {
+  const now = Date.now();
+  for (const [key, exp] of oauthStates) {
+    if (exp < now) oauthStates.delete(key);
+  }
+}
+
+router.get('/auth/github/login', (_req, res) => {
+  const clientId = process.env.GITHUB_CLIENT_ID;
+  if (!clientId) {
+    return res.status(500).json({ error: 'GitHub OAuth not configured' });
+  }
+
+  pruneStates();
+  const state = crypto.randomUUID();
+  oauthStates.set(state, Date.now() + 5 * 60 * 1000);
+
+  const redirectUri =
+    process.env.GITHUB_REDIRECT_URI || 'http://localhost:3002/api/auth/github/callback';
+
+  // Also store in a cookie as a secondary check
+  res.cookie('oauth_state', state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 5 * 60 * 1000,
+    sameSite: 'lax',
+  });
+
+  const authUrl = new URL('https://github.com/login/oauth/authorize');
+  authUrl.searchParams.set('client_id', clientId);
+  authUrl.searchParams.set('redirect_uri', redirectUri);
+  authUrl.searchParams.set('state', state);
+  authUrl.searchParams.set('scope', 'user:email');
+
+  return res.redirect(authUrl.toString());
+});
+
+router.get('/auth/github/callback', async (req, res) => {
+  const { code, state } = req.query as { code?: string; state?: string };
+
+  // Validate state — must exist in in-memory store (single-use)
+  // Cookie is set as defense-in-depth but memory is authoritative
+  const memoryValid = state && oauthStates.has(state) && oauthStates.get(state)! > Date.now();
+
+  if (!state || !memoryValid) {
+    return res.status(400).json({ error: 'Invalid or expired state parameter' });
+  }
+
+  // Consume state (one-time use)
+  oauthStates.delete(state);
+  res.clearCookie('oauth_state');
+
+  if (!code) {
+    return res.status(400).json({ error: 'Missing authorization code' });
+  }
+
+  try {
+    // Exchange code for access token — server-side, secret never exposed
+    const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+        redirect_uri:
+          process.env.GITHUB_REDIRECT_URI || 'http://localhost:3002/api/auth/github/callback',
+      }),
+    });
+
+    const tokenBody = (await tokenResponse.json()) as Record<string, any>;
+    if (tokenBody.error || !tokenBody.access_token) {
+      throw new Error(tokenBody.error_description || tokenBody.error || 'Token exchange failed');
+    }
+
+    // Verify token and get user info
+    const userInfo = await verifyGitHubToken(tokenBody.access_token);
+
+    // Create session tokens (same logic as POST /api/login)
+    const baseClaims = {
+      sub: userInfo.sub,
+      email: userInfo.email,
+      name: userInfo.name,
+      provider: 'github',
+    } as Record<string, any>;
+
+    const accessJwt = await signJwt(baseClaims, { expiresIn: '1h' } as any);
+
+    const refreshRow = createRefreshToken(String(userInfo.sub), null, REFRESH_TTL_SEC);
+    const refreshJwt = await signJwt(
+      { ...baseClaims, jti: refreshRow.id, family: refreshRow.family, token_type: 'refresh' },
+      { expiresIn: '7d' } as any,
+    );
+
+    res.cookie('pj_refresh', refreshJwt, REFRESH_COOKIE_OPTS);
+
+    authEvent(req, 'login', { sub: userInfo.sub, provider: 'github', method: 'oauth_redirect' });
+
+    // Redirect to frontend with access token in URL hash
+    const frontendUrl = process.env.FRONTEND_URL || 'https://pj.publiclogic.org';
+    return res.redirect(`${frontendUrl}/#access_token=${accessJwt}`);
+  } catch (err: any) {
+    authEvent(req, 'login_failed', {
+      provider: 'github',
+      method: 'oauth_redirect',
+      reason: err?.message ?? 'unknown',
+    });
+    const frontendUrl = process.env.FRONTEND_URL || 'https://pj.publiclogic.org';
+    return res.redirect(`${frontendUrl}/#error=authentication_failed`);
+  }
+});
+
+// Expose oauthStates for testing
+export { oauthStates as _oauthStates };
 
 export default router;

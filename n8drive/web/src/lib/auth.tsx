@@ -212,10 +212,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Attempt silent refresh on mount (if refresh cookie exists)
   useEffect(() => {
+    // Check for OAuth callback with access token in URL hash
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash;
+      if (hash.startsWith("#access_token=")) {
+        const token = hash.replace("#access_token=", "");
+        try {
+          const payload = decodeJwtPayload(token);
+          if (payload.sub) {
+            setUser({
+              sub: payload.sub as string,
+              email: payload.email as string | undefined,
+              name: payload.name as string | undefined,
+              provider: payload.provider as string | undefined,
+            });
+
+            // Schedule silent refresh before this access token expires
+            const remaining = msUntilExpiry(token);
+            if (remaining > REFRESH_LEAD_MS) {
+              scheduleRefresh(remaining - REFRESH_LEAD_MS, refresh);
+            }
+
+            fetchProtectedData();
+          }
+        } catch {
+          // ignore invalid token in hash
+        }
+        // Clear the hash from the URL
+        window.history.replaceState(null, "", window.location.pathname);
+        return; // skip normal refresh — we already have a fresh token
+      }
+
+      if (hash === "#error=authentication_failed") {
+        setError("Authentication failed. Please try again.");
+        window.history.replaceState(null, "", window.location.pathname);
+        return;
+      }
+    }
+
     refresh().then((ok) => {
       if (ok) fetchProtectedData();
     });
-  }, [refresh, fetchProtectedData]);
+  }, [refresh, fetchProtectedData, scheduleRefresh]);
 
   const value = useMemo<AuthState>(
     () => ({ user, manifest, runtimeCtx, loading, error, login, logout, refresh }),
