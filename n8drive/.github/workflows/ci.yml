@@ -53,6 +53,20 @@ jobs:
       - name: Unit tests – puddlejumper
         run: pnpm --filter @publiclogic/puddlejumper run test
 
+      - name: Config validation (startup schema) 
+        run: |
+          node -e "
+            process.env.JWT_SECRET = 'ci-test-secret';
+            process.env.AUTH_ISSUER = 'ci-issuer';
+            process.env.AUTH_AUDIENCE = 'ci-audience';
+            process.env.PRR_DB_PATH = '/app/data/prr.db';
+            process.env.CONNECTOR_DB_PATH = '/app/data/connectors.db';
+            import('./apps/puddlejumper/dist/api/startupConfig.js').then(m => {
+              m.loadConfig();
+              console.log('✓ Config validation passed');
+            });
+          "
+
       - name: Monorepo build (root)
         run: pnpm run build
 
@@ -100,3 +114,27 @@ jobs:
         with:
           push: false
           tags: publiclogic/puddlejumper:ci
+
+  validate-alerts:
+    name: Validate Prometheus alert rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install promtool
+        run: |
+          PROM_VERSION="2.51.0"
+          curl -sL "https://github.com/prometheus/prometheus/releases/download/v${PROM_VERSION}/prometheus-${PROM_VERSION}.linux-amd64.tar.gz" | tar xzf -
+          sudo mv "prometheus-${PROM_VERSION}.linux-amd64/promtool" /usr/local/bin/
+          promtool --version
+
+      - name: Lint alert rules
+        run: |
+          if [ -f ops/alerts/approval-alerts.yml ]; then
+            promtool check rules ops/alerts/approval-alerts.yml
+            echo "✓ Alert rules valid"
+          else
+            echo "⊘ No alert rules found — skipping"
+          fi
