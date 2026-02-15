@@ -77,6 +77,7 @@ import { createAccessRoutes } from "./routes/access.js";
 import { createGovernanceRoutes } from "./routes/governance.js";
 import { createApprovalRoutes } from "./routes/approvals.js";
 import { createChainTemplateRoutes } from "./routes/chainTemplates.js";
+import { createAdminRoutes } from "./routes/admin.js";
 import { createWebhookActionRoutes } from "./routes/webhookAction.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
@@ -316,6 +317,19 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.get("/puddle-jumper", (_req, res) => sendPjWorkspace(res));
   app.get("/pj-workspace", (_req, res) => sendPjWorkspace(res));
 
+  // ── Admin UI ──────────────────────────────────────────────────────────
+  const ADMIN_HTML_FILE = path.join(PUBLIC_DIR, "admin.html");
+  app.get("/pj/admin", (_req, res) => {
+    try {
+      res.setHeader("Cache-Control", "no-store, max-age=0");
+      res.type("html").sendFile(ADMIN_HTML_FILE);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to serve admin HTML:", (err as Error).message);
+      res.status(503).json({ error: "Admin HTML not available" });
+    }
+  });
+
   // ── Auth gating for /api ──────────────────────────────────────────────
   app.use("/api", (req, res, next) => {
     if (req.method === "POST" && req.path === "/login") { next(); return; }
@@ -368,6 +382,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     approvalStore, dispatcherRegistry, nodeEnv, chainStore,
   }));
   app.use("/api", createChainTemplateRoutes({ chainStore }));
+  app.use("/api", createAdminRoutes({ approvalStore, chainStore }));
   app.use("/api", createWebhookActionRoutes({
     approvalStore, dispatcherRegistry, chainStore,
   }));
