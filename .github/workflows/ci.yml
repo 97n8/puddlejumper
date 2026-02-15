@@ -81,6 +81,7 @@ jobs:
           PJ_RUNTIME_TILES_JSON=[{"id":"ci","label":"CI","url":"http://localhost:3000"}]
           PJ_RUNTIME_CAPABILITIES_JSON={"automations":[],"quickActions":[{"id":"ci","label":"CI Action","route":"/ci"}]}
           EOF
+          sed -i 's/^[[:space:]]*//' .env.ci
 
       - name: Build Docker image
         run: |
