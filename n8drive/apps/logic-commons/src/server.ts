@@ -1,9 +1,10 @@
 import express from 'express';
 import serverless from 'serverless-http';
-import { cookieParserMiddleware, csrfProtection, validateJwt, createOptionalJwtAuthenticationMiddleware } from '@publiclogic/core';
+import { cookieParserMiddleware, csrfProtection, validateJwt, createOptionalJwtAuthenticationMiddleware, correlationId } from '@publiclogic/core';
 import loginRouter from './routes/login.js';
 
 const app: express.Express = express();
+app.use(correlationId());
 app.use(cookieParserMiddleware());
 app.use(express.json());
 

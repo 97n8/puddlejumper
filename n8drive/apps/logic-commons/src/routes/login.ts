@@ -9,6 +9,19 @@ import {
   revokeAllForUser,
 } from '../lib/refreshTokenStore.js';
 
+// ── Structured auth event logger ────────────────────────────────────────────
+function authEvent(req: any, event: string, data: Record<string, unknown> = {}) {
+  const entry = {
+    ts: new Date().toISOString(),
+    event,
+    correlationId: req.correlationId ?? null,
+    ip: req.ip,
+    ...data,
+  };
+  // eslint-disable-next-line no-console
+  console.log(JSON.stringify(entry));
+}
+
 const REFRESH_TTL_SEC = 7 * 24 * 60 * 60; // 7 days in seconds
 
 const REFRESH_COOKIE_OPTS = {
@@ -43,8 +56,7 @@ router.post('/login', async (req, res) => {
         const gi = await verifyGitHubToken(providerToken);
         userInfo = { sub: gi.sub, email: gi.email, name: gi.name };
       } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error('github verify failed', e);
+          authEvent(req, 'login_failed', { provider: 'github', reason: 'invalid_token' });
         return res.status(401).json({ error: 'invalid provider token' });
       }
     } else {
@@ -66,10 +78,10 @@ router.post('/login', async (req, res) => {
     );
 
     res.cookie('pj_refresh', refreshJwt, REFRESH_COOKIE_OPTS);
+    authEvent(req, 'login', { sub: userInfo.sub, provider });
     return res.json({ jwt: accessJwt });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('login error', err);
+    authEvent(req, 'login_error', { error: String(err) });
     return res.status(500).json({ error: 'internal error' });
   }
 });
@@ -91,10 +103,11 @@ router.post('/refresh', async (req, res) => {
     if (!result.ok) {
       if (result.reason === 'token_reuse_detected') {
         // Breach: someone replayed an already-used token → family revoked
+        authEvent(req, 'token_reuse_detected', { sub: payload.sub, family: payload.family });
         res.clearCookie('pj_refresh', { path: '/api' });
         return res.status(401).json({ error: 'token_reuse_detected' });
       }
-      // Missing or expired
+      authEvent(req, 'refresh_failed', { sub: payload.sub, reason: result.reason });
       return res.status(401).json({ error: 'invalid or expired refresh token' });
     }
 
@@ -110,10 +123,10 @@ router.post('/refresh', async (req, res) => {
       { sub: payload.sub, email: payload.email, name: payload.name, provider: payload.provider },
       { expiresIn: '1h' } as any,
     );
+    authEvent(req, 'refresh', { sub: payload.sub });
     return res.json({ jwt: newAccess });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('refresh error', err);
+    authEvent(req, 'refresh_error', { error: String(err) });
     return res.status(500).json({ error: 'server error' });
   }
 });
@@ -125,12 +138,14 @@ router.post('/auth/logout', async (req, res) => {
     if (refreshToken) {
       const payload = await verifyJwt(refreshToken).catch(() => null) as Record<string, any> | null;
       if (payload?.jti) revokeRefreshToken(payload.jti);
+      authEvent(req, 'logout', { sub: payload?.sub });
+    } else {
+      authEvent(req, 'logout', { sub: null });
     }
     res.clearCookie('pj_refresh', { path: '/api' });
     return res.status(200).json({ ok: true });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('logout error', err);
+    authEvent(req, 'logout_error', { error: String(err) });
     return res.status(500).json({ error: 'server error' });
   }
 });
@@ -147,15 +162,16 @@ router.post('/auth/revoke', async (req, res) => {
       // Only admins can revoke other users' tokens
       if (auth.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
       const count = revokeAllForUser(targetUserId);
+      authEvent(req, 'revoke', { actor: auth.sub, target: targetUserId, count });
       return res.json({ revoked: count });
     }
 
     const count = revokeAllForUser(String(auth.sub));
+    authEvent(req, 'revoke', { actor: auth.sub, target: auth.sub, count });
     res.clearCookie('pj_refresh', { path: '/api' });
     return res.json({ revoked: count });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('revoke error', err);
+    authEvent(req, 'revoke_error', { error: String(err) });
     return res.status(500).json({ error: 'server error' });
   }
 });
