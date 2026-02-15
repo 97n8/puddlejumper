@@ -495,7 +495,17 @@ router.get('/auth/microsoft/login', (_req, res) => {
 });
 
 router.get('/auth/microsoft/callback', async (req, res) => {
-  const { code, state } = req.query as { code?: string; state?: string };
+  const { code, state, error, error_description } = req.query as {
+    code?: string;
+    state?: string;
+    error?: string;
+    error_description?: string;
+  };
+
+  // If Microsoft returned an error (e.g. user denied consent)
+  if (error) {
+    return res.status(400).json({ error, error_description: error_description || 'Microsoft auth error' });
+  }
 
   const memoryValid = state && microsoftOauthStates.has(state) && microsoftOauthStates.get(state)! > Date.now();
   if (!state || !memoryValid) {

@@ -79,7 +79,17 @@ export function createMicrosoftOAuthRoutes(opts: MicrosoftOAuthOptions): express
 
   // GET /api/auth/microsoft/callback → exchange code, create session, redirect to frontend
   router.get("/auth/microsoft/callback", async (req, res) => {
-    const { code, state } = req.query as { code?: string; state?: string };
+    const { code, state, error, error_description } = req.query as {
+      code?: string;
+      state?: string;
+      error?: string;
+      error_description?: string;
+    };
+
+    // If Microsoft returned an error (e.g. user denied consent)
+    if (error) {
+      return res.status(400).json({ error, error_description: error_description || "Microsoft auth error" });
+    }
 
     // Validate state — in-memory store is authoritative (single-use)
     const memoryValid = state && oauthStates.has(state) && oauthStates.get(state)! > Date.now();
