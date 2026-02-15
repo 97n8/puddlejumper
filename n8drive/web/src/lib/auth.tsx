@@ -30,7 +30,7 @@ export type CapabilityManifest = {
 export type RuntimeContext = {
   workspace: { id: string };
   municipality: { id: string };
-  operator?: string;
+  operator?: { id: string; name: string; role: string; permissions: string[]; delegations: string[] } | string;
 } | null;
 
 export type LiveTile = {

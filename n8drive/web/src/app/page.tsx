@@ -103,7 +103,7 @@ export default function Home() {
           <div className="flex items-center gap-4">
             {runtimeCtx && (
               <span className="text-xs text-zinc-500">
-                {runtimeCtx.workspace.id} / {runtimeCtx.operator ?? "—"}
+                {runtimeCtx.workspace.id} / {typeof runtimeCtx.operator === "object" ? runtimeCtx.operator?.name : runtimeCtx.operator ?? "—"}
               </span>
             )}
             {user ? (
