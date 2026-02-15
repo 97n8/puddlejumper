@@ -753,7 +753,7 @@ function renderMembers(members) {
       <td>${timeAgo(m.joined_at)}</td>
       <td>${esc(m.invited_by || "—")}</td>
       <td>
-        ${m.role !== "owner" ? `<button class="btn btn-sm btn-danger" onclick="removeMember('${esc(m.user_id)}')">Remove</button>` : ""}
+        ${m.role !== "owner" ? `<button class="btn btn-sm btn-danger" onclick="removeMember('${m.user_id}')">Remove</button>` : ""}
       </td>
     </tr>
   `).join("");
@@ -777,8 +777,8 @@ function renderInvitations(invitations) {
       <td>${timeAgo(inv.created_at)}</td>
       <td>${new Date(inv.expires_at).toLocaleDateString()}</td>
       <td>
-        <button class="btn btn-sm btn-secondary" onclick="copyInviteLink('${esc(inv.token)}')">Copy Link</button>
-        <button class="btn btn-sm btn-danger" onclick="revokeInvite('${esc(inv.id)}')">Revoke</button>
+        <button class="btn btn-sm btn-secondary" onclick="copyInviteLink('${inv.token}')">Copy Link</button>
+        <button class="btn btn-sm btn-danger" onclick="revokeInvite('${inv.id}')">Revoke</button>
       </td>
     </tr>
   `).join("");
