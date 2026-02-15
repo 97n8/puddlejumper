@@ -105,7 +105,8 @@ describe("GET /api/auth/:provider/login", () => {
     const app = makeApp();
     const res = await request(app).get("/api/auth/testprov/login").redirects(0);
 
-    const cookies = res.headers["set-cookie"] as string[];
+    const setCookieHeader = res.headers["set-cookie"];
+    const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader ? [setCookieHeader] : [];
     expect(cookies.some((c: string) => c.startsWith("oauth_state_test="))).toBe(true);
   });
 
@@ -199,7 +200,8 @@ describe("GET /api/auth/:provider/callback", () => {
       expect(res.headers.location).toBe("http://localhost:3000");
 
       // Should set jwt and pj_refresh cookies
-      const cookies = res.headers["set-cookie"] as string[];
+      const setCookieHeader = res.headers["set-cookie"];
+      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader ? [setCookieHeader] : [];
       expect(cookies.some((c: string) => c.startsWith("jwt="))).toBe(true);
       expect(cookies.some((c: string) => c.startsWith("pj_refresh="))).toBe(true);
     } finally {

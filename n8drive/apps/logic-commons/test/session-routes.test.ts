@@ -166,7 +166,8 @@ describe("POST /api/refresh", () => {
     expect(res.body.user.sub).toBe(USER.sub);
 
     // Should set pj_refresh and jwt cookies
-    const setCookies = res.headers["set-cookie"] as string[];
+    const setCookieHeader = res.headers["set-cookie"];
+    const setCookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader ? [setCookieHeader] : [];
     expect(setCookies.some((c: string) => c.startsWith("pj_refresh="))).toBe(true);
     expect(setCookies.some((c: string) => c.startsWith("jwt="))).toBe(true);
   });
