@@ -49,7 +49,9 @@ export function configureAuditStore(dataDir: string): void {
 
 function resolveDataDir(): string {
   if (_dataDir) return _dataDir;
-  return process.env.CONTROLLED_DATA_DIR || path.resolve(process.cwd(), "data");
+  return process.env.LOGIC_COMMONS_DATA_DIR
+    || process.env.CONTROLLED_DATA_DIR
+    || path.resolve(process.cwd(), "data");
 }
 
 function getDb(): Database.Database {
