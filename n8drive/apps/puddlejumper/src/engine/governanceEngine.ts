@@ -35,7 +35,8 @@ export type ConnectorName =
   | "google"
   | "github"
   | "vault"
-  | "webhook";
+  | "webhook"
+  | "slack";
 
 type TriggerType = "form" | "timer" | "state" | "calendar" | "manual" | "drift" | "webhook";
 
