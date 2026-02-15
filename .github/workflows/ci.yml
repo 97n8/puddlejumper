@@ -20,24 +20,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js 20.x
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-
       - name: Enable corepack/pnpm
         run: |
           corepack enable
           corepack prepare pnpm@8.15.8 --activate
           pnpm --version
 
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: n8drive/pnpm-lock.yaml
+
       - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
       - name: Lint frontend (if present)
         working-directory: n8drive/web
-        if: ${{ always() && (exists('n8drive/web/package.json')) }}
+        if: ${{ hashFiles('n8drive/web/package.json') != '' }}
         run: |
           pnpm --filter web -w run -s lint || echo "No lint script or lint failed"
 
