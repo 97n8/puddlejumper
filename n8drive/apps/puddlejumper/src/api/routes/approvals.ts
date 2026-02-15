@@ -309,7 +309,9 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
     try {
       const planSteps: PlanStepInput[] = JSON.parse(row.plan_json);
 
-      const retryPolicy: RetryPolicy = {
+      // Retry policy is now registered per-connector in the DispatcherRegistry.
+      // Pass a fallback for any connectors that don't have one explicitly set.
+      const fallbackRetryPolicy: RetryPolicy = {
         maxAttempts: 3,
         baseDelayMs: 1000,
         onRetry: (attempt, error, stepId) => {
@@ -323,7 +325,7 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
         requestId: row.request_id,
         operatorId: row.operator_id,
         dryRun,
-      }, dispatcherRegistry, retryPolicy);
+      }, dispatcherRegistry, fallbackRetryPolicy);
 
       if (result.success) {
         approvalStore.markDispatched(row.id, result);

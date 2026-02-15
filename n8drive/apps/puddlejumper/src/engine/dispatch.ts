@@ -95,13 +95,29 @@ export interface ConnectorDispatcher {
  */
 export class DispatcherRegistry {
   private readonly dispatchers = new Map<string, ConnectorDispatcher>();
+  private readonly retryPolicies = new Map<string, RetryPolicy>();
 
-  register(dispatcher: ConnectorDispatcher): void {
+  /**
+   * Register a connector dispatcher, optionally with a retry policy.
+   *
+   * When a retry policy is attached at registration time, dispatchPlan()
+   * uses it automatically — route handlers no longer need to construct
+   * one inline.
+   */
+  register(dispatcher: ConnectorDispatcher, retryPolicy?: RetryPolicy): void {
     this.dispatchers.set(dispatcher.connectorName, dispatcher);
+    if (retryPolicy) {
+      this.retryPolicies.set(dispatcher.connectorName, retryPolicy);
+    }
   }
 
   get(connectorName: string): ConnectorDispatcher | undefined {
     return this.dispatchers.get(connectorName);
+  }
+
+  /** Get the retry policy registered for a connector (if any). */
+  getRetryPolicy(connectorName: string): RetryPolicy | undefined {
+    return this.retryPolicies.get(connectorName);
   }
 
   has(connectorName: string): boolean {
@@ -220,6 +236,14 @@ export async function dispatchWithRetry(
  * Steps whose connector has no registered dispatcher are skipped.
  * Each step is retried with exponential backoff on transient failures.
  */
+/**
+ * Dispatch an entire approved plan through the connector registry.
+ *
+ * Retry policy resolution order (per step):
+ *   1. Per-connector policy from registry.getRetryPolicy(connector)
+ *   2. Caller-provided fallback retryPolicy
+ *   3. DEFAULT_RETRY_POLICY
+ */
 export async function dispatchPlan(
   steps: PlanStepInput[],
   context: DispatchContext,
@@ -267,8 +291,9 @@ export async function dispatchPlan(
       continue;
     }
 
+    const effectivePolicy = registry.getRetryPolicy(step.connector) ?? retryPolicy;
     const { result: stepResult } = await dispatchWithRetry(
-      dispatcher, step, context, retryPolicy,
+      dispatcher, step, context, effectivePolicy,
     );
     results.push(stepResult);
     if (stepResult.status === "failed") {

@@ -59,6 +59,7 @@ import {
   renderPjWorkspaceHtml,
   getCorrelationId,
   logServerError,
+  logServerInfo,
 } from "./serverMiddleware.js";
 import { processAccessNotificationQueueOnce } from "./accessNotificationWorker.js";
 import { OAuthStateStore } from "./oauthStateStore.js";
@@ -86,7 +87,8 @@ import { DispatcherRegistry } from "../engine/dispatch.js";
 import { GitHubDispatcher } from "../engine/dispatchers/github.js";
 import { SlackDispatcher } from "../engine/dispatchers/slack.js";
 import { WebhookDispatcher } from "../engine/dispatchers/webhook.js";
-import { approvalMetrics, METRIC_HELP } from "../engine/approvalMetrics.js";
+import { SharePointDispatcher } from "../engine/dispatchers/sharepoint.js";
+import { approvalMetrics, METRIC, METRIC_HELP } from "../engine/approvalMetrics.js";
 import { loadConfig, StartupConfigError } from "./startupConfig.js";
 
 // ── Directory layout ────────────────────────────────────────────────────────
@@ -146,9 +148,18 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   const chainStore = new ChainStore(approvalStore.db);
   const policyProvider = new LocalPolicyProvider(approvalStore.db, chainStore);
   const dispatcherRegistry = new DispatcherRegistry();
-  dispatcherRegistry.register(new GitHubDispatcher());
+  const defaultRetryPolicy = {
+    maxAttempts: 3,
+    baseDelayMs: 1000,
+    onRetry: (attempt: number, error: string, stepId: string) => {
+      approvalMetrics.increment(METRIC.DISPATCH_RETRY);
+      logServerInfo("dispatch.retry", crypto.randomUUID(), { stepId, attempt, error });
+    },
+  };
+  dispatcherRegistry.register(new GitHubDispatcher(), defaultRetryPolicy);
   dispatcherRegistry.register(new SlackDispatcher());
-  dispatcherRegistry.register(new WebhookDispatcher());
+  dispatcherRegistry.register(new WebhookDispatcher(), defaultRetryPolicy);
+  dispatcherRegistry.register(new SharePointDispatcher(), defaultRetryPolicy);
 
   // ── Auth middleware ───────────────────────────────────────────────────
   const authMiddleware = createJwtAuthenticationMiddleware(authOptions);
