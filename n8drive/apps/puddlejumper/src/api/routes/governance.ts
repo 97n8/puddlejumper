@@ -35,6 +35,7 @@ import {
   logServerInfo,
   summarizePrompt,
 } from "../serverMiddleware.js";
+import { approvalMetrics, emitApprovalEvent, METRIC } from "../../engine/approvalMetrics.js";
 
 type GovernanceRoutesOptions = {
   runtimeContext: RuntimeContext | null;
@@ -152,6 +153,13 @@ export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.R
             planSteps: result.actionPlan,
             auditRecord: result.auditRecord,
             decisionResult: result,
+          });
+          approvalMetrics.increment(METRIC.APPROVALS_CREATED);
+          approvalMetrics.incrementGauge(METRIC.PENDING_GAUGE);
+          emitApprovalEvent("created", {
+            approvalId: approval.id, operatorId: auth.userId,
+            intent: evaluatePayload.action.intent, planHash: result.auditRecord.planHash,
+            correlationId,
           });
           logServerInfo("pj.execute.approval_created", correlationId, {
             approvalId: approval.id, operatorId: auth.userId, intent: evaluatePayload.action.intent,

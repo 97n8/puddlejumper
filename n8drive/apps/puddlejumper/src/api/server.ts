@@ -79,6 +79,7 @@ import { createApprovalRoutes } from "./routes/approvals.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { DispatcherRegistry } from "../engine/dispatch.js";
 import { GitHubDispatcher } from "../engine/dispatchers/github.js";
+import { approvalMetrics } from "../engine/approvalMetrics.js";
 
 // ── Directory layout ────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -248,6 +249,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       checks,
       secrets,
     });
+  });
+  app.get("/metrics", (_req, res) => {
+    res.type("text/plain; version=0.0.4; charset=utf-8").send(approvalMetrics.prometheus());
   });
   app.get("/auth/callback", authCallback);
   app.use(createSecurityHeadersMiddleware(nodeEnv, PJ_WORKSPACE_FILE));

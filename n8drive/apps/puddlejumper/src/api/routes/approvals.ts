@@ -16,6 +16,7 @@ import type { ApprovalStore } from "../../engine/approvalStore.js";
 import type { DispatcherRegistry, PlanStepInput } from "../../engine/dispatch.js";
 import { dispatchPlan } from "../../engine/dispatch.js";
 import { getCorrelationId } from "../serverMiddleware.js";
+import { approvalMetrics, emitApprovalEvent, METRIC } from "../../engine/approvalMetrics.js";
 
 export type ApprovalRouteOptions = {
   approvalStore: ApprovalStore;
@@ -118,6 +119,22 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
       return;
     }
 
+    // ── Metrics ──
+    if (status === "approved") {
+      approvalMetrics.increment(METRIC.APPROVALS_APPROVED);
+      const createdAt = new Date(updated.created_at).getTime();
+      const approvedAt = new Date(updated.updated_at).getTime();
+      if (createdAt > 0 && approvedAt > createdAt) {
+        approvalMetrics.observe(METRIC.APPROVAL_TIME, (approvedAt - createdAt) / 1000);
+      }
+    } else {
+      approvalMetrics.increment(METRIC.APPROVALS_REJECTED);
+    }
+    approvalMetrics.setGauge(METRIC.PENDING_GAUGE, approvalStore.countPending());
+    emitApprovalEvent("decided", {
+      approvalId: req.params.id, status, approverId: auth.userId ?? auth.sub, correlationId,
+    });
+
     res.json({ success: true, correlationId, data: sanitizeRow(updated) });
   });
 
@@ -149,14 +166,18 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
       return;
     }
 
-    // Mark as dispatching
-    const dispatching = approvalStore.markDispatching(row.id);
+    // Mark as dispatching (atomic CAS)
+    const dispatching = approvalStore.consumeForDispatch(row.id);
     if (!dispatching) {
+      approvalMetrics.increment(METRIC.CONSUME_CAS_CONFLICT);
+      emitApprovalEvent("consume_conflict", { approvalId: row.id, correlationId });
       res.status(409).json({ success: false, correlationId, error: "Failed to acquire dispatch lock" });
       return;
     }
+    approvalMetrics.increment(METRIC.CONSUME_CAS_SUCCESS);
 
     const dryRun = req.body?.dryRun === true;
+    emitApprovalEvent("dispatch_started", { approvalId: row.id, correlationId, dryRun });
 
     try {
       const planSteps: PlanStepInput[] = JSON.parse(row.plan_json);
@@ -170,9 +191,15 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
 
       if (result.success) {
         approvalStore.markDispatched(row.id, result);
+        approvalMetrics.increment(METRIC.DISPATCH_SUCCESS);
+        emitApprovalEvent("dispatched", { approvalId: row.id, correlationId, summary: result.summary });
       } else {
         approvalStore.markDispatchFailed(row.id, result);
+        approvalMetrics.increment(METRIC.DISPATCH_FAILURE);
+        emitApprovalEvent("dispatch_failed", { approvalId: row.id, correlationId, summary: result.summary });
       }
+      const dispatchMs = new Date(result.completedAt).getTime() - new Date(result.startedAt).getTime();
+      if (dispatchMs > 0) approvalMetrics.observe(METRIC.DISPATCH_LATENCY, dispatchMs / 1000);
 
       res.json({
         success: result.success,

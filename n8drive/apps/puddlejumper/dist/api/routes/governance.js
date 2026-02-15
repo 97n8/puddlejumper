@@ -8,6 +8,7 @@ import { getSystemPromptText } from "../../prompt/systemPrompt.js";
 import { buildCapabilityManifest, PJ_ACTION_DEFINITIONS, isPjActionAllowed, buildPjEvaluatePayload, resolveDecisionStatusCode, buildPjExecuteData, assertTenantScope, scopedRequestId, } from "../capabilities.js";
 import { extractMsGraphToken, fetchMsGraphProfile, buildMsGraphAuthContext, } from "../msGraph.js";
 import { getCorrelationId, logServerError, logServerInfo, summarizePrompt, } from "../serverMiddleware.js";
+import { approvalMetrics, emitApprovalEvent, METRIC } from "../../engine/approvalMetrics.js";
 export function createGovernanceRoutes(opts) {
     const router = express.Router();
     const engine = createDefaultEngine({ canonicalSourceOptions: opts.canonicalSourceOptions });
@@ -111,6 +112,13 @@ export function createGovernanceRoutes(opts) {
                         planSteps: result.actionPlan,
                         auditRecord: result.auditRecord,
                         decisionResult: result,
+                    });
+                    approvalMetrics.increment(METRIC.APPROVALS_CREATED);
+                    approvalMetrics.incrementGauge(METRIC.PENDING_GAUGE);
+                    emitApprovalEvent("created", {
+                        approvalId: approval.id, operatorId: auth.userId,
+                        intent: evaluatePayload.action.intent, planHash: result.auditRecord.planHash,
+                        correlationId,
                     });
                     logServerInfo("pj.execute.approval_created", correlationId, {
                         approvalId: approval.id, operatorId: auth.userId, intent: evaluatePayload.action.intent,
