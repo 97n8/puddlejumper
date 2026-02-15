@@ -449,5 +449,134 @@ router.get('/auth/google/callback', async (req, res) => {
 // Expose oauthStates for testing
 export { oauthStates as _oauthStates };
 export { googleOauthStates as _googleOauthStates };
+export { microsoftOauthStates as _microsoftOauthStates };
+
+// ── Microsoft (Entra ID) OAuth ──────────────────────────────────────────────
+const microsoftOauthStates = new Map<string, number>();
+
+function pruneMicrosoftStates() {
+  const now = Date.now();
+  for (const [key, exp] of microsoftOauthStates) {
+    if (exp < now) microsoftOauthStates.delete(key);
+  }
+}
+
+router.get('/auth/microsoft/login', (_req, res) => {
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  if (!clientId) {
+    return res.status(500).json({ error: 'Microsoft OAuth not configured' });
+  }
+
+  pruneMicrosoftStates();
+  const state = crypto.randomUUID();
+  microsoftOauthStates.set(state, Date.now() + 5 * 60 * 1000);
+
+  const tenantId = process.env.MICROSOFT_TENANT_ID || 'common';
+  const redirectUri =
+    process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3002/api/auth/microsoft/callback';
+  const nodeEnv = process.env.NODE_ENV || 'development';
+
+  res.cookie('microsoft_oauth_state', state, {
+    httpOnly: true,
+    secure: nodeEnv === 'production',
+    maxAge: 5 * 60 * 1000,
+    sameSite: 'lax',
+  });
+
+  const authUrl = new URL(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`);
+  authUrl.searchParams.set('client_id', clientId);
+  authUrl.searchParams.set('redirect_uri', redirectUri);
+  authUrl.searchParams.set('response_type', 'code');
+  authUrl.searchParams.set('scope', 'openid email profile User.Read');
+  authUrl.searchParams.set('state', state);
+  authUrl.searchParams.set('response_mode', 'query');
+
+  return res.redirect(authUrl.toString());
+});
+
+router.get('/auth/microsoft/callback', async (req, res) => {
+  const { code, state } = req.query as { code?: string; state?: string };
+
+  const memoryValid = state && microsoftOauthStates.has(state) && microsoftOauthStates.get(state)! > Date.now();
+  if (!state || !memoryValid) {
+    return res.status(400).json({ error: 'Invalid or expired state parameter' });
+  }
+
+  microsoftOauthStates.delete(state);
+  res.clearCookie('microsoft_oauth_state');
+
+  if (!code) {
+    return res.status(400).json({ error: 'Missing authorization code' });
+  }
+
+  try {
+    const tenantId = process.env.MICROSOFT_TENANT_ID || 'common';
+    const redirectUri =
+      process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3002/api/auth/microsoft/callback';
+
+    const tokenResponse = await fetch(
+      `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: process.env.MICROSOFT_CLIENT_ID!,
+          client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
+          code,
+          redirect_uri: redirectUri,
+          grant_type: 'authorization_code',
+          scope: 'openid email profile User.Read',
+        }),
+      },
+    );
+
+    const tokenBody = (await tokenResponse.json()) as Record<string, any>;
+    if (tokenBody.error || !tokenBody.access_token) {
+      throw new Error(tokenBody.error_description || tokenBody.error || 'Token exchange failed');
+    }
+
+    // Verify token via MS Graph /me
+    const meRes = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: { Authorization: `Bearer ${tokenBody.access_token}`, Accept: 'application/json' },
+    });
+    if (!meRes.ok) {
+      const txt = await meRes.text().catch(() => '');
+      throw new Error(`Microsoft /me error ${meRes.status} ${txt}`);
+    }
+    const meJson = (await meRes.json()) as Record<string, any>;
+    const msId = meJson.id ? String(meJson.id) : undefined;
+    if (!msId) throw new Error('Missing microsoft id');
+
+    const userInfo = {
+      sub: msId,
+      email: meJson.mail ?? meJson.userPrincipalName ?? undefined,
+      name: meJson.displayName ?? meJson.mail ?? undefined,
+    };
+
+    const accessJwt = await signJwt(
+      { sub: userInfo.sub, email: userInfo.email, name: userInfo.name, provider: 'microsoft', role: 'user' },
+      { expiresIn: '15m' },
+    );
+
+    const refreshJwt = await signJwt(
+      { sub: userInfo.sub, email: userInfo.email, provider: 'microsoft', type: 'refresh' },
+      { expiresIn: '7d' } as any,
+    );
+
+    res.cookie('pj_refresh', refreshJwt, REFRESH_COOKIE_OPTS);
+    authEvent(req, 'login', { sub: userInfo.sub, provider: 'microsoft', method: 'oauth_redirect' });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'https://pj.publiclogic.org';
+    return res.redirect(`${frontendUrl}/#access_token=${accessJwt}`);
+  } catch (err: any) {
+    authEvent(req, 'login_failed', {
+      provider: 'microsoft',
+      method: 'oauth_redirect',
+      reason: err?.message ?? 'unknown',
+    });
+    const frontendUrl = process.env.FRONTEND_URL || 'https://pj.publiclogic.org';
+    return res.redirect(`${frontendUrl}/#error=authentication_failed`);
+  }
+});
 
 export default router;

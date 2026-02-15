@@ -169,6 +169,23 @@ export default function Home() {
                 </svg>
                 Sign in with Google
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://publiclogic-puddlejumper.fly.dev";
+                  window.location.href = `${apiUrl}/api/auth/microsoft/login`;
+                }}
+                className="flex items-center justify-center gap-3 rounded-lg bg-zinc-100 px-5 py-3 text-sm font-medium text-zinc-900 transition hover:bg-white"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 21 21">
+                  <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+                  <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+                  <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+                  <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+                </svg>
+                Sign in with Microsoft
+              </button>
             </div>
 
             {/* Manual token fallback */}
