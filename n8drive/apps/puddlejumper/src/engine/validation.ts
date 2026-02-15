@@ -226,6 +226,7 @@ export function toConnector(target: string):
   | "google"
   | "github"
   | "vault"
+  | "webhook"
   | "none" {
   if (typeof target !== "string" || !target.includes(":")) {
     return "none";
@@ -243,7 +244,8 @@ export function toConnector(target: string):
     prefix === "civicplus" ||
     prefix === "google" ||
     prefix === "github" ||
-    prefix === "vault"
+    prefix === "vault" ||
+    prefix === "webhook"
   ) {
     return prefix;
   }

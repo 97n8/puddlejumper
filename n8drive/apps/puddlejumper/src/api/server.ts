@@ -76,6 +76,7 @@ import { createPrrRoutes } from "./routes/prr.js";
 import { createAccessRoutes } from "./routes/access.js";
 import { createGovernanceRoutes } from "./routes/governance.js";
 import { createApprovalRoutes } from "./routes/approvals.js";
+import { createWebhookActionRoutes } from "./routes/webhookAction.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { DispatcherRegistry } from "../engine/dispatch.js";
 import { GitHubDispatcher } from "../engine/dispatchers/github.js";
@@ -358,6 +359,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   }));
   app.use("/api", createApprovalRoutes({
     approvalStore, dispatcherRegistry, nodeEnv,
+  }));
+  app.use("/api", createWebhookActionRoutes({
+    approvalStore, dispatcherRegistry,
   }));
   app.use("/api/connectors", createConnectorsRouter({
     store: connectorStore, stateHmacKey: connectorStateSecret,
