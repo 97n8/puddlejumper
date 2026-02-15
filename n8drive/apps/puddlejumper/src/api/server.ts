@@ -182,13 +182,13 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   // ── Express app ───────────────────────────────────────────────────────
   const app = express();
 
+  // Global middleware (must come before routes for CORS to apply)
+  app.use(withCorrelationId);
+  app.use(createCorsMiddleware(nodeEnv));
+
   // Pre-auth routes
   app.get("/health", (_req, res) => res.sendStatus(200));
   app.get("/auth/callback", authCallback);
-
-  // Global middleware
-  app.use(withCorrelationId);
-  app.use(createCorsMiddleware(nodeEnv));
   app.use(createSecurityHeadersMiddleware(nodeEnv, PJ_WORKSPACE_FILE));
   app.use(express.json({ limit: "2mb" }));
   app.use(cookieParser());
