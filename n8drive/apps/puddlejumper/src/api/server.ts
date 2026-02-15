@@ -315,6 +315,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     workerInterval.unref?.();
   }
 
+  // ── Root + login redirects ────────────────────────────────────────────
+  app.get("/", (_req, res) => res.redirect("/pj/admin"));
+  app.get("/login", (_req, res) => res.redirect("/pj/admin"));
+
   // ── PJ workspace HTML routes ──────────────────────────────────────────
   const sendPjWorkspace = (res: express.Response): void => {
     try {
