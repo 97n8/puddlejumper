@@ -188,7 +188,42 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   // Pre-auth routes
   app.get("/health", (_req, res) => {
-    res.json({ status: "ok", service: "puddle-jumper-deploy-remote", nodeEnv, now: new Date().toISOString() });
+    const checks: Record<string, { status: string; detail?: string }> = {};
+
+    // Database connectivity
+    for (const [label, store] of [["prr", prrStore], ["connectors", connectorStore]] as const) {
+      try {
+        (store as any).db.prepare("SELECT 1").get();
+        checks[label] = { status: "ok" };
+      } catch (err: unknown) {
+        checks[label] = { status: "error", detail: err instanceof Error ? err.message : String(err) };
+      }
+    }
+
+    // Critical secrets presence (never leak values)
+    const secretKeys = [
+      "JWT_SECRET",
+      "CONNECTOR_STATE_SECRET",
+      "GITHUB_CLIENT_ID",
+      "GOOGLE_CLIENT_ID",
+      "MICROSOFT_CLIENT_ID",
+    ];
+    const secrets: Record<string, boolean> = {};
+    for (const key of secretKeys) {
+      secrets[key] = Boolean(process.env[key]?.trim());
+    }
+    checks.secrets = { status: Object.values(secrets).every(Boolean) ? "ok" : "warn" };
+
+    const overall = Object.values(checks).every((c) => c.status === "ok") ? "ok" : "degraded";
+
+    res.json({
+      status: overall,
+      service: "puddle-jumper-deploy-remote",
+      nodeEnv,
+      now: new Date().toISOString(),
+      checks,
+      secrets,
+    });
   });
   app.get("/auth/callback", authCallback);
   app.use(createSecurityHeadersMiddleware(nodeEnv, PJ_WORKSPACE_FILE));

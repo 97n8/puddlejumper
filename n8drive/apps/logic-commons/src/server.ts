@@ -49,7 +49,17 @@ app.use('/api', loginRouter);
 
 // Health endpoint (no auth required)
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'logic-commons' });
+  const secretKeys = ['JWT_SECRET', 'GITHUB_CLIENT_ID', 'GOOGLE_CLIENT_ID', 'MICROSOFT_CLIENT_ID'];
+  const secrets: Record<string, boolean> = {};
+  for (const key of secretKeys) {
+    secrets[key] = Boolean(process.env[key]?.trim());
+  }
+  res.json({
+    status: 'ok',
+    service: 'logic-commons',
+    now: new Date().toISOString(),
+    secrets,
+  });
 });
 
 // Export for serverless (Vercel)
