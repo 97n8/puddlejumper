@@ -333,10 +333,27 @@ export function assertProductionInvariants(nodeEnv, authOptions, controlledDataD
         "IDEMPOTENCY_DB_PATH",
         "RATE_LIMIT_DB_PATH",
         "ACCESS_NOTIFICATION_WEBHOOK_URL",
+        "FRONTEND_URL",
     ];
     for (const variable of requiredEnvVars) {
         if (!process.env[variable]?.trim()) {
             throw new Error(`${variable} must be configured in production`);
+        }
+    }
+    // OAuth provider credentials – each provider needs both client ID and secret
+    const oauthProviders = [
+        { name: "GitHub", idVar: "GITHUB_CLIENT_ID", secretVar: "GITHUB_CLIENT_SECRET", redirectVar: "GITHUB_REDIRECT_URI" },
+        { name: "Google", idVar: "GOOGLE_CLIENT_ID", secretVar: "GOOGLE_CLIENT_SECRET", redirectVar: "GOOGLE_REDIRECT_URI" },
+        { name: "Microsoft", idVar: "MICROSOFT_CLIENT_ID", secretVar: "MICROSOFT_CLIENT_SECRET", redirectVar: "MICROSOFT_REDIRECT_URI" },
+    ];
+    for (const { name, idVar, secretVar, redirectVar } of oauthProviders) {
+        const hasId = Boolean(process.env[idVar]?.trim());
+        const hasSecret = Boolean(process.env[secretVar]?.trim());
+        if (hasId !== hasSecret) {
+            throw new Error(`${name} OAuth: both ${idVar} and ${secretVar} must be set (or both unset)`);
+        }
+        if (hasId && !process.env[redirectVar]?.trim()) {
+            throw new Error(`${name} OAuth: ${redirectVar} must be configured when ${idVar} is set`);
         }
     }
     const hasJwtVerificationKey = Boolean(authOptions.jwtPublicKey?.trim() || authOptions.jwtSecret?.trim());

@@ -11,20 +11,24 @@ import { createRefreshToken } from "./refreshTokenStore.js";
 export const REFRESH_TTL_SEC = 7 * 24 * 60 * 60; // 7 days in seconds
 
 export function getRefreshCookieOpts(nodeEnv: string) {
+  // SameSite=None required for cross-origin fetch (frontend on different domain)
+  const isProduction = nodeEnv === "production";
   return {
     httpOnly: true,
-    secure: nodeEnv === "production",
-    sameSite: "lax" as const,
+    secure: isProduction,
+    sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
     path: "/api",
     maxAge: REFRESH_TTL_SEC * 1000,
   };
 }
 
 export function getAccessCookieOpts(nodeEnv: string) {
+  // SameSite=None required for cross-origin fetch (frontend on different domain)
+  const isProduction = nodeEnv === "production";
   return {
     httpOnly: true,
-    secure: nodeEnv === "production",
-    sameSite: "lax" as const,
+    secure: isProduction,
+    sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
     path: "/",
     maxAge: 60 * 60 * 1000, // 1 hour (matches access token expiry)
   };

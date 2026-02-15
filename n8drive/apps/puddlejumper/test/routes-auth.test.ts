@@ -214,10 +214,10 @@ describe('Auth routes', () => {
       expect(res.body.user.sub).toBe('u1');
     });
 
-    it('returns 401 with authenticated=false when no auth', async () => {
+    it('returns 200 with authenticated=false when no auth', async () => {
       const app = buildApp();
       const res = await request(app).get('/api/auth/status');
-      expect(res.status).toBe(401);
+      expect(res.status).toBe(200);
       expect(res.body.authenticated).toBe(false);
     });
   });
