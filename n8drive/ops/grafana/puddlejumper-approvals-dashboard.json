@@ -1,0 +1,254 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": null,
+  "iteration": 1627543200000,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "show": true }
+      },
+      "title": "Approvals Created / Approved / Rejected (rate, 5m)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(approvals_created_total[5m])",
+          "legendFormat": "created",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(approvals_approved_total[5m])",
+          "legendFormat": "approved",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(approvals_rejected_total[5m])",
+          "legendFormat": "rejected",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "req/s", "min": 0 },
+        "overrides": []
+      }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "id": 2,
+      "options": {
+        "tooltip": { "show": true },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "title": "Pending Approvals (gauge)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "approval_pending_gauge",
+          "legendFormat": "pending",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "id": 3,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "show": true }
+      },
+      "title": "Approval Time (latency) p50 & p95",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(approval_time_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(approval_time_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s", "min": 0 },
+        "overrides": []
+      }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "id": 4,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "show": true }
+      },
+      "title": "ConsumeForDispatch Conflicts (rate 5m)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(consume_for_dispatch_conflict_total[5m])",
+          "legendFormat": "conflicts",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "req/s", "min": 0 },
+        "overrides": []
+      }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "id": 5,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "show": true }
+      },
+      "title": "Dispatch Failures & Success Rate (5m)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(dispatch_failure_total[5m])",
+          "legendFormat": "failures (rate)",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(dispatch_success_total[5m])",
+          "legendFormat": "success (rate)",
+          "refId": "B"
+        },
+        {
+          "expr": "( rate(dispatch_success_total[5m]) / (rate(dispatch_success_total[5m]) + rate(dispatch_failure_total[5m])) ) * 100",
+          "legendFormat": "success % (5m)",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "min": 0, "max": 100 },
+        "overrides": []
+      }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "id": 6,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "show": true }
+      },
+      "title": "Dispatch Latency p95",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(dispatch_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "dispatch_p95",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s", "min": 0 },
+        "overrides": []
+      }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 16 },
+      "id": 7,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "show": true }
+      },
+      "title": "Approval Backlog Trend",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "approval_pending_gauge",
+          "legendFormat": "pending",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": ["puddlejumper", "approvals", "ops"],
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "type": "datasource",
+        "pluginId": "prometheus",
+        "query": "prometheus",
+        "hide": 0,
+        "label": "Prometheus",
+        "includeAll": false,
+        "multi": false,
+        "options": []
+      }
+    ]
+  },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m"],
+    "time_options": ["1h", "6h", "12h", "24h", "7d", "30d"]
+  },
+  "timezones": { "default": "browser" },
+  "title": "PuddleJumper Approvals & Dispatch — Ops",
+  "uid": "pj-approvals-ops",
+  "version": 1
+}
