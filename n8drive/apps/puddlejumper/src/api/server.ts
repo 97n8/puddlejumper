@@ -95,6 +95,7 @@ import { WebhookDispatcher } from "../engine/dispatchers/webhook.js";
 import { SharePointDispatcher } from "../engine/dispatchers/sharepoint.js";
 import { approvalMetrics, METRIC, METRIC_HELP } from "../engine/approvalMetrics.js";
 import { loadConfig, StartupConfigError } from "./startupConfig.js";
+import { ensurePersonalWorkspace } from "../engine/workspaceStore.js";
 
 // ── Directory layout ────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -328,6 +329,19 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.get("/", (_req, res) => res.redirect("/pj/admin"));
   app.get("/login", (_req, res) => res.redirect("/pj/admin"));
 
+  // ── PJ landing page ────────────────────────────────────────────────
+  const LANDING_HTML_FILE = path.join(PUBLIC_DIR, "index.html");
+  app.get("/pj", (_req, res) => {
+    try {
+      res.setHeader("Cache-Control", "no-store, max-age=0");
+      res.type("html").sendFile(LANDING_HTML_FILE);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to serve landing HTML:", (err as Error).message);
+      res.status(503).json({ error: "Landing HTML not available" });
+    }
+  });
+
   // ── PJ workspace HTML routes ──────────────────────────────────────────
   const sendPjWorkspace = (res: express.Response): void => {
     try {
@@ -339,7 +353,6 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       res.status(503).json({ error: "Workspace HTML not available" });
     }
   };
-  app.get("/pj", (_req, res) => sendPjWorkspace(res));
   app.get("/puddle-jumper", (_req, res) => sendPjWorkspace(res));
   app.get("/pj-workspace", (_req, res) => sendPjWorkspace(res));
 
@@ -404,6 +417,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       name: auth.name ?? null,
       role: auth.role ?? "viewer",
       provider: auth.provider ?? null,
+      workspaceId: auth.workspaceId ?? "system",
+      workspaceName: auth.workspaceName ?? null,
     });
   });
 
@@ -426,7 +441,12 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       name: userInfo.name,
       provider: userInfo.provider,
     });
-    return { ...userInfo, role: row.role };
+    // Ensure personal workspace exists
+    const ws = ensurePersonalWorkspace(CONTROLLED_DATA_DIR, row.id, row.name || row.sub);
+    // Clone default template into new workspace if not present
+    chainStore.cloneDefaultTemplateToWorkspace(ws.id);
+    // Extend the returned object to include workspaceId and workspaceName
+    return { ...userInfo, role: row.role, workspaceId: ws.id, workspaceName: ws.name } as typeof userInfo & { role: string; workspaceId: string; workspaceName: string };
   };
   const oauthRouteOpts = { nodeEnv, oauthStateStore, onUserAuthenticated };
   app.use("/api", createOAuthRoutes(githubProvider, oauthRouteOpts));

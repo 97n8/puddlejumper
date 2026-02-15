@@ -16,6 +16,8 @@
     "build:pj": "pnpm --filter @publiclogic/puddlejumper run build",
     "build:web": "pnpm --filter web run build",
     "vercel-build": "pnpm -r run build",
+    "deploy:vercel": "./scripts/deploy-vercel.sh",
+    "deploy:fly": "./scripts/deploy-fly.sh",
     "test": "pnpm -r run test",
     "test:root": "tsx --test test/**/*.test.ts",
     "test:core": "pnpm --filter @publiclogic/core run test",

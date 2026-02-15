@@ -38,8 +38,9 @@ let chainStore: ChainStore;
 let registry: DispatcherRegistry;
 let tmpDir: string;
 
-const ADMIN = { sub: "admin-1", name: "Admin", role: "admin", permissions: ["deploy"], tenants: ["t1"], tenantId: "t1" };
-const VIEWER = { sub: "viewer-1", name: "Viewer", role: "viewer", permissions: [], tenants: ["t1"], tenantId: "t1" };
+const WORKSPACE_ID = "ws-test";
+const ADMIN = { sub: "admin-1", name: "Admin", role: "admin", permissions: ["deploy"], tenants: ["t1"], tenantId: "t1", workspaceId: WORKSPACE_ID };
+const VIEWER = { sub: "viewer-1", name: "Viewer", role: "viewer", permissions: [], tenants: ["t1"], tenantId: "t1", workspaceId: WORKSPACE_ID };
 
 async function tokenFor(user: Record<string, unknown>) {
   return signJwt(user, { expiresIn: "1h" });
@@ -106,7 +107,7 @@ function createApproval(overrides: Record<string, unknown> = {}) {
   return approvalStore.create({
     requestId: overrides.requestId as string ?? `req-${crypto.randomUUID()}`,
     operatorId: overrides.operatorId as string ?? "admin-1",
-    workspaceId: "ws-test",
+    workspaceId: WORKSPACE_ID,
     municipalityId: "muni-test",
     actionIntent: overrides.actionIntent as string ?? "deploy_policy",
     actionMode: "governed",
@@ -125,6 +126,8 @@ beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "viewer-role-test-"));
   approvalStore = new ApprovalStore(path.join(tmpDir, "approvals.db"));
   chainStore = new ChainStore(approvalStore.db);
+  // Ensure default template is present in the test workspace
+  chainStore.cloneDefaultTemplateToWorkspace(WORKSPACE_ID);
   registry = new DispatcherRegistry();
   registry.register(createMockDispatcher());
   approvalMetrics.reset();
@@ -279,7 +282,9 @@ describe("Viewer read-only access", () => {
     const token = await tokenFor(VIEWER);
     const h = { Authorization: `Bearer ${token}`, "X-PuddleJumper-Request": "true" };
 
-    const res = await request(app).get("/api/chain-templates/default").set(h);
+    // After cloning, the template ID is workspace-scoped
+    const workspaceScopedId = `default-${WORKSPACE_ID}`;
+    const res = await request(app).get(`/api/chain-templates/${workspaceScopedId}`).set(h);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });

@@ -245,6 +245,10 @@ tbody tr:hover { background: var(--surface-hover); }
   .template-grid { grid-template-columns: 1fr; }
   table { font-size: 12px; }
   thead th, tbody td { padding: 8px 6px; }
+  .header { padding: 12px 16px; flex-wrap: wrap; gap: 12px; }
+  .header h1 { font-size: 16px; }
+  .header .subtitle { font-size: 12px; margin-left: 8px; }
+  .header-right { gap: 8px; }
 }
 /* ── Viewer role: hide mutations ───────────────────────────────────── */
 body.role-viewer .btn-approve,
@@ -264,9 +268,10 @@ body.role-viewer .viewer-banner { display: flex; }
 <body>
 
 <div class="header">
-  <div style="display:flex;align-items:baseline;">
+  <div style="display:flex;align-items:baseline;gap:10px;">
     <h1>PuddleJumper Admin</h1>
     <span class="subtitle">Control Plane</span>
+    <span id="workspace-name" class="subtitle" style="color:var(--green);display:none;"></span>
   </div>
   <div class="header-right">
     <a class="guide-link" href="/pj/guide">Quick Start</a>
@@ -896,13 +901,18 @@ async function refresh() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────
-// Fetch user role before loading data
+// Fetch user role and workspace before loading data
 (async function init() {
   try {
     const meRes = await fetch("/api/me", { headers: authHeaders() });
     if (meRes.ok) {
       const me = await meRes.json();
       userRole = me.role;
+      if (me.workspaceName) {
+        const ws = document.getElementById("workspace-name");
+        ws.textContent = me.workspaceName;
+        ws.style.display = "inline";
+      }
     }
   } catch { /* ignore */ }
   loadApprovals();

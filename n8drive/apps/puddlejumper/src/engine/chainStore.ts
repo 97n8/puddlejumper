@@ -36,6 +36,7 @@ export type ChainTemplate = {
   steps: ChainTemplateStep[];
   createdAt: string;
   updatedAt: string;
+  workspace_id: string;
 };
 
 export type ChainTemplateStep = {
@@ -135,7 +136,8 @@ export class ChainStore {
         description TEXT NOT NULL DEFAULT '',
         steps_json TEXT NOT NULL,
         created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        workspace_id TEXT NOT NULL DEFAULT 'system'
       );
 
       CREATE TABLE IF NOT EXISTS approval_chain_steps (
@@ -158,7 +160,16 @@ export class ChainStore {
         ON approval_chain_steps(approval_id);
       CREATE INDEX IF NOT EXISTS idx_chain_steps_status
         ON approval_chain_steps(status);
+      CREATE INDEX IF NOT EXISTS idx_chain_templates_workspace
+        ON approval_chain_templates(workspace_id);
     `);
+
+    // Migration: add workspace_id column if missing
+    const pragma = this.db.prepare("PRAGMA table_info(approval_chain_templates)").all();
+    if (!pragma.some((col: any) => col.name === "workspace_id")) {
+      this.db.exec("ALTER TABLE approval_chain_templates ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'system'");
+      this.db.exec("CREATE INDEX IF NOT EXISTS idx_templates_workspace ON approval_chain_templates(workspace_id)");
+    }
 
     // Migration: drop old UNIQUE index (from 30-day milestone) and replace
     // with non-unique to support parallel steps at the same order.
@@ -205,6 +216,7 @@ export class ChainStore {
     name: string;
     description?: string;
     steps: ChainTemplateStep[];
+    workspaceId?: string;
   }): ChainTemplate {
     if (input.steps.length === 0) {
       throw new Error("Chain template must have at least one step");
@@ -224,14 +236,15 @@ export class ChainStore {
     const now = new Date().toISOString();
 
     this.db.prepare(`
-      INSERT INTO approval_chain_templates (id, name, description, steps_json, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO approval_chain_templates (id, name, description, steps_json, created_at, updated_at, workspace_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       input.name,
       input.description ?? "",
       JSON.stringify(sorted),
       now, now,
+      input.workspaceId ?? "system",
     );
 
     return this.getTemplate(id)!;
@@ -251,14 +264,19 @@ export class ChainStore {
       steps: JSON.parse(row.steps_json) as ChainTemplateStep[],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      workspace_id: row.workspace_id,
     };
   }
 
-  listTemplates(): ChainTemplate[] {
-    const rows = this.db
-      .prepare("SELECT * FROM approval_chain_templates ORDER BY name")
-      .all() as any[];
-
+  listTemplates(opts: { workspaceId?: string } = {}): ChainTemplate[] {
+    let sql = "SELECT * FROM approval_chain_templates";
+    const params: any[] = [];
+    if (opts.workspaceId) {
+      sql += " WHERE workspace_id = ?";
+      params.push(opts.workspaceId);
+    }
+    sql += " ORDER BY name";
+    const rows = this.db.prepare(sql).all(...params) as any[];
     return rows.map((row) => ({
       id: row.id,
       name: row.name,
@@ -266,6 +284,7 @@ export class ChainStore {
       steps: JSON.parse(row.steps_json) as ChainTemplateStep[],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      workspace_id: row.workspace_id,
     }));
   }
 
@@ -599,6 +618,34 @@ export class ChainStore {
       .prepare("SELECT COUNT(*) as cnt FROM approval_chain_steps WHERE status = 'active'")
       .get() as { cnt: number };
     return row.cnt;
+  }
+
+  /**
+   * Clone the default template into a new workspace if not present.
+   * Idempotent: does nothing if a template with the same name exists in the workspace.
+   */
+  cloneDefaultTemplateToWorkspace(workspaceId: string): void {
+    // Check if a template with the default name exists in this workspace
+    const row = this.db.prepare(
+      "SELECT id FROM approval_chain_templates WHERE workspace_id = ? AND name = ?"
+    ).get(workspaceId, DEFAULT_TEMPLATE_NAME);
+    if (row) return; // Already present
+    // Get the default template
+    const def = this.getTemplate(DEFAULT_TEMPLATE_ID);
+    if (!def) return;
+    const now = new Date().toISOString();
+    const newId = `${DEFAULT_TEMPLATE_ID}-${workspaceId}`;
+    this.db.prepare(`
+      INSERT INTO approval_chain_templates (id, name, description, steps_json, created_at, updated_at, workspace_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      newId,
+      def.name,
+      def.description,
+      JSON.stringify(def.steps),
+      now, now,
+      workspaceId
+    );
   }
 }
 

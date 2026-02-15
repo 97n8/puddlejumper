@@ -37,40 +37,43 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
     next();
   };
 
-  // ── List templates (viewer + admin) ───────────────────────────────────
-  router.get("/chain-templates", requireAuthenticated(), (_req, res) => {
+  // ── List templates (workspace-scoped) ────────────────────────────────
+  router.get("/chain-templates", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
-    const templates = chainStore.listTemplates();
+    if (!auth) { res.status(401).json({ success: false, correlationId, error: "Unauthorized" }); return; }
+    const templates = chainStore.listTemplates({ workspaceId: auth.workspaceId });
     res.json({ success: true, correlationId, data: templates });
   });
 
-  // ── Get single template (viewer + admin) ──────────────────────────────
+  // ── Get single template (workspace-scoped) ───────────────────────────
   router.get("/chain-templates/:id", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
+    if (!auth) { res.status(401).json({ success: false, correlationId, error: "Unauthorized" }); return; }
     const template = chainStore.getTemplate(req.params.id);
-    if (!template) {
+    if (!template || template.workspace_id !== auth.workspaceId) {
       res.status(404).json({ success: false, correlationId, error: "Template not found" });
       return;
     }
     res.json({ success: true, correlationId, data: template });
   });
 
-  // ── Create template ───────────────────────────────────────────────────
+  // ── Create template (workspace-scoped) ───────────────────────────────
   router.post("/chain-templates", requireAuthenticated(), requireAdmin, (req, res) => {
+    const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
     const { id, name, description, steps } = req.body ?? {};
 
+    if (!auth) { res.status(401).json({ success: false, correlationId, error: "Unauthorized" }); return; }
     if (!name || typeof name !== "string") {
       res.status(400).json({ success: false, correlationId, error: "name is required and must be a string" });
       return;
     }
-
     if (!Array.isArray(steps) || steps.length === 0) {
       res.status(400).json({ success: false, correlationId, error: "steps must be a non-empty array" });
       return;
     }
-
-    // Validate step shape
     for (const step of steps) {
       if (typeof step.order !== "number" || typeof step.requiredRole !== "string" || typeof step.label !== "string") {
         res.status(400).json({
@@ -80,18 +83,17 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
         return;
       }
     }
-
     try {
       const template = chainStore.createTemplate({
         id: typeof id === "string" ? id : undefined,
         name,
         description: typeof description === "string" ? description : undefined,
         steps,
+        workspaceId: auth.workspaceId,
       });
       res.status(201).json({ success: true, correlationId, data: template });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      // Duplicate id or validation error
       const status = message.includes("UNIQUE constraint") ? 409 : 400;
       res.status(status).json({ success: false, correlationId, error: message });
     }

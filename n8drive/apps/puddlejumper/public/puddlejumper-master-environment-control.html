@@ -3,12 +3,95 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PuddleJumper Workspace Shell</title>
+    <title>PuddleJumper — Workspace Control</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      :root {
+        --bg: #0f1117;
+        --surface: #1a1d27;
+        --border: #2a2d37;
+        --text: #e4e6eb;
+        --text-dim: #8b8fa3;
+        --accent: #4f8ff7;
+        --green: #34d399;
+        --radius: 8px;
+        --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      body {
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .container {
+        max-width: 600px;
+        text-align: center;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 40px 32px;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        color: var(--accent);
+      }
+      p {
+        font-size: 16px;
+        color: var(--text-dim);
+        margin-bottom: 24px;
+        line-height: 1.6;
+      }
+      .nav-links {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .nav-links a {
+        color: var(--text-dim);
+        padding: 8px 16px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        text-decoration: none;
+        font-size: 14px;
+        transition: all 0.2s;
+      }
+      .nav-links a:hover {
+        color: var(--text);
+        border-color: var(--text-dim);
+        text-decoration: none;
+      }
+      .nav-links a.primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+      .nav-links a.primary:hover {
+        opacity: 0.9;
+      }
+      @media (max-width: 480px) {
+        .container { padding: 32px 20px; }
+        h1 { font-size: 20px; }
+        .nav-links { flex-direction: column; align-items: center; }
+        .nav-links a { width: 200px; text-align: center; }
+      }
+    </style>
   </head>
   <body>
-    <main>
-      <h1>PuddleJumper Workspace Shell</h1>
-      <p>Runtime workspace shell served from the PublicLogic portal.</p>
-    </main>
+    <div class="container">
+      <h1>PuddleJumper Workspace</h1>
+      <p>Runtime workspace shell for governed operations and approval workflows. Access the control plane to manage approvals and monitor system health.</p>
+      <div class="nav-links">
+        <a href="/pj/admin" class="primary">Admin Panel</a>
+        <a href="/pj/guide">Quick Start</a>
+        <a href="/health">Health Check</a>
+      </div>
+    </div>
   </body>
 </html>

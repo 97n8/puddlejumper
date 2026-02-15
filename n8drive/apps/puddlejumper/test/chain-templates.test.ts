@@ -30,8 +30,9 @@ let chainStore: ChainStore;
 let registry: DispatcherRegistry;
 let tmpDir: string;
 
-const ADMIN = { sub: "admin-1", name: "Admin", role: "admin", permissions: ["deploy"], tenants: ["t1"], tenantId: "t1" };
-const VIEWER = { sub: "viewer-1", name: "Viewer", role: "viewer", permissions: [], tenants: ["t1"], tenantId: "t1" };
+const WORKSPACE_ID = "ws-tmpl";
+const ADMIN = { sub: "admin-1", name: "Admin", role: "admin", permissions: ["deploy"], tenants: ["t1"], tenantId: "t1", workspaceId: WORKSPACE_ID };
+const VIEWER = { sub: "viewer-1", name: "Viewer", role: "viewer", permissions: [], tenants: ["t1"], tenantId: "t1", workspaceId: WORKSPACE_ID };
 
 async function tokenFor(user: Record<string, unknown>) {
   return signJwt(user, { expiresIn: "1h" });
@@ -82,7 +83,7 @@ function buildApp() {
     const approval = approvalStore.create({
       requestId,
       operatorId: auth.sub,
-      workspaceId: "ws-tmpl",
+      workspaceId: WORKSPACE_ID,
       municipalityId: "muni-tmpl",
       actionIntent: req.body.actionIntent ?? "deploy_policy",
       actionMode: "governed",
@@ -122,6 +123,8 @@ beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tmpl-api-test-"));
   approvalStore = new ApprovalStore(path.join(tmpDir, "approvals.db"));
   chainStore = new ChainStore(approvalStore.db);
+  // Ensure default template is present in the test workspace
+  chainStore.cloneDefaultTemplateToWorkspace(WORKSPACE_ID);
   registry = new DispatcherRegistry();
   registry.register(createMockDispatcher());
 });
@@ -144,7 +147,9 @@ describe("Template management API — CRUD", () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.length).toBeGreaterThanOrEqual(1);
-    const def = res.body.data.find((t: any) => t.id === DEFAULT_TEMPLATE_ID);
+    // After cloning, the template ID is workspace-scoped
+    const workspaceScopedId = `${DEFAULT_TEMPLATE_ID}-${WORKSPACE_ID}`;
+    const def = res.body.data.find((t: any) => t.id === workspaceScopedId);
     expect(def).toBeTruthy();
     expect(def.name).toBe("Single Admin Approval");
   });
@@ -194,9 +199,11 @@ describe("Template management API — CRUD", () => {
     const adminToken = await tokenFor(ADMIN);
     const h = { Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" };
 
-    const res = await request(app).get(`/api/chain-templates/${DEFAULT_TEMPLATE_ID}`).set(h);
+    // After cloning, the template ID is workspace-scoped
+    const workspaceScopedId = `${DEFAULT_TEMPLATE_ID}-${WORKSPACE_ID}`;
+    const res = await request(app).get(`/api/chain-templates/${workspaceScopedId}`).set(h);
     expect(res.status).toBe(200);
-    expect(res.body.data.id).toBe(DEFAULT_TEMPLATE_ID);
+    expect(res.body.data.id).toBe(workspaceScopedId);
   });
 
   it("returns 404 for unknown template", async () => {
@@ -490,7 +497,7 @@ describe("Approval list enriched with chain summary", () => {
     const approval = approvalStore.create({
       requestId: "legacy-enrich-1",
       operatorId: "admin-1",
-      workspaceId: "ws",
+      workspaceId: WORKSPACE_ID,
       municipalityId: "muni",
       actionIntent: "deploy",
       actionMode: "governed",

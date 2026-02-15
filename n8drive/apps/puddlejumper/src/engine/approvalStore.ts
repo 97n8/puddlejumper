@@ -98,7 +98,7 @@ export class ApprovalStore {
         decision_status TEXT NOT NULL,
         approval_status TEXT NOT NULL DEFAULT 'pending',
         operator_id TEXT NOT NULL,
-        workspace_id TEXT NOT NULL,
+        workspace_id TEXT NOT NULL DEFAULT 'system',
         municipality_id TEXT NOT NULL,
         action_intent TEXT NOT NULL,
         action_mode TEXT NOT NULL,
@@ -119,6 +119,13 @@ export class ApprovalStore {
       CREATE INDEX IF NOT EXISTS idx_approvals_workspace ON approvals(workspace_id);
       CREATE INDEX IF NOT EXISTS idx_approvals_expires ON approvals(expires_at);
     `);
+
+    // Migration: add workspace_id column if missing
+    const pragma = this.db.prepare("PRAGMA table_info(approvals)").all();
+    if (!pragma.some((col: any) => col.name === "workspace_id")) {
+      this.db.exec("ALTER TABLE approvals ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'system'");
+      this.db.exec("CREATE INDEX IF NOT EXISTS idx_approvals_workspace ON approvals(workspace_id)");
+    }
 
     // Auto-expire pending approvals
     this.pruneTimer = setInterval(() => this.expirePending(), PRUNE_INTERVAL_MS);
@@ -196,10 +203,15 @@ export class ApprovalStore {
       .all(...params, limit, offset) as ApprovalRow[];
   }
 
-  countPending(): number {
-    const row = this.db.prepare(
-      "SELECT COUNT(*) as cnt FROM approvals WHERE approval_status = 'pending' AND expires_at > ?"
-    ).get(new Date().toISOString()) as { cnt: number };
+  countPending(opts: { workspaceId?: string } = {}): number {
+    const now = new Date().toISOString();
+    let sql = "SELECT COUNT(*) as cnt FROM approvals WHERE approval_status = 'pending' AND expires_at > ?";
+    const params: any[] = [now];
+    if (opts.workspaceId) {
+      sql += " AND workspace_id = ?";
+      params.push(opts.workspaceId);
+    }
+    const row = this.db.prepare(sql).get(...params) as { cnt: number };
     return row.cnt;
   }
 

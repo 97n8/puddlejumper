@@ -31,7 +31,7 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
   const router = express.Router();
   const { approvalStore, dispatcherRegistry, chainStore } = opts;
 
-  // ── List approvals ────────────────────────────────────────────────────
+  // ── List approvals (workspace-scoped) ───────────────────────────────
   // GET /api/approvals?status=pending&limit=50&offset=0
   router.get("/approvals", requireAuthenticated(), (req, res) => {
     const auth = getAuthContext(req);
@@ -42,17 +42,20 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
     const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 50;
     const offset = typeof req.query.offset === "string" ? parseInt(req.query.offset, 10) : 0;
 
-    // Admins and viewers see all approvals; other roles see only their own
+    // Always scope to workspaceId from JWT
+    const workspaceId = auth.workspaceId;
+    // Admins and viewers see all approvals in workspace; other roles see only their own
     const operatorId = (auth.role === "admin" || auth.role === "viewer") ? undefined : auth.userId ?? auth.sub;
 
     const rows = approvalStore.query({
       approvalStatus: approvalStatus as any,
       operatorId,
+      workspaceId,
       limit: isNaN(limit) ? 50 : limit,
       offset: isNaN(offset) ? 0 : offset,
     });
 
-    const pendingCount = approvalStore.countPending();
+    const pendingCount = approvalStore.countPending({ workspaceId });
 
     res.json({
       success: true,
@@ -68,7 +71,7 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
     });
   });
 
-  // ── Get single approval ───────────────────────────────────────────────
+  // ── Get single approval (workspace-scoped) ──────────────────────────
   // GET /api/approvals/:id
   router.get("/approvals/:id", requireAuthenticated(), (req, res) => {
     const auth = getAuthContext(req);
@@ -76,7 +79,7 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
     if (!auth) { res.status(401).json({ success: false, correlationId, error: "Unauthorized" }); return; }
 
     const row = approvalStore.findById(req.params.id);
-    if (!row) {
+    if (!row || row.workspace_id !== auth.workspaceId) {
       res.status(404).json({ success: false, correlationId, error: "Approval not found" });
       return;
     }
