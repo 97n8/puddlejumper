@@ -42,14 +42,14 @@ jobs:
         run: |
           pnpm --filter web -w run -s lint || echo "No lint script or lint failed"
 
+      - name: Build core package
+        run: pnpm --filter @publiclogic/core run build
+
       - name: Typecheck (root)
         run: pnpm run typecheck
 
       - name: Contract check
         run: pnpm run check:pj-contract
-
-      - name: Build core package
-        run: pnpm --filter @publiclogic/core run build
 
       - name: Unit tests – core
         run: pnpm --filter @publiclogic/core run test
