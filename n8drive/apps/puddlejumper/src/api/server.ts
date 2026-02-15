@@ -80,6 +80,7 @@ import { ApprovalStore } from "../engine/approvalStore.js";
 import { DispatcherRegistry } from "../engine/dispatch.js";
 import { GitHubDispatcher } from "../engine/dispatchers/github.js";
 import { approvalMetrics, METRIC_HELP } from "../engine/approvalMetrics.js";
+import { loadConfig, StartupConfigError } from "./startupConfig.js";
 
 // ── Directory layout ────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -364,6 +365,18 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
 // ── Standalone launcher ─────────────────────────────────────────────────────
 export function startServer() {
+  // Validate required env vars before anything else
+  try {
+    loadConfig();
+  } catch (err) {
+    if (err instanceof StartupConfigError) {
+      // eslint-disable-next-line no-console
+      console.error(err.message);
+      process.exit(1);
+    }
+    throw err;
+  }
+
   const app = createApp();
   const port = Number.parseInt(process.env.PORT ?? "3002", 10);
   app.listen(port, () => {
