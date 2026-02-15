@@ -203,7 +203,8 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
         return;
       }
 
-      // Chain advanced to next step — parent stays "pending"
+      // Chain step decided but chain not complete — parent stays "pending".
+      // This covers both sequential advancement and parallel-group partial approval.
       const row = approvalStore.findById(req.params.id);
       if (!row) {
         res.status(404).json({ success: false, correlationId, error: "Approval not found" });
@@ -215,6 +216,7 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
         stepId: activeStep.id,
         stepOrder: activeStep.stepOrder,
         status,
+        advanced: chainResult.advanced,
         approverId,
         correlationId,
       });
@@ -222,7 +224,7 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
       res.json({
         success: true,
         correlationId,
-        data: { ...sanitizeRow(row), chainAdvanced: true },
+        data: { ...sanitizeRow(row), chainAdvanced: chainResult.advanced },
       });
       return;
     }

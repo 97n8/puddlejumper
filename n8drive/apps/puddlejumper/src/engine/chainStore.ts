@@ -3,12 +3,14 @@
 // Multi-step approval chains extend the single-step approval gate.
 //
 // A chain is an ordered sequence of approval steps attached to an approval.
-// Each step requires a specific role. Steps are progressed sequentially:
-//   step 1 (pending) → approved → step 2 (pending) → approved → ...
+// Each step requires a specific role. Steps at the same order value run
+// in parallel — all must be approved before the next order activates.
+//
+//   order 0 (active) → all approved → order 1 (active) → ... → done
 //
 // When ALL steps are approved, the parent approval transitions from
 // "pending" to "approved" (eligible for dispatch). Rejection at any
-// step makes the entire approval "rejected" (terminal).
+// step makes the entire approval "rejected" (terminal — remaining skipped).
 //
 // Boundary:
 //   PJ owns: routing, sequencing, step status tracking.
@@ -82,7 +84,10 @@ export type ChainProgress = {
   templateName: string;
   totalSteps: number;
   completedSteps: number;
+  /** First active step (backward-compatible). */
   currentStep: ChainStepRow | null;
+  /** All currently active steps (parallel support). */
+  currentSteps: ChainStepRow[];
   steps: ChainStepRow[];
   /** True when all steps are approved. */
   allApproved: boolean;
@@ -153,7 +158,13 @@ export class ChainStore {
         ON approval_chain_steps(approval_id);
       CREATE INDEX IF NOT EXISTS idx_chain_steps_status
         ON approval_chain_steps(status);
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_chain_steps_approval_order
+    `);
+
+    // Migration: drop old UNIQUE index (from 30-day milestone) and replace
+    // with non-unique to support parallel steps at the same order.
+    this.db.exec(`DROP INDEX IF EXISTS idx_chain_steps_approval_order`);
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_chain_steps_approval_order_v2
         ON approval_chain_steps(approval_id, step_order);
     `);
 
@@ -199,11 +210,13 @@ export class ChainStore {
       throw new Error("Chain template must have at least one step");
     }
 
-    // Validate step orders
+    // Validate step orders: must be dense (0, 1, 2, ...) but multiple steps
+    // can share the same order value (parallel group).
     const sorted = [...input.steps].sort((a, b) => a.order - b.order);
-    for (let i = 0; i < sorted.length; i++) {
-      if (sorted[i].order !== i) {
-        throw new Error(`Step orders must be sequential starting from 0. Expected ${i}, got ${sorted[i].order}`);
+    const distinctOrders = [...new Set(sorted.map(s => s.order))].sort((a, b) => a - b);
+    for (let i = 0; i < distinctOrders.length; i++) {
+      if (distinctOrders[i] !== i) {
+        throw new Error(`Step orders must be sequential starting from 0. Expected ${i}, got ${distinctOrders[i]}`);
       }
     }
 
@@ -280,9 +293,10 @@ export class ChainStore {
         throw new Error("Chain template must have at least one step");
       }
       const sorted = [...input.steps].sort((a, b) => a.order - b.order);
-      for (let i = 0; i < sorted.length; i++) {
-        if (sorted[i].order !== i) {
-          throw new Error(`Step orders must be sequential starting from 0. Expected ${i}, got ${sorted[i].order}`);
+      const distinctOrders = [...new Set(sorted.map(s => s.order))].sort((a, b) => a - b);
+      for (let i = 0; i < distinctOrders.length; i++) {
+        if (distinctOrders[i] !== i) {
+          throw new Error(`Step orders must be sequential starting from 0. Expected ${i}, got ${distinctOrders[i]}`);
         }
       }
     }
@@ -338,8 +352,8 @@ export class ChainStore {
   /**
    * Create chain step instances for an approval from a template.
    *
-   * The first step is set to "active" (ready for decision).
-   * Remaining steps are "pending" (waiting for prior steps).
+   * All steps at order 0 are set to "active" (ready for decision).
+   * Remaining steps are "pending" (waiting for prior order groups).
    *
    * Returns the created step rows.
    */
@@ -399,6 +413,7 @@ export class ChainStore {
 
   /**
    * Get the current active step for an approval (the step awaiting decision).
+   * Returns the first active step by order. For parallel chains, use getActiveSteps().
    * Returns null if no step is active (all done, or chain rejected).
    */
   getActiveStep(approvalId: string): ChainStepRow | null {
@@ -408,20 +423,35 @@ export class ChainStore {
     return row ? rowToChainStep(row) : null;
   }
 
+  /**
+   * Get ALL currently active steps for an approval.
+   * For parallel chains this returns multiple steps at the same order.
+   */
+  getActiveSteps(approvalId: string): ChainStepRow[] {
+    return this.db
+      .prepare("SELECT * FROM approval_chain_steps WHERE approval_id = ? AND status = 'active' ORDER BY step_order")
+      .all(approvalId)
+      .map(rowToChainStep);
+  }
+
   // ── Step Decision ─────────────────────────────────────────────────────
 
   /**
    * Decide a chain step (approve or reject).
    *
    * Rules:
-   * - Only the "active" step can be decided.
-   * - On approve: mark step "approved", activate next step (if any).
-   * - On reject: mark step "rejected", skip remaining steps.
+   * - Only an "active" step can be decided.
+   * - On approve: if all siblings at the same order are now approved,
+   *   activate all steps at the next order. Otherwise, wait.
+   * - On reject: mark step "rejected", skip all active siblings at the
+   *   same order and all subsequent steps.
    *
    * Returns:
-   * - `{ advanced: true, allApproved: false }` — next step activated
+   * - `{ advanced: true, allApproved: false }` — next order group activated
    * - `{ advanced: false, allApproved: true }` — chain complete, ready for dispatch
    * - `{ advanced: false, allApproved: false, rejected: true }` — chain rejected
+   * - `{ advanced: false, allApproved: false, rejected: false }` — step approved,
+   *     but parallel siblings at same order still active (waiting)
    * - `null` — step not found or not in "active" state
    */
   decideStep(decision: ChainStepDecision): {
@@ -436,7 +466,7 @@ export class ChainStore {
     const now = new Date().toISOString();
 
     if (decision.status === "rejected") {
-      // Reject this step and skip all remaining
+      // Reject this step, skip active siblings at same order, and skip all subsequent
       return this.db.transaction(() => {
         // Mark this step rejected
         this.db.prepare(`
@@ -445,11 +475,18 @@ export class ChainStore {
           WHERE id = ?
         `).run(decision.deciderId, decision.note ?? null, now, now, decision.stepId);
 
-        // Skip all subsequent steps
+        // Skip active siblings at the same order
         this.db.prepare(`
           UPDATE approval_chain_steps
           SET status = 'skipped', updated_at = ?
-          WHERE approval_id = ? AND step_order > ? AND status = 'pending'
+          WHERE approval_id = ? AND step_order = ? AND status = 'active' AND id != ?
+        `).run(now, step.approvalId, step.stepOrder, decision.stepId);
+
+        // Skip all subsequent steps (pending at higher orders)
+        this.db.prepare(`
+          UPDATE approval_chain_steps
+          SET status = 'skipped', updated_at = ?
+          WHERE approval_id = ? AND step_order > ? AND status IN ('pending', 'active')
         `).run(now, step.approvalId, step.stepOrder);
 
         const updatedStep = this.getStep(decision.stepId)!;
@@ -465,20 +502,32 @@ export class ChainStore {
         WHERE id = ?
       `).run(decision.deciderId, decision.note ?? null, now, now, decision.stepId);
 
-      // Check for next pending step
-      const nextStep = this.db
-        .prepare("SELECT * FROM approval_chain_steps WHERE approval_id = ? AND step_order = ? AND status = 'pending'")
-        .get(step.approvalId, step.stepOrder + 1) as any | undefined;
+      // Check if any siblings at the same order are still active
+      const activeSiblings = this.db
+        .prepare("SELECT COUNT(*) as cnt FROM approval_chain_steps WHERE approval_id = ? AND step_order = ? AND status = 'active'")
+        .get(step.approvalId, step.stepOrder) as { cnt: number };
 
-      if (nextStep) {
-        // Activate next step
-        this.db.prepare("UPDATE approval_chain_steps SET status = 'active', updated_at = ? WHERE id = ?")
-          .run(now, nextStep.id);
+      if (activeSiblings.cnt > 0) {
+        // Parallel siblings still active — wait for them
+        const updatedStep = this.getStep(decision.stepId)!;
+        return { step: updatedStep, advanced: false, allApproved: false, rejected: false };
+      }
+
+      // All siblings at this order are done. Check for next order group.
+      const nextOrderSteps = this.db
+        .prepare("SELECT * FROM approval_chain_steps WHERE approval_id = ? AND step_order = ? AND status = 'pending'")
+        .all(step.approvalId, step.stepOrder + 1) as any[];
+
+      if (nextOrderSteps.length > 0) {
+        // Activate ALL steps at the next order
+        this.db.prepare(
+          "UPDATE approval_chain_steps SET status = 'active', updated_at = ? WHERE approval_id = ? AND step_order = ? AND status = 'pending'"
+        ).run(now, step.approvalId, step.stepOrder + 1);
         const updatedStep = this.getStep(decision.stepId)!;
         return { step: updatedStep, advanced: true, allApproved: false, rejected: false };
       }
 
-      // No next step — chain is complete
+      // No next order — chain is complete
       const updatedStep = this.getStep(decision.stepId)!;
       return { step: updatedStep, advanced: false, allApproved: true, rejected: false };
     })();
@@ -498,7 +547,8 @@ export class ChainStore {
     const template = this.getTemplate(templateId);
 
     const completedSteps = steps.filter((s) => s.status === "approved").length;
-    const currentStep = steps.find((s) => s.status === "active") ?? null;
+    const currentSteps = steps.filter((s) => s.status === "active");
+    const currentStep = currentSteps[0] ?? null;
     const allApproved = steps.every((s) => s.status === "approved");
     const rejected = steps.some((s) => s.status === "rejected");
 
@@ -509,6 +559,7 @@ export class ChainStore {
       totalSteps: steps.length,
       completedSteps,
       currentStep,
+      currentSteps,
       steps,
       allApproved,
       rejected,
