@@ -3,20 +3,26 @@
 
 # macOS
 .DS_Store
+Thumbs.db
 
 # Environment variables
-.env*
-.env.production
+.env
+.env.*
+!.env.example
 
 # Database files
 *.db
+*.db-journal
 *.db-shm
 *.db-wal
 
 # Test results
 test-results/
+playwright-report/
+coverage/
 
 # Build artifacts
 *.tsbuildinfo
 node_modules/
 dist/
+build/
