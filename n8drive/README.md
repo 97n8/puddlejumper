@@ -1,208 +1,257 @@
 # PuddleJumper
 
-Multi-tenant governance engine for decision workflows. Secure, scalable, and built for the enterprise.
+## Quick Start & Systems Map
 
-## Features
-
-- **Workspace Isolation**: Each user gets their own secure workspace with complete data isolation
-- **Approval Chains**: Multi-step approval workflows with parallel processing and audit trails
-- **Governance Engine**: Policy-driven decision making with comprehensive audit logging
-- **OAuth Integration**: Support for GitHub, Google, and Microsoft OAuth providers
-- **Role-Based Access**: Admin and viewer roles with appropriate permissions
-- **API-First Design**: RESTful APIs for integration with existing systems
+### Admin Workspace
 
 ## Quick Start
 
-### Local Development
+PuddleJumper is a governance control plane that sits between AI agents (or human operators) and production systems. Every action passes through an approval gate before being dispatched to its target connector.
 
-1. **Clone and install dependencies:**
-   ```bash
-   git clone <repository-url>
-   cd puddle-jumper-deploy-remote
-   pnpm install
-   ```
+### 1 — Authenticate
 
-2. **Configure environment:**
-   ```bash
-   cp .env.sample .env
-   # Edit .env with your configuration
-   ```
+Sign in via GitHub, Google, or Microsoft OAuth at `/pj`. Tokens are JWT-based with role + tenant scoping.
 
-3. **Start development server:**
-   ```bash
-   pnpm run dev
-   ```
+### 2 — Submit an action
 
-4. **Open your browser:**
-   - Landing page: http://localhost:3002/pj
-   - Admin panel: http://localhost:3002/pj/admin
-   - Health check: http://localhost:3002/health
+POST to `/api/pj/execute` with an intent, mode, and plan. The governance engine evaluates it and creates an approval request.
 
-### Production Deployment
+### 3 — Approval chain
 
-#### Vercel (Serverless)
+If a chain template is assigned, approval routes through sequential or parallel steps. Each step is decided independently. All steps at the same order must approve before the next order activates.
 
-1. **Install Vercel CLI and login:**
-   ```bash
-   npm install -g vercel
-   vercel login
-   ```
+### 4 — Decide
 
-2. **Deploy:**
-   ```bash
-   pnpm run deploy:vercel
-   ```
+Approve or reject via the Admin UI or `POST /api/approvals/:id/decide`. Rejections are terminal — all subsequent steps are skipped.
 
-#### Fly.io (Containerized)
+### 5 — Dispatch
 
-1. **Install Fly.io CLI and login:**
-   ```bash
-   curl -L https://fly.io/install.sh | sh
-   fly auth login
-   ```
+Once fully approved, dispatch sends the action to a registered connector: GitHub, Slack, or a generic webhook. Retries use exponential backoff.
 
-2. **Deploy:**
-   ```bash
-   pnpm run deploy:fly
-   ```
+### 6 — Monitor
 
-#### Docker
+Track metrics on the Admin Dashboard. Prometheus-format metrics are available at `/metrics`. Health checks at `/health`.
+
+## Local development
 
 ```bash
-docker build -t puddle-jumper .
-docker run -p 3002:3002 \
-  -e JWT_SECRET=your-secret \
-  -e AUTH_ISSUER=puddle-jumper \
-  -e AUTH_AUDIENCE=puddle-jumper-api \
-  puddle-jumper
+# From monorepo root
+pnpm install
+cd apps/puddlejumper
+
+# Set minimum env vars
+export JWT_SECRET=dev-secret
+export AUTH_ISSUER=dev
+export AUTH_AUDIENCE=dev
+
+# Start
+npx tsx src/api/server.ts
+# → http://localhost:3002/pj
 ```
 
-## Configuration
-
-### Required Environment Variables
+## Deploy (Fly.io)
 
 ```bash
-# Authentication
-JWT_SECRET=your-256-bit-secret-here
-AUTH_ISSUER=puddle-jumper
-AUTH_AUDIENCE=puddle-jumper-api
-
-# Database paths
-PRR_DB_PATH=./data/prr.db
-CONNECTOR_DB_PATH=./data/connectors.db
-
-# URLs
-PJ_PUBLIC_URL=https://your-domain.com
-BASE_URL=https://your-domain.com
+# From monorepo root (/n8drive)
+fly deploy --app publiclogic-puddlejumper
 ```
 
-### OAuth Setup
+---
 
-Configure OAuth providers in your environment:
-
-- **GitHub**: Set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
-- **Google**: Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
-- **Microsoft**: Set `MICROSOFT_CLIENT_ID` and `MICROSOFT_CLIENT_SECRET`
-
-## API Documentation
-
-### Core Endpoints
-
-- `GET /health` - Health check
-- `GET /metrics` - Prometheus metrics
-- `GET /api/me` - Current user profile
-- `POST /api/auth/github/login` - OAuth login
-- `GET /api/approvals` - List approvals
-- `POST /api/approvals/:id/decide` - Approve/reject approval
-- `POST /api/pj/execute` - Execute governed action
-
-### Admin Endpoints
-
-- `GET /pj/admin` - Admin panel UI
-- `GET /api/admin/stats` - Operational statistics
-- `GET /api/admin/audit` - Audit events
-
-## Architecture
+## Systems Map
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Web Clients   │────│  PuddleJumper    │────│  Connectors     │
-│                 │    │  Control Plane   │    │  (GitHub, etc.) │
-│ - Admin UI      │    │                  │    │                 │
-│ - Landing Page  │    │ - Auth & OAuth   │    │ - Slack         │
-│ - API Clients   │    │ - Approval Engine│    │ - Webhooks      │
-└─────────────────┘    │ - Audit Logging  │    │ - Custom APIs   │
-                       └──────────────────┘    └─────────────────┘
+Clients
+├── PJ Workspace UI
+├── Admin UI
+├── AI Agent / CLI
+└── Webhook Consumer
+
+    ↕ HTTPS + JWT
+
+API Layer (Express)
+├── Auth & OAuth
+├── Config & Capabilities
+├── PRR Intake
+├── Access Requests
+├── Governance / Execute
+├── Approvals
+├── Chain Templates
+├── Webhook Actions
+├── Admin Stats
+└── Connectors
+
+    ↕
+
+Engine
+├── Governance Engine
+├── Approval Store
+├── Chain Store
+├── Dispatcher Registry
+├── Approval Metrics
+├── Validation
+└── Idempotency Store
+
+    ↕
+
+Data Stores (SQLite WAL)
+├── prr.db
+├── approvals.db
+├── connectors.db
+└── oauth_state.db
+
+    ↕
+
+Dispatch Targets
+├── GitHub (Issues/PRs)
+├── Slack (Messages)
+└── Webhook (HTTP POST)
 ```
 
-## Security
-
-- **Multi-tenant isolation** with workspace-scoped data
-- **JWT-based authentication** with configurable issuers
-- **Role-based access control** (admin/viewer roles)
-- **Audit logging** for all governance decisions
-- **CSP headers** and security middleware
-- **Rate limiting** and request validation
-
-## Development
-
-### Project Structure
+## Monorepo structure
 
 ```
-├── apps/puddlejumper/     # Main application
-│   ├── src/api/          # Express server & routes
-│   ├── public/           # Static web assets
-│   └── test/             # Application tests
-├── packages/core/        # Shared business logic
-├── packages/logic-commons/ # Auth & OAuth utilities
-└── docs/                 # Documentation
+n8drive/
+├── packages/core/          @publiclogic/core — JWT auth, middleware, CSRF
+├── apps/logic-commons/     @publiclogic/logic-commons — OAuth providers, session routes
+├── apps/puddlejumper/      The control plane application
+│   ├── public/             Static assets (admin.html, guide.html, workspace)
+│   ├── src/api/            Express server, routes, middleware
+│   │   ├── server.ts       App factory + route wiring
+│   │   └── routes/         auth, config, prr, access, governance,
+│   │                       approvals, chainTemplates, admin, webhookAction
+│   ├── src/engine/         Business logic
+│   │   ├── approvalStore   Approval CRUD + status machine
+│   │   ├── chainStore      Chain templates, steps, parallel progression
+│   │   ├── dispatch        DispatcherRegistry + GitHub/Slack/Webhook dispatchers
+│   │   ├── governanceEngine  Policy evaluation + approval gate
+│   │   └── approvalMetrics Prometheus-format counters & histograms
+│   └── test/               309 tests across 22 files
+├── Dockerfile              Multi-stage build (Fly.io)
+└── fly.toml                Deployment config (app: publiclogic-puddlejumper)
 ```
 
-### Testing
+---
 
-> **Note**: The repository currently has both `test/` and `tests/` directories. These should be consolidated in a future update for consistency.
+## API Reference
 
-```bash
-# Run all tests
-pnpm run test
+### Authentication
 
-# Run specific test suites
-pnpm run test:pj        # PuddleJumper tests
-pnpm run test:core      # Core package tests
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/login` | public | Built-in login (dev/test) |
+| GET | `/api/auth/github/login` | public | GitHub OAuth redirect |
+| GET | `/api/auth/google/login` | public | Google OAuth redirect |
+| GET | `/api/auth/microsoft/login` | public | Microsoft OAuth redirect |
+| GET | `/api/auth/status` | public | Current auth state |
+| GET | `/api/session` | public | Session info |
+| POST | `/api/refresh` | public | Refresh JWT |
+| GET | `/api/identity` | user | Current identity |
+| POST | `/api/auth/logout` | public | Logout + revoke |
 
-# Type checking
-pnpm run typecheck
+### Governance
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/pj/execute` | user | Submit action for governance evaluation |
+| GET | `/api/prompt` | admin | System prompt |
+| GET | `/api/core-prompt` | user | Core prompt |
+| POST | `/api/evaluate` | deploy | Evaluate action against policies |
+| GET | `/api/pj/identity-token` | optional | MS Graph identity exchange |
+
+### Approvals
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/approvals` | user | List approvals (filter by status) |
+| GET | `/api/approvals/:id` | user | Get approval detail |
+| POST | `/api/approvals/:id/decide` | user | Approve or reject (chain-aware) |
+| POST | `/api/approvals/:id/dispatch` | user | Dispatch approved action to connector |
+| GET | `/api/approvals/:id/chain` | user | Chain progress for approval |
+| GET | `/api/approvals/count/pending` | user | Count of pending approvals |
+
+### Chain Templates
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/chain-templates` | admin | List all templates |
+| GET | `/api/chain-templates/:id` | admin | Get single template |
+| POST | `/api/chain-templates` | admin | Create template (supports parallel steps) |
+| PUT | `/api/chain-templates/:id` | admin | Update template |
+| DELETE | `/api/chain-templates/:id` | admin | Delete template |
+
+### Config & Operational
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/runtime/context` | user | Runtime context |
+| GET | `/api/config/tiles` | user | UI tiles config |
+| GET | `/api/config/capabilities` | user | Capabilities list |
+| GET | `/api/capabilities/manifest` | user | Full capability manifest |
+| GET | `/api/pj/actions` | user | Available actions |
+| GET | `/api/admin/stats` | admin | Operational dashboard stats |
+| GET | `/api/admin/audit` | admin | Auth audit log |
+| GET | `/health` | public | Health check (db + secrets) |
+| GET | `/metrics` | token | Prometheus metrics |
+
+### PRR & Access
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/prr/intake` | optional | Submit PRR |
+| GET | `/api/prr` | user | List PRRs |
+| POST | `/api/prr/:id/status` | user | Update PRR status |
+| POST | `/api/prr/:id/close` | user | Close PRR |
+| POST | `/api/access/request` | optional | Submit access request |
+| POST | `/api/access/request/:id/status` | user | Update access request status |
+| POST | `/api/access/request/:id/close` | user | Close access request |
+| POST | `/api/pj/actions/webhook` | user | Fire webhook action |
+
+---
+
+## Parallel Approval Chains
+
+Chain templates support both sequential and parallel step routing. Steps sharing the same `order` value run in parallel.
+
+### How it works
+
+- Steps at order N all activate simultaneously when order N is reached
+- Each step is decided independently (different approvers can act concurrently)
+- All steps at order N must be approved before order N+1 activates
+- A rejection at any step is terminal — active siblings and all subsequent steps are skipped
+
+### Example template
+
+```json
+{
+  "name": "Dual-review then release",
+  "steps": [
+    { "label": "Security Review", "approverRole": "security", "order": 0 },
+    { "label": "Legal Review",    "approverRole": "legal",    "order": 0 },
+    { "label": "Release Manager", "approverRole": "release",  "order": 1 }
+  ]
+}
+// Step 0: Security + Legal run in parallel
+// Step 1: Release Manager runs only after both order-0 steps approve
 ```
 
-### Building
+---
 
-```bash
-# Build all packages
-pnpm run build
+## Key Environment Variables
 
-# Build specific packages
-pnpm run build:pj
-pnpm run build:core
-```
+| Variable | Description |
+|----------|-------------|
+| `JWT_SECRET` | Secret for signing JWTs (required) |
+| `AUTH_ISSUER` | JWT issuer claim |
+| `AUTH_AUDIENCE` | JWT audience claim |
+| `GITHUB_CLIENT_ID` / `_SECRET` | GitHub OAuth app credentials |
+| `GOOGLE_CLIENT_ID` / `_SECRET` | Google OAuth credentials |
+| `MICROSOFT_CLIENT_ID` / `_SECRET` | Microsoft OAuth credentials |
+| `CONNECTOR_STATE_SECRET` | HMAC key for connector state integrity |
+| `METRICS_TOKEN` | Bearer token for `/metrics` scraping (optional) |
+| `PORT` | Server port (default: 3002) |
+| `NODE_ENV` | `production` \| `development` \| `test` |
 
-## Deployment
+---
 
-See [Deployment Guide](./docs/DEPLOYMENT.md) for detailed instructions on deploying to Vercel, Fly.io, and other platforms.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## License
-
-See LICENSE file for details.
-
-## Support
-
-- Documentation: [./docs/](./docs/)
-- Issues: GitHub Issues
-- Security: Use GitHub's private vulnerability reporting or contact security@publiclogic.org
+PuddleJumper Control Plane · 309 tests · Deployed on Fly.io as `publiclogic-puddlejumper`
