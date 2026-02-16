@@ -1,24 +1,36 @@
 node_modules/
 .DS_Store
+Thumbs.db
 npm-debug.log*
 /tmp/
 data/publiclogic-audit.ndjson
+
+# Environment variables
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 **/.env.local
 
 # Build artifacts
 dist/
 **/dist/
+build/
 prod-test/
 *.tsbuildinfo
 
 # SQLite database files - development data
 **/data/*.db
+**/data/*.db-journal
 **/data/*.db-shm
 **/data/*.db-wal
 **/test-data/*.db
+*.db
+*.db-journal
+
+# Test outputs
+test-results/
+playwright-report/
+coverage/
 
 # Temporary files
 web/.tmp_webhook_secret.txt
