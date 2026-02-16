@@ -33,7 +33,7 @@ You are an agent for the puddlejumper repository — a governance-first approval
 - All policy methods return `Promise<T>` except `getProviderType()` (sync)
 - Admin is a superrole that bypasses `requiredRole` checks on chain steps
 - Legacy approvals (no chain) fall back to direct `approvalStore.decide()`
-- Tests use vitest. Test files are in `test/`. Current target: 260+ tests.
+- Tests use vitest. Test files are in `test/`. Current target: 309 tests.
 - SQLite via better-sqlite3. No ORM.
 - The codebase follows a "structure is care" philosophy — governance correctness over convenience.
 
