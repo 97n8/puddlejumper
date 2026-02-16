@@ -188,7 +188,27 @@
 
   <div class="table-header">
     <h2>Workspace Members</h2>
-    <button class="btn btn-primary" onclick="showInviteModal()">✉️ Invite Member</button>
+    <button class="btn btn-primary" onclick="toggleInviteForm()">+ Invite Member</button>
+  </div>
+
+  <!-- Invite Member Form (hidden by default) -->
+  <div id="invite-form-wrap" style="display:none;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+    <h3 style="font-size:15px;margin-bottom:16px;">Invite Member</h3>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Email</label>
+      <input type="email" id="invite-form-email" placeholder="user@example.com" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Role</label>
+      <select id="invite-form-role" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+        <option value="admin">Admin</option>
+        <option value="viewer">Viewer</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-primary" onclick="submitInviteForm()">Send Invitation</button>
+      <button class="btn btn-secondary" onclick="cancelInviteForm()">Cancel</button>
+    </div>
   </div>
 
   <div id="members-table-wrap">
@@ -232,14 +252,38 @@
 <div class="main" id="tab-prr" style="display:none;">
   <div class="table-header">
     <h2>Public Records Requests</h2>
-    <div class="filter-group">
-      <select id="prr-status-filter" onchange="loadPRRQueue()">
-        <option value="">All Status</option>
-        <option value="submitted">Submitted</option>
-        <option value="acknowledged">Acknowledged</option>
-        <option value="in_progress">In Progress</option>
-        <option value="closed">Closed</option>
-      </select>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div class="filter-group">
+        <select id="prr-status-filter" onchange="loadPRRQueue()">
+          <option value="">All Status</option>
+          <option value="submitted">Submitted</option>
+          <option value="acknowledged">Acknowledged</option>
+          <option value="in_progress">In Progress</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="togglePRRForm()">+ New Request</button>
+    </div>
+  </div>
+
+  <!-- New PRR Form (hidden by default) -->
+  <div id="prr-form-wrap" style="display:none;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+    <h3 style="font-size:15px;margin-bottom:16px;">New Public Records Request</h3>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Requester Name</label>
+      <input type="text" id="prr-form-name" placeholder="e.g. Jane Sullivan" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Description</label>
+      <textarea id="prr-form-description" placeholder="Describe the records being requested…" rows="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);resize:vertical;"></textarea>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Due Date</label>
+      <input type="date" id="prr-form-due" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-primary" onclick="submitPRRForm()">Create Request</button>
+      <button class="btn btn-secondary" onclick="cancelPRRForm()">Cancel</button>
     </div>
   </div>
 
@@ -1111,6 +1155,42 @@ async function sendInvite() {
   }
 }
 
+// ── Inline Invite Form ───────────────────────────────────────────────────
+function toggleInviteForm() {
+  const wrap = document.getElementById("invite-form-wrap");
+  if (wrap.style.display === "none") {
+    document.getElementById("invite-form-email").value = "";
+    document.getElementById("invite-form-role").value = "admin";
+    wrap.style.display = "block";
+  } else {
+    wrap.style.display = "none";
+  }
+}
+
+function cancelInviteForm() {
+  document.getElementById("invite-form-wrap").style.display = "none";
+}
+
+async function submitInviteForm() {
+  const email = document.getElementById("invite-form-email").value.trim();
+  const role = document.getElementById("invite-form-role").value;
+  if (!email) { showToast("Email is required", "error"); return; }
+  if (!email.includes("@")) { showToast("Please enter a valid email address", "error"); return; }
+
+  try {
+    const json = await api("/api/workspace/invite", {
+      method: "POST",
+      body: JSON.stringify({ email, role }),
+    });
+    if (!json.success) { showToast(json.error || "Failed to send invitation", "error"); return; }
+    showToast("Invitation sent", "success");
+    cancelInviteForm();
+    loadMembers();
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to send invitation", "error");
+  }
+}
+
 async function removeMember(userId) {
   if (!confirm(`Remove user ${userId} from workspace?`)) return;
   
@@ -1285,6 +1365,45 @@ async function submitPlanChange() {
 }
 
 // ── PRR Management ────────────────────────────────────────────────────────
+function togglePRRForm() {
+  const wrap = document.getElementById("prr-form-wrap");
+  if (wrap.style.display === "none") {
+    document.getElementById("prr-form-name").value = "";
+    document.getElementById("prr-form-description").value = "";
+    document.getElementById("prr-form-due").value = "";
+    wrap.style.display = "block";
+  } else {
+    wrap.style.display = "none";
+  }
+}
+
+function cancelPRRForm() {
+  document.getElementById("prr-form-wrap").style.display = "none";
+}
+
+async function submitPRRForm() {
+  const requesterName = document.getElementById("prr-form-name").value.trim();
+  const description = document.getElementById("prr-form-description").value.trim();
+  const dueDate = document.getElementById("prr-form-due").value;
+  if (!requesterName) { showToast("Requester name is required", "error"); return; }
+  if (!description) { showToast("Description is required", "error"); return; }
+
+  try {
+    const body = { requesterName, description };
+    if (dueDate) body.dueDate = dueDate;
+    const json = await api("/api/prr", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    if (!json.success) { showToast(json.error || "Failed to create request", "error"); return; }
+    showToast("Request created", "success");
+    cancelPRRForm();
+    loadPRRQueue();
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to create request", "error");
+  }
+}
+
 async function loadPRRQueue() {
   const statusFilter = document.getElementById('prr-status-filter')?.value || '';
   const params = new URLSearchParams();
