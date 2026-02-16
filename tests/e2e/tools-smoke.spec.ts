@@ -28,9 +28,11 @@ test.describe('Tools page - Governance card', () => {
   test('PuddleJumper Admin button shown when configured', async ({ page }) => {
     await page.goto('/#/tools');
 
+    // The admin button only appears when puddlejumper.adminUrl is set in config.
+    // This test verifies the link target is correct if the button is present.
     const adminBtn = page.locator('a', { hasText: 'PuddleJumper Admin' });
-    if (await adminBtn.count()) {
-      await expect(adminBtn).toHaveAttribute('href', /pj\/admin/);
-    }
+    const isVisible = await adminBtn.isVisible().catch(() => false);
+    test.skip(!isVisible, 'PuddleJumper Admin button not configured — skipping');
+    await expect(adminBtn).toHaveAttribute('href', /pj\/admin/);
   });
 });
