@@ -258,6 +258,38 @@ describe("Targeted step decisions via stepId", () => {
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/not found/);
   });
+
+  it("rejects non-string stepId (number)", async () => {
+    const approval = approvalStore.create(makeApprovalInput());
+
+    const app = buildApp();
+    const adminToken = await tokenFor(ADMIN);
+    const h = { Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" };
+
+    const res = await request(app)
+      .post(`/api/approvals/${approval.id}/decide`)
+      .set(h)
+      .send({ status: "approved", stepId: 123 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/non-empty string/);
+  });
+
+  it("rejects empty-string stepId", async () => {
+    const approval = approvalStore.create(makeApprovalInput());
+
+    const app = buildApp();
+    const adminToken = await tokenFor(ADMIN);
+    const h = { Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" };
+
+    const res = await request(app)
+      .post(`/api/approvals/${approval.id}/decide`)
+      .set(h)
+      .send({ status: "approved", stepId: "" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/non-empty string/);
+  });
 });
 
 describe("Role-based authorization for chain steps", () => {

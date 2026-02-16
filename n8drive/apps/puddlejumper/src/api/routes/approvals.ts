@@ -113,6 +113,14 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
       return;
     }
 
+    // Validate stepId type when present — must be a non-empty string.
+    // Role matching (auth.role === step.requiredRole) is exact string equality;
+    // chain templates and JWT tokens must use identical role strings.
+    if (stepId !== undefined && (typeof stepId !== "string" || stepId === "")) {
+      res.status(400).json({ success: false, correlationId, error: "stepId must be a non-empty string" });
+      return;
+    }
+
     const approverId = auth.userId ?? auth.sub ?? "unknown";
 
     // ── Chain-aware decision logic ─────────────────────────────────────
