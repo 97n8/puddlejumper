@@ -15,7 +15,9 @@ import {
   PRRFilters,
 } from "../../engine/prrStore.js";
 
-export function createAdminPRRRoutes(): express.Router {
+type AdminPRRRouteOptions = { dataDir?: string; };
+
+export function createAdminPRRRoutes(opts: AdminPRRRouteOptions = {}): express.Router {
   const router = express.Router();
   
   // GET /api/prr - List PRRs for workspace
@@ -34,7 +36,7 @@ export function createAdminPRRRoutes(): express.Router {
       return;
     }
     
-    const dataDir = process.env.DATA_DIR || "./data";
+    const dataDir = opts.dataDir || process.env.DATA_DIR || "./data";
     
     // Parse filters from query
     const filters: PRRFilters = {
@@ -76,7 +78,7 @@ export function createAdminPRRRoutes(): express.Router {
       return;
     }
     
-    const dataDir = process.env.DATA_DIR || "./data";
+    const dataDir = opts.dataDir || process.env.DATA_DIR || "./data";
     const { id } = req.params;
     
     try {
@@ -129,7 +131,7 @@ export function createAdminPRRRoutes(): express.Router {
       return;
     }
     
-    const dataDir = process.env.DATA_DIR || "./data";
+    const dataDir = opts.dataDir || process.env.DATA_DIR || "./data";
     const { id } = req.params;
     const { body } = req.body;
     
@@ -179,7 +181,7 @@ export function createAdminPRRRoutes(): express.Router {
       return;
     }
     
-    const dataDir = process.env.DATA_DIR || "./data";
+    const dataDir = opts.dataDir || process.env.DATA_DIR || "./data";
     const { id } = req.params;
     const { status, assigned_to } = req.body;
     
@@ -224,7 +226,7 @@ export function createAdminPRRRoutes(): express.Router {
       return;
     }
     
-    const dataDir = process.env.DATA_DIR || "./data";
+    const dataDir = opts.dataDir || process.env.DATA_DIR || "./data";
     const { id } = req.params;
     
     try {
