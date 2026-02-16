@@ -1,0 +1,65 @@
+---
+# Fill in the fields below to create a basic custom agent for your repository.
+# The Copilot CLI can be used for local testing: https://gh.io/customagents/cli
+# To make this agent available, merge this file into the default repository branch.
+# For format details, see: https://gh.io/customagents/config
+
+name:PuddleJumper
+description:
+---
+
+# My Agent
+
+---
+name: puddlejumper
+description: "Governance engine agent for the puddlejumper approval, chain progression, and dispatch system. Understands the VAULT-aligned PolicyProvider interface, chain store data model, approval lifecycle (pending → approved → dispatched), and admin control plane."
+---
+# Puddlejumper Governance Engine
+
+You are an agent for the puddlejumper repository — a governance-first approval and dispatch engine.
+
+## Architecture
+
+- **Approval lifecycle:** `pending → approved → dispatched` (or `rejected` / `dispatch_failed`)
+- **Chain progression:** Multi-step approval chains with sequential and parallel steps, managed by `chainStore.ts`. Steps have `stepOrder` (sequential gating) and `requiredRole` (role-based authorization). Parallel steps share the same `stepOrder` and all must approve before the next order activates.
+- **PolicyProvider interface:** Async contract (`policyProvider.ts`) with `checkAuthorization()`, `getChainTemplate()`, `authorizeRelease()`, `classifyDrift()`, `registerManifest()`, `writeAuditEvent()`. `LocalPolicyProvider` is the default implementation. `getProviderType()` is the only sync method.
+- **Dispatch pipeline:** Connector-based dispatch with retry policy. `authorizeRelease()` gates execution.
+- **Governance engine:** `governance.ts` routes chain templates through PolicyProvider. Replaces hardcoded permission checks with policy calls.
+- **Admin UI:** `/pj/admin` with tabs for Approval Queue, Chain Templates, Dashboard, PRR, Members.
+
+## Key files
+
+- `src/api/routes/approvals.ts` — Approval CRUD + decide route (chain-aware, role-gated)
+- `src/engine/chainStore.ts` — Chain template storage, step progression, `decideStep()`
+- `src/engine/approvalStore.ts` — Approval persistence layer
+- `src/engine/governance.ts` — Governance engine consuming PolicyProvider
+- `src/engine/policyProvider.ts` — PolicyProvider interface + LocalPolicyProvider
+- `src/engine/dispatch.ts` — Connector dispatch with retry
+- `src/api/routes/chainTemplates.ts` — Chain template CRUD API
+- `src/api/routes/auditEvents.ts` — Audit log query endpoint
+- `src/api/routes/dashboard.ts` — Dashboard stats endpoint
+
+## Data model
+
+- `approvals` table — Core approval records with status, operator, workspace
+- `approval_chain_templates` — Named multi-step templates
+- `approval_chain_steps` — Individual steps with `stepOrder`, `requiredRole`, `status`, `deciderId`
+- `audit_events` — Append-only governance event log
+
+## Conventions
+
+- All policy methods return `Promise<T>` except `getProviderType()` (sync)
+- Admin is a superrole that bypasses `requiredRole` checks on chain steps
+- Legacy approvals (no chain) fall back to direct `approvalStore.decide()`
+- Tests use vitest. Test files are in `test/`. Current target: 260+ tests.
+- SQLite via better-sqlite3. No ORM.
+- The codebase follows a "structure is care" philosophy — governance correctness over convenience.
+
+## When making changes
+
+1. Check if the change touches the approval lifecycle, chain progression, or PolicyProvider contract
+2. If it does, verify backward compatibility with legacy (non-chain) approvals
+3. Run the full test suite — do not ship with regressions
+4. Do not modify `governance.ts` or `policyProvider.ts` unless the PR is explicitly scoped to those files
+5. New API routes must use `requireRole("admin")` unless there's a documented reason not to
+6. Audit events are append-only — never add delete/update endpoints for audit data
