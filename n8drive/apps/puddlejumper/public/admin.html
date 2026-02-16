@@ -76,7 +76,7 @@
       </thead>
       <tbody id="approvals-body"></tbody>
     </table>
-    <div id="empty-state" class="empty-state" style="display:none;">No approvals found.</div>
+    <div id="empty-state" class="empty-state" style="display:none;">No approvals match the selected filter.</div>
   </div>
 
   <div class="pagination">
@@ -121,12 +121,16 @@
 
   <div id="templates-loading" class="empty-state" style="display:none;">Loading templates…</div>
   <div id="templates-grid" class="template-grid"></div>
-  <div id="templates-empty" class="empty-state" style="display:none;">No chain templates configured.</div>
+  <div id="templates-empty" class="empty-state" style="display:none;">No chain templates yet — create one above to define multi-step approval routing.</div>
 </div>
 
 <!-- Dashboard Tab -->
 <div class="main" id="tab-dashboard" style="display:none;">
-  <h2 style="font-size:16px;font-weight:600;margin-bottom:16px;">Operational Dashboard</h2>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <h2 style="font-size:16px;font-weight:600;">Operational Dashboard</h2>
+    <span id="dashboard-last-refreshed" style="font-size:11px;color:var(--text-dim);"></span>
+  </div>
+  <div id="dashboard-loading" class="empty-state" style="display:none;">Loading dashboard…</div>
 
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card"><div class="label">Pending Approvals</div><div class="value pending" id="s-pending">—</div></div>
@@ -161,7 +165,7 @@
     </thead>
     <tbody id="dispatch-body"></tbody>
   </table>
-  <div id="dispatch-empty" class="empty-state" style="display:none;">No recent dispatches.</div>
+  <div id="dispatch-empty" class="empty-state" style="display:none;">No recent dispatches yet.</div>
 </div>
 
 <!-- Members Tab -->
@@ -200,7 +204,7 @@
       </thead>
       <tbody id="members-body"></tbody>
     </table>
-    <div id="members-empty" class="empty-state" style="display:none;">No members found.</div>
+    <div id="members-empty" class="empty-state" style="display:none;">No workspace members found. Use the Invite Member button to add team members.</div>
   </div>
 
   <div class="table-header" style="margin-top:40px;">
@@ -220,7 +224,7 @@
       </thead>
       <tbody id="invitations-body"></tbody>
     </table>
-    <div id="invitations-empty" class="empty-state" style="display:none;">No pending invitations.</div>
+    <div id="invitations-empty" class="empty-state" style="display:none;">No pending invitations. Send an invite using the button above.</div>
   </div>
 </div>
 
@@ -240,6 +244,7 @@
   </div>
 
   <div id="prr-queue-wrap">
+    <div id="prr-loading" class="empty-state" style="display:none;">Loading PRRs…</div>
     <table>
       <thead>
         <tr>
@@ -254,7 +259,7 @@
       </thead>
       <tbody id="prr-queue-body"></tbody>
     </table>
-    <div id="prr-queue-empty" class="empty-state" style="display:none;">No PRRs found.</div>
+    <div id="prr-queue-empty" class="empty-state" style="display:none;">No public records requests match the selected filter.</div>
   </div>
 </div>
 
@@ -894,8 +899,11 @@ async function editTemplate(id) {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────
 async function loadStats() {
+  const loading = document.getElementById("dashboard-loading");
+  if (loading) loading.style.display = "block";
   try {
     const json = await api("/api/admin/stats");
+    if (loading) loading.style.display = "none";
     if (!json.success) return;
     const d = json.data;
 
@@ -917,7 +925,12 @@ async function loadStats() {
     document.getElementById("s-d-failure").textContent = d.dispatchFailure;
     document.getElementById("s-d-latency").textContent = d.avgDispatchLatencySec > 0 ? fmtDuration(d.avgDispatchLatencySec) : "—";
     document.getElementById("s-chain-steps").textContent = d.activeChainSteps;
+
+    // Update last-refreshed timestamp
+    const ts = document.getElementById("dashboard-last-refreshed");
+    if (ts) ts.textContent = "Last updated: " + new Date().toLocaleTimeString();
   } catch (e) {
+    if (loading) loading.style.display = "none";
     if (e.message !== "Unauthorized") showToast("Failed to load stats", "error");
   }
 
@@ -1276,13 +1289,17 @@ async function loadPRRQueue() {
   const statusFilter = document.getElementById('prr-status-filter')?.value || '';
   const params = new URLSearchParams();
   if (statusFilter) params.append('status', statusFilter);
+  const loading = document.getElementById("prr-loading");
+  if (loading) loading.style.display = "block";
   
   try {
     const json = await api(`/api/prr?${params}`);
+    if (loading) loading.style.display = "none";
     if (json.success) {
       renderPRRQueue(json.data.requests);
     }
   } catch (e) {
+    if (loading) loading.style.display = "none";
     if (e.message !== "Unauthorized") showToast("Failed to load PRRs", "error");
   }
 }
@@ -1438,6 +1455,7 @@ function closePRRDetail(event) {
 // ── Auto-refresh ──────────────────────────────────────────────────────────
 let autoRefreshApprovalTimer = null;
 let autoRefreshDashboardTimer = null;
+let autoRefreshPRRTimer = null;
 
 function startAutoRefresh() {
   stopAutoRefresh();
@@ -1453,11 +1471,17 @@ function startAutoRefresh() {
     const active = document.querySelector(".tab.active");
     if (active && active.dataset.tab === "dashboard") loadStats();
   }, 60000);
+
+  autoRefreshPRRTimer = setInterval(() => {
+    const active = document.querySelector(".tab.active");
+    if (active && active.dataset.tab === "prr") loadPRRQueue();
+  }, 30000);
 }
 
 function stopAutoRefresh() {
   if (autoRefreshApprovalTimer) { clearInterval(autoRefreshApprovalTimer); autoRefreshApprovalTimer = null; }
   if (autoRefreshDashboardTimer) { clearInterval(autoRefreshDashboardTimer); autoRefreshDashboardTimer = null; }
+  if (autoRefreshPRRTimer) { clearInterval(autoRefreshPRRTimer); autoRefreshPRRTimer = null; }
   const indicator = document.getElementById("auto-refresh-indicator");
   if (indicator) indicator.style.display = "none";
 }
