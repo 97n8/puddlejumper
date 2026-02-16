@@ -15,6 +15,11 @@ const __dirname = path.dirname(__filename);
 
 async function loadApp(): Promise<any> {
   const tryPaths = [
+    '../src/api/server',
+    '../src/api/index',
+    '../src/server',
+    '../src/app',
+    '../src/index',
     '../../src/app',
     '../../src/server',
     '../../src/index',
