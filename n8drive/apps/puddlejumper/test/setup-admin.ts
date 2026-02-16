@@ -1,3 +1,4 @@
+import { beforeAll } from 'vitest';
 import request from 'supertest';
 import fs from 'node:fs';
 import path from 'node:path';
