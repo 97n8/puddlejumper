@@ -1060,7 +1060,7 @@ function renderPRRDetail(prr) {
   content.innerHTML = `
     <div class="detail-field">
       <label>Status</label>
-      <select id="prr-status-select" data-action="updatePRRStatus" data-id="${prr.id}">>
+      <select id="prr-status-select" data-action="updatePRRStatus" data-id="${prr.id}">
         <option value="submitted" ${prr.status === 'submitted' ? 'selected' : ''}>Submitted</option>
         <option value="acknowledged" ${prr.status === 'acknowledged' ? 'selected' : ''}>Acknowledged</option>
         <option value="in_progress" ${prr.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
