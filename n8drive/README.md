@@ -185,10 +185,6 @@ pnpm run build:pj
 pnpm run build:core
 ```
 
-## Roadmap
-
-See [What's Next](./docs/NEXT.md) for the post-V1 roadmap and prioritized next steps.
-
 ## Deployment
 
 See [Deployment Guide](./docs/DEPLOYMENT.md) for detailed instructions on deploying to Vercel, Fly.io, and other platforms.

@@ -27,7 +27,6 @@ pnpm run dev
 
 - See `n8drive/README.md` for detailed PuddleJumper documentation
 - See `n8drive/docs/` for architecture and release docs
-- See `n8drive/docs/NEXT.md` for the post-V1 roadmap
 - See `n8drive/SECURITY.md` for security policy
 
 ## License
