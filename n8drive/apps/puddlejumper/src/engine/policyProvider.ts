@@ -124,7 +124,7 @@ export type ReleaseQuery = {
 export type ReleaseResult = {
   authorized: boolean;
   reason?: string;
-  expiresAt?: string | null;
+  expiresAt: string | null;
 };
 
 // ── Drift Classification ────────────────────────────────────────────────────
@@ -477,7 +477,6 @@ export class LocalPolicyProvider implements PolicyProvider {
   }
 
   async registerManifest(input: ManifestInput): Promise<ManifestResult> {
-    void input;
     return { accepted: true, manifestId: input.manifestId };
   }
 
