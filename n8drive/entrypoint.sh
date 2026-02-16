@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-DATA_DIR="${CONTROLLED_DATA_DIR:-/app/data}"
+DATA_DIR="${CONTROLLED_DATA_DIR:-${DATA_DIR:-/app/data}}"
 
 # Ensure data directory exists and is writable
 mkdir -p "$DATA_DIR"

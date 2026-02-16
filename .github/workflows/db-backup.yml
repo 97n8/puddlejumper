@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Setup Fly CLI
-        uses: superfly/flyctl-actions/setup-flyctl@master
+        uses: superfly/flyctl-actions/setup-flyctl@v1
 
       - name: Run SQLite backup on Fly machine
         env:

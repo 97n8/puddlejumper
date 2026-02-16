@@ -101,12 +101,51 @@ if (!cspMatch || typeof cspMatch[1] !== "string") {
   }
 }
 
-if (!/app\.get\(\s*["']\/api\/pj\/actions["']/.test(serverSource)) {
-  errors.push(`${path.relative(ROOT, serverPath)} must expose GET /api/pj/actions`);
+// Check for /api/pj/actions endpoint
+// Routes may be in server.ts directly OR in route files mounted via app.use("/api", ...)
+const governancePath = path.join(PJ_ROOT, "src", "api", "routes", "governance.ts");
+const configPath = path.join(PJ_ROOT, "src", "api", "routes", "config.ts");
+
+let hasActionsRoute = /app\.get\(\s*["']\/api\/pj\/actions["']/.test(serverSource);
+let hasExecuteRoute = /app\.post\(\s*["']\/api\/pj\/execute["']/.test(serverSource);
+
+// If not found in server.ts directly, check route files + mounting
+if (!hasActionsRoute) {
+  try {
+    const configSource = readFile(configPath);
+    // Check if config.ts has router.get("/pj/actions"
+    const hasRouteInConfig = /router\.get\(\s*["']\/pj\/actions["']/.test(configSource);
+    // Check if server.ts mounts config routes under /api
+    const mountsConfigRoutes = /app\.use\(\s*["']\/api["']\s*,\s*createConfigRoutes\b/.test(serverSource);
+    if (hasRouteInConfig && mountsConfigRoutes) {
+      hasActionsRoute = true;
+    }
+  } catch {
+    // Config route file doesn't exist, keep hasActionsRoute as false
+  }
 }
 
-if (!/app\.post\(\s*["']\/api\/pj\/execute["']/.test(serverSource)) {
-  errors.push(`${path.relative(ROOT, serverPath)} must expose POST /api/pj/execute`);
+if (!hasExecuteRoute) {
+  try {
+    const governanceSource = readFile(governancePath);
+    // Check if governance.ts has router.post("/pj/execute"
+    const hasRouteInGovernance = /router\.post\(\s*["']\/pj\/execute["']/.test(governanceSource);
+    // Check if server.ts mounts governance routes under /api
+    const mountsGovernanceRoutes = /app\.use\(\s*["']\/api["']\s*,\s*createGovernanceRoutes\b/.test(serverSource);
+    if (hasRouteInGovernance && mountsGovernanceRoutes) {
+      hasExecuteRoute = true;
+    }
+  } catch {
+    // Governance route file doesn't exist, keep hasExecuteRoute as false
+  }
+}
+
+if (!hasActionsRoute) {
+  errors.push(`${path.relative(ROOT, serverPath)} must expose GET /api/pj/actions (either directly or via mounted routes)`);
+}
+
+if (!hasExecuteRoute) {
+  errors.push(`${path.relative(ROOT, serverPath)} must expose POST /api/pj/execute (either directly or via mounted routes)`);
 }
 
 if (errors.length > 0) {
