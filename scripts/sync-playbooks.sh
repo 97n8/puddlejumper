@@ -16,6 +16,7 @@
 #   ./scripts/sync-playbooks.sh --check  # dry-run: report drift, exit 1 if out of sync
 
 set -euo pipefail
+shopt -s nullglob
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
