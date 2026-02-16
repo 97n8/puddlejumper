@@ -95,7 +95,7 @@ export type ManifestInput = {
   intent: string;
   planHash: string;
   /** Required. Every governance action needs a human-readable justification. */
-  description: string;  // NOTE: NOT optional
+  description: string;
   connectors: string[];
   timestamp: string;
 };
@@ -447,10 +447,9 @@ export class LocalPolicyProvider implements PolicyProvider {
     return evaluateAuthorization(query);
   }
 
-  async getChainTemplate(query: ChainTemplateQuery): Promise<ChainTemplate | null> {
+  async getChainTemplate(_query: ChainTemplateQuery): Promise<ChainTemplate | null> {
     // Today: return the default template regardless of action/municipality.
     // Future: look up municipality-specific template mappings.
-    void query; // reserved for future municipality-specific routing
     return this.chainStore.getTemplate("default");
   }
 
@@ -480,13 +479,11 @@ export class LocalPolicyProvider implements PolicyProvider {
     return { accepted: true, manifestId: input.manifestId };
   }
 
-  async authorizeRelease(query: ReleaseQuery): Promise<ReleaseResult> {
-    void query;
+  async authorizeRelease(_query: ReleaseQuery): Promise<ReleaseResult> {
     return { authorized: true, expiresAt: null };
   }
 
-  async classifyDrift(query: DriftQuery): Promise<DriftClassification> {
-    void query;
+  async classifyDrift(_query: DriftQuery): Promise<DriftClassification> {
     return { severity: "none", requiresReapproval: false };
   }
 
