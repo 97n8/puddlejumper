@@ -209,10 +209,9 @@ export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.R
                 });
                 if (resolved) templateId = resolved.id;
               }
-              opts.chainStore.createChainForApproval(approval.id, templateId);
+              const createdSteps = opts.chainStore.createChainForApproval(approval.id, templateId);
               // ── Chain step metrics ──
-              const steps = opts.chainStore.getStepsForApproval(approval.id);
-              approvalMetrics.increment(METRIC.CHAIN_STEPS_TOTAL, steps.length);
+              approvalMetrics.increment(METRIC.CHAIN_STEPS_TOTAL, createdSteps.length);
               approvalMetrics.setGauge(METRIC.CHAIN_STEP_PENDING_GAUGE, opts.chainStore.countActiveSteps());
             } catch {
               // Chain creation failure is non-fatal — approval still exists
