@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check Request Status — PuddleJumper</title>
+<link rel="stylesheet" href="/styles/pj.css">
+<style>
+.status-container {
+  max-width: 700px;
+  margin: 40px auto;
+  padding: 32px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.status-header {
+  margin-bottom: 24px;
+}
+.status-header h1 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+}
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 16px;
+}
+.status-badge.submitted {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+  border: 1px solid #2563eb;
+}
+.status-badge.acknowledged {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 1px solid #d97706;
+}
+.status-badge.in_progress {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+.status-badge.closed {
+  background: rgba(107, 114, 128, 0.2);
+  color: #6b7280;
+  border: 1px solid #4b5563;
+}
+.status-details {
+  margin-top: 24px;
+}
+.status-field {
+  margin-bottom: 20px;
+}
+.status-field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.status-field .value {
+  font-size: 15px;
+  color: var(--text);
+}
+.comments-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.comments-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+}
+.comment {
+  padding: 12px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.comment .meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.comment .body {
+  font-size: 14px;
+}
+.search-form {
+  margin-bottom: 24px;
+}
+.search-form input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+.search-form button {
+  margin-top: 12px;
+  padding: 10px 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+}
+.error-message, .empty-message {
+  padding: 16px;
+  border-radius: var(--radius);
+  text-align: center;
+}
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+}
+.empty-message {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+#status-result {
+  display: none;
+}
+#status-result.show {
+  display: block;
+}
+</style>
+</head>
+<body>
+
+<div class="status-container">
+  <div class="status-header">
+    <h1>Check Request Status</h1>
+    <p>Enter your tracking token to view the status of your public records request.</p>
+  </div>
+
+  <div class="search-form">
+    <label for="token-input" style="display:block;margin-bottom:8px;font-weight:600;">Tracking Token</label>
+    <input type="text" id="token-input" placeholder="Enter your tracking token..." 
+           aria-label="Tracking token" value="">
+    <button onclick="checkStatus()">Check Status</button>
+  </div>
+
+  <div id="error-message" class="error-message" style="display:none;"></div>
+
+  <div id="status-result">
+    <div class="status-field">
+      <label>Status</label>
+      <div class="value">
+        <span id="status-badge" class="status-badge"></span>
+      </div>
+    </div>
+
+    <div class="status-details">
+      <div class="status-field">
+        <label>Summary</label>
+        <div class="value" id="summary"></div>
+      </div>
+
+      <div class="status-field">
+        <label>Details</label>
+        <div class="value" id="details"></div>
+      </div>
+
+      <div class="status-field">
+        <label>Submitted</label>
+        <div class="value" id="created-at"></div>
+      </div>
+
+      <div class="status-field">
+        <label>Last Updated</label>
+        <div class="value" id="updated-at"></div>
+      </div>
+    </div>
+
+    <div class="comments-section" id="comments-section" style="display:none;">
+      <h3>Updates</h3>
+      <div id="comments-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Check URL params for token
+const urlParams = new URLSearchParams(window.location.search);
+const tokenFromUrl = urlParams.get('token');
+if (tokenFromUrl) {
+  document.getElementById('token-input').value = tokenFromUrl;
+  checkStatus();
+}
+
+async function checkStatus() {
+  const token = document.getElementById('token-input').value.trim();
+  const errorMsg = document.getElementById('error-message');
+  const result = document.getElementById('status-result');
+  
+  errorMsg.style.display = 'none';
+  result.classList.remove('show');
+  
+  if (!token) {
+    errorMsg.textContent = 'Please enter a tracking token';
+    errorMsg.style.display = 'block';
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/public/prr/${encodeURIComponent(token)}`);
+    const data = await response.json();
+    
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Request not found');
+    }
+    
+    const prr = data.data;
+    
+    // Display status
+    const statusBadge = document.getElementById('status-badge');
+    statusBadge.textContent = prr.status.replace('_', ' ');
+    statusBadge.className = `status-badge ${prr.status}`;
+    
+    // Display details
+    document.getElementById('summary').textContent = prr.summary || '—';
+    document.getElementById('details').textContent = prr.details || 'No additional details provided';
+    document.getElementById('created-at').textContent = formatDate(prr.created_at);
+    document.getElementById('updated-at').textContent = formatDate(prr.updated_at);
+    
+    // Display comments/updates
+    const commentsSection = document.getElementById('comments-section');
+    const commentsList = document.getElementById('comments-list');
+    
+    if (prr.comments && prr.comments.length > 0) {
+      commentsSection.style.display = 'block';
+      commentsList.innerHTML = prr.comments.map(comment => `
+        <div class="comment">
+          <div class="meta">
+            ${formatDate(comment.created_at)}
+            ${comment.is_admin ? ' • Admin' : ''}
+          </div>
+          <div class="body">${escapeHtml(comment.body)}</div>
+        </div>
+      `).join('');
+    } else {
+      commentsSection.style.display = 'none';
+    }
+    
+    result.classList.add('show');
+    
+  } catch (error) {
+    errorMsg.textContent = error.message || 'An error occurred. Please check your token and try again.';
+    errorMsg.style.display = 'block';
+  }
+}
+
+function formatDate(isoString) {
+  if (!isoString) return '—';
+  const date = new Date(isoString);
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Allow enter key to submit
+document.getElementById('token-input').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') checkStatus();
+});
+</script>
+
+</body>
+</html>

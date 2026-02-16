@@ -24,6 +24,7 @@
   <button class="tab active" data-tab="queue" onclick="switchTab('queue')">Approval Queue</button>
   <button class="tab" data-tab="chains" onclick="switchTab('chains')">Chain Templates</button>
   <button class="tab" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+  <button class="tab" data-tab="prr" onclick="switchTab('prr')">PRR</button>
   <button class="tab" data-tab="members" onclick="switchTab('members')">Members</button>
 </div>
 
@@ -195,6 +196,53 @@
   </div>
 </div>
 
+<!-- PRR Tab -->
+<div class="main" id="tab-prr" style="display:none;">
+  <div class="table-header">
+    <h2>Public Records Requests</h2>
+    <div class="filter-group">
+      <select id="prr-status-filter" onchange="loadPRRQueue()">
+        <option value="">All Status</option>
+        <option value="submitted">Submitted</option>
+        <option value="acknowledged">Acknowledged</option>
+        <option value="in_progress">In Progress</option>
+        <option value="closed">Closed</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="prr-queue-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Submitter</th>
+          <th>Summary</th>
+          <th>Status</th>
+          <th>Assigned</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="prr-queue-body"></tbody>
+    </table>
+    <div id="prr-queue-empty" class="empty-state" style="display:none;">No PRRs found.</div>
+  </div>
+</div>
+
+<!-- PRR Detail Modal -->
+<div class="detail-overlay" id="prr-detail-overlay" onclick="closePRRDetail(event)">
+  <div class="detail-panel" onclick="event.stopPropagation()">
+    <h3>
+      <span id="prr-detail-title">PRR Detail</span>
+      <button class="detail-close" onclick="closePRRDetail()">✕</button>
+    </h3>
+    <div class="detail-content" id="prr-detail-content">
+      <!-- Populated by renderPRRDetail() -->
+    </div>
+  </div>
+</div>
+
 <!-- Invite Member Modal -->
 <div class="detail-overlay" id="invite-modal" onclick="closeInviteModal(event)">
   <div class="detail-panel" onclick="event.stopPropagation()">
@@ -346,6 +394,7 @@ function switchTab(tab) {
   if (el) el.style.display = "block";
   if (tab === "dashboard") loadStats();
   if (tab === "chains") loadTemplates();
+  if (tab === "prr") loadPRRQueue();
   if (tab === "members") { loadMembers(); loadUsage(); }
 }
 
@@ -1054,6 +1103,170 @@ async function submitPlanChange() {
   } catch (e) {
     if (e.message !== "Unauthorized") showToast("Failed to update plan", "error");
   }
+}
+
+// ── PRR Management ────────────────────────────────────────────────────────
+async function loadPRRQueue() {
+  const statusFilter = document.getElementById('prr-status-filter')?.value || '';
+  const params = new URLSearchParams();
+  if (statusFilter) params.append('status', statusFilter);
+  
+  try {
+    const json = await api(`/api/prr?${params}`);
+    if (json.success) {
+      renderPRRQueue(json.data.requests);
+    }
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to load PRRs", "error");
+  }
+}
+
+function renderPRRQueue(requests) {
+  const tbody = document.getElementById('prr-queue-body');
+  const empty = document.getElementById('prr-queue-empty');
+  
+  if (!requests || requests.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  
+  empty.style.display = 'none';
+  tbody.innerHTML = requests.map(prr => {
+    const statusClass = prr.status.replace('_', '-');
+    return `
+      <tr>
+        <td><code>${esc(prr.id.substring(0, 8))}</code></td>
+        <td>${esc(prr.submitter_name || 'Anonymous')}<br><small>${esc(prr.submitter_email || '—')}</small></td>
+        <td>${esc(prr.summary)}</td>
+        <td><span class="status-badge prr-${statusClass}">${esc(prr.status.replace('_', ' '))}</span></td>
+        <td>${esc(prr.assigned_to || '—')}</td>
+        <td>${timeAgo(prr.created_at)}</td>
+        <td><button class="btn-link" onclick="openPRRDetail('${prr.id}')">View</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function openPRRDetail(id) {
+  try {
+    const json = await api(`/api/prr/${encodeURIComponent(id)}`);
+    if (json.success) {
+      renderPRRDetail(json.data);
+      document.getElementById('prr-detail-overlay').style.display = 'flex';
+    }
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to load PRR", "error");
+  }
+}
+
+function renderPRRDetail(prr) {
+  const attachments = prr.attachments || [];
+  
+  const content = document.getElementById('prr-detail-content');
+  content.innerHTML = `
+    <div class="detail-field">
+      <label>Status</label>
+      <select id="prr-status-select" onchange="updatePRRStatus('${prr.id}')">
+        <option value="submitted" ${prr.status === 'submitted' ? 'selected' : ''}>Submitted</option>
+        <option value="acknowledged" ${prr.status === 'acknowledged' ? 'selected' : ''}>Acknowledged</option>
+        <option value="in_progress" ${prr.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+        <option value="closed" ${prr.status === 'closed' ? 'selected' : ''}>Closed</option>
+      </select>
+    </div>
+    
+    <div class="detail-field">
+      <label>Submitter</label>
+      <div>${esc(prr.submitter_name || 'Anonymous')}</div>
+      <div><small>${esc(prr.submitter_email || '—')}</small></div>
+    </div>
+    
+    <div class="detail-field">
+      <label>Summary</label>
+      <div>${esc(prr.summary)}</div>
+    </div>
+    
+    <div class="detail-field">
+      <label>Details</label>
+      <div>${esc(prr.details || 'No additional details')}</div>
+    </div>
+    
+    <div class="detail-field">
+      <label>Created</label>
+      <div>${timeAgo(prr.created_at)}</div>
+    </div>
+    
+    ${attachments.length > 0 ? `
+      <div class="detail-field">
+        <label>Attachments</label>
+        ${attachments.map(att => `<div><a href="/api/prr/${prr.id}/attachment/${att.filename}">${esc(att.filename)}</a></div>`).join('')}
+      </div>
+    ` : ''}
+    
+    <div class="detail-field" style="margin-top:24px;">
+      <label>Comments</label>
+      <div id="prr-comments-list">
+        ${(prr.comments || []).map(c => `
+          <div class="comment" style="margin-bottom:12px;padding:12px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">${timeAgo(c.created_at)} • ${c.user_id ? 'Admin' : 'System'}</div>
+            <div>${esc(c.body)}</div>
+          </div>
+        `).join('')}
+      </div>
+      
+      <div style="margin-top:12px;">
+        <textarea id="prr-comment-input" placeholder="Add a comment..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);min-height:80px;"></textarea>
+        <button class="btn btn-primary" onclick="addPRRComment('${prr.id}')" style="margin-top:8px;">Add Comment</button>
+      </div>
+    </div>
+  `;
+}
+
+async function updatePRRStatus(id) {
+  const status = document.getElementById('prr-status-select').value;
+  
+  try {
+    const json = await api(`/api/prr/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    
+    if (json.success) {
+      showToast('Status updated', 'success');
+      loadPRRQueue();
+    }
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to update status", "error");
+  }
+}
+
+async function addPRRComment(id) {
+  const input = document.getElementById('prr-comment-input');
+  const body = input.value.trim();
+  
+  if (!body) return;
+  
+  try {
+    const json = await api(`/api/prr/${encodeURIComponent(id)}/comment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body })
+    });
+    
+    if (json.success) {
+      showToast('Comment added', 'success');
+      input.value = '';
+      openPRRDetail(id); // Refresh detail
+    }
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to add comment", "error");
+  }
+}
+
+function closePRRDetail(event) {
+  if (event && event.target !== document.getElementById('prr-detail-overlay')) return;
+  document.getElementById('prr-detail-overlay').style.display = 'none';
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────
