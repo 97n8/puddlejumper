@@ -67,9 +67,21 @@ export async function renderTools(ctx) {
     ])
   ]);
 
+  const workspaceLabel = cfg.agenda?.defaultWorkspace || "Logicville, MA";
+  const governance = card(`${workspaceLabel} — Governance`, [
+    el("div", { class: "small" }, ["Governance engine and operating playbooks for this workspace."]),
+    el("div", { class: "hr" }),
+    el("div", { class: "chiprow" }, [
+      el("a", { class: "btn", href: "#/agenda" }, ["Agenda"]),
+      el("a", { class: "btn", href: "#/playbooks?doc=09-logicville-living-agenda.md" }, ["Playbooks"]),
+      ...(cfg.puddlejumper?.adminUrl ? [toolButton({ title: "PuddleJumper Admin", url: cfg.puddlejumper.adminUrl })] : [])
+    ])
+  ]);
+
   const content = el("div", {}, [
     el("div", { class: "grid" }, [
       el("div", { style: "grid-column: span 12;" }, [quick]),
+      el("div", { style: "grid-column: span 12;" }, [governance]),
       el("div", { style: "grid-column: span 12;" }, [osData]),
       el("div", { style: "grid-column: span 6;" }, [comms]),
       el("div", { style: "grid-column: span 6;" }, [ops])

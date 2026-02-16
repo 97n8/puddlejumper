@@ -22,14 +22,14 @@ A clean, modern operating system for two founders. Mobile‑first. Action‑firs
 - Start/finish on time. Capture decisions before we leave.
 - Keep language plain. Remove anything not actionable.
 - Link to source systems; keep sensitive data out of this workspace.
-- Every task has **Owner • Due • DoD** or it isn’t real.
+- Every task has **Owner • Due • DoD** or it isn't real.
 - Mark **OML/PRR** when needed; VAULT™ handles routing/retention (high‑level only).
 
 ## Weekly Agenda Template (Founders)
 **Today:** `YYYY-MM-DD`  
 **Mode:** calm, clear, get‑it‑done
 
-1. **Check‑in** — Where we’re actually at. Honest, quick, no extra polish.
+1. **Check‑in** — Where we're actually at. Honest, quick, no extra polish.
 2. **Day One** — Confirm lanes and priorities (no drift).
 3. **VAULT Alignment** — High‑level map and compliance routing (PRR + service tickets).
 4. **12‑Week Pilots** — Week 1–2 outputs: readiness docs + first SOP examples.
@@ -83,7 +83,7 @@ Week of `__ / __ / ____`
 
 ## Compliance & Governance Checklist (MA)
 - **Open Meeting Law (M.G.L. c.30A):** If a quorum/public body is implicated, ensure agendas, notices, minutes, and recordings follow statute and AG guidance.
-- **Public Records (M.G.L. c.66 §10):** Structure outputs so they’re retrievable; apply retention tags.
+- **Public Records (M.G.L. c.66 §10):** Structure outputs so they're retrievable; apply retention tags.
 - **Data Security (201 CMR 17.00):** Keep PII out of this workspace; link to secure systems; confirm access controls.
 - **Accessibility:** Use plain language, headings, and alt text; check **WCAG 2.1 AA** for any public artifacts.
 - **Retention:** Apply state schedule categories; route to ARCHIEVE™ enforcement where applicable (high‑level only).
@@ -100,4 +100,3 @@ Date • Editor • Summary of change
 
 ## IP Notice
 This document reflects PublicLogic™ methods and may reference VAULT™ and ARCHIEVE™ at a high level only. Mechanics and logic are proprietary and intentionally omitted.
-

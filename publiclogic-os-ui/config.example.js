@@ -63,5 +63,10 @@ window.PUBLICLOGIC_OS_CONFIG = {
     { title: "Outlook Calendar", url: "https://outlook.office.com/calendar/" },
     { title: "Microsoft Teams", url: "https://teams.microsoft.com/" },
     { title: "SharePoint OS Site", url: "https://publiclogic978.sharepoint.com/sites/PL" }
-  ]
+  ],
+
+  // Optional: link to PuddleJumper governance engine admin panel.
+  // puddlejumper: {
+  //   adminUrl: "https://your-puddlejumper-host/pj/admin"
+  // }
 };
