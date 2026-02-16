@@ -4,6 +4,8 @@ on:
     paths:
       - 'publiclogic-os-ui/**'
       - '.github/workflows/os-ui-tools-smoke.yml'
+permissions:
+  contents: read
 jobs:
   smoke:
     runs-on: ubuntu-latest

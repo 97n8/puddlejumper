@@ -6,6 +6,8 @@ on:
       - 'publiclogic-os-ui/content/playbooks/**'
       - 'publiclogic-site/HMLP/content/playbooks/**'
       - 'scripts/sync-playbooks.sh'
+permissions:
+  contents: read
 jobs:
   check-playbooks:
     runs-on: ubuntu-latest

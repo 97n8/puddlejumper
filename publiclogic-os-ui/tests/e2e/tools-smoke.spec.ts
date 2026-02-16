@@ -5,11 +5,12 @@ test.describe("Tools page", () => {
     await page.goto("/#/tools");
 
     // Governance card title
-    await expect(page.locator("text=Logicville — Governance")).toBeVisible();
+    const govCard = page.locator(".card", { hasText: "Logicville — Governance" });
+    await expect(govCard).toBeVisible();
 
-    // Agenda & Playbooks links
-    await expect(page.locator("a", { hasText: "Agenda" })).toBeVisible();
-    await expect(page.locator("a", { hasText: "Playbooks" })).toBeVisible();
+    // Agenda & Playbooks links within the Governance card
+    await expect(govCard.locator("a", { hasText: "Agenda" })).toBeVisible();
+    await expect(govCard.locator("a", { hasText: "Playbooks" })).toBeVisible();
   });
 
   test("PuddleJumper Admin link renders only when configured", async ({ page }) => {
@@ -17,7 +18,8 @@ test.describe("Tools page", () => {
 
     // PuddleJumper Admin is optional — renders only when cfg.puddlejumper.adminUrl is set.
     // In a default/unconfigured environment, the button should not appear.
-    const adminBtn = page.locator("a", { hasText: "PuddleJumper Admin" });
+    const govCard = page.locator(".card", { hasText: "Logicville — Governance" });
+    const adminBtn = govCard.locator("a", { hasText: "PuddleJumper Admin" });
     const count = await adminBtn.count();
     if (count > 0) {
       await expect(adminBtn).toHaveAttribute("href", /pj\/admin/);
