@@ -1,0 +1,17 @@
+name: Playbook sync check
+on:
+  pull_request:
+    paths:
+      - 'publiclogic-operating-system/**'
+      - 'publiclogic-os-ui/content/playbooks/**'
+      - 'publiclogic-site/HMLP/content/playbooks/**'
+      - 'scripts/sync-playbooks.sh'
+jobs:
+  check-playbooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure script is executable
+        run: chmod +x ./scripts/sync-playbooks.sh
+      - name: Run playbook sync check
+        run: ./scripts/sync-playbooks.sh --check

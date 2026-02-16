@@ -1,0 +1,25 @@
+name: OS UI Tools smoke (Playwright)
+on:
+  pull_request:
+    paths:
+      - 'publiclogic-os-ui/**'
+      - '.github/workflows/os-ui-tools-smoke.yml'
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Start static server
+        run: npx serve publiclogic-os-ui -l 3000 &
+      - name: Wait for server
+        run: npx wait-on http://localhost:3000 --timeout 10000
+      - name: Run Playwright smoke tests
+        run: npx playwright test publiclogic-os-ui/tests/e2e/ --project=chromium
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
