@@ -444,3 +444,221 @@ describe("Chain integration — backward compatibility", () => {
     expect(chainRes.status).toBe(404);
   });
 });
+
+describe("role-gated chain step authorization", () => {
+
+  it("admin can decide any step regardless of requiredRole", async () => {
+    const app = buildApp();
+    const adminToken = await tokenFor(ADMIN);
+    const h = { Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" };
+
+    // Create a chain template with legal_reviewer requirement
+    const template = chainStore.createTemplate({
+      name: "Legal Review",
+      description: "Requires legal reviewer",
+      steps: [
+        { order: 0, requiredRole: "legal_reviewer", label: "Legal Review" },
+      ],
+    });
+
+    // Create approval with this chain
+    const execRes = await request(app)
+      .post("/api/pj/execute")
+      .set(h)
+      .send({ requestId: "role-admin-test", templateId: template.id });
+    const approvalId = execRes.body.approvalId;
+
+    // Admin should be able to decide despite step requiring legal_reviewer
+    const decideRes = await request(app)
+      .post(`/api/approvals/${approvalId}/decide`)
+      .set(h)
+      .send({ status: "approved", note: "Admin override" });
+    expect(decideRes.status).toBe(200);
+    expect(decideRes.body.success).toBe(true);
+  });
+
+  it("matching role can decide their step", async () => {
+    const app = buildApp();
+    const deptHeadToken = await tokenFor({ sub: "dept-head-1", name: "Dept Head", role: "dept_head", permissions: [], tenants: ["t1"], tenantId: "t1" });
+    const h = { Authorization: `Bearer ${deptHeadToken}`, "X-PuddleJumper-Request": "true" };
+
+    // Create a chain template with dept_head requirement
+    const template = chainStore.createTemplate({
+      name: "Department Head Review",
+      description: "Requires department head",
+      steps: [
+        { order: 0, requiredRole: "dept_head", label: "Dept Head Review" },
+      ],
+    });
+
+    // Create approval with this chain (as admin first)
+    const adminToken = await tokenFor(ADMIN);
+    const execRes = await request(app)
+      .post("/api/pj/execute")
+      .set({ Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" })
+      .send({ requestId: "role-match-test", templateId: template.id });
+    const approvalId = execRes.body.approvalId;
+
+    // dept_head should be able to decide their step
+    const decideRes = await request(app)
+      .post(`/api/approvals/${approvalId}/decide`)
+      .set(h)
+      .send({ status: "approved", note: "Dept head approval" });
+    expect(decideRes.status).toBe(200);
+    expect(decideRes.body.success).toBe(true);
+  });
+
+  it("mismatched role gets 403", async () => {
+    const app = buildApp();
+    const deptHeadToken = await tokenFor({ sub: "dept-head-1", name: "Dept Head", role: "dept_head", permissions: [], tenants: ["t1"], tenantId: "t1" });
+    const h = { Authorization: `Bearer ${deptHeadToken}`, "X-PuddleJumper-Request": "true" };
+
+    // Create a chain template with legal_reviewer requirement
+    const template = chainStore.createTemplate({
+      name: "Legal Review",
+      description: "Requires legal reviewer",
+      steps: [
+        { order: 0, requiredRole: "legal_reviewer", label: "Legal Review" },
+      ],
+    });
+
+    // Create approval with this chain (as admin first)
+    const adminToken = await tokenFor(ADMIN);
+    const execRes = await request(app)
+      .post("/api/pj/execute")
+      .set({ Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" })
+      .send({ requestId: "role-mismatch-test", templateId: template.id });
+    const approvalId = execRes.body.approvalId;
+
+    // dept_head should get 403 when trying to decide legal_reviewer step
+    const decideRes = await request(app)
+      .post(`/api/approvals/${approvalId}/decide`)
+      .set(h)
+      .send({ status: "approved", note: "Trying to approve" });
+    expect(decideRes.status).toBe(403);
+    expect(decideRes.body.success).toBe(false);
+    expect(decideRes.body.error).toContain("dept_head");
+    expect(decideRes.body.error).toContain("legal_reviewer");
+  });
+
+  it("viewer role gets 403", async () => {
+    const app = buildApp();
+    const viewerToken = await tokenFor(VIEWER);
+    const h = { Authorization: `Bearer ${viewerToken}`, "X-PuddleJumper-Request": "true" };
+
+    // Create a chain template with admin requirement
+    const template = chainStore.createTemplate({
+      name: "Admin Review",
+      description: "Requires admin",
+      steps: [
+        { order: 0, requiredRole: "admin", label: "Admin Review" },
+      ],
+    });
+
+    // Create approval with this chain (as admin first)
+    const adminToken = await tokenFor(ADMIN);
+    const execRes = await request(app)
+      .post("/api/pj/execute")
+      .set({ Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" })
+      .send({ requestId: "role-viewer-test", templateId: template.id });
+    const approvalId = execRes.body.approvalId;
+
+    // viewer should get 403 (blocked by existing check at line 111)
+    const decideRes = await request(app)
+      .post(`/api/approvals/${approvalId}/decide`)
+      .set(h)
+      .send({ status: "approved", note: "Trying to approve" });
+    expect(decideRes.status).toBe(403);
+    expect(decideRes.body.success).toBe(false);
+  });
+
+  it("role check only applies to active step", async () => {
+    const app = buildApp();
+    const deptHeadToken = await tokenFor({ sub: "dept-head-1", name: "Dept Head", role: "dept_head", permissions: [], tenants: ["t1"], tenantId: "t1" });
+    const deptHeadH = { Authorization: `Bearer ${deptHeadToken}`, "X-PuddleJumper-Request": "true" };
+
+    // Create a 2-step chain
+    const template = chainStore.createTemplate({
+      name: "Two Step Review",
+      description: "Department head then legal",
+      steps: [
+        { order: 0, requiredRole: "dept_head", label: "Dept Head Review" },
+        { order: 1, requiredRole: "legal_reviewer", label: "Legal Review" },
+      ],
+    });
+
+    // Create approval with this chain (as admin)
+    const adminToken = await tokenFor(ADMIN);
+    const execRes = await request(app)
+      .post("/api/pj/execute")
+      .set({ Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" })
+      .send({ requestId: "role-progression-test", templateId: template.id });
+    const approvalId = execRes.body.approvalId;
+
+    // Step 1: dept_head decides first step (should succeed)
+    const decide1Res = await request(app)
+      .post(`/api/approvals/${approvalId}/decide`)
+      .set(deptHeadH)
+      .send({ status: "approved", note: "Dept head approval" });
+    expect(decide1Res.status).toBe(200);
+    expect(decide1Res.body.success).toBe(true);
+
+    // Verify second step is now active (use admin token for chain visibility)
+    const chainRes = await request(app)
+      .get(`/api/approvals/${approvalId}/chain`)
+      .set({ Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" });
+    expect(chainRes.status).toBe(200);
+    expect(chainRes.body.data.currentStep.requiredRole).toBe("legal_reviewer");
+
+    // Step 2: dept_head tries to decide second step (should get 403)
+    const decide2Res = await request(app)
+      .post(`/api/approvals/${approvalId}/decide`)
+      .set(deptHeadH)
+      .send({ status: "approved", note: "Trying to approve legal step" });
+    expect(decide2Res.status).toBe(403);
+    expect(decide2Res.body.success).toBe(false);
+    expect(decide2Res.body.error).toContain("dept_head");
+    expect(decide2Res.body.error).toContain("legal_reviewer");
+  });
+
+  it("admin override on second step", async () => {
+    const app = buildApp();
+    const deptHeadToken = await tokenFor({ sub: "dept-head-1", name: "Dept Head", role: "dept_head", permissions: [], tenants: ["t1"], tenantId: "t1" });
+    const deptHeadH = { Authorization: `Bearer ${deptHeadToken}`, "X-PuddleJumper-Request": "true" };
+    const adminToken = await tokenFor(ADMIN);
+    const adminH = { Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" };
+
+    // Create a 2-step chain
+    const template = chainStore.createTemplate({
+      name: "Two Step Review",
+      description: "Department head then legal",
+      steps: [
+        { order: 0, requiredRole: "dept_head", label: "Dept Head Review" },
+        { order: 1, requiredRole: "legal_reviewer", label: "Legal Review" },
+      ],
+    });
+
+    // Create approval with this chain
+    const execRes = await request(app)
+      .post("/api/pj/execute")
+      .set(adminH)
+      .send({ requestId: "role-admin-override-test", templateId: template.id });
+    const approvalId = execRes.body.approvalId;
+
+    // Step 1: dept_head decides first step
+    const decide1Res = await request(app)
+      .post(`/api/approvals/${approvalId}/decide`)
+      .set(deptHeadH)
+      .send({ status: "approved", note: "Dept head approval" });
+    expect(decide1Res.status).toBe(200);
+
+    // Step 2: admin decides second step (should succeed even though it requires legal_reviewer)
+    const decide2Res = await request(app)
+      .post(`/api/approvals/${approvalId}/decide`)
+      .set(adminH)
+      .send({ status: "approved", note: "Admin override on legal step" });
+    expect(decide2Res.status).toBe(200);
+    expect(decide2Res.body.success).toBe(true);
+    expect(decide2Res.body.data.approval_status).toBe("approved");
+  });
+});

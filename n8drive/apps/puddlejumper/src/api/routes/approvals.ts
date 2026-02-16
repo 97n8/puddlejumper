@@ -107,12 +107,6 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
     const correlationId = getCorrelationId(res);
     if (!auth) { res.status(401).json({ success: false, correlationId, error: "Unauthorized" }); return; }
 
-    // Only admins can approve/reject
-    if (auth.role !== "admin") {
-      res.status(403).json({ success: false, correlationId, error: "Only admins can approve or reject" });
-      return;
-    }
-
     const { status, note } = req.body ?? {};
     if (status !== "approved" && status !== "rejected") {
       res.status(400).json({ success: false, correlationId, error: "status must be 'approved' or 'rejected'" });
@@ -126,7 +120,23 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
     // If no chain exists (legacy), fall back to direct approvalStore.decide().
     const activeStep = chainStore?.getActiveStep(req.params.id) ?? null;
 
+    // Only admins can approve/reject (legacy non-chain approvals)
+    // For chain-based approvals, role authorization happens at step level
+    if (!activeStep && auth.role !== "admin") {
+      res.status(403).json({ success: false, correlationId, error: "Only admins can approve or reject" });
+      return;
+    }
+
     if (activeStep && chainStore) {
+      // Admin is a superrole — can decide any step
+      if (auth.role !== "admin" && auth.role !== activeStep.requiredRole) {
+        return res.status(403).json({
+          success: false,
+          correlationId,
+          error: `Your role (${auth.role}) cannot decide this step (requires ${activeStep.requiredRole})`
+        });
+      }
+
       // Decide the active chain step
       const chainResult = chainStore.decideStep({
         stepId: activeStep.id,
