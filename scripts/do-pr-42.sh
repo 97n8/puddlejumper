@@ -2,6 +2,7 @@
 # ── PR #42 Helper ────────────────────────────────────────────────────────────
 #
 # One-shot script to commit, push, create/find PR, and attempt merge.
+# Specific to the Logicville + governance + sync work on this branch.
 #
 # Usage:
 #   ./scripts/do-pr-42.sh          # Run the full flow
@@ -34,8 +35,13 @@ echo ""
 
 # Step 1: Commit any uncommitted changes
 echo "Step 1: Committing local changes..."
-git add -A
-git commit -m "$TITLE" 2>/dev/null && echo "  ✓ Committed." || echo "  ✓ Nothing to commit."
+if git diff --quiet && git diff --cached --quiet; then
+  echo "  ✓ Nothing to commit."
+else
+  git add -A
+  git commit -m "$TITLE"
+  echo "  ✓ Committed."
+fi
 
 # Step 2: Push
 echo "Step 2: Pushing branch..."
@@ -48,14 +54,20 @@ EXISTING_PR=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open --json num
 
 if [[ -n "$EXISTING_PR" ]]; then
   PR_NUMBER="$EXISTING_PR"
+  PR_URL="https://github.com/$REPO/pull/$PR_NUMBER"
   echo "  ✓ Found existing PR #$PR_NUMBER"
-  PR_URL=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json url --jq '.url' 2>/dev/null || echo "https://github.com/$REPO/pull/$PR_NUMBER")
 else
-  PR_URL=$(gh pr create --repo "$REPO" \
+  CREATE_OUTPUT=$(gh pr create --repo "$REPO" \
     --title "$TITLE" \
     --body "$BODY" \
     --base "$BASE" --head "$BRANCH" 2>&1)
-  PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$' || true)
+  PR_URL=$(echo "$CREATE_OUTPUT" | grep -oE 'https://github.com/[^ ]+' | head -1)
+  PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+  if [[ -z "$PR_NUMBER" ]]; then
+    echo "  ✗ Failed to create PR. Output:"
+    echo "    $CREATE_OUTPUT"
+    exit 1
+  fi
   echo "  ✓ Created PR #$PR_NUMBER"
 fi
 
