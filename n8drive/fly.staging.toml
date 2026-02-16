@@ -11,6 +11,14 @@ primary_region = 'ewr'
   min_machines_running = 0
   processes = ['app']
 
+  [[http_service.checks]]
+    type = "http"
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "10s"
+    method = "get"
+    path = "/health"
+
 [[vm]]
   cpu_kind = 'shared'
   cpus = 1
@@ -22,5 +30,5 @@ primary_region = 'ewr'
   initial_size = '1gb'
 
 [[env]]
-  DATA_DIR = '/app/data'
+  CONTROLLED_DATA_DIR = '/app/data'
   PORT = '8080'

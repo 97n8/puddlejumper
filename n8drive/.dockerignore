@@ -22,3 +22,8 @@ yarn-error.log*
 pnpm-debug.log*
 docker-compose.yml
 Dockerfile
+test
+tests
+playwright-report
+.DS_Store
+*.tsbuildinfo

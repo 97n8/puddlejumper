@@ -254,6 +254,14 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use(withCorrelationId);
   app.use(createCorsMiddleware(nodeEnv));
 
+  // Add HSTS header for production
+  if (nodeEnv === "production") {
+    app.use((_req, res, next) => {
+      res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+      next();
+    });
+  }
+
   // Pre-auth routes
   app.get("/health", (_req, res) => {
     const checks: Record<string, { status: string; detail?: string }> = {};
