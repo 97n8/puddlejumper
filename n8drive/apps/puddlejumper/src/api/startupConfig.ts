@@ -26,10 +26,10 @@ export const startupConfigSchema = z.object({
   JWT_SECRET: nonEmptyString,
   AUTH_ISSUER: nonEmptyString,
   AUTH_AUDIENCE: nonEmptyString,
-  PRR_DB_PATH: nonEmptyString,
-  CONNECTOR_DB_PATH: nonEmptyString,
 
   // ── Optional ────────────────────────────────────────────────────────
+  PRR_DB_PATH: z.string().optional(),
+  CONNECTOR_DB_PATH: z.string().optional(),
   METRICS_TOKEN: z.string().optional(),
   FRONTEND_URL: z.string().url().optional().or(z.literal("").transform(() => undefined)),
   LOGIC_COMMONS_DATA_DIR: z.string().optional(),

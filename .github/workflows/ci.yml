@@ -36,14 +36,20 @@ jobs:
       - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
+      - name: Clean stale TypeScript build cache
+        run: find . -name "*.tsbuildinfo" -type f -delete
+
+      - name: Build packages in dependency order
+        run: |
+          pnpm --filter @publiclogic/core run build
+          pnpm --filter @publiclogic/logic-commons run build  
+          pnpm --filter @publiclogic/puddlejumper run build
+
       - name: Lint frontend (if present)
         working-directory: n8drive/web
         if: ${{ hashFiles('n8drive/web/package.json') != '' }}
         run: |
           pnpm --filter web -w run -s lint || echo "No lint script or lint failed"
-
-      - name: Build core package
-        run: pnpm --filter @publiclogic/core run build
 
       - name: Typecheck (root)
         run: pnpm run typecheck
@@ -57,9 +63,6 @@ jobs:
 
       - name: Unit tests – puddlejumper
         run: pnpm --filter @publiclogic/puddlejumper run test
-
-      - name: Monorepo build (root)
-        run: pnpm run build
 
       - name: Create CI env file
         run: |
