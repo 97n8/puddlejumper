@@ -136,20 +136,20 @@ function renderApprovals() {
 
     const actions = [];
     if (a.approval_status === "pending") {
-      actions.push(`<button class="btn btn-approve" onclick="decide('${a.id}','approved')">Approve</button>`);
-      actions.push(`<button class="btn btn-reject" onclick="decide('${a.id}','rejected')">Reject</button>`);
+      actions.push(`<button class="btn btn-approve" data-action="decide" data-id="${a.id}" data-status="approved">Approve</button>`);
+      actions.push(`<button class="btn btn-reject" data-action="decide" data-id="${a.id}" data-status="rejected">Reject</button>`);
     }
     if (a.approval_status === "approved") {
-      actions.push(`<button class="btn btn-dispatch" onclick="dispatch('${a.id}')">Dispatch</button>`);
+      actions.push(`<button class="btn btn-dispatch" data-action="dispatch" data-id="${a.id}">Dispatch</button>`);
     }
 
-    return `<tr onclick="showDetail('${a.id}')" class="cursor-pointer">
+    return `<tr data-action="showDetail" data-id="${a.id}" class="cursor-pointer">
       <td>${esc(a.action_intent || "—")}</td>
       <td><span class="status-badge ${a.approval_status}">${a.approval_status}</span></td>
       <td>${chainHtml}</td>
       <td>${esc(a.operator_id || "—")}</td>
       <td>${timeAgo(a.created_at)}</td>
-      <td class="actions" onclick="event.stopPropagation()">${actions.join("") || "—"}</td>
+      <td class="actions" data-stop-propagation>${actions.join("") || "—"}</td>
     </tr>`;
   }).join("");
 }
@@ -284,14 +284,14 @@ async function showDetail(id) {
     if (a.approval_status === "pending") {
       html += `
         <div class="form-actions">
-          <button class="btn btn-approve" onclick="decide('${a.id}','approved');closeDetail()">Approve</button>
-          <button class="btn btn-reject" onclick="decide('${a.id}','rejected');closeDetail()">Reject</button>
+          <button class="btn btn-approve" data-action="decideAndClose" data-id="${a.id}" data-status="approved">Approve</button>
+          <button class="btn btn-reject" data-action="decideAndClose" data-id="${a.id}" data-status="rejected">Reject</button>
         </div>`;
     }
     if (a.approval_status === "approved") {
       html += `
         <div class="detail-actions-mt">
-          <button class="btn btn-dispatch" onclick="dispatch('${a.id}');closeDetail()">Dispatch</button>
+          <button class="btn btn-dispatch" data-action="dispatchAndClose" data-id="${a.id}">Dispatch</button>
         </div>`;
     }
 
@@ -371,9 +371,9 @@ function renderTemplates(templates) {
       <div class="template-meta">${steps.length} step${steps.length !== 1 ? "s" : ""} · ${orders.length} stage${orders.length !== 1 ? "s" : ""}${created ? " · Created " + created : ""}</div>
       <div class="template-steps-viz">${vizHtml}</div>
       <div class="template-actions">
-        <button class="btn btn-secondary" onclick="showTemplateDetail('${esc(t.id)}')">View JSON</button>
-        ${!isDefault ? `<button class="btn btn-secondary" onclick="editTemplate('${esc(t.id)}')">Edit</button>` : ""}
-        ${!isDefault ? `<button class="btn btn-danger" onclick="deleteTemplate('${esc(t.id)}')">Delete</button>` : ""}
+        <button class="btn btn-secondary" data-action="showTemplateDetail" data-id="${esc(t.id)}">View JSON</button>
+        ${!isDefault ? `<button class="btn btn-secondary" data-action="editTemplate" data-id="${esc(t.id)}">Edit</button>` : ""}
+        ${!isDefault ? `<button class="btn btn-danger" data-action="deleteTemplate" data-id="${esc(t.id)}">Delete</button>` : ""}
       </div>
     </div>`;
   }).join("");
@@ -451,7 +451,7 @@ function addTemplateStep() {
     <span class="step-number">Step ${stepNum}</span>
     <input type="text" placeholder="Role (e.g. admin)" class="step-role step-input-role">
     <input type="text" placeholder="Label (e.g. Legal Review)" class="step-label step-input-label">
-    <button class="btn btn-danger btn-sm" onclick="removeTemplateStep('step-row-${idx}')">✕</button>
+    <button class="btn btn-danger btn-sm" data-action="removeTemplateStep" data-row-id="step-row-${idx}">✕</button>
   `;
   list.appendChild(div);
 }
@@ -676,7 +676,7 @@ function renderMembers(members) {
       <td>${timeAgo(m.joined_at)}</td>
       <td>${esc(m.invited_by || "—")}</td>
       <td>
-        ${m.role !== "owner" ? `<button class="btn btn-sm btn-danger" onclick="removeMember('${m.user_id}')">Remove</button>` : ""}
+        ${m.role !== "owner" ? `<button class="btn btn-sm btn-danger" data-action="removeMember" data-id="${m.user_id}">Remove</button>` : ""}
       </td>
     </tr>
   `).join("");
@@ -700,8 +700,8 @@ function renderInvitations(invitations) {
       <td>${timeAgo(inv.created_at)}</td>
       <td>${new Date(inv.expires_at).toLocaleDateString()}</td>
       <td>
-        <button class="btn btn-sm btn-secondary" onclick="copyInviteLink('${inv.token}')">Copy Link</button>
-        <button class="btn btn-sm btn-danger" onclick="revokeInvite('${inv.id}')">Revoke</button>
+        <button class="btn btn-sm btn-secondary" data-action="copyInviteLink" data-token="${inv.token}">Copy Link</button>
+        <button class="btn btn-sm btn-danger" data-action="revokeInvite" data-id="${inv.id}">Revoke</button>
       </td>
     </tr>
   `).join("");
@@ -1035,7 +1035,7 @@ function renderPRRQueue(requests) {
         <td><span class="status-badge prr-${statusClass}">${esc(prr.status.replace('_', ' '))}</span></td>
         <td>${esc(prr.assigned_to || '—')}</td>
         <td>${timeAgo(prr.created_at)}</td>
-        <td><button class="btn-link" onclick="openPRRDetail('${prr.id}')">View</button></td>
+        <td><button class="btn-link" data-action="openPRRDetail" data-id="${prr.id}">View</button></td>
       </tr>
     `;
   }).join('');
@@ -1060,7 +1060,7 @@ function renderPRRDetail(prr) {
   content.innerHTML = `
     <div class="detail-field">
       <label>Status</label>
-      <select id="prr-status-select" onchange="updatePRRStatus('${prr.id}')">
+      <select id="prr-status-select" data-action="updatePRRStatus" data-id="${prr.id}">>
         <option value="submitted" ${prr.status === 'submitted' ? 'selected' : ''}>Submitted</option>
         <option value="acknowledged" ${prr.status === 'acknowledged' ? 'selected' : ''}>Acknowledged</option>
         <option value="in_progress" ${prr.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
@@ -1109,7 +1109,7 @@ function renderPRRDetail(prr) {
       
       <div class="prr-comment-form">
         <textarea id="prr-comment-input" placeholder="Add a comment..." class="prr-comment-input"></textarea>
-        <button class="btn btn-primary btn-mt" onclick="addPRRComment('${prr.id}')">Add Comment</button>
+        <button class="btn btn-primary btn-mt" data-action="addPRRComment" data-id="${prr.id}">Add Comment</button>
       </div>
     </div>
   `;
@@ -1201,6 +1201,91 @@ window.addEventListener("hashchange", () => {
   const hash = window.location.hash.replace("#", "");
   const tab = HASH_TAB_MAP[hash];
   if (tab) switchTab(tab);
+});
+
+// ── Event Delegation ──────────────────────────────────────────────────────
+// CSP blocks inline event handlers (onclick=, onchange=). Use data-action
+// attributes and event delegation instead.
+
+const ACTION_MAP = {
+  // Tab navigation
+  switchTab: (el) => switchTab(el.dataset.tab),
+  // Refresh
+  refresh: () => refresh(),
+  // Approval queue
+  loadApprovals: () => loadApprovals(),
+  sortBy: (el) => sortBy(el.dataset.sort),
+  prevPage: () => prevPage(),
+  nextPage: () => nextPage(),
+  // Approve/reject/dispatch
+  decide: (el) => decide(el.dataset.id, el.dataset.status),
+  dispatch: (el) => dispatch(el.dataset.id),
+  decideAndClose: (el) => { decide(el.dataset.id, el.dataset.status); closeDetail(); },
+  dispatchAndClose: (el) => { dispatch(el.dataset.id); closeDetail(); },
+  showDetail: (el) => showDetail(el.dataset.id),
+  closeDetail: (el, e) => closeDetail(e),
+  forceCloseDetail: () => closeDetail(),
+  // Chain templates
+  toggleCreateTemplateForm: () => toggleCreateTemplateForm(),
+  addTemplateStep: () => addTemplateStep(),
+  submitTemplate: () => submitTemplate(),
+  cancelTemplateForm: () => cancelTemplateForm(),
+  showTemplateDetail: (el) => showTemplateDetail(el.dataset.id),
+  editTemplate: (el) => editTemplate(el.dataset.id),
+  deleteTemplate: (el) => deleteTemplate(el.dataset.id),
+  removeTemplateStep: (el) => removeTemplateStep(el.dataset.rowId),
+  // Members
+  toggleInviteForm: () => toggleInviteForm(),
+  submitInviteForm: () => submitInviteForm(),
+  cancelInviteForm: () => cancelInviteForm(),
+  sendInvite: () => sendInvite(),
+  closeInviteModal: (el, e) => closeInviteModal(e),
+  forceCloseInviteModal: () => closeInviteModal(),
+  removeMember: (el) => removeMember(el.dataset.id),
+  revokeInvite: (el) => revokeInvite(el.dataset.id),
+  copyInviteLink: (el) => copyInviteLink(el.dataset.token),
+  // Usage & upgrade
+  openUpgradeModal: () => openUpgradeModal(),
+  closeUpgradeModal: (el, e) => closeUpgradeModal(e),
+  forceCloseUpgradeModal: () => closeUpgradeModal(),
+  submitPlanChange: () => submitPlanChange(),
+  loadUsage: () => loadUsage(),
+  // PRR
+  togglePRRForm: () => togglePRRForm(),
+  submitPRRForm: () => submitPRRForm(),
+  cancelPRRForm: () => cancelPRRForm(),
+  loadPRRQueue: () => loadPRRQueue(),
+  openPRRDetail: (el) => openPRRDetail(el.dataset.id),
+  closePRRDetail: (el, e) => closePRRDetail(e),
+  forceClosePRRDetail: () => closePRRDetail(),
+  updatePRRStatus: (el) => updatePRRStatus(el.dataset.id),
+  addPRRComment: (el) => addPRRComment(el.dataset.id),
+};
+
+document.addEventListener("click", (e) => {
+  const actionEl = e.target.closest("[data-action]");
+  const stopEl = e.target.closest("[data-stop-propagation]");
+
+  // If a stop-propagation element is between the target and the action element,
+  // block the action (e.g. clicking inside a table cell that should not trigger
+  // the row's showDetail action).
+  if (stopEl && actionEl && actionEl.contains(stopEl) && stopEl !== actionEl) {
+    e.stopPropagation();
+    return;
+  }
+
+  if (actionEl) {
+    const handler = ACTION_MAP[actionEl.dataset.action];
+    if (handler) handler(actionEl, e);
+  }
+});
+
+document.addEventListener("change", (e) => {
+  const el = e.target.closest("[data-action]");
+  if (!el) return;
+  const action = el.dataset.action;
+  const handler = ACTION_MAP[action];
+  if (handler) handler(el, e);
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────

@@ -17,16 +17,16 @@
   <div class="header-right">
     <span id="auto-refresh-indicator" class="auto-refresh-text hidden">⟳ Auto-refresh</span>
     <a class="guide-link" href="/pj/guide">Quick Start</a>
-    <button class="refresh-btn" onclick="refresh()" id="refresh-btn">⟳ Refresh</button>
+    <button class="refresh-btn" data-action="refresh" id="refresh-btn">⟳ Refresh</button>
   </div>
 </div>
 
 <div class="tabs">
-  <button class="tab active" data-tab="queue" onclick="switchTab('queue')">Approval Queue</button>
-  <button class="tab" data-tab="chains" onclick="switchTab('chains')">Chain Templates</button>
-  <button class="tab" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
-  <button class="tab" data-tab="prr" onclick="switchTab('prr')">PRR</button>
-  <button class="tab" data-tab="members" onclick="switchTab('members')">Members</button>
+  <button class="tab active" data-tab="queue" data-action="switchTab">Approval Queue</button>
+  <button class="tab" data-tab="chains" data-action="switchTab">Chain Templates</button>
+  <button class="tab" data-tab="dashboard" data-action="switchTab">Dashboard</button>
+  <button class="tab" data-tab="prr" data-action="switchTab">PRR</button>
+  <button class="tab" data-tab="members" data-action="switchTab">Members</button>
 </div>
 
 <!-- Auth gate (shown when user isn't authenticated) -->
@@ -49,7 +49,7 @@
   <div class="table-header">
     <h2>Approvals</h2>
     <div class="filter-group">
-      <select id="status-filter" onchange="loadApprovals()">
+      <select id="status-filter" data-action="loadApprovals">
         <option value="pending">Pending</option>
         <option value="approved">Approved</option>
         <option value="rejected">Rejected</option>
@@ -66,11 +66,11 @@
     <table>
       <thead>
         <tr>
-          <th onclick="sortBy('action_intent')">Intent</th>
-          <th onclick="sortBy('approval_status')">Status</th>
-          <th onclick="sortBy('chain')">Chain Progress</th>
-          <th onclick="sortBy('operator_id')">Operator</th>
-          <th onclick="sortBy('created_at')">Created</th>
+          <th data-action="sortBy" data-sort="action_intent">Intent</th>
+          <th data-action="sortBy" data-sort="approval_status">Status</th>
+          <th data-action="sortBy" data-sort="chain">Chain Progress</th>
+          <th data-action="sortBy" data-sort="operator_id">Operator</th>
+          <th data-action="sortBy" data-sort="created_at">Created</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -82,8 +82,8 @@
   <div class="pagination">
     <span id="page-info"></span>
     <div class="pagination-buttons">
-      <button id="prev-btn" onclick="prevPage()" disabled>← Previous</button>
-      <button id="next-btn" onclick="nextPage()">Next →</button>
+      <button id="prev-btn" data-action="prevPage" disabled>← Previous</button>
+      <button id="next-btn" data-action="nextPage">Next →</button>
     </div>
   </div>
 </div>
@@ -92,7 +92,7 @@
 <div class="main hidden" id="tab-chains">
   <div class="table-header">
     <h2>Chain Templates</h2>
-    <button class="btn btn-primary" onclick="toggleCreateTemplateForm()">+ Create Template</button>
+    <button class="btn btn-primary" data-action="toggleCreateTemplateForm">+ Create Template</button>
   </div>
   <div class="section-desc">Define multi-step approval routing with sequential and parallel steps</div>
 
@@ -111,11 +111,11 @@
     <div class="form-group">
       <label class="form-label-gap">Steps</label>
       <div id="template-steps-list"></div>
-      <button class="btn btn-secondary btn-mt" onclick="addTemplateStep()">+ Add Step</button>
+      <button class="btn btn-secondary btn-mt" data-action="addTemplateStep">+ Add Step</button>
     </div>
     <div class="form-actions">
-      <button class="btn btn-primary" onclick="submitTemplate()">Save Template</button>
-      <button class="btn btn-secondary" onclick="cancelTemplateForm()">Cancel</button>
+      <button class="btn btn-primary" data-action="submitTemplate">Save Template</button>
+      <button class="btn btn-secondary" data-action="cancelTemplateForm">Cancel</button>
     </div>
   </div>
 
@@ -178,7 +178,7 @@
         <h3>Workspace Usage</h3>
         <div class="plan-badge" id="plan-badge">FREE</div>
       </div>
-      <button class="btn btn-upgrade" id="upgrade-btn" onclick="openUpgradeModal()">⬆️ Upgrade</button>
+      <button class="btn btn-upgrade" id="upgrade-btn" data-action="openUpgradeModal">⬆️ Upgrade</button>
     </div>
     
     <div class="usage-metrics" id="usage-metrics">
@@ -188,7 +188,7 @@
 
   <div class="table-header">
     <h2>Workspace Members</h2>
-    <button class="btn btn-primary" onclick="toggleInviteForm()">+ Invite Member</button>
+    <button class="btn btn-primary" data-action="toggleInviteForm">+ Invite Member</button>
   </div>
 
   <!-- Invite Member Form (hidden by default) -->
@@ -206,8 +206,8 @@
       </select>
     </div>
     <div class="form-actions">
-      <button class="btn btn-primary" onclick="submitInviteForm()">Send Invitation</button>
-      <button class="btn btn-secondary" onclick="cancelInviteForm()">Cancel</button>
+      <button class="btn btn-primary" data-action="submitInviteForm">Send Invitation</button>
+      <button class="btn btn-secondary" data-action="cancelInviteForm">Cancel</button>
     </div>
   </div>
 
@@ -254,7 +254,7 @@
     <h2>Public Records Requests</h2>
     <div class="flex-row">
       <div class="filter-group">
-        <select id="prr-status-filter" onchange="loadPRRQueue()">
+        <select id="prr-status-filter" data-action="loadPRRQueue">
           <option value="">All Status</option>
           <option value="submitted">Submitted</option>
           <option value="acknowledged">Acknowledged</option>
@@ -262,7 +262,7 @@
           <option value="closed">Closed</option>
         </select>
       </div>
-      <button class="btn btn-primary" onclick="togglePRRForm()">+ New Request</button>
+      <button class="btn btn-primary" data-action="togglePRRForm">+ New Request</button>
     </div>
   </div>
 
@@ -282,8 +282,8 @@
       <input type="date" id="prr-form-due" class="form-input">
     </div>
     <div class="form-actions">
-      <button class="btn btn-primary" onclick="submitPRRForm()">Create Request</button>
-      <button class="btn btn-secondary" onclick="cancelPRRForm()">Cancel</button>
+      <button class="btn btn-primary" data-action="submitPRRForm">Create Request</button>
+      <button class="btn btn-secondary" data-action="cancelPRRForm">Cancel</button>
     </div>
   </div>
 
@@ -308,11 +308,11 @@
 </div>
 
 <!-- PRR Detail Modal -->
-<div class="detail-overlay" id="prr-detail-overlay" onclick="closePRRDetail(event)">
-  <div class="detail-panel" onclick="event.stopPropagation()">
+<div class="detail-overlay" id="prr-detail-overlay" data-action="closePRRDetail">
+  <div class="detail-panel" data-stop-propagation>
     <h3>
       <span id="prr-detail-title">PRR Detail</span>
-      <button class="detail-close" onclick="closePRRDetail()">✕</button>
+      <button class="detail-close" data-action="forceClosePRRDetail">✕</button>
     </h3>
     <div class="detail-content" id="prr-detail-content">
       <!-- Populated by renderPRRDetail() -->
@@ -321,11 +321,11 @@
 </div>
 
 <!-- Invite Member Modal -->
-<div class="detail-overlay" id="invite-modal" onclick="closeInviteModal(event)">
-  <div class="detail-panel" onclick="event.stopPropagation()">
+<div class="detail-overlay" id="invite-modal" data-action="closeInviteModal">
+  <div class="detail-panel" data-stop-propagation>
     <h3>
       <span>Invite Member</span>
-      <button class="detail-close" onclick="closeInviteModal()">✕</button>
+      <button class="detail-close" data-action="forceCloseInviteModal">✕</button>
     </h3>
     <div class="modal-body">
       <div class="detail-field modal-field">
@@ -341,19 +341,19 @@
         </select>
       </div>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="sendInvite()">Send Invitation</button>
-        <button class="btn btn-secondary" onclick="closeInviteModal()">Cancel</button>
+        <button class="btn btn-primary" data-action="sendInvite">Send Invitation</button>
+        <button class="btn btn-secondary" data-action="forceCloseInviteModal">Cancel</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Upgrade Plan Modal -->
-<div class="detail-overlay" id="upgrade-modal" onclick="closeUpgradeModal(event)">
-  <div class="detail-panel" onclick="event.stopPropagation()">
+<div class="detail-overlay" id="upgrade-modal" data-action="closeUpgradeModal">
+  <div class="detail-panel" data-stop-propagation>
     <h3>
       <span>Upgrade Workspace Plan</span>
-      <button class="detail-close" onclick="closeUpgradeModal()">✕</button>
+      <button class="detail-close" data-action="forceCloseUpgradeModal">✕</button>
     </h3>
     <div class="modal-body">
       <div class="plan-current-info">
@@ -385,19 +385,19 @@
       </div>
       
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="submitPlanChange()">Confirm Upgrade</button>
-        <button class="btn btn-secondary" onclick="closeUpgradeModal()">Cancel</button>
+        <button class="btn btn-primary" data-action="submitPlanChange">Confirm Upgrade</button>
+        <button class="btn btn-secondary" data-action="forceCloseUpgradeModal">Cancel</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Detail slide-out panel -->
-<div class="detail-overlay" id="detail-overlay" onclick="closeDetail(event)">
-  <div class="detail-panel" id="detail-panel" onclick="event.stopPropagation()">
+<div class="detail-overlay" id="detail-overlay" data-action="closeDetail">
+  <div class="detail-panel" id="detail-panel" data-stop-propagation>
     <h3>
       <span id="detail-title">Approval Detail</span>
-      <button class="detail-close" onclick="closeDetail()">✕</button>
+      <button class="detail-close" data-action="forceCloseDetail">✕</button>
     </h3>
     <div id="detail-content"></div>
   </div>
