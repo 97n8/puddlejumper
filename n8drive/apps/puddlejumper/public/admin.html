@@ -137,6 +137,22 @@
 
 <!-- Members Tab -->
 <div class="main" id="tab-members" style="display:none;">
+  
+  <!-- Usage & Plan Card -->
+  <div class="usage-card" id="usage-card">
+    <div class="usage-header">
+      <div>
+        <h3>Workspace Usage</h3>
+        <div class="plan-badge" id="plan-badge">FREE</div>
+      </div>
+      <button class="btn btn-upgrade" id="upgrade-btn" onclick="openUpgradeModal()">⬆️ Upgrade</button>
+    </div>
+    
+    <div class="usage-metrics" id="usage-metrics">
+      <!-- Populated by renderUsageCard() -->
+    </div>
+  </div>
+
   <div class="table-header">
     <h2>Workspace Members</h2>
     <button class="btn btn-primary" onclick="showInviteModal()">✉️ Invite Member</button>
@@ -202,6 +218,50 @@
       <div style="display:flex;gap:8px;">
         <button class="btn btn-primary" onclick="sendInvite()">Send Invitation</button>
         <button class="btn btn-secondary" onclick="closeInviteModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upgrade Plan Modal -->
+<div class="detail-overlay" id="upgrade-modal" onclick="closeUpgradeModal(event)" style="display:none;">
+  <div class="detail-panel" onclick="event.stopPropagation()">
+    <h3>
+      <span>Upgrade Workspace Plan</span>
+      <button class="detail-close" onclick="closeUpgradeModal()">✕</button>
+    </h3>
+    <div style="padding:20px;">
+      <div style="margin-bottom:20px;">
+        <strong>Current Plan:</strong> <span id="current-plan-display" class="plan-badge">FREE</span>
+      </div>
+      
+      <div class="detail-field" style="margin-bottom:16px;">
+        <label style="display:block;margin-bottom:8px;font-weight:600;">Select New Plan</label>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:12px;border:2px solid var(--border);border-radius:var(--radius);background:var(--card-bg);">
+            <input type="radio" name="plan-choice" value="free" checked>
+            <div>
+              <div style="font-weight:600;">Free</div>
+              <div style="font-size:12px;color:var(--muted);">3 templates, 50 approvals/mo, 1 member</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:12px;border:2px solid var(--green);border-radius:var(--radius);background:var(--card-bg);">
+            <input type="radio" name="plan-choice" value="pro">
+            <div>
+              <div style="font-weight:600;color:var(--green);">Pro</div>
+              <div style="font-size:12px;color:var(--muted);">Unlimited templates, approvals, and members</div>
+            </div>
+          </label>
+        </div>
+      </div>
+      
+      <div style="background:var(--warning-bg,#3a2f1f);border:1px solid var(--warning,#f59e0b);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;">
+        ⚠️ Note: This is a manual admin operation. Billing is not yet implemented.
+      </div>
+      
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="submitPlanChange()">Confirm Upgrade</button>
+        <button class="btn btn-secondary" onclick="closeUpgradeModal()">Cancel</button>
       </div>
     </div>
   </div>
@@ -286,7 +346,7 @@ function switchTab(tab) {
   if (el) el.style.display = "block";
   if (tab === "dashboard") loadStats();
   if (tab === "chains") loadTemplates();
-  if (tab === "members") loadMembers();
+  if (tab === "members") { loadMembers(); loadUsage(); }
 }
 
 // ── Approval Queue ────────────────────────────────────────────────────────
@@ -709,7 +769,7 @@ async function refresh() {
     if (active === "queue") await loadApprovals();
     if (active === "dashboard") await loadStats();
     if (active === "chains") await loadTemplates();
-    if (active === "members") await loadMembers();
+    if (active === "members") { await loadMembers(); await loadUsage(); }
   } finally {
     btn.disabled = false;
     btn.textContent = "⟳ Refresh";
@@ -870,6 +930,130 @@ function copyInviteLink(token) {
   }).catch(() => {
     showToast("Failed to copy link", "error");
   });
+}
+
+// ── Workspace Usage & Upgrade ─────────────────────────────────────────────
+async function fetchWorkspaceUsage() {
+  try {
+    const json = await api("/api/workspace/usage");
+    if (json.success) {
+      return json.data;
+    }
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to load usage data", "error");
+  }
+  return null;
+}
+
+function renderUsageCard(usage) {
+  if (!usage) return;
+  
+  const planBadge = document.getElementById("plan-badge");
+  planBadge.textContent = usage.plan.toUpperCase();
+  planBadge.className = `plan-badge plan-${usage.plan}`;
+  
+  const metricsDiv = document.getElementById("usage-metrics");
+  const resources = [
+    { key: "templates", label: "Templates" },
+    { key: "approvals", label: "Approvals" },
+    { key: "members", label: "Members" }
+  ];
+  
+  metricsDiv.innerHTML = resources.map(({ key, label }) => {
+    const current = usage.usage[key];
+    const limit = usage.limits[key];
+    const percent = limit > 0 ? Math.min((current / limit) * 100, 100) : 0;
+    const isAtLimit = current >= limit;
+    const isNearLimit = percent >= 85;
+    
+    let statusClass = "";
+    let statusLabel = "";
+    if (isAtLimit) {
+      statusClass = "at-limit";
+      statusLabel = '<span class="limit-badge">LIMIT REACHED</span>';
+    } else if (isNearLimit) {
+      statusClass = "near-limit";
+      statusLabel = '<span class="limit-badge warn">NEAR LIMIT</span>';
+    }
+    
+    return `
+      <div class="usage-item">
+        <div class="usage-label">
+          <strong>${esc(label)}</strong>
+          ${statusLabel}
+        </div>
+        <div class="usage-bar-wrap">
+          <div class="usage-bar ${statusClass}" style="width:${percent}%"></div>
+        </div>
+        <div class="usage-count">${current} / ${limit === 999999 ? '∞' : limit}</div>
+      </div>
+    `;
+  }).join("");
+  
+  // Show/hide upgrade button based on limits
+  const upgradeBtn = document.getElementById("upgrade-btn");
+  if (usage.plan === "free") {
+    upgradeBtn.style.display = "block";
+  } else {
+    upgradeBtn.style.display = "none";
+  }
+}
+
+async function loadUsage() {
+  const usage = await fetchWorkspaceUsage();
+  if (usage) {
+    renderUsageCard(usage);
+  }
+}
+
+function openUpgradeModal() {
+  const modal = document.getElementById("upgrade-modal");
+  const currentPlanDisplay = document.getElementById("current-plan-display");
+  const planBadge = document.getElementById("plan-badge");
+  currentPlanDisplay.textContent = planBadge.textContent;
+  currentPlanDisplay.className = planBadge.className;
+  modal.style.display = "flex";
+}
+
+function closeUpgradeModal(event) {
+  if (event && event.target !== document.getElementById("upgrade-modal")) return;
+  document.getElementById("upgrade-modal").style.display = "none";
+}
+
+async function submitPlanChange() {
+  const selectedPlan = document.querySelector('input[name="plan-choice"]:checked').value;
+  
+  try {
+    // Get current workspace ID from /api/me
+    const meRes = await fetch("/api/me", { headers: authHeaders() });
+    if (!meRes.ok) {
+      showToast("Failed to get workspace info", "error");
+      return;
+    }
+    const me = await meRes.json();
+    const workspaceId = me.workspaceId;
+    
+    const json = await api(`/api/admin/workspace/${encodeURIComponent(workspaceId)}/plan`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: selectedPlan })
+    });
+    
+    if (!json.success) {
+      const errorMsg = json.error === "Admin only" 
+        ? "Admin privileges required to change plan"
+        : json.error || "Failed to update plan";
+      showToast(errorMsg, "error");
+      return;
+    }
+    
+    showToast(`Workspace plan updated to ${selectedPlan.toUpperCase()}. New limits applied.`, "success");
+    closeUpgradeModal();
+    await loadUsage();
+    
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to update plan", "error");
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────
