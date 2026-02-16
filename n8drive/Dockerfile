@@ -1,5 +1,5 @@
 # ---------- BUILDER ----------
-FROM node:20 AS builder
+FROM node:20-bookworm AS builder
 
 WORKDIR /app
 
@@ -39,7 +39,7 @@ RUN pnpm rebuild better-sqlite3
 RUN pnpm --filter @publiclogic/puddlejumper deploy --prod /prod
 
 # ---------- RUNTIME ----------
-FROM node:20-slim
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
