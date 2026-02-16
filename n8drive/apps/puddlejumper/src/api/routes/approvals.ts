@@ -144,7 +144,17 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
         return;
       }
 
+      // ── Chain step metrics (common to all outcomes) ──
+      approvalMetrics.increment(METRIC.CHAIN_STEP_DECIDED);
+      const stepCreatedAt = new Date(activeStep.createdAt).getTime();
+      const stepDecidedAt = Date.now();
+      if (stepCreatedAt > 0 && stepDecidedAt > stepCreatedAt) {
+        approvalMetrics.observe(METRIC.CHAIN_STEP_TIME, (stepDecidedAt - stepCreatedAt) / 1000);
+      }
+      approvalMetrics.setGauge(METRIC.CHAIN_STEP_PENDING_GAUGE, chainStore.countActiveSteps());
+
       if (chainResult.allApproved) {
+        approvalMetrics.increment(METRIC.CHAIN_COMPLETED);
         // All chain steps approved → transition parent approval to "approved"
         const updated = approvalStore.decide({
           approvalId: req.params.id,
@@ -179,6 +189,7 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
       }
 
       if (chainResult.rejected) {
+        approvalMetrics.increment(METRIC.CHAIN_REJECTED);
         // Chain rejected → transition parent approval to "rejected"
         const updated = approvalStore.decide({
           approvalId: req.params.id,

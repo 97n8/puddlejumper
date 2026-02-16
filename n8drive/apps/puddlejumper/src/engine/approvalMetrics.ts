@@ -191,10 +191,18 @@ export const METRIC = {
 
   // Gauges
   PENDING_GAUGE: "approval_pending_gauge",
+  CHAIN_STEP_PENDING_GAUGE: "approval_chain_step_pending_gauge",
 
   // Histograms
   APPROVAL_TIME: "approval_time_seconds",
   DISPATCH_LATENCY: "dispatch_latency_seconds",
+  CHAIN_STEP_TIME: "approval_chain_step_time_seconds",
+
+  // Chain counters
+  CHAIN_STEPS_TOTAL: "approval_chain_steps_total",
+  CHAIN_STEP_DECIDED: "approval_chain_step_decided_total",
+  CHAIN_COMPLETED: "approval_chain_completed_total",
+  CHAIN_REJECTED: "approval_chain_rejected_total",
 } as const;
 
 /** Human-readable HELP strings for each metric (used in Prometheus output). */
@@ -209,6 +217,12 @@ export const METRIC_HELP: Record<string, string> = {
   [METRIC.CONSUME_CAS_CONFLICT]:"CAS conflicts when acquiring dispatch lock (double-dispatch prevented)",
   dispatch_retry_total:          "Total retry attempts across all dispatcher dispatch calls",
   [METRIC.PENDING_GAUGE]:       "Current number of approvals in pending state",
+  [METRIC.CHAIN_STEP_PENDING_GAUGE]: "Current number of chain steps in active (awaiting decision) state",
   [METRIC.APPROVAL_TIME]:       "Time in seconds from approval creation to decision",
   [METRIC.DISPATCH_LATENCY]:    "Time in seconds for dispatch plan execution",
+  [METRIC.CHAIN_STEP_TIME]:     "Time in seconds from chain step activation to decision",
+  [METRIC.CHAIN_STEPS_TOTAL]:   "Total chain steps created across all approvals",
+  [METRIC.CHAIN_STEP_DECIDED]:  "Total chain steps decided (label: status=approved|rejected)",
+  [METRIC.CHAIN_COMPLETED]:     "Total approval chains fully approved (all steps passed)",
+  [METRIC.CHAIN_REJECTED]:      "Total approval chains rejected at any step",
 };

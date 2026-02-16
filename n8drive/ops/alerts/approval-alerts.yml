@@ -7,7 +7,10 @@
 #   approvals_created_total, approvals_approved_total, approvals_rejected_total,
 #   approval_pending_gauge, approval_time_seconds, dispatch_success_total,
 #   dispatch_failure_total, dispatch_latency_seconds,
-#   consume_for_dispatch_conflict_total
+#   consume_for_dispatch_conflict_total,
+#   approval_chain_steps_total, approval_chain_step_decided_total,
+#   approval_chain_completed_total, approval_chain_rejected_total,
+#   approval_chain_step_pending_gauge, approval_chain_step_time_seconds
 #
 # Tune thresholds to your SLA. These are conservative starting points.
 
@@ -101,3 +104,17 @@ groups:
             {{ $value }} approvals created but zero approved/rejected.
             Approval pipeline may be stalled.
           runbook: https://github.com/97n8/puddlejumper/blob/main/ops/runbooks/approvals.md
+
+      # ── Chain step stuck > 24h ───────────────────────────────────────────
+      - alert: ChainStepStuck24h
+        expr: approval_chain_step_pending_gauge > 0 and increase(approval_chain_step_decided_total[24h]) == 0
+        for: 30m
+        labels:
+          severity: warn
+        annotations:
+          summary: "Chain step(s) pending with no decisions in 24h"
+          description: >-
+            {{ $value }} chain steps are active but no step has been decided
+            in the last 24 hours. A chain may be stalled — check approver
+            availability and step role assignments.
+          runbook: https://github.com/97n8/puddlejumper/blob/main/ops/runbooks/chain-stuck.md

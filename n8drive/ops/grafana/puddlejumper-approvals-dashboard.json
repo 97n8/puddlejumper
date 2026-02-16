@@ -313,6 +313,104 @@
         },
         "overrides": []
       }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 22 },
+      "id": 8,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "show": true }
+      },
+      "title": "Chain Steps Created / Decided / Completed / Rejected (rate, 5m)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(approval_chain_steps_total[5m])",
+          "legendFormat": "steps created",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(approval_chain_step_decided_total[5m])",
+          "legendFormat": "steps decided",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(approval_chain_completed_total[5m])",
+          "legendFormat": "chains completed",
+          "refId": "C"
+        },
+        {
+          "expr": "rate(approval_chain_rejected_total[5m])",
+          "legendFormat": "chains rejected",
+          "refId": "D"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "req/s", "min": 0 },
+        "overrides": []
+      }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 22 },
+      "id": 9,
+      "options": {
+        "tooltip": { "show": true },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "title": "Pending Chain Steps (gauge)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "approval_chain_step_pending_gauge",
+          "legendFormat": "active steps",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 15 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 22 },
+      "id": 10,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "show": true }
+      },
+      "title": "Chain Step Decision Time p50 & p95",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(approval_chain_step_time_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(approval_chain_step_time_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s", "min": 0 },
+        "overrides": []
+      }
     }
   ],
   "refresh": "10s",
