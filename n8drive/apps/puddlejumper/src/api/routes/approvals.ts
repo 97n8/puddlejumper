@@ -121,9 +121,16 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
 
     // When stepId is provided, target that specific step (parallel support).
     // Otherwise fall back to the first active step (backward-compatible).
-    let targetStep = stepId && chainStore
+    const targetStep = stepId && chainStore
       ? chainStore.getStep(stepId)
       : chainStore?.getActiveStep(req.params.id) ?? null;
+
+    // If a stepId was explicitly provided but not found, return an error
+    // rather than silently falling through to legacy behavior.
+    if (stepId && chainStore && !targetStep) {
+      res.status(404).json({ success: false, correlationId, error: "Chain step not found" });
+      return;
+    }
 
     if (targetStep && chainStore) {
       // ── Role gate for chain steps ──

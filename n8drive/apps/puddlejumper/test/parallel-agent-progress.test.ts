@@ -237,6 +237,27 @@ describe("Targeted step decisions via stepId", () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/does not belong/);
   });
+
+  it("returns 404 when stepId does not exist", async () => {
+    const template = chainStore.createTemplate({
+      name: "Simple",
+      steps: [{ order: 0, requiredRole: "admin", label: "Admin" }],
+    });
+    const approval = approvalStore.create(makeApprovalInput());
+    chainStore.createChainForApproval(approval.id, template.id);
+
+    const app = buildApp();
+    const adminToken = await tokenFor(ADMIN);
+    const h = { Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" };
+
+    const res = await request(app)
+      .post(`/api/approvals/${approval.id}/decide`)
+      .set(h)
+      .send({ status: "approved", stepId: "nonexistent-step-id" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/not found/);
+  });
 });
 
 describe("Role-based authorization for chain steps", () => {
