@@ -160,6 +160,8 @@ Configure OAuth providers in your environment:
 
 ### Testing
 
+> **Note**: The repository currently has both `test/` and `tests/` directories. These should be consolidated in a future update for consistency.
+
 ```bash
 # Run all tests
 pnpm run test
@@ -203,4 +205,4 @@ See LICENSE file for details.
 
 - Documentation: [./docs/](./docs/)
 - Issues: GitHub Issues
-- Security: security@example.com
+- Security: Use GitHub's private vulnerability reporting or contact security@publiclogic.org
