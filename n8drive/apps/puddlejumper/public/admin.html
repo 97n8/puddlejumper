@@ -15,6 +15,7 @@
     <span id="workspace-name" class="subtitle" style="color:var(--green);display:none;"></span>
   </div>
   <div class="header-right">
+    <span id="auto-refresh-indicator" style="font-size:11px;color:var(--text-dim);display:none;">⟳ Auto-refresh</span>
     <a class="guide-link" href="/pj/guide">Quick Start</a>
     <button class="refresh-btn" onclick="refresh()" id="refresh-btn">⟳ Refresh</button>
   </div>
@@ -61,6 +62,7 @@
   </div>
 
   <div id="approvals-table-wrap">
+    <div id="approvals-loading" class="empty-state" style="display:none;">Loading approvals…</div>
     <table>
       <thead>
         <tr>
@@ -90,8 +92,34 @@
 <div class="main" id="tab-chains" style="display:none;">
   <div class="table-header">
     <h2>Chain Templates</h2>
-    <div style="font-size:13px;color:var(--text-dim)">Define multi-step approval routing with sequential and parallel steps</div>
+    <button class="btn btn-primary" onclick="toggleCreateTemplateForm()">+ Create Template</button>
   </div>
+  <div style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Define multi-step approval routing with sequential and parallel steps</div>
+
+  <!-- Create / Edit Template Form (hidden by default) -->
+  <div id="template-form-wrap" style="display:none;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+    <h3 style="font-size:15px;margin-bottom:16px;" id="template-form-title">Create Template</h3>
+    <input type="hidden" id="template-edit-id" value="">
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Name</label>
+      <input type="text" id="template-name" placeholder="e.g. Two-Step Legal Review" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Description (optional)</label>
+      <input type="text" id="template-description" placeholder="Brief description" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:8px;font-size:13px;color:var(--text-dim);">Steps</label>
+      <div id="template-steps-list"></div>
+      <button class="btn btn-secondary" onclick="addTemplateStep()" style="margin-top:8px;">+ Add Step</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-primary" onclick="submitTemplate()">Save Template</button>
+      <button class="btn btn-secondary" onclick="cancelTemplateForm()">Cancel</button>
+    </div>
+  </div>
+
+  <div id="templates-loading" class="empty-state" style="display:none;">Loading templates…</div>
   <div id="templates-grid" class="template-grid"></div>
   <div id="templates-empty" class="empty-state" style="display:none;">No chain templates configured.</div>
 </div>
@@ -387,11 +415,20 @@ function hideAuthGate() {
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────
+const TAB_HASH_MAP = { queue: "approvals", chains: "templates", dashboard: "dashboard", prr: "prr", members: "members" };
+const HASH_TAB_MAP = Object.fromEntries(Object.entries(TAB_HASH_MAP).map(([k, v]) => [v, k]));
+
 function switchTab(tab) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
   document.querySelectorAll(".main").forEach(el => el.style.display = "none");
   const el = document.getElementById("tab-" + tab);
   if (el) el.style.display = "block";
+  // Update URL hash
+  const hash = TAB_HASH_MAP[tab] || tab;
+  if (window.location.hash !== "#" + hash) {
+    history.replaceState(null, "", "#" + hash);
+  }
+  if (tab === "queue") loadApprovals();
   if (tab === "dashboard") loadStats();
   if (tab === "chains") loadTemplates();
   if (tab === "prr") loadPRRQueue();
@@ -403,14 +440,18 @@ async function loadApprovals() {
   const status = document.getElementById("status-filter").value;
   const qs = status ? `?status=${status}&limit=${PAGE_SIZE}&offset=${currentPage * PAGE_SIZE}` :
                        `?limit=${PAGE_SIZE}&offset=${currentPage * PAGE_SIZE}`;
+  const loading = document.getElementById("approvals-loading");
+  if (loading) loading.style.display = "block";
   try {
     const json = await api("/api/approvals" + qs);
+    if (loading) loading.style.display = "none";
     if (!json.success) { showToast(json.error || "Failed to load", "error"); return; }
     hideAuthGate();
     approvals = json.data.approvals;
     renderApprovals();
     renderPagination(json.data.pendingCount, json.data.total);
   } catch (e) {
+    if (loading) loading.style.display = "none";
     if (e.message !== "Unauthorized") showToast("Failed to load approvals", "error");
   }
 }
@@ -627,12 +668,20 @@ function closeDetail(e) {
 
 // ── Chain Templates ───────────────────────────────────────────────────────
 async function loadTemplates() {
+  const loading = document.getElementById("templates-loading");
+  const grid = document.getElementById("templates-grid");
+  const empty = document.getElementById("templates-empty");
+  if (loading) loading.style.display = "block";
+  if (grid) grid.innerHTML = "";
+  if (empty) empty.style.display = "none";
   try {
     const json = await api("/api/chain-templates");
+    if (loading) loading.style.display = "none";
     if (!json.success) { showToast(json.error || "Failed to load templates", "error"); return; }
     hideAuthGate();
     renderTemplates(json.data);
   } catch (e) {
+    if (loading) loading.style.display = "none";
     if (e.message !== "Unauthorized") showToast("Failed to load templates", "error");
   }
 }
@@ -683,6 +732,7 @@ function renderTemplates(templates) {
       <div class="template-steps-viz">${vizHtml}</div>
       <div class="template-actions">
         <button class="btn btn-secondary" onclick="showTemplateDetail('${esc(t.id)}')">View JSON</button>
+        ${!isDefault ? `<button class="btn btn-secondary" onclick="editTemplate('${esc(t.id)}')">Edit</button>` : ""}
         ${!isDefault ? `<button class="btn btn-danger" onclick="deleteTemplate('${esc(t.id)}')">Delete</button>` : ""}
       </div>
     </div>`;
@@ -724,6 +774,120 @@ async function deleteTemplate(id) {
     loadTemplates();
   } catch (e) {
     if (e.message !== "Unauthorized") showToast("Delete failed", "error");
+  }
+}
+
+// ── Create / Edit Template Form ──────────────────────────────────────────
+let templateStepCounter = 0;
+
+function toggleCreateTemplateForm() {
+  const wrap = document.getElementById("template-form-wrap");
+  if (wrap.style.display === "none") {
+    document.getElementById("template-form-title").textContent = "Create Template";
+    document.getElementById("template-edit-id").value = "";
+    document.getElementById("template-name").value = "";
+    document.getElementById("template-description").value = "";
+    templateStepCounter = 0;
+    document.getElementById("template-steps-list").innerHTML = "";
+    addTemplateStep(); // Start with one step
+    wrap.style.display = "block";
+  } else {
+    wrap.style.display = "none";
+  }
+}
+
+function cancelTemplateForm() {
+  document.getElementById("template-form-wrap").style.display = "none";
+}
+
+function addTemplateStep() {
+  const list = document.getElementById("template-steps-list");
+  const idx = templateStepCounter++;
+  const div = document.createElement("div");
+  div.id = `step-row-${idx}`;
+  div.style.cssText = "display:flex;gap:8px;align-items:center;margin-bottom:8px;";
+  div.innerHTML = `
+    <span style="font-size:12px;color:var(--text-dim);min-width:32px;">Step ${list.children.length}</span>
+    <input type="text" placeholder="Role (e.g. admin)" class="step-role" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    <input type="text" placeholder="Label (e.g. Legal Review)" class="step-label" style="flex:2;padding:6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    <button class="btn btn-danger btn-sm" onclick="removeTemplateStep('step-row-${idx}')">✕</button>
+  `;
+  list.appendChild(div);
+}
+
+function removeTemplateStep(rowId) {
+  const el = document.getElementById(rowId);
+  if (el) el.remove();
+  // Re-number visible steps
+  const list = document.getElementById("template-steps-list");
+  Array.from(list.children).forEach((row, i) => {
+    const label = row.querySelector("span");
+    if (label) label.textContent = `Step ${i}`;
+  });
+}
+
+async function submitTemplate() {
+  const editId = document.getElementById("template-edit-id").value;
+  const name = document.getElementById("template-name").value.trim();
+  const description = document.getElementById("template-description").value.trim();
+  if (!name) { showToast("Template name is required", "error"); return; }
+
+  const stepRows = document.getElementById("template-steps-list").children;
+  if (stepRows.length === 0) { showToast("At least one step is required", "error"); return; }
+
+  const steps = [];
+  for (let i = 0; i < stepRows.length; i++) {
+    const role = stepRows[i].querySelector(".step-role").value.trim();
+    const label = stepRows[i].querySelector(".step-label").value.trim();
+    if (!role || !label) { showToast(`Step ${i}: role and label are required`, "error"); return; }
+    steps.push({ order: i, requiredRole: role, label });
+  }
+
+  try {
+    let json;
+    if (editId) {
+      json = await api(`/api/chain-templates/${encodeURIComponent(editId)}`, {
+        method: "PUT",
+        body: JSON.stringify({ name, description, steps }),
+      });
+    } else {
+      json = await api("/api/chain-templates", {
+        method: "POST",
+        body: JSON.stringify({ name, description, steps }),
+      });
+    }
+    if (!json.success) { showToast(json.error || "Save failed", "error"); return; }
+    showToast(editId ? "Template updated" : "Template created", "success");
+    cancelTemplateForm();
+    loadTemplates();
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Save failed", "error");
+  }
+}
+
+async function editTemplate(id) {
+  try {
+    const json = await api(`/api/chain-templates/${encodeURIComponent(id)}`);
+    if (!json.success) { showToast("Failed to load template", "error"); return; }
+    const t = json.data;
+    const wrap = document.getElementById("template-form-wrap");
+    document.getElementById("template-form-title").textContent = "Edit Template";
+    document.getElementById("template-edit-id").value = t.id;
+    document.getElementById("template-name").value = t.name;
+    document.getElementById("template-description").value = t.description || "";
+    templateStepCounter = 0;
+    document.getElementById("template-steps-list").innerHTML = "";
+    (t.steps || []).forEach(s => {
+      addTemplateStep();
+      const rows = document.getElementById("template-steps-list").children;
+      const last = rows[rows.length - 1];
+      last.querySelector(".step-role").value = s.requiredRole;
+      last.querySelector(".step-label").value = s.label;
+    });
+    wrap.style.display = "block";
+    wrap.scrollIntoView({ behavior: "smooth" });
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to load template", "error");
   }
 }
 
@@ -818,6 +982,7 @@ async function refresh() {
     if (active === "queue") await loadApprovals();
     if (active === "dashboard") await loadStats();
     if (active === "chains") await loadTemplates();
+    if (active === "prr") await loadPRRQueue();
     if (active === "members") { await loadMembers(); await loadUsage(); }
   } finally {
     btn.disabled = false;
@@ -1269,6 +1434,40 @@ function closePRRDetail(event) {
   document.getElementById('prr-detail-overlay').style.display = 'none';
 }
 
+// ── Auto-refresh ──────────────────────────────────────────────────────────
+let autoRefreshApprovalTimer = null;
+let autoRefreshDashboardTimer = null;
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  const indicator = document.getElementById("auto-refresh-indicator");
+  if (indicator) indicator.style.display = "inline";
+
+  autoRefreshApprovalTimer = setInterval(() => {
+    const active = document.querySelector(".tab.active");
+    if (active && active.dataset.tab === "queue") loadApprovals();
+  }, 30000);
+
+  autoRefreshDashboardTimer = setInterval(() => {
+    const active = document.querySelector(".tab.active");
+    if (active && active.dataset.tab === "dashboard") loadStats();
+  }, 60000);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshApprovalTimer) { clearInterval(autoRefreshApprovalTimer); autoRefreshApprovalTimer = null; }
+  if (autoRefreshDashboardTimer) { clearInterval(autoRefreshDashboardTimer); autoRefreshDashboardTimer = null; }
+  const indicator = document.getElementById("auto-refresh-indicator");
+  if (indicator) indicator.style.display = "none";
+}
+
+// ── Hash navigation ──────────────────────────────────────────────────────
+window.addEventListener("hashchange", () => {
+  const hash = window.location.hash.replace("#", "");
+  const tab = HASH_TAB_MAP[hash];
+  if (tab) switchTab(tab);
+});
+
 // ── Init ──────────────────────────────────────────────────────────────────
 // Fetch user role and workspace before loading data
 (async function init() {
@@ -1284,7 +1483,18 @@ function closePRRDetail(event) {
       }
     }
   } catch { /* ignore */ }
-  loadApprovals();
+
+  // Restore tab from URL hash
+  const hash = window.location.hash.replace("#", "");
+  const tab = HASH_TAB_MAP[hash];
+  if (tab) {
+    switchTab(tab);
+  } else {
+    loadApprovals();
+  }
+
+  // Start auto-refresh timers
+  startAutoRefresh();
 })();
 </script>
 </body>

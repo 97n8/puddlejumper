@@ -283,6 +283,7 @@ tbody tr:hover { background: var(--surface-hover); }
   .header-right { gap: 8px; }
 }
 /* ── Viewer role: hide mutations ───────────────────────────────────── */
+body.role-viewer #template-form-wrap { display: none !important; }
 body.role-viewer .btn-approve,
 body.role-viewer .btn-reject,
 body.role-viewer .btn-dispatch,
