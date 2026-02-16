@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PuddleJumper — Workspace Control</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-lTM4O20majxJjrf/NWBNxIj925pwXdVkwvzkJ6Q3KaU='; style-src 'sha256-tUGJUTkksXNdq7kvBc2hRB4EU+heH2krWsiekThNFcQ='" />
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       :root {
@@ -82,6 +83,10 @@
         .nav-links a { width: 200px; text-align: center; }
       }
     </style>
+    <script>
+      const PJ_EXECUTE = "/api/pj/execute";
+      const ENABLE_BACKEND = true;
+    </script>
   </head>
   <body>
     <div class="container">
