@@ -26,8 +26,10 @@ COPY . .
 # Clean stale TypeScript build cache (prevents composite build issues)
 RUN find . -name "*.tsbuildinfo" -type f -delete
 
-# Root build — produces /app/dist/api/server.js (and auth.js, etc.)
-RUN pnpm run build
+# Build packages in explicit dependency order (same as CI)
+RUN pnpm --filter @publiclogic/core run build && \
+    pnpm --filter @publiclogic/logic-commons run build && \
+    pnpm --filter @publiclogic/puddlejumper run build
 
 # Rebuild native addons for linux target
 RUN pnpm rebuild better-sqlite3
