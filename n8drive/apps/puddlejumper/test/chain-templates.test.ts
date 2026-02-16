@@ -320,6 +320,9 @@ describe("Template management API — CRUD", () => {
     // Try delete — should be blocked
     const delRes = await request(app).delete("/api/chain-templates/in-use-tmpl").set(h);
     expect(delRes.status).toBe(409);
+    expect(delRes.body.success).toBe(false);
+    expect(delRes.body.error).toBe("Template in use by active chains");
+    expect(delRes.body.activeCount).toBeGreaterThan(0);
   });
 });
 
@@ -367,17 +370,42 @@ describe("Template management API — validation", () => {
     expect(res.status).toBe(400);
   });
 
-  it("viewers can list templates but cannot create", async () => {
+  it("rejects template with steps missing requiredRole or label", async () => {
+    const app = buildApp();
+    const adminToken = await tokenFor(ADMIN);
+    const h = { Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" };
+
+    // Missing requiredRole
+    const res1 = await request(app)
+      .post("/api/chain-templates")
+      .set(h)
+      .send({
+        name: "Bad Step",
+        steps: [{ order: 0, label: "Step 1" }],
+      });
+    expect(res1.status).toBe(400);
+
+    // Missing label
+    const res2 = await request(app)
+      .post("/api/chain-templates")
+      .set(h)
+      .send({
+        name: "Bad Step",
+        steps: [{ order: 0, requiredRole: "admin" }],
+      });
+    expect(res2.status).toBe(400);
+  });
+
+  it("viewers cannot list or create templates (403)", async () => {
     const app = buildApp();
     const viewerToken = await tokenFor(VIEWER);
     const h = { Authorization: `Bearer ${viewerToken}`, "X-PuddleJumper-Request": "true" };
 
-    // Viewers can read templates (read-only access)
+    // Viewers cannot read templates (admin-only access)
     const listRes = await request(app).get("/api/chain-templates").set(h);
-    expect(listRes.status).toBe(200);
-    expect(listRes.body.success).toBe(true);
+    expect(listRes.status).toBe(403);
 
-    // But cannot create templates (mutation — admin only)
+    // And cannot create templates (mutation — admin only)
     const createRes = await request(app)
       .post("/api/chain-templates")
       .set(h)
