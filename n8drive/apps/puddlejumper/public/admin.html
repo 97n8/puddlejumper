@@ -803,11 +803,12 @@ function cancelTemplateForm() {
 function addTemplateStep() {
   const list = document.getElementById("template-steps-list");
   const idx = templateStepCounter++;
+  const stepNum = list.children.length + 1;
   const div = document.createElement("div");
   div.id = `step-row-${idx}`;
   div.style.cssText = "display:flex;gap:8px;align-items:center;margin-bottom:8px;";
   div.innerHTML = `
-    <span style="font-size:12px;color:var(--text-dim);min-width:32px;">Step ${list.children.length}</span>
+    <span style="font-size:12px;color:var(--text-dim);min-width:40px;">Step ${stepNum}</span>
     <input type="text" placeholder="Role (e.g. admin)" class="step-role" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
     <input type="text" placeholder="Label (e.g. Legal Review)" class="step-label" style="flex:2;padding:6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
     <button class="btn btn-danger btn-sm" onclick="removeTemplateStep('step-row-${idx}')">✕</button>
@@ -818,11 +819,11 @@ function addTemplateStep() {
 function removeTemplateStep(rowId) {
   const el = document.getElementById(rowId);
   if (el) el.remove();
-  // Re-number visible steps
+  // Re-number visible steps (1-based for display)
   const list = document.getElementById("template-steps-list");
   Array.from(list.children).forEach((row, i) => {
     const label = row.querySelector("span");
-    if (label) label.textContent = `Step ${i}`;
+    if (label) label.textContent = `Step ${i + 1}`;
   });
 }
 
@@ -839,7 +840,7 @@ async function submitTemplate() {
   for (let i = 0; i < stepRows.length; i++) {
     const role = stepRows[i].querySelector(".step-role").value.trim();
     const label = stepRows[i].querySelector(".step-label").value.trim();
-    if (!role || !label) { showToast(`Step ${i}: role and label are required`, "error"); return; }
+    if (!role || !label) { showToast(`Step ${i + 1}: role and label are required`, "error"); return; }
     steps.push({ order: i, requiredRole: role, label });
   }
 
