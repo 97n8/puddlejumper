@@ -500,10 +500,12 @@ describe("PolicyProvider", () => {
   // ── PolicyProvider interface contract ─────────────────────────────────
 
   describe("interface contract", () => {
-    it("implements all three PolicyProvider methods", () => {
+    it("implements all five PolicyProvider methods", () => {
       expect(typeof provider.checkAuthorization).toBe("function");
       expect(typeof provider.getChainTemplate).toBe("function");
       expect(typeof provider.writeAuditEvent).toBe("function");
+      expect(typeof provider.registerManifest).toBe("function");
+      expect(typeof provider.authorizeRelease).toBe("function");
     });
 
     it("checkAuthorization returns a complete AuthorizationResult", () => {
@@ -522,6 +524,83 @@ describe("PolicyProvider", () => {
       expect(template).toHaveProperty("steps");
       expect(template).toHaveProperty("createdAt");
       expect(template).toHaveProperty("updatedAt");
+    });
+  });
+
+  // ── LocalPolicyProvider.registerManifest ──────────────────────────────
+
+  describe("LocalPolicyProvider.registerManifest", () => {
+    it("accepts any manifest (local stub)", async () => {
+      const result = await provider.registerManifest({
+        workspaceId: "ws-1",
+        operatorId: "op-1",
+        municipalityId: "muni-1",
+        intent: "deploy_policy",
+        actionMode: "governed",
+        capabilities: { actions: ["deploy"] },
+      });
+      expect(result.accepted).toBe(true);
+      expect(result.manifestId).toBeTruthy();
+    });
+
+    it("returns a unique manifestId per call", async () => {
+      const r1 = await provider.registerManifest({
+        workspaceId: "ws-1",
+        operatorId: "op-1",
+        municipalityId: "muni-1",
+        intent: "deploy_policy",
+        actionMode: "governed",
+        capabilities: {},
+      });
+      const r2 = await provider.registerManifest({
+        workspaceId: "ws-1",
+        operatorId: "op-1",
+        municipalityId: "muni-1",
+        intent: "deploy_policy",
+        actionMode: "governed",
+        capabilities: {},
+      });
+      expect(r1.manifestId).not.toBe(r2.manifestId);
+    });
+
+    it("returns a Promise (async method)", () => {
+      const result = provider.registerManifest({
+        workspaceId: "ws-1",
+        operatorId: "op-1",
+        municipalityId: "muni-1",
+        intent: "deploy_policy",
+        actionMode: "governed",
+        capabilities: {},
+      });
+      expect(result).toBeInstanceOf(Promise);
+    });
+  });
+
+  // ── LocalPolicyProvider.authorizeRelease ──────────────────────────────
+
+  describe("LocalPolicyProvider.authorizeRelease", () => {
+    it("authorizes any release (local stub)", async () => {
+      const result = await provider.authorizeRelease({
+        approvalId: "appr-1",
+        workspaceId: "ws-1",
+        operatorId: "op-1",
+        municipalityId: "muni-1",
+        intent: "deploy_policy",
+        planHash: "abc123",
+      });
+      expect(result.authorized).toBe(true);
+    });
+
+    it("returns a Promise (async method)", () => {
+      const result = provider.authorizeRelease({
+        approvalId: "appr-1",
+        workspaceId: "ws-1",
+        operatorId: "op-1",
+        municipalityId: "muni-1",
+        intent: "deploy_policy",
+        planHash: "abc123",
+      });
+      expect(result).toBeInstanceOf(Promise);
     });
   });
 });

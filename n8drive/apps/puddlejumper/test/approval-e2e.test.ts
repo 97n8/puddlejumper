@@ -475,3 +475,200 @@ describe("Approval lifecycle end-to-end", () => {
     expect(output).toContain('approval_time_seconds_bucket{le="+Inf"} 1');
   });
 });
+
+// ── authorizeRelease gate tests ─────────────────────────────────────────────
+
+describe("authorizeRelease dispatch gate", () => {
+  /** Build an app with a mock PolicyProvider for authorizeRelease testing. */
+  function buildAppWithPolicyProvider(opts: {
+    dispatcher?: ConnectorDispatcher;
+    authorizeRelease: (query: any) => Promise<{ authorized: boolean; reason?: string }>;
+  }) {
+    const app = express();
+    app.use(cookieParserMiddleware());
+    app.use(express.json());
+
+    app.use(async (req: any, _res: any, next: any) => {
+      const h = req.headers.authorization;
+      if (h?.startsWith("Bearer ")) {
+        try {
+          const { verifyJwt } = await import("@publiclogic/core");
+          req.auth = await verifyJwt(h.slice(7));
+        } catch { /* unauthenticated */ }
+      }
+      next();
+    });
+
+    app.use(csrfProtection());
+
+    if (opts.dispatcher) {
+      registry.register(opts.dispatcher);
+    }
+
+    // Gate endpoint (simulates governance execute → 202)
+    app.post("/api/pj/execute", (req: any, res: any) => {
+      const auth = req.auth;
+      if (!auth) { res.status(401).json({ error: "Unauthorized" }); return; }
+      const requestId = req.body.requestId ?? `e2e-${crypto.randomUUID()}`;
+
+      const approval = store.create({
+        requestId,
+        operatorId: auth.sub,
+        workspaceId: "ws-smoke",
+        municipalityId: "muni-smoke",
+        actionIntent: "deploy_policy",
+        actionMode: "governed",
+        planHash: "hash-" + requestId,
+        planSteps: [
+          { stepId: "s1", description: "Create branch", requiresApproval: false, connector: "github", status: "ready", plan: { repo: "test/repo" } },
+        ],
+        auditRecord: { eventId: `evt-${requestId}`, timestamp: new Date().toISOString() },
+        decisionResult: { status: "approved", approved: true },
+      });
+
+      res.status(202).json({
+        success: true,
+        approvalRequired: true,
+        approvalId: approval.id,
+        approvalStatus: "pending",
+      });
+    });
+
+    // Mock policy provider with controllable authorizeRelease
+    const mockPolicyProvider = {
+      checkAuthorization: () => ({ allowed: true, required: [], delegationUsed: "", delegationEvaluation: {} }),
+      getChainTemplate: () => null,
+      writeAuditEvent: () => {},
+      registerManifest: async () => ({ accepted: true, manifestId: "mock-id" }),
+      authorizeRelease: opts.authorizeRelease,
+    } as any;
+
+    app.use("/api", createApprovalRoutes({
+      approvalStore: store,
+      dispatcherRegistry: registry,
+      nodeEnv: "test",
+      policyProvider: mockPolicyProvider,
+    }));
+
+    return app;
+  }
+
+  it("dispatch proceeds when authorizeRelease returns authorized: true", async () => {
+    const app = buildAppWithPolicyProvider({
+      dispatcher: createMockDispatcher(),
+      authorizeRelease: async () => ({ authorized: true }),
+    });
+    const adminToken = await tokenFor(ADMIN);
+    const h = { Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" };
+
+    const executeRes = await request(app)
+      .post("/api/pj/execute")
+      .set(h)
+      .send({ requestId: "e2e-auth-release-ok" });
+    const approvalId = executeRes.body.approvalId;
+
+    await request(app)
+      .post(`/api/approvals/${approvalId}/decide`)
+      .set(h)
+      .send({ status: "approved" });
+
+    const dispatchRes = await request(app)
+      .post(`/api/approvals/${approvalId}/dispatch`)
+      .set(h)
+      .send({});
+
+    expect(dispatchRes.status).toBe(200);
+    expect(dispatchRes.body.success).toBe(true);
+    expect(dispatchRes.body.data.approvalStatus).toBe("dispatched");
+  });
+
+  it("dispatch blocked when authorizeRelease returns authorized: false", async () => {
+    const app = buildAppWithPolicyProvider({
+      dispatcher: createMockDispatcher(),
+      authorizeRelease: async () => ({ authorized: false, reason: "Compliance review required" }),
+    });
+    const adminToken = await tokenFor(ADMIN);
+    const h = { Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" };
+
+    const executeRes = await request(app)
+      .post("/api/pj/execute")
+      .set(h)
+      .send({ requestId: "e2e-auth-release-deny" });
+    const approvalId = executeRes.body.approvalId;
+
+    await request(app)
+      .post(`/api/approvals/${approvalId}/decide`)
+      .set(h)
+      .send({ status: "approved" });
+
+    const dispatchRes = await request(app)
+      .post(`/api/approvals/${approvalId}/dispatch`)
+      .set(h)
+      .send({});
+
+    expect(dispatchRes.status).toBe(403);
+    expect(dispatchRes.body.error).toBe("release_not_authorized");
+    expect(dispatchRes.body.reason).toBe("Compliance review required");
+
+    // Verify the approval is marked as dispatch_failed
+    const row = store.findById(approvalId)!;
+    expect(row.approval_status).toBe("dispatch_failed");
+  });
+
+  it("dispatch continues when authorizeRelease throws (non-fatal)", async () => {
+    const app = buildAppWithPolicyProvider({
+      dispatcher: createMockDispatcher(),
+      authorizeRelease: async () => { throw new Error("VAULT unreachable"); },
+    });
+    const adminToken = await tokenFor(ADMIN);
+    const h = { Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" };
+
+    const executeRes = await request(app)
+      .post("/api/pj/execute")
+      .set(h)
+      .send({ requestId: "e2e-auth-release-throw" });
+    const approvalId = executeRes.body.approvalId;
+
+    await request(app)
+      .post(`/api/approvals/${approvalId}/decide`)
+      .set(h)
+      .send({ status: "approved" });
+
+    const dispatchRes = await request(app)
+      .post(`/api/approvals/${approvalId}/dispatch`)
+      .set(h)
+      .send({});
+
+    // Non-fatal: dispatch should proceed despite authorizeRelease throwing
+    expect(dispatchRes.status).toBe(200);
+    expect(dispatchRes.body.success).toBe(true);
+    expect(dispatchRes.body.data.approvalStatus).toBe("dispatched");
+  });
+
+  it("legacy dispatch (no policyProvider) still works unchanged", async () => {
+    // Uses the original buildApp function (no policyProvider)
+    const app = buildApp({ dispatcher: createMockDispatcher() });
+    const adminToken = await tokenFor(ADMIN);
+    const h = { Authorization: `Bearer ${adminToken}`, "X-PuddleJumper-Request": "true" };
+
+    const executeRes = await request(app)
+      .post("/api/pj/execute")
+      .set(h)
+      .send({ requestId: "e2e-legacy-dispatch" });
+    const approvalId = executeRes.body.approvalId;
+
+    await request(app)
+      .post(`/api/approvals/${approvalId}/decide`)
+      .set(h)
+      .send({ status: "approved" });
+
+    const dispatchRes = await request(app)
+      .post(`/api/approvals/${approvalId}/dispatch`)
+      .set(h)
+      .send({});
+
+    expect(dispatchRes.status).toBe(200);
+    expect(dispatchRes.body.success).toBe(true);
+    expect(dispatchRes.body.data.approvalStatus).toBe("dispatched");
+  });
+});
