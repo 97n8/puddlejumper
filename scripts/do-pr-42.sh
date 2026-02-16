@@ -12,10 +12,20 @@ PR_BODY=$'Summary:\n\n- Adds canonical Logicville playbooks to publiclogic-opera
 MERGE_SUBJECT="feat(os): Logicville playbooks, governance card, sync scripts, smoke test"
 MERGE_BODY="Merge Logicville OS work (playbooks, governance Tools card, sync utilities, Playwright smoke test)."
 
+# PR to close after merge (original Logicville branch)
+DUPLICATE_PR=41
+
 # -----------------------------
 # Helper: print & run
 # -----------------------------
 run() { echo "+ $*"; "$@"; }
+
+close_duplicate_pr() {
+  if gh pr view "${DUPLICATE_PR}" --repo "${REPO}" --json state --jq '.state' 2>/dev/null | grep -qi open; then
+    echo "Closing PR #${DUPLICATE_PR} (duplicate/original Logicville branch)..."
+    gh pr close "${DUPLICATE_PR}" --repo "${REPO}" --delete-branch || true
+  fi
+}
 
 echo "Working directory: $(pwd)"
 echo "Repository: $REPO"
@@ -95,19 +105,12 @@ else
   echo "Open the PR to inspect CI / review status: ${PR_URL}"
   echo "You can re-run the merge command after CI passes:"
   echo "  gh pr merge ${PR_NUMBER} --repo ${REPO} --squash --delete-branch --subject \"${MERGE_SUBJECT}\" --body \"${MERGE_BODY}\""
-  # Attempt to close PR #41 if it exists and is open (to avoid duplication)
-  if gh pr view 41 --repo "${REPO}" >/dev/null 2>&1; then
-    echo "PR #41 exists. Will attempt to close it to avoid duplicate merges..."
-    gh pr close 41 --repo "${REPO}" --delete-branch || true
-  fi
+  close_duplicate_pr
   exit 0
 fi
 
-# On successful merge, attempt to close PR #41 (if open)
-if gh pr view 41 --repo "${REPO}" >/dev/null 2>&1; then
-  echo "Closing PR #41 (duplicate/original Logicville branch) if still open..."
-  gh pr close 41 --repo "${REPO}" --delete-branch || true
-fi
+# On successful merge, attempt to close duplicate PR (if open)
+close_duplicate_pr
 
 echo "Done. PR merged and branch cleaned up."
 echo "Verify CI on main and the Tools page in staging to ensure everything deployed correctly."
