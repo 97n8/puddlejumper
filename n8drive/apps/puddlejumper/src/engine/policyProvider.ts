@@ -12,6 +12,7 @@
 // Boundary: Chain templates define routing order, not authorization rules.
 // PJ owns routing/sequencing. VAULT owns authorization/policy.
 //
+import crypto from "node:crypto";
 import type Database from "better-sqlite3";
 import type { ChainStore, ChainTemplate } from "./chainStore.js";
 import { INTENT_PERMISSIONS, CONNECTOR_PERMISSIONS } from "./validation.js";
@@ -58,6 +59,43 @@ export type ChainTemplateQuery = {
   actionMode: string;
   municipalityId: string;
   workspaceId: string;
+};
+
+// ── Manifest Registration ───────────────────────────────────────────────────
+
+/** Input to a manifest registration (pre-flight before approval). */
+export type ManifestRegistration = {
+  workspaceId: string;
+  operatorId: string;
+  municipalityId: string;
+  intent: string;
+  actionMode: string;
+  capabilities: Record<string, unknown>;
+};
+
+/** Result of registering a manifest. */
+export type ManifestRegistrationResult = {
+  accepted: boolean;
+  manifestId?: string;
+  reason?: string;
+};
+
+// ── Release Authorization ───────────────────────────────────────────────────
+
+/** Input to a release authorization check (gate before dispatch). */
+export type ReleaseAuthorizationQuery = {
+  approvalId: string;
+  workspaceId: string;
+  operatorId: string;
+  municipalityId: string;
+  intent: string;
+  planHash: string;
+};
+
+/** Result of a release authorization check. */
+export type ReleaseAuthorizationResult = {
+  authorized: boolean;
+  reason?: string;
 };
 
 // ── Audit Events ────────────────────────────────────────────────────────────
@@ -112,6 +150,22 @@ export interface PolicyProvider {
    * Future (VAULT): sends to the immutable compliance ledger.
    */
   writeAuditEvent(event: AuditEvent): void;
+
+  /**
+   * Register a manifest as pre-flight before approval creation.
+   *
+   * Today (Local): always accepts (stub).
+   * Future (VAULT): validates the manifest against the policy store.
+   */
+  registerManifest(manifest: ManifestRegistration): Promise<ManifestRegistrationResult>;
+
+  /**
+   * Authorize a release as the final gate before dispatch.
+   *
+   * Today (Local): always authorizes (stub).
+   * Future (VAULT): checks release policy and compliance requirements.
+   */
+  authorizeRelease(query: ReleaseAuthorizationQuery): Promise<ReleaseAuthorizationResult>;
 }
 
 // ── Authorization Helpers (pure functions) ──────────────────────────────────
@@ -364,6 +418,20 @@ export class LocalPolicyProvider implements PolicyProvider {
         JSON.stringify(event.details),
         new Date().toISOString(),
       );
+  }
+
+  async registerManifest(manifest: ManifestRegistration): Promise<ManifestRegistrationResult> {
+    // Today: always accepts — local stub.
+    // Future (VAULT): validates the manifest against the policy store.
+    void manifest;
+    return { accepted: true, manifestId: crypto.randomUUID() };
+  }
+
+  async authorizeRelease(query: ReleaseAuthorizationQuery): Promise<ReleaseAuthorizationResult> {
+    // Today: always authorizes — local stub.
+    // Future (VAULT): checks release policy and compliance requirements.
+    void query;
+    return { authorized: true };
   }
 
   // ── Query helpers (admin / testing) ───────────────────────────────────

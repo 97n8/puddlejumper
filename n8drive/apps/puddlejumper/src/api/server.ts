@@ -503,7 +503,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     approvalStore, chainStore, policyProvider,
   }));
   app.use("/api", createApprovalRoutes({
-    approvalStore, dispatcherRegistry, nodeEnv, chainStore,
+    approvalStore, dispatcherRegistry, nodeEnv, chainStore, policyProvider,
   }));
   app.use("/api", createChainTemplateRoutes({ chainStore }));
   app.use("/api", createAdminRoutes({ approvalStore, chainStore }));

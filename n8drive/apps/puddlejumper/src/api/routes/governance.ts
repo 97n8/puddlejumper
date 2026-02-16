@@ -176,6 +176,31 @@ export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.R
         }
         
         try {
+          // ── Pre-flight: register manifest through policy provider ────────
+          if (opts.policyProvider) {
+            try {
+              const manifestResult = await opts.policyProvider.registerManifest({
+                workspaceId: evaluatePayload.workspace.id,
+                operatorId: auth.userId,
+                municipalityId: evaluatePayload.municipality.id,
+                intent: evaluatePayload.action.intent,
+                actionMode: evaluatePayload.action.mode,
+                capabilities: manifest,
+              });
+              if (!manifestResult.accepted) {
+                res.status(403).json({
+                  success: false,
+                  correlationId,
+                  error: "manifest_rejected",
+                  reason: manifestResult.reason ?? "Manifest registration rejected by policy provider",
+                });
+                return;
+              }
+            } catch {
+              // Manifest registration failure is non-fatal — continue with approval creation
+            }
+          }
+
           const approval = opts.approvalStore.create({
             requestId: evaluatePayload.action.requestId ?? `pj-${correlationId}`,
             operatorId: auth.userId,
