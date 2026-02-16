@@ -15,6 +15,13 @@ import { z } from "zod";
 /** Non-empty trimmed string (rejects "" and whitespace-only). */
 const nonEmptyString = z.string().trim().min(1);
 
+export const DEFAULT_PRR_DB_PATH = "./data/prr.db";
+export const DEFAULT_CONNECTOR_DB_PATH = "./data/connectors.db";
+
+/** Optional path env that trims input and falls back to the provided default when missing or blank. */
+const optionalPathWithDefault = (defaultPath: string) =>
+  z.string().optional().transform((value) => (value ?? "").trim() || defaultPath);
+
 /**
  * Zod schema for the startup environment.
  *
@@ -26,8 +33,8 @@ export const startupConfigSchema = z.object({
   JWT_SECRET: nonEmptyString,
   AUTH_ISSUER: nonEmptyString,
   AUTH_AUDIENCE: nonEmptyString,
-  PRR_DB_PATH: nonEmptyString,
-  CONNECTOR_DB_PATH: nonEmptyString,
+  PRR_DB_PATH: optionalPathWithDefault(DEFAULT_PRR_DB_PATH),
+  CONNECTOR_DB_PATH: optionalPathWithDefault(DEFAULT_CONNECTOR_DB_PATH),
 
   // ── Optional ────────────────────────────────────────────────────────
   METRICS_TOKEN: z.string().optional(),

@@ -46,13 +46,30 @@ describe("loadConfig", () => {
     expect(config.LOGIC_COMMONS_DATA_DIR).toBeUndefined();
   });
 
+  it("falls back to default DB paths when unset or empty", () => {
+    const { PRR_DB_PATH, CONNECTOR_DB_PATH, ...env } = validEnv();
+    const configWithMissing = loadConfig(env);
+    expect(configWithMissing.PRR_DB_PATH).toBe("./data/prr.db");
+    expect(configWithMissing.CONNECTOR_DB_PATH).toBe("./data/connectors.db");
+
+    const configWithEmpty = loadConfig({ ...env, PRR_DB_PATH: "", CONNECTOR_DB_PATH: "   " });
+    expect(configWithEmpty.PRR_DB_PATH).toBe("./data/prr.db");
+    expect(configWithEmpty.CONNECTOR_DB_PATH).toBe("./data/connectors.db");
+
+    const configWithTrimmedValues = loadConfig({
+      ...env,
+      PRR_DB_PATH: "  /custom/prr.db  ",
+      CONNECTOR_DB_PATH: "   /custom/conn.db ",
+    });
+    expect(configWithTrimmedValues.PRR_DB_PATH).toBe("/custom/prr.db");
+    expect(configWithTrimmedValues.CONNECTOR_DB_PATH).toBe("/custom/conn.db");
+  });
+
   describe("required var missing → throws StartupConfigError", () => {
     const requiredKeys = [
       "JWT_SECRET",
       "AUTH_ISSUER",
       "AUTH_AUDIENCE",
-      "PRR_DB_PATH",
-      "CONNECTOR_DB_PATH",
     ] as const;
 
     for (const key of requiredKeys) {
@@ -84,9 +101,7 @@ describe("loadConfig", () => {
       expect(e.message).toContain("JWT_SECRET");
       expect(e.message).toContain("AUTH_ISSUER");
       expect(e.message).toContain("AUTH_AUDIENCE");
-      expect(e.message).toContain("PRR_DB_PATH");
-      expect(e.message).toContain("CONNECTOR_DB_PATH");
-      expect(e.issues.length).toBeGreaterThanOrEqual(5);
+      expect(e.issues.length).toBeGreaterThanOrEqual(3);
     }
   });
 

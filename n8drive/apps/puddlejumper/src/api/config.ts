@@ -1,5 +1,6 @@
 // ── Configuration, env-parsing, and runtime resolution ──────────────────────
 import path from "node:path";
+import { DEFAULT_CONNECTOR_DB_PATH, DEFAULT_PRR_DB_PATH } from "./startupConfig.js";
 import type { AuthOptions } from "@publiclogic/core";
 import type {
   LoginUser,
@@ -357,11 +358,11 @@ export function assertProductionInvariants(nodeEnv: string, authOptions: AuthOpt
     throw new Error("ALLOW_PROD_ADMIN_LOGIN requires ALLOW_ADMIN_LOGIN to also be true");
   }
 
+  // DB paths with defaults (PRR_DB_PATH, CONNECTOR_DB_PATH) have defaults applied when unset
   const requiredEnvVars = [
     "PJ_RUNTIME_CONTEXT_JSON",
     "PJ_RUNTIME_TILES_JSON",
     "PJ_RUNTIME_CAPABILITIES_JSON",
-    "PRR_DB_PATH",
     "IDEMPOTENCY_DB_PATH",
     "RATE_LIMIT_DB_PATH",
     "ACCESS_NOTIFICATION_WEBHOOK_URL",
@@ -398,10 +399,15 @@ export function assertProductionInvariants(nodeEnv: string, authOptions: AuthOpt
     throw new Error("JWT secret cannot use development fallback in production");
   }
 
-  const prrPath = process.env.PRR_DB_PATH ?? "";
+  // PRR/connector DB paths may be omitted (defaults applied) but must remain inside the controlled data dir.
+  const resolveDbPath = (value: string | undefined, fallback: string): string => {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : fallback;
+  };
+  const prrPath = resolveDbPath(process.env.PRR_DB_PATH, DEFAULT_PRR_DB_PATH);
   const idempotencyPath = process.env.IDEMPOTENCY_DB_PATH ?? "";
   const rateLimitPath = process.env.RATE_LIMIT_DB_PATH ?? "";
-  const connectorPath = process.env.CONNECTOR_DB_PATH ?? "";
+  const connectorPath = resolveDbPath(process.env.CONNECTOR_DB_PATH, DEFAULT_CONNECTOR_DB_PATH);
   const connectorStateSecret = (process.env.CONNECTOR_STATE_SECRET ?? "").trim();
   for (const [label, p] of [
     ["PRR_DB_PATH", prrPath],
