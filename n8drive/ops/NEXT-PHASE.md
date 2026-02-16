@@ -38,7 +38,7 @@ awaiting merge.
 | 10 | Resolve webhook idempotency TODO | Half-day |
 
 **Exit criterion:** CI green on main, zero open draft PRs, zero skipped
-tests, zero TODOs.
+tests, webhook idempotency TODO resolved.
 
 ---
 
@@ -99,7 +99,7 @@ on multiple boards or committees, each with its own approval chains.
 
 | Deliverable | Detail |
 |-------------|--------|
-| Allow user → many workspaces | Schema change: workspace_members junction table (already exists, need to lift the UI constraint) |
+| Allow user → many workspaces | Lift the single-workspace UI constraint (workspace_members junction table already supports this) |
 | Workspace switcher in admin UI | Dropdown or sidebar showing user's workspaces |
 | Scope all API queries to active workspace | Already workspace-scoped; add `X-Workspace-Id` header or query param |
 
@@ -175,7 +175,7 @@ PR #32 already makes the interface async. The next step is a concrete
 |-------------|--------|
 | `RemotePolicyProvider` class | HTTP client calling VAULT endpoints |
 | Configuration: `VAULT_URL`, `VAULT_API_KEY` | Feature-flagged: falls back to local if not set |
-| Circuit breaker | If VAULT is unreachable, fall back to local (fail-closed means "deny if uncertain") |
+| Circuit breaker | If VAULT is unreachable, use LocalPolicyProvider as fallback (deny-by-default still applies within local evaluation) |
 | Tests | Mock HTTP responses, test fallback, test timeout |
 
 ### 4.2 Audit Event Forwarding

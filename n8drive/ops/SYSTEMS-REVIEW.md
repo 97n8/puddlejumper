@@ -105,8 +105,9 @@ PRs #40 and #43 can be closed (superseded/empty).
 
 ### Remaining Gaps
 
-- **No audit log UI.** The admin page has 5 tabs but no audit event viewer.
-  PolicyProvider writes audit events to SQLite; the UI doesn't surface them.
+- **No audit log UI.** The admin page has 5 tabs (Queue, Templates,
+  Dashboard, PRR, Members) but no audit event viewer. PolicyProvider writes
+  audit events to SQLite; the UI doesn't surface them.
 - **Email invitations not sent.** Invitation records are created and
   auto-accepted on login, but no email is dispatched. Copy-link only.
 - **SharePoint dispatcher is a stub.** Returns `skipped`. Requires Azure AD
