@@ -63,5 +63,8 @@ window.PUBLICLOGIC_OS_CONFIG = {
     { title: "Outlook Calendar", url: "https://outlook.office.com/calendar/" },
     { title: "Microsoft Teams", url: "https://teams.microsoft.com/" },
     { title: "SharePoint OS Site", url: "https://publiclogic978.sharepoint.com/sites/PL" }
-  ]
+  ],
+
+  // Optional: connect the Logicville Governance card on Tools to PuddleJumper Admin.
+  // puddlejumper: { adminUrl: "https://pj.publiclogic.org/pj/admin" }
 };
