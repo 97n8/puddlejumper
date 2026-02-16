@@ -1,8 +1,8 @@
 import { beforeAll } from 'vitest';
 import request from 'supertest';
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { signJwt } from '@publiclogic/core';
 
 type AppModule = Record<string, any>;
 
@@ -123,6 +123,19 @@ beforeAll(async () => {
   if (!token) {
     const alt = await tryPostPaths(app, ['/api/admin/login-as', '/api/admin/token'], { email: adminEmail });
     if (alt) token = normalizeTokenFromResponse(alt.body);
+  }
+
+  if (!token) {
+    token = await signJwt({
+      sub: 'setup-admin',
+      userId: 'setup-admin',
+      username: 'setup-admin',
+      email: adminEmail,
+      role: 'admin',
+      tenantId: 'setup-tenant',
+      workspaceId: 'setup-workspace',
+      permissions: ['deploy'],
+    });
   }
 
   if (!token) {
