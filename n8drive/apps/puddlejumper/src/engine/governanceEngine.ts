@@ -917,7 +917,7 @@ export function createGovernanceEngine(options: EngineOptions = {}) {
         );
 
         const authority = policyProvider
-          ? policyProvider.checkAuthorization({
+          ? await policyProvider.checkAuthorization({
               operatorId: input.operator.id,
               operatorRole: input.operator.role,
               operatorPermissions: input.operator.permissions ?? [],
@@ -1118,7 +1118,7 @@ export function createGovernanceEngine(options: EngineOptions = {}) {
 
       const connectors = Array.from(new Set(connectorPairs.map((pair) => pair.connector as ConnectorName)));
       const authority = policyProvider
-        ? policyProvider.checkAuthorization({
+        ? await policyProvider.checkAuthorization({
             operatorId: input.operator.id,
             operatorRole: input.operator.role,
             operatorPermissions: input.operator.permissions ?? [],

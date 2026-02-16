@@ -84,16 +84,93 @@ export type AuditEvent = {
   details: Record<string, unknown>;
 };
 
+// ── Manifest Registration ───────────────────────────────────────────────────
+
+/** Input to manifest registration (pre-flight check). */
+export type ManifestInput = {
+  manifestId: string;
+  workspaceId: string;
+  operatorId: string;
+  municipalityId: string;
+  intent: string;
+  planHash: string;
+  /** Required. Every governance action needs a human-readable justification. */
+  description: string;  // NOTE: NOT optional
+  connectors: string[];
+  timestamp: string;
+};
+
+/** Result of manifest registration. */
+export type ManifestResult = {
+  accepted: boolean;
+  manifestId: string;
+  reason?: string;
+};
+
+// ── Release Authorization ───────────────────────────────────────────────────
+
+/** Input to release authorization check. */
+export type ReleaseQuery = {
+  approvalId: string;
+  manifestId: string;
+  workspaceId: string;
+  municipalityId: string;
+  operatorId: string;
+  planHash: string;
+  timestamp: string;
+};
+
+/** Result of release authorization. */
+export type ReleaseResult = {
+  authorized: boolean;
+  reason?: string;
+  expiresAt?: string | null;
+};
+
+// ── Drift Classification ────────────────────────────────────────────────────
+
+/** Input to drift classification. */
+export type DriftQuery = {
+  approvalId: string;
+  manifestId: string;
+  workspaceId: string;
+  municipalityId: string;
+  /** Which fields/resources drifted — typed so VAULT knows what to inspect. */
+  changedFields: string[];
+  /** Additional context — opaque to PJ, meaningful to VAULT. */
+  driftContext: Record<string, unknown>;
+  timestamp: string;
+};
+
+/** Drift severity classification. */
+export type DriftClassification = {
+  severity: "none" | "low" | "medium" | "high" | "critical";
+  requiresReapproval: boolean;
+  reason?: string;
+};
+
+// ── Policy Provider Type ────────────────────────────────────────────────────
+
+/** Policy provider implementation type. */
+export type PolicyProviderType = "local" | "remote";
+
 // ── PolicyProvider Interface ────────────────────────────────────────────────
 
 export interface PolicyProvider {
+  /**
+   * Get the provider type (local or remote).
+   *
+   * This is synchronous — it's configuration, not a policy decision.
+   */
+  getProviderType(): PolicyProviderType;
+
   /**
    * Check if an operator is authorized to perform an action.
    *
    * Today (Local): evaluates permissions + delegations from the payload.
    * Future (VAULT): HTTP query to the authority service.
    */
-  checkAuthorization(query: AuthorizationQuery): AuthorizationResult;
+  checkAuthorization(query: AuthorizationQuery): Promise<AuthorizationResult>;
 
   /**
    * Resolve the approval chain template for an action + municipality.
@@ -103,7 +180,7 @@ export interface PolicyProvider {
    * Today (Local): returns the default template from ChainStore.
    * Future (VAULT): returns a municipality-specific template.
    */
-  getChainTemplate(query: ChainTemplateQuery): ChainTemplate | null;
+  getChainTemplate(query: ChainTemplateQuery): Promise<ChainTemplate | null>;
 
   /**
    * Write a structured audit event.
@@ -111,7 +188,36 @@ export interface PolicyProvider {
    * Today (Local): persists to SQLite audit_events table.
    * Future (VAULT): sends to the immutable compliance ledger.
    */
-  writeAuditEvent(event: AuditEvent): void;
+  writeAuditEvent(event: AuditEvent): Promise<void>;
+
+  /**
+   * Register a manifest (pre-flight check).
+   *
+   * Allows VAULT to reject upfront (freeze windows, disabled intents).
+   *
+   * Today (Local): accepts all manifests.
+   * Future (VAULT): validates against policy constraints.
+   */
+  registerManifest(input: ManifestInput): Promise<ManifestResult>;
+
+  /**
+   * Authorize release of an approved action.
+   *
+   * Post-approval gate between "chain complete" and "dispatch".
+   * Catches conditions that emerge between approval and dispatch.
+   *
+   * Today (Local): authorizes all releases.
+   * Future (VAULT): validates plan hash, freeze windows, budget caps, TTL.
+   */
+  authorizeRelease(query: ReleaseQuery): Promise<ReleaseResult>;
+
+  /**
+   * Classify drift between deployed artifact and approved manifest.
+   *
+   * Today (Local): returns no drift.
+   * Future (VAULT): analyzes drift severity and reapproval requirements.
+   */
+  classifyDrift(query: DriftQuery): Promise<DriftClassification>;
 }
 
 // ── Authorization Helpers (pure functions) ──────────────────────────────────
@@ -333,18 +439,22 @@ export class LocalPolicyProvider implements PolicyProvider {
 
   // ── PolicyProvider implementation ─────────────────────────────────────
 
-  checkAuthorization(query: AuthorizationQuery): AuthorizationResult {
+  getProviderType(): PolicyProviderType {
+    return "local";
+  }
+
+  async checkAuthorization(query: AuthorizationQuery): Promise<AuthorizationResult> {
     return evaluateAuthorization(query);
   }
 
-  getChainTemplate(query: ChainTemplateQuery): ChainTemplate | null {
+  async getChainTemplate(query: ChainTemplateQuery): Promise<ChainTemplate | null> {
     // Today: return the default template regardless of action/municipality.
     // Future: look up municipality-specific template mappings.
     void query; // reserved for future municipality-specific routing
     return this.chainStore.getTemplate("default");
   }
 
-  writeAuditEvent(event: AuditEvent): void {
+  async writeAuditEvent(event: AuditEvent): Promise<void> {
     this.db
       .prepare(
         `INSERT OR IGNORE INTO audit_events
@@ -364,6 +474,21 @@ export class LocalPolicyProvider implements PolicyProvider {
         JSON.stringify(event.details),
         new Date().toISOString(),
       );
+  }
+
+  async registerManifest(input: ManifestInput): Promise<ManifestResult> {
+    void input;
+    return { accepted: true, manifestId: input.manifestId };
+  }
+
+  async authorizeRelease(query: ReleaseQuery): Promise<ReleaseResult> {
+    void query;
+    return { authorized: true, expiresAt: null };
+  }
+
+  async classifyDrift(query: DriftQuery): Promise<DriftClassification> {
+    void query;
+    return { severity: "none", requiresReapproval: false };
   }
 
   // ── Query helpers (admin / testing) ───────────────────────────────────
