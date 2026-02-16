@@ -116,12 +116,20 @@ if (!/router\.post\(\s*["']\/pj\/execute["']/.test(governanceSource)) {
 }
 
 // Verify server.ts mounts these routes via createGovernanceRoutes and createConfigRoutes
-if (!/createGovernanceRoutes/.test(serverSource)) {
-  errors.push(`${path.relative(ROOT, serverPath)} must import and use createGovernanceRoutes`);
+if (!/import\s*\{[^}]*createGovernanceRoutes[^}]*\}\s*from/.test(serverSource)) {
+  errors.push(`${path.relative(ROOT, serverPath)} must import createGovernanceRoutes`);
 }
 
-if (!/createConfigRoutes/.test(serverSource)) {
-  errors.push(`${path.relative(ROOT, serverPath)} must import and use createConfigRoutes`);
+if (!/import\s*\{[^}]*createConfigRoutes[^}]*\}\s*from/.test(serverSource)) {
+  errors.push(`${path.relative(ROOT, serverPath)} must import createConfigRoutes`);
+}
+
+if (!/createGovernanceRoutes\s*\(/.test(serverSource)) {
+  errors.push(`${path.relative(ROOT, serverPath)} must call createGovernanceRoutes`);
+}
+
+if (!/createConfigRoutes\s*\(/.test(serverSource)) {
+  errors.push(`${path.relative(ROOT, serverPath)} must call createConfigRoutes`);
 }
 
 if (errors.length > 0) {
