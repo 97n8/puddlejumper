@@ -1,3 +1,8 @@
+// Load environment variables from .env file
+import dotenv from 'dotenv';
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 // ── PuddleJumper API server (orchestrator) ──────────────────────────────────
 //
 // This file wires together modules extracted from the original monolithic
@@ -16,9 +21,7 @@
 //   routes/governance.ts  – PJ execute, identity-token, prompt, evaluate
 //
 import express from "express";
-import path from "node:path";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import cookieParser from "cookie-parser";
 import {
@@ -104,6 +107,9 @@ import { ensurePersonalWorkspace, getDb, acceptInvitation } from "../engine/work
 // ── Directory layout ────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load .env file from repository root
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 const ROOT_DIR = path.resolve(__dirname, "../../");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
