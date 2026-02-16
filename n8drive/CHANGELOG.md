@@ -5,6 +5,38 @@ All notable changes to PuddleJumper will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **PolicyProvider async interface** (PR #32)
+  - All PolicyProvider methods return `Promise` for RemotePolicyProvider compatibility
+  - `registerManifest()` — pre-flight validation before approval creation
+  - `authorizeRelease()` — post-approval dispatch gate
+  - `classifyDrift()` — drift severity classification
+  - `getProviderType()` — sync provider identification (`"local"` | `"remote"`)
+
+- **Governance pipeline integration** (PR #38)
+  - `registerManifest` called as pre-flight before approval creation in `/api/pj/execute`
+  - `authorizeRelease` called as final gate after CAS lock in dispatch flow
+  - Both are non-fatal (try/catch) and only active when policyProvider is provided
+
+- **Chain template access control** (PR #34)
+  - All chain template endpoints (including GET) require admin/owner role
+  - Viewers receive 403 on chain template reads
+
+- **Input validation hardening** (PR #35)
+  - `stepId` parameter type-validated before `chainStore.getStep()`
+  - Role matching contract documented (exact string equality)
+
+### Changed
+- Lockfile churn stripped from PRs #32 and #34 (PR #33)
+
+### Known Gaps (Phase 1)
+- Chain Prometheus metrics not yet emitted (6 metrics from architecture appendix)
+- Grafana dashboard missing chain-specific panels
+- No alert rule for chain steps stuck >24h
+- SYSTEM-GUIDE.md not yet updated for chains, PolicyProvider, or admin UI
+
 ## [1.0.0] - 2026-02-16
 
 ### Added
@@ -76,5 +108,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[Unreleased]: https://github.com/97n8/puddlejumper/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/97n8/puddlejumper/releases/tag/v1.0.0
 [0.9.0]: https://github.com/97n8/puddlejumper/releases/tag/v0.9.0

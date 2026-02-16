@@ -274,3 +274,124 @@ Until VAULT exists, PJ uses a local chain definition table. When VAULT ships, th
 | `approval_chain_step_time_seconds` | histogram | Time per step (creation to decision) |
 
 These compose with existing metrics. `approvals_created_total` remains the top-level count. Chain metrics provide per-step granularity.
+
+---
+
+## Phase 1 Completion Assessment (Day 90)
+
+> **Date:** February 16, 2026
+
+### What shipped
+
+| Milestone | Deliverable | Status | Evidence |
+|-----------|------------|--------|----------|
+| **Days 1–30** | Approval chain data model | ✅ Shipped | `chainStore.ts` — `approval_chain_templates` + `approval_chain_steps` tables, sequential + parallel step progression |
+| | Chain progression logic | ✅ Shipped | `decideChainStep()` → activate next order group, rejection skips remaining steps |
+| | API surface for chains | ✅ Shipped | `chainTemplates.ts` — 5 CRUD endpoints with RBAC + tier enforcement |
+| | Tests | ✅ Shipped | `chainStore.test.ts`, `chain-templates.test.ts`, `chain-integration.test.ts`, `parallel-approval.test.ts` |
+| **Days 31–60** | Control Plane UI — approval queue | ✅ Shipped | `admin.html` — Approvals tab with chain progress column, status filters, pagination |
+| | Operational dashboard | ✅ Shipped | Dashboard tab — pending count, success rate, retry count, avg latency, recent dispatches |
+| | Parallel approval support | ✅ Shipped | Steps at same `order` value all activate simultaneously; chain advances when all are approved |
+| **Days 61–90** | PolicyProvider interface (local) | ✅ Shipped | `policyProvider.ts` — `checkAuthorization`, `getChainTemplate`, `writeAuditEvent` |
+| | Governance engine consumes PolicyProvider | ✅ Shipped | `governanceEngine.ts` calls `policyProvider.checkAuthorization()` when available |
+| | Connector retry policy on registration | ✅ Shipped | `DispatcherRegistry.register(dispatcher, retryPolicy?)` in `dispatch.ts` |
+| | SharePointDispatcher stub | ✅ Shipped | `dispatchers/sharepoint.ts` — returns `skipped`, registered with retry policy |
+| | Documentation | ⚠️ Partial | SYSTEM-GUIDE.md does not yet reference chains, PolicyProvider, or admin UI |
+
+### What did not ship
+
+| Item | Gap | Severity |
+|------|-----|----------|
+| Chain Prometheus metrics | 6 metrics from appendix not emitted (`approval_chain_steps_total`, etc.) | Medium — metrics are operational visibility, not correctness |
+| Grafana dashboard for chains | No chain-specific panels in `puddlejumper-approvals-dashboard.json` | Medium — existing dashboard covers top-level approvals |
+| Chain-stuck >24h alert | No alert rule in `ops/alerts/` | Low — manual monitoring works at current scale |
+| SYSTEM-GUIDE.md update | No mention of chains, PolicyProvider, admin chain management | Medium — affects onboarding for new operators |
+
+### Test count
+
+507 tests passing (73 logic-commons + 434 puddlejumper). Target was 280+.
+
+### Open PRs (in-flight, not yet merged to main)
+
+| PR | Title | What it adds |
+|----|-------|-------------|
+| #32 | Make PolicyProvider async for RemotePolicyProvider | `Promise` return types on all PolicyProvider methods; `registerManifest`, `authorizeRelease`, `classifyDrift` stubs |
+| #33 | Strip lockfile churn from PRs #32 and #34 | Removes +2786/-2242 lockfile noise |
+| #34 | Admin-only chain template endpoints | GET chain templates requires admin/owner (was open to viewers) |
+| #35 | Harden stepId validation + role matching docs | Type-validates `stepId` before `chainStore.getStep()` |
+| #38 | Governance engine consumes async PolicyProvider (Week 10) | Wires `registerManifest` pre-flight + `authorizeRelease` dispatch gate |
+
+**Recommended merge order:** #33 → #34 → #32 → #38 → #35 (PRs #32 and #38 both touch `policyProvider.ts`; #35 rebases cleanly after #32/#33).
+
+---
+
+## 7. Phase 2 Plan: Days 91–180
+
+> **Status:** Proposed — requires owner review before lock  
+> **Prerequisite:** Merge open PRs #32–#38. Resolve staging Fly.io issue (#20).
+
+### Strategic intent
+
+Phase 1 built the governance machinery: chains, PolicyProvider, admin UI, dispatchers with retry. Phase 2 makes it **operationally real**: close the documentation gaps, add the observability that the appendix promised, ship the V1.1 features that actual users need (email delivery, audit visibility), and harden the system for a second municipality.
+
+Phase 2 does NOT build VAULT, a rule engine, or a connector marketplace. Those triggers have not been met (see Section 4 guardrails). Phase 2 finishes what Phase 1 started and adds the operational polish that separates a prototype from a product.
+
+### Days 91–120: Finish Phase 1 + Observability
+
+**Goal:** Ship the Phase 1 items that didn't land. No new features until the foundation is complete.
+
+| Week | Deliverable | Detail |
+|------|------------|--------|
+| 13 | Chain Prometheus metrics | Emit the 6 metrics from the appendix. Instrument `chainStore.createChainForApproval()`, `decideChainStep()`, and chain completion paths. Add `approval_chain_step_pending_gauge` via periodic scan or increment/decrement on step state transitions. |
+| 14 | Grafana dashboard + alert | Add chain-specific panels to `puddlejumper-approvals-dashboard.json`: step throughput, pending step gauge, step decision latency histogram. Add `ChainStepStuck24h` alert rule to `ops/alerts/`. |
+| 15 | SYSTEM-GUIDE.md update | Document: multi-step approval chains (data model, API endpoints, admin UI workflow), PolicyProvider interface (what it is, how LocalPolicyProvider works, how RemotePolicyProvider will swap in), control plane UI tabs and their purpose. |
+| 16 | Merge open PRs + regression | Land #32–#38 in order. Run full test suite. Fix any conflicts. Cut v1.1.0-rc1 tag. |
+
+**Exit criteria:** All 6 chain metrics emitting in `/metrics`. Grafana dashboard renders chain panels. SYSTEM-GUIDE.md covers chains and PolicyProvider. 0 open Phase 1 PRs.
+
+### Days 121–150: Operational Readiness
+
+**Goal:** Ship the V1 known limitations that block real municipal usage.
+
+| Week | Deliverable | Detail |
+|------|------------|--------|
+| 17 | Audit log UI | Add "Audit" tab to admin.html. Display `audit_events` table with filters: event type, operator, date range. Read-only — PJ audit is operational, not compliance (that's VAULT). Backend: `GET /api/admin/audit` already exists; UI consumes it. |
+| 18 | Email delivery for invitations | Integrate SendGrid (or Postmark) for workspace invitation emails. Behind feature flag (`EMAIL_PROVIDER=sendgrid|none`). Fallback to copy-link when `none`. Invitation email template: workspace name, inviter, accept link, expiry. |
+| 19 | Webhook signature verification | Verify inbound webhook signatures (`X-Hub-Signature-256` for GitHub, configurable HMAC for custom). Reject unverified payloads with 401. Connector-level config: `{ webhookSecret: string }` at registration. |
+| 20 | Staging deployment fix | Resolve issue #20 (SQLite volume permissions on Fly.io staging). Deploy v1.1.0-rc1 to staging. Run E2E smoke tests against staging. |
+
+**Exit criteria:** Audit tab renders events. Invitations send real emails (with flag on). Webhook signatures verified. Staging deploys and passes smoke tests.
+
+### Days 151–180: Multi-Workspace + Hardening
+
+**Goal:** Remove the single-workspace-per-user limitation. Harden for second municipality onboarding.
+
+| Week | Deliverable | Detail |
+|------|------------|--------|
+| 21 | Multi-workspace support | Users can create additional workspaces. Workspace switcher in UI. Each workspace has independent tiers, members, chains, approvals. Session token carries `activeWorkspaceId`. |
+| 22 | Workspace ownership transfer | `POST /api/workspaces/:id/transfer` — owner nominates new owner (must be existing admin member). Requires confirmation from both parties. Audit event logged. |
+| 23 | API rate limiting hardening | Current rate limiter exists (`rateLimit.ts`). Add per-workspace rate limits (not just per-IP). Add rate limit headers (`X-RateLimit-Remaining`, `X-RateLimit-Reset`). Document limits in API reference. |
+| 24 | v1.1.0 release | Full regression (target: 550+ tests). Update CHANGELOG.md. Update deployment docs. Tag v1.1.0. Deploy to production. |
+
+**Exit criteria:** Users can own multiple workspaces. Ownership transfer works. Rate limits are per-workspace with standard headers. v1.1.0 tagged and deployed.
+
+### Phase 2 "Not Doing" List
+
+| Item | Why not in Phase 2 |
+|------|-------------------|
+| Build VAULT as a service | No municipal customer requiring compliance-grade audit separation yet. `LocalPolicyProvider` covers current needs. Trigger: first compliance audit request. |
+| Stripe billing integration | Manual tier upgrades work. Stripe requires PCI compliance infrastructure. Trigger: when free-to-Pro conversion volume justifies the integration cost. |
+| Connector marketplace | 4 dispatchers (GitHub, Webhook, SharePoint stub, Slack). Still under the 5+ trigger. |
+| Rule engine extraction | Single municipality. No divergent rule sets to compare. |
+| Workflow chaining | No customer has requested multi-action sequences. Individual governed actions remain sufficient. |
+| RemotePolicyProvider (HTTP-to-VAULT) | Interface is defined (PR #32). Implementation waits for VAULT service. Building the HTTP client without a server to call is speculative. |
+| Mobile UI | Municipal admins confirmed on desktop. No usage data suggesting mobile need. |
+
+### Phase 2 Risks
+
+| Risk | Mitigation |
+|------|-----------|
+| Multi-workspace migration breaks existing single-workspace users | Migration script auto-assigns existing workspace as `activeWorkspaceId`. No user action required. Add migration test. |
+| SendGrid email delivery in fail-closed pipeline | Email is notification, not governance. Email failure does not block invitation creation — invitation record exists, copy-link fallback always works. |
+| Webhook signature verification rejects legitimate payloads | Feature flag per-connector: `{ verifySignature: true|false }`. Default `false` for existing connectors. New connectors default `true`. |
+| Staging Fly.io volume permissions (issue #20) | Fix in Week 20 is gated — v1.1.0 does not deploy to production until staging passes smoke tests. |
