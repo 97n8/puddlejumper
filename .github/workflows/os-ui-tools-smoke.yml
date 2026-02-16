@@ -4,6 +4,7 @@ on:
     paths:
       - 'publiclogic-os-ui/**'
       - 'tests/e2e/**'
+      - 'playwright.config.ts'
       - '.github/workflows/os-ui-tools-smoke.yml'
 permissions:
   contents: read
