@@ -23,6 +23,9 @@ RUN pnpm install --frozen-lockfile
 # Now copy source (changes here won't bust the install cache)
 COPY . .
 
+# Clean stale TypeScript build cache (prevents composite build issues)
+RUN find . -name "*.tsbuildinfo" -type f -delete
+
 # Root build — produces /app/dist/api/server.js (and auth.js, etc.)
 RUN pnpm run build
 
