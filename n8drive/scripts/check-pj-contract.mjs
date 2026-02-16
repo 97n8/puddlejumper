@@ -40,6 +40,13 @@ const errors = [];
 const masterHtml = readFile(masterHtmlPath);
 const serverSource = readFile(serverPath);
 
+// Also check route files where the actual endpoints are defined
+const governancePath = path.join(PJ_ROOT, "src", "api", "routes", "governance.ts");
+const configPath = path.join(PJ_ROOT, "src", "api", "routes", "config.ts");
+const governanceSource = readFile(governancePath);
+const configSource = readFile(configPath);
+const allRouteSources = serverSource + "\n" + governanceSource + "\n" + configSource;
+
 const innerHtmlMatches = findLineMatches(masterHtml, /\binnerHTML\b/);
 if (innerHtmlMatches.length > 0) {
   errors.push(
@@ -101,12 +108,14 @@ if (!cspMatch || typeof cspMatch[1] !== "string") {
   }
 }
 
-if (!/app\.get\(\s*["']\/api\/pj\/actions["']/.test(serverSource)) {
-  errors.push(`${path.relative(ROOT, serverPath)} must expose GET /api/pj/actions`);
+// Check for /pj/actions and /pj/execute routes (with or without /api prefix)
+// Routes may be defined with app.get/app.post or router.get/router.post
+if (!/(?:app|router)\.get\(\s*["'](?:\/api)?\/pj\/actions["']/.test(allRouteSources)) {
+  errors.push("Route files must expose GET /api/pj/actions");
 }
 
-if (!/app\.post\(\s*["']\/api\/pj\/execute["']/.test(serverSource)) {
-  errors.push(`${path.relative(ROOT, serverPath)} must expose POST /api/pj/execute`);
+if (!/(?:app|router)\.post\(\s*["'](?:\/api)?\/pj\/execute["']/.test(allRouteSources)) {
+  errors.push("Route files must expose POST /api/pj/execute");
 }
 
 if (errors.length > 0) {
