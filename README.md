@@ -17,12 +17,43 @@ PuddleJumper is a multi-tenant governance engine for municipal decision workflow
 | `scripts/` | Sync utilities and helper scripts |
 | `tests/` | E2E tests (Playwright) |
 
+## Prerequisites
+
+| Tool | Version | Install |
+|------|---------|---------|
+| **Node.js** | 20+ | `nvm install 20` or [nodejs.org](https://nodejs.org) |
+| **pnpm** | 8.x | `corepack enable && corepack prepare pnpm@8.15.8 --activate` |
+| **Git** | 2.x+ | [git-scm.com](https://git-scm.com) |
+
+> **Note:** Clone via HTTPS if you don't have SSH keys configured:
+> ```bash
+> git clone https://github.com/97n8/puddlejumper.git
+> ```
+
 ## Getting Started
 
+**Quick setup** (automated):
+```bash
+bash scripts/bootstrap.sh
+```
+
+**Manual setup:**
 ```bash
 cd n8drive
 pnpm install
-pnpm run dev
+pnpm --filter @publiclogic/core run build
+pnpm --filter @publiclogic/logic-commons run build
+pnpm --filter @publiclogic/puddlejumper run build
+cp .env.sample .env          # edit to add OAuth secrets if needed
+pnpm run dev                 # starts server on http://localhost:3002
+```
+
+**Run tests:**
+```bash
+cd n8drive
+pnpm test                    # all unit tests
+pnpm run typecheck           # TypeScript type checking
+pnpm run check:pj-contract   # PJ contract validation
 ```
 
 ## Playbook Sync
