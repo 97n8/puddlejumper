@@ -66,7 +66,7 @@ copy_file() {
     return 0
   fi
 
-  if diff -q "$src" "$dst" > /dev/null 2>&1; then
+  if [[ -f "$dst" ]] && diff -q "$src" "$dst" > /dev/null 2>&1; then
     return 0
   fi
 
@@ -111,7 +111,7 @@ for md in "$UI_DIR"/*.md; do
     continue
   fi
   if [[ ! -f "$OS_DIR/$filename" ]]; then
-    echo "  WARNING  $filename exists in UI but not in OS (canonical source)"
+    echo "  WARNING  $filename exists in UI but not in OS (canonical source). Move it to OS or remove it from UI."
     DRIFT=1
   fi
 done
