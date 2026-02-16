@@ -6,13 +6,13 @@ import express from "express";
 import { getCorrelationId } from "../serverMiddleware.js";
 import { createPRR, getPRRByToken, listPRRComments } from "../../engine/prrStore.js";
 
-export function createPublicPRRRoutes(): express.Router {
+export function createPublicPRRRoutes(opts?: { dataDir?: string }): express.Router {
   const router = express.Router();
   
   // POST /public/prr - Submit a new PRR (public, no auth)
   router.post("/public/prr", (req, res) => {
     const correlationId = getCorrelationId(res);
-    const dataDir = process.env.DATA_DIR || "./data";
+    const dataDir = opts?.dataDir ?? process.env.DATA_DIR ?? "./data";
     
     const { workspace_id, name, email, summary, details, attachments } = req.body;
     
@@ -67,7 +67,7 @@ export function createPublicPRRRoutes(): express.Router {
   // GET /public/prr/:token - Check PRR status (public, no auth)
   router.get("/public/prr/:token", (req, res) => {
     const correlationId = getCorrelationId(res);
-    const dataDir = process.env.DATA_DIR || "./data";
+    const dataDir = opts?.dataDir ?? process.env.DATA_DIR ?? "./data";
     const { token } = req.params;
     
     try {

@@ -14,6 +14,10 @@ prod-test
 
 coverage
 data
+test
+tests
+*.test.ts
+*.spec.ts
 *.md
 !SECURITY.md
 LICENSE

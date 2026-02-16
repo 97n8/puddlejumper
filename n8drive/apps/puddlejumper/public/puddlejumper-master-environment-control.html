@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-mwau9reStI4C5JwVQP/vAmRb/AwukYdLRc0JTWHaaJg='; style-src 'sha256-tUGJUTkksXNdq7kvBc2hRB4EU+heH2krWsiekThNFcQ='; connect-src 'self'; form-action 'none'; base-uri 'self';" />
     <title>PuddleJumper — Workspace Control</title>
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -93,5 +94,9 @@
         <a href="/health">Health Check</a>
       </div>
     </div>
+    <script>
+      const PJ_EXECUTE = '/api/pj/execute';
+      const ENABLE_BACKEND = true;
+    </script>
   </body>
 </html>

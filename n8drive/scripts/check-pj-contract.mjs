@@ -7,6 +7,8 @@ const ROOT = process.cwd();
 const PJ_ROOT = path.join(ROOT, "apps", "puddlejumper");
 const masterHtmlPath = path.join(PJ_ROOT, "public", "puddlejumper-master-environment-control.html");
 const serverPath = path.join(PJ_ROOT, "src", "api", "server.ts");
+const governancePath = path.join(PJ_ROOT, "src", "api", "routes", "governance.ts");
+const configPath = path.join(PJ_ROOT, "src", "api", "routes", "config.ts");
 
 function readFile(filePath) {
   try {
@@ -39,6 +41,8 @@ function failWith(errors) {
 const errors = [];
 const masterHtml = readFile(masterHtmlPath);
 const serverSource = readFile(serverPath);
+const governanceSource = readFile(governancePath);
+const configSource = readFile(configPath);
 
 const innerHtmlMatches = findLineMatches(masterHtml, /\binnerHTML\b/);
 if (innerHtmlMatches.length > 0) {
@@ -101,12 +105,22 @@ if (!cspMatch || typeof cspMatch[1] !== "string") {
   }
 }
 
-if (!/app\.get\(\s*["']\/api\/pj\/actions["']/.test(serverSource)) {
-  errors.push(`${path.relative(ROOT, serverPath)} must expose GET /api/pj/actions`);
+// Check for /api/pj/actions in server.ts OR router.get("/pj/actions" in config.ts
+const hasActionsRoute = 
+  /app\.get\(\s*["']\/api\/pj\/actions["']/.test(serverSource) ||
+  /router\.get\(\s*["']\/pj\/actions["']/.test(configSource);
+
+if (!hasActionsRoute) {
+  errors.push(`Must expose GET /api/pj/actions (check ${path.relative(ROOT, serverPath)} or ${path.relative(ROOT, configPath)})`);
 }
 
-if (!/app\.post\(\s*["']\/api\/pj\/execute["']/.test(serverSource)) {
-  errors.push(`${path.relative(ROOT, serverPath)} must expose POST /api/pj/execute`);
+// Check for /api/pj/execute in server.ts OR router.post("/pj/execute" in governance.ts
+const hasExecuteRoute = 
+  /app\.post\(\s*["']\/api\/pj\/execute["']/.test(serverSource) ||
+  /router\.post\(\s*["']\/pj\/execute["']/.test(governanceSource);
+
+if (!hasExecuteRoute) {
+  errors.push(`Must expose POST /api/pj/execute (check ${path.relative(ROOT, serverPath)} or ${path.relative(ROOT, governancePath)})`);
 }
 
 if (errors.length > 0) {
