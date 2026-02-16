@@ -105,3 +105,78 @@ test.describe('Visual Snapshots - Mobile', () => {
     });
   });
 });
+
+test.describe("PRR Visual Snapshots", () => {
+  test("PRR submission form", async ({ page }) => {
+    await page.goto("/prr");
+    await expect(page.locator("h1")).toBeVisible();
+    await expect(page).toHaveScreenshot("prr-submission-form.png");
+  });
+
+  test("PRR submission success", async ({ page }) => {
+    await page.goto("/prr");
+    
+    // Fill and submit
+    await page.fill('input[name="submitter_name"]', "Visual Test");
+    await page.fill('input[name="submitter_email"]', "visual@test.com");
+    await page.fill('input[name="summary"]', "Visual regression test");
+    await page.fill('textarea[name="details"]', "Testing snapshot capture");
+    await page.click('button[type="submit"]');
+    
+    // Wait for success state
+    await expect(page.locator("#success-message")).toBeVisible({ timeout: 5000 });
+    await expect(page).toHaveScreenshot("prr-submission-success.png");
+  });
+
+  test("PRR status page", async ({ page }) => {
+    // Mock PRR token in URL
+    await page.goto("/prr-status");
+    await expect(page.locator("h1")).toBeVisible();
+    await expect(page).toHaveScreenshot("prr-status-page.png");
+  });
+
+  test("Admin PRR queue", async ({ page }) => {
+    await page.goto("/pj/admin");
+    
+    // Mock session
+    await page.evaluate(() => {
+      localStorage.setItem("pj_session", JSON.stringify({
+        user_id: "snapshot-user",
+        workspace_id: "snapshot-workspace",
+        role: "admin"
+      }));
+    });
+    await page.reload();
+    
+    // Switch to PRR tab
+    await page.click('[data-tab="prr"]');
+    await expect(page.locator("#tab-prr")).toBeVisible();
+    await page.waitForTimeout(1000); // Allow queue to load
+    
+    await expect(page).toHaveScreenshot("admin-prr-queue.png");
+  });
+
+  test("Admin PRR detail modal", async ({ page }) => {
+    await page.goto("/pj/admin");
+    
+    await page.evaluate(() => {
+      localStorage.setItem("pj_session", JSON.stringify({
+        user_id: "snapshot-user",
+        workspace_id: "snapshot-workspace",
+        role: "admin"
+      }));
+    });
+    await page.reload();
+    
+    await page.click('[data-tab="prr"]');
+    await page.waitForTimeout(1000);
+    
+    // Open detail if PRR exists
+    const viewButton = page.locator('button:has-text("View")').first();
+    if (await viewButton.isVisible()) {
+      await viewButton.click();
+      await expect(page.locator("#prr-detail-overlay")).toBeVisible();
+      await expect(page).toHaveScreenshot("admin-prr-detail.png");
+    }
+  });
+});
