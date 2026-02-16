@@ -41,9 +41,9 @@ mkdir -p ./data
 
 # 5. Start server (from puddlejumper app)
 echo "Starting server on 3002..."
-cd apps/puddlejumper
+cd n8drive/apps/puddlejumper
 node dist/api/server.js & echo $! > /tmp/pj_pid
-cd ../..
+cd ../../..
 
 # 6. Wait
 sleep 5
