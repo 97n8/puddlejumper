@@ -1,2 +1,22 @@
 # Local Netlify folder
 .netlify
+
+# macOS
+.DS_Store
+
+# Environment variables
+.env*
+.env.production
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Test results
+test-results/
+
+# Build artifacts
+*.tsbuildinfo
+node_modules/
+dist/

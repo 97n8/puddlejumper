@@ -5,12 +5,14 @@ npm-debug.log*
 data/publiclogic-audit.ndjson
 .env
 .env.local
+.env.production
 **/.env.local
 
 # Build artifacts
 dist/
 **/dist/
 prod-test/
+*.tsbuildinfo
 
 # SQLite database files - development data
 **/data/*.db

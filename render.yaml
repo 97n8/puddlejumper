@@ -34,6 +34,7 @@ services:
       - key: CONNECTOR_STATE_SECRET
         generateValue: true
       - key: ACCESS_NOTIFICATION_WEBHOOK_URL
+        # NOTE: Must be configured with a valid webhook URL for production use
         value: https://placeholder-webhook.invalid
       - key: PJ_RUNTIME_CONTEXT_JSON
         value: '{"workspace":{"id":"default","charter":{"authority":true,"accountability":true,"boundary":true,"continuity":true}},"municipality":{"id":"default","name":"Production"}}'

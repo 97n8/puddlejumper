@@ -14,6 +14,7 @@ RUN corepack prepare pnpm@8.15.8 --activate
 # Copy package manifests first for better layer caching
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/puddlejumper/package.json apps/puddlejumper/
+COPY apps/logic-commons/package.json apps/logic-commons/
 COPY packages/core/package.json packages/core/
 COPY web/package.json web/
 
@@ -23,8 +24,13 @@ RUN pnpm install --frozen-lockfile
 # Now copy source (changes here won't bust the install cache)
 COPY . .
 
-# Root build — produces /app/dist/api/server.js (and auth.js, etc.)
-RUN pnpm run build
+# Clean stale TypeScript build cache (prevents composite build issues)
+RUN find . -name "*.tsbuildinfo" -type f -delete
+
+# Build packages in explicit dependency order (same as CI)
+RUN pnpm --filter @publiclogic/core run build && \
+    pnpm --filter @publiclogic/logic-commons run build && \
+    pnpm --filter @publiclogic/puddlejumper run build
 
 # Rebuild native addons for linux target
 RUN pnpm rebuild better-sqlite3

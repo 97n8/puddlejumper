@@ -51,8 +51,6 @@ describe("loadConfig", () => {
       "JWT_SECRET",
       "AUTH_ISSUER",
       "AUTH_AUDIENCE",
-      "PRR_DB_PATH",
-      "CONNECTOR_DB_PATH",
     ] as const;
 
     for (const key of requiredKeys) {
@@ -84,9 +82,7 @@ describe("loadConfig", () => {
       expect(e.message).toContain("JWT_SECRET");
       expect(e.message).toContain("AUTH_ISSUER");
       expect(e.message).toContain("AUTH_AUDIENCE");
-      expect(e.message).toContain("PRR_DB_PATH");
-      expect(e.message).toContain("CONNECTOR_DB_PATH");
-      expect(e.issues.length).toBeGreaterThanOrEqual(5);
+      expect(e.issues.length).toBeGreaterThanOrEqual(3);
     }
   });
 

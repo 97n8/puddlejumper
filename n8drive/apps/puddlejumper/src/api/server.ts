@@ -1,3 +1,8 @@
+// Load environment variables from .env file
+import dotenv from 'dotenv';
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 // ── PuddleJumper API server (orchestrator) ──────────────────────────────────
 //
 // This file wires together modules extracted from the original monolithic
@@ -16,9 +21,7 @@
 //   routes/governance.ts  – PJ execute, identity-token, prompt, evaluate
 //
 import express from "express";
-import path from "node:path";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import cookieParser from "cookie-parser";
 import {
@@ -87,6 +90,8 @@ import { createAdminRoutes } from "./routes/admin.js";
 import { createWebhookActionRoutes } from "./routes/webhookAction.js";
 import { createWorkspaceUsageRoutes } from "./routes/workspaceUsage.js";
 import { createWorkspaceCollaborationRoutes } from "./routes/workspaceCollaboration.js";
+import { createPublicPRRRoutes } from "./routes/publicPrr.js";
+import { createAdminPRRRoutes } from "./routes/prrAdmin.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
@@ -102,6 +107,9 @@ import { ensurePersonalWorkspace, getDb, acceptInvitation } from "../engine/work
 // ── Directory layout ────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load .env file from repository root
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 const ROOT_DIR = path.resolve(__dirname, "../../");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
@@ -493,6 +501,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createAdminRoutes({ approvalStore, chainStore }));
   app.use("/api", createWorkspaceUsageRoutes());
   app.use("/api", createWorkspaceCollaborationRoutes());
+  app.use(createPublicPRRRoutes());
+  app.use("/api", createAdminPRRRoutes());
   app.use("/api", createWebhookActionRoutes({
     approvalStore, dispatcherRegistry, chainStore,
   }));

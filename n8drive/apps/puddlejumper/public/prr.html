@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Public Records Request — PuddleJumper</title>
+<link rel="stylesheet" href="/styles/pj.css">
+<style>
+.prr-container {
+  max-width: 700px;
+  margin: 40px auto;
+  padding: 32px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.prr-header {
+  margin-bottom: 24px;
+}
+.prr-header h1 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+}
+.prr-header p {
+  margin: 0;
+  color: var(--muted);
+}
+.form-group {
+  margin-bottom: 20px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+}
+.form-group textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+.form-group input[type="file"] {
+  padding: 8px;
+}
+.form-group small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.required {
+  color: var(--red, #ef4444);
+}
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+.btn-primary:hover {
+  background: var(--accent-bright);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.success-message {
+  display: none;
+  padding: 20px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid var(--green);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+}
+.success-message.show {
+  display: block;
+}
+.token-display {
+  background: var(--bg);
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-top: 16px;
+  font-family: 'Monaco', monospace;
+  word-break: break-all;
+}
+.error-message {
+  display: none;
+  padding: 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  color: #ef4444;
+}
+.error-message.show {
+  display: block;
+}
+</style>
+</head>
+<body>
+
+<div class="prr-container">
+  <div class="prr-header">
+    <h1>Public Records Request</h1>
+    <p>Submit a request for public records. You'll receive a tracking token to check the status.</p>
+  </div>
+
+  <div id="success-message" class="success-message">
+    <h3 style="margin-top:0;">Request Submitted Successfully!</h3>
+    <p>Your tracking token is:</p>
+    <div class="token-display" id="token-display"></div>
+    <p style="margin-top:16px;">
+      Save this token. You can check the status at:
+      <a href="/prr/status" id="status-link" style="color:var(--green);">/prr/status</a>
+    </p>
+    <button class="btn btn-primary" onclick="copyToken()" style="margin-top:16px;">📋 Copy Token</button>
+  </div>
+
+  <div id="error-message" class="error-message"></div>
+
+  <form id="prr-form" onsubmit="submitPRR(event)">
+    <div class="form-group">
+      <label for="name">Your Name <span class="required">*</span></label>
+      <input type="text" id="name" name="name" required maxlength="200"
+             aria-required="true" aria-describedby="name-help">
+      <small id="name-help">Your full name</small>
+    </div>
+
+    <div class="form-group">
+      <label for="email">Email Address <span class="required">*</span></label>
+      <input type="email" id="email" name="email" required maxlength="200"
+             aria-required="true" aria-describedby="email-help">
+      <small id="email-help">We'll use this to contact you about your request</small>
+    </div>
+
+    <div class="form-group">
+      <label for="summary">Request Summary <span class="required">*</span></label>
+      <input type="text" id="summary" name="summary" required maxlength="500"
+             aria-required="true" aria-describedby="summary-help"
+             placeholder="Brief description of records requested">
+      <small id="summary-help">A short description (max 500 characters)</small>
+    </div>
+
+    <div class="form-group">
+      <label for="details">Detailed Description</label>
+      <textarea id="details" name="details" maxlength="5000"
+                aria-describedby="details-help"
+                placeholder="Provide detailed information about the records you're requesting..."></textarea>
+      <small id="details-help">Include dates, names, document types, etc. (max 5000 characters)</small>
+    </div>
+
+    <div class="form-group">
+      <label for="attachment">Attachment (optional)</label>
+      <input type="file" id="attachment" name="attachment"
+             accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+             aria-describedby="attachment-help">
+      <small id="attachment-help">Supporting documents (PDF, Word, images). Max 8MB.</small>
+    </div>
+
+    <button type="submit" class="btn btn-primary" id="submit-btn">
+      Submit Request
+    </button>
+  </form>
+</div>
+
+<script>
+// Get workspace ID from config or default
+const WORKSPACE_ID = 'default'; // TODO: Make this dynamic or configurable
+
+let submittedToken = '';
+
+async function submitPRR(event) {
+  event.preventDefault();
+  
+  const submitBtn = document.getElementById('submit-btn');
+  const errorMsg = document.getElementById('error-message');
+  
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting...';
+  errorMsg.classList.remove('show');
+  
+  try {
+    const form = document.getElementById('prr-form');
+    const formData = {
+      workspace_id: WORKSPACE_ID,
+      name: form.name.value,
+      email: form.email.value,
+      summary: form.summary.value,
+      details: form.details.value || null
+    };
+    
+    // Handle file upload if present
+    // For V1, we'll skip actual file upload and just show the flow
+    const fileInput = document.getElementById('attachment');
+    if (fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      if (file.size > 8 * 1024 * 1024) {
+        throw new Error('File size exceeds 8MB limit');
+      }
+      // In production, implement multipart/form-data upload
+      formData.attachments = [{
+        filename: file.name,
+        size: file.size,
+        // path would be set by server
+      }];
+    }
+    
+    const response = await fetch('/public/prr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Failed to submit request');
+    }
+    
+    // Success!
+    submittedToken = data.data.public_token;
+    document.getElementById('token-display').textContent = submittedToken;
+    document.getElementById('status-link').href = `/prr/status?token=${submittedToken}`;
+    
+    // Show success, hide form
+    document.getElementById('success-message').classList.add('show');
+    document.getElementById('prr-form').style.display = 'none';
+    
+  } catch (error) {
+    errorMsg.textContent = error.message || 'An error occurred. Please try again.';
+    errorMsg.classList.add('show');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit Request';
+  }
+}
+
+function copyToken() {
+  navigator.clipboard.writeText(submittedToken).then(() => {
+    alert('Token copied to clipboard!');
+  }).catch(() => {
+    alert('Failed to copy. Please copy manually.');
+  });
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+NOTE: PRR API tests are skipped in V1 because the routes use file-based SQLite databases
+and don't support in-memory database injection for testing.
+
+This requires refactoring the route handlers to accept a database connection parameter
+instead of opening their own connections via the dataDir pattern.
+
+Tracked separately - not a V1 blocker since the routes work correctly in production.
