@@ -247,8 +247,8 @@ describe("Admin HTML page — via full createApp", () => {
     expect(res.text).toContain("PuddleJumper");
     expect(res.text).toContain("Approval Queue");
     expect(res.text).toContain("Dashboard");
-    expect(res.text).toContain("/api/admin/stats");
-    expect(res.text).toContain("/api/approvals");
+    expect(res.text).toContain("/scripts/pj-admin.js");
+    expect(res.text).toContain("/styles/pj-admin.css");
   });
 
   it("admin stats endpoint is accessible via full app", async () => {
