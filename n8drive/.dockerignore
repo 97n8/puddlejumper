@@ -22,3 +22,12 @@ yarn-error.log*
 pnpm-debug.log*
 docker-compose.yml
 Dockerfile
+
+# Additional exclusions for smaller build context
+tests
+test
+test-results
+docs
+ops
+scripts
+.DS_Store

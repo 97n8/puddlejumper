@@ -7,6 +7,8 @@ const ROOT = process.cwd();
 const PJ_ROOT = path.join(ROOT, "apps", "puddlejumper");
 const masterHtmlPath = path.join(PJ_ROOT, "public", "puddlejumper-master-environment-control.html");
 const serverPath = path.join(PJ_ROOT, "src", "api", "server.ts");
+const governancePath = path.join(PJ_ROOT, "src", "api", "routes", "governance.ts");
+const configPath = path.join(PJ_ROOT, "src", "api", "routes", "config.ts");
 
 function readFile(filePath) {
   try {
@@ -39,6 +41,8 @@ function failWith(errors) {
 const errors = [];
 const masterHtml = readFile(masterHtmlPath);
 const serverSource = readFile(serverPath);
+const governanceSource = readFile(governancePath);
+const configSource = readFile(configPath);
 
 const innerHtmlMatches = findLineMatches(masterHtml, /\binnerHTML\b/);
 if (innerHtmlMatches.length > 0) {
@@ -101,12 +105,23 @@ if (!cspMatch || typeof cspMatch[1] !== "string") {
   }
 }
 
-if (!/app\.get\(\s*["']\/api\/pj\/actions["']/.test(serverSource)) {
-  errors.push(`${path.relative(ROOT, serverPath)} must expose GET /api/pj/actions`);
+// Check that /pj/actions route exists in config.ts
+if (!/router\.get\(\s*["']\/pj\/actions["']/.test(configSource)) {
+  errors.push(`${path.relative(ROOT, configPath)} must expose GET /pj/actions`);
 }
 
-if (!/app\.post\(\s*["']\/api\/pj\/execute["']/.test(serverSource)) {
-  errors.push(`${path.relative(ROOT, serverPath)} must expose POST /api/pj/execute`);
+// Check that /pj/execute route exists in governance.ts
+if (!/router\.post\(\s*["']\/pj\/execute["']/.test(governanceSource)) {
+  errors.push(`${path.relative(ROOT, governancePath)} must expose POST /pj/execute`);
+}
+
+// Verify server.ts mounts these routes via createGovernanceRoutes and createConfigRoutes
+if (!/createGovernanceRoutes/.test(serverSource)) {
+  errors.push(`${path.relative(ROOT, serverPath)} must import and use createGovernanceRoutes`);
+}
+
+if (!/createConfigRoutes/.test(serverSource)) {
+  errors.push(`${path.relative(ROOT, serverPath)} must import and use createConfigRoutes`);
 }
 
 if (errors.length > 0) {

@@ -15,8 +15,9 @@ import {
   PRRFilters,
 } from "../../engine/prrStore.js";
 
-export function createAdminPRRRoutes(): express.Router {
+export function createAdminPRRRoutes(opts?: { dataDir?: string }): express.Router {
   const router = express.Router();
+  const dataDir = opts?.dataDir ?? process.env.DATA_DIR ?? "./data";
   
   // GET /api/prr - List PRRs for workspace
   router.get("/api/prr", requireAuthenticated(), (req, res) => {
@@ -33,8 +34,6 @@ export function createAdminPRRRoutes(): express.Router {
       res.status(403).json({ success: false, correlationId, error: "Access denied" });
       return;
     }
-    
-    const dataDir = process.env.DATA_DIR || "./data";
     
     // Parse filters from query
     const filters: PRRFilters = {
@@ -76,7 +75,6 @@ export function createAdminPRRRoutes(): express.Router {
       return;
     }
     
-    const dataDir = process.env.DATA_DIR || "./data";
     const { id } = req.params;
     
     try {
@@ -129,7 +127,6 @@ export function createAdminPRRRoutes(): express.Router {
       return;
     }
     
-    const dataDir = process.env.DATA_DIR || "./data";
     const { id } = req.params;
     const { body } = req.body;
     
@@ -179,7 +176,6 @@ export function createAdminPRRRoutes(): express.Router {
       return;
     }
     
-    const dataDir = process.env.DATA_DIR || "./data";
     const { id } = req.params;
     const { status, assigned_to } = req.body;
     
@@ -224,7 +220,6 @@ export function createAdminPRRRoutes(): express.Router {
       return;
     }
     
-    const dataDir = process.env.DATA_DIR || "./data";
     const { id } = req.params;
     
     try {
