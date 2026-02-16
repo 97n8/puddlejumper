@@ -15,6 +15,7 @@
     <span id="workspace-name" class="subtitle" style="color:var(--green);display:none;"></span>
   </div>
   <div class="header-right">
+    <span id="auto-refresh-indicator" style="font-size:11px;color:var(--text-dim);display:none;">⟳ Auto-refresh</span>
     <a class="guide-link" href="/pj/guide">Quick Start</a>
     <button class="refresh-btn" onclick="refresh()" id="refresh-btn">⟳ Refresh</button>
   </div>
@@ -61,6 +62,7 @@
   </div>
 
   <div id="approvals-table-wrap">
+    <div id="approvals-loading" class="empty-state" style="display:none;">Loading approvals…</div>
     <table>
       <thead>
         <tr>
@@ -74,7 +76,7 @@
       </thead>
       <tbody id="approvals-body"></tbody>
     </table>
-    <div id="empty-state" class="empty-state" style="display:none;">No approvals found.</div>
+    <div id="empty-state" class="empty-state" style="display:none;">No approvals match the selected filter.</div>
   </div>
 
   <div class="pagination">
@@ -90,15 +92,45 @@
 <div class="main" id="tab-chains" style="display:none;">
   <div class="table-header">
     <h2>Chain Templates</h2>
-    <div style="font-size:13px;color:var(--text-dim)">Define multi-step approval routing with sequential and parallel steps</div>
+    <button class="btn btn-primary" onclick="toggleCreateTemplateForm()">+ Create Template</button>
   </div>
+  <div style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Define multi-step approval routing with sequential and parallel steps</div>
+
+  <!-- Create / Edit Template Form (hidden by default) -->
+  <div id="template-form-wrap" style="display:none;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+    <h3 style="font-size:15px;margin-bottom:16px;" id="template-form-title">Create Template</h3>
+    <input type="hidden" id="template-edit-id" value="">
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Name</label>
+      <input type="text" id="template-name" placeholder="e.g. Two-Step Legal Review" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Description (optional)</label>
+      <input type="text" id="template-description" placeholder="Brief description" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:8px;font-size:13px;color:var(--text-dim);">Steps</label>
+      <div id="template-steps-list"></div>
+      <button class="btn btn-secondary" onclick="addTemplateStep()" style="margin-top:8px;">+ Add Step</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-primary" onclick="submitTemplate()">Save Template</button>
+      <button class="btn btn-secondary" onclick="cancelTemplateForm()">Cancel</button>
+    </div>
+  </div>
+
+  <div id="templates-loading" class="empty-state" style="display:none;">Loading templates…</div>
   <div id="templates-grid" class="template-grid"></div>
-  <div id="templates-empty" class="empty-state" style="display:none;">No chain templates configured.</div>
+  <div id="templates-empty" class="empty-state" style="display:none;">No chain templates yet — create one above to define multi-step approval routing.</div>
 </div>
 
 <!-- Dashboard Tab -->
 <div class="main" id="tab-dashboard" style="display:none;">
-  <h2 style="font-size:16px;font-weight:600;margin-bottom:16px;">Operational Dashboard</h2>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <h2 style="font-size:16px;font-weight:600;">Operational Dashboard</h2>
+    <span id="dashboard-last-refreshed" style="font-size:11px;color:var(--text-dim);"></span>
+  </div>
+  <div id="dashboard-loading" class="empty-state" style="display:none;">Loading dashboard…</div>
 
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card"><div class="label">Pending Approvals</div><div class="value pending" id="s-pending">—</div></div>
@@ -133,7 +165,7 @@
     </thead>
     <tbody id="dispatch-body"></tbody>
   </table>
-  <div id="dispatch-empty" class="empty-state" style="display:none;">No recent dispatches.</div>
+  <div id="dispatch-empty" class="empty-state" style="display:none;">No recent dispatches yet.</div>
 </div>
 
 <!-- Members Tab -->
@@ -156,7 +188,27 @@
 
   <div class="table-header">
     <h2>Workspace Members</h2>
-    <button class="btn btn-primary" onclick="showInviteModal()">✉️ Invite Member</button>
+    <button class="btn btn-primary" onclick="toggleInviteForm()">+ Invite Member</button>
+  </div>
+
+  <!-- Invite Member Form (hidden by default) -->
+  <div id="invite-form-wrap" style="display:none;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+    <h3 style="font-size:15px;margin-bottom:16px;">Invite Member</h3>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Email</label>
+      <input type="email" id="invite-form-email" placeholder="user@example.com" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Role</label>
+      <select id="invite-form-role" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+        <option value="admin">Admin</option>
+        <option value="viewer">Viewer</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-primary" onclick="submitInviteForm()">Send Invitation</button>
+      <button class="btn btn-secondary" onclick="cancelInviteForm()">Cancel</button>
+    </div>
   </div>
 
   <div id="members-table-wrap">
@@ -172,7 +224,7 @@
       </thead>
       <tbody id="members-body"></tbody>
     </table>
-    <div id="members-empty" class="empty-state" style="display:none;">No members found.</div>
+    <div id="members-empty" class="empty-state" style="display:none;">No workspace members found. Use the Invite Member button to add team members.</div>
   </div>
 
   <div class="table-header" style="margin-top:40px;">
@@ -192,7 +244,7 @@
       </thead>
       <tbody id="invitations-body"></tbody>
     </table>
-    <div id="invitations-empty" class="empty-state" style="display:none;">No pending invitations.</div>
+    <div id="invitations-empty" class="empty-state" style="display:none;">No pending invitations. Send an invite using the button above.</div>
   </div>
 </div>
 
@@ -200,18 +252,43 @@
 <div class="main" id="tab-prr" style="display:none;">
   <div class="table-header">
     <h2>Public Records Requests</h2>
-    <div class="filter-group">
-      <select id="prr-status-filter" onchange="loadPRRQueue()">
-        <option value="">All Status</option>
-        <option value="submitted">Submitted</option>
-        <option value="acknowledged">Acknowledged</option>
-        <option value="in_progress">In Progress</option>
-        <option value="closed">Closed</option>
-      </select>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div class="filter-group">
+        <select id="prr-status-filter" onchange="loadPRRQueue()">
+          <option value="">All Status</option>
+          <option value="submitted">Submitted</option>
+          <option value="acknowledged">Acknowledged</option>
+          <option value="in_progress">In Progress</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="togglePRRForm()">+ New Request</button>
+    </div>
+  </div>
+
+  <!-- New PRR Form (hidden by default) -->
+  <div id="prr-form-wrap" style="display:none;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+    <h3 style="font-size:15px;margin-bottom:16px;">New Public Records Request</h3>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Requester Name</label>
+      <input type="text" id="prr-form-name" placeholder="e.g. Jane Sullivan" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Description</label>
+      <textarea id="prr-form-description" placeholder="Describe the records being requested…" rows="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);resize:vertical;"></textarea>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Due Date</label>
+      <input type="date" id="prr-form-due" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-primary" onclick="submitPRRForm()">Create Request</button>
+      <button class="btn btn-secondary" onclick="cancelPRRForm()">Cancel</button>
     </div>
   </div>
 
   <div id="prr-queue-wrap">
+    <div id="prr-loading" class="empty-state" style="display:none;">Loading PRRs…</div>
     <table>
       <thead>
         <tr>
@@ -226,7 +303,7 @@
       </thead>
       <tbody id="prr-queue-body"></tbody>
     </table>
-    <div id="prr-queue-empty" class="empty-state" style="display:none;">No PRRs found.</div>
+    <div id="prr-queue-empty" class="empty-state" style="display:none;">No public records requests match the selected filter.</div>
   </div>
 </div>
 
@@ -387,11 +464,20 @@ function hideAuthGate() {
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────
+const TAB_HASH_MAP = { queue: "approvals", chains: "templates", dashboard: "dashboard", prr: "prr", members: "members" };
+const HASH_TAB_MAP = Object.fromEntries(Object.entries(TAB_HASH_MAP).map(([k, v]) => [v, k]));
+
 function switchTab(tab) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
   document.querySelectorAll(".main").forEach(el => el.style.display = "none");
   const el = document.getElementById("tab-" + tab);
   if (el) el.style.display = "block";
+  // Update URL hash
+  const hash = TAB_HASH_MAP[tab] || tab;
+  if (window.location.hash !== "#" + hash) {
+    history.replaceState(null, "", "#" + hash);
+  }
+  if (tab === "queue") loadApprovals();
   if (tab === "dashboard") loadStats();
   if (tab === "chains") loadTemplates();
   if (tab === "prr") loadPRRQueue();
@@ -403,14 +489,18 @@ async function loadApprovals() {
   const status = document.getElementById("status-filter").value;
   const qs = status ? `?status=${status}&limit=${PAGE_SIZE}&offset=${currentPage * PAGE_SIZE}` :
                        `?limit=${PAGE_SIZE}&offset=${currentPage * PAGE_SIZE}`;
+  const loading = document.getElementById("approvals-loading");
+  if (loading) loading.style.display = "block";
   try {
     const json = await api("/api/approvals" + qs);
+    if (loading) loading.style.display = "none";
     if (!json.success) { showToast(json.error || "Failed to load", "error"); return; }
     hideAuthGate();
     approvals = json.data.approvals;
     renderApprovals();
     renderPagination(json.data.pendingCount, json.data.total);
   } catch (e) {
+    if (loading) loading.style.display = "none";
     if (e.message !== "Unauthorized") showToast("Failed to load approvals", "error");
   }
 }
@@ -627,12 +717,20 @@ function closeDetail(e) {
 
 // ── Chain Templates ───────────────────────────────────────────────────────
 async function loadTemplates() {
+  const loading = document.getElementById("templates-loading");
+  const grid = document.getElementById("templates-grid");
+  const empty = document.getElementById("templates-empty");
+  if (loading) loading.style.display = "block";
+  if (grid) grid.innerHTML = "";
+  if (empty) empty.style.display = "none";
   try {
     const json = await api("/api/chain-templates");
+    if (loading) loading.style.display = "none";
     if (!json.success) { showToast(json.error || "Failed to load templates", "error"); return; }
     hideAuthGate();
     renderTemplates(json.data);
   } catch (e) {
+    if (loading) loading.style.display = "none";
     if (e.message !== "Unauthorized") showToast("Failed to load templates", "error");
   }
 }
@@ -683,6 +781,7 @@ function renderTemplates(templates) {
       <div class="template-steps-viz">${vizHtml}</div>
       <div class="template-actions">
         <button class="btn btn-secondary" onclick="showTemplateDetail('${esc(t.id)}')">View JSON</button>
+        ${!isDefault ? `<button class="btn btn-secondary" onclick="editTemplate('${esc(t.id)}')">Edit</button>` : ""}
         ${!isDefault ? `<button class="btn btn-danger" onclick="deleteTemplate('${esc(t.id)}')">Delete</button>` : ""}
       </div>
     </div>`;
@@ -727,10 +826,128 @@ async function deleteTemplate(id) {
   }
 }
 
+// ── Create / Edit Template Form ──────────────────────────────────────────
+let templateStepCounter = 0;
+
+function toggleCreateTemplateForm() {
+  const wrap = document.getElementById("template-form-wrap");
+  if (wrap.style.display === "none") {
+    document.getElementById("template-form-title").textContent = "Create Template";
+    document.getElementById("template-edit-id").value = "";
+    document.getElementById("template-name").value = "";
+    document.getElementById("template-description").value = "";
+    templateStepCounter = 0;
+    document.getElementById("template-steps-list").innerHTML = "";
+    addTemplateStep(); // Start with one step
+    wrap.style.display = "block";
+  } else {
+    wrap.style.display = "none";
+  }
+}
+
+function cancelTemplateForm() {
+  document.getElementById("template-form-wrap").style.display = "none";
+}
+
+function addTemplateStep() {
+  const list = document.getElementById("template-steps-list");
+  const idx = templateStepCounter++;
+  const stepNum = list.children.length + 1;
+  const div = document.createElement("div");
+  div.id = `step-row-${idx}`;
+  div.style.cssText = "display:flex;gap:8px;align-items:center;margin-bottom:8px;";
+  div.innerHTML = `
+    <span style="font-size:12px;color:var(--text-dim);min-width:40px;">Step ${stepNum}</span>
+    <input type="text" placeholder="Role (e.g. admin)" class="step-role" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    <input type="text" placeholder="Label (e.g. Legal Review)" class="step-label" style="flex:2;padding:6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    <button class="btn btn-danger btn-sm" onclick="removeTemplateStep('step-row-${idx}')">✕</button>
+  `;
+  list.appendChild(div);
+}
+
+function removeTemplateStep(rowId) {
+  const el = document.getElementById(rowId);
+  if (el) el.remove();
+  // Re-number visible steps (1-based for display)
+  const list = document.getElementById("template-steps-list");
+  Array.from(list.children).forEach((row, i) => {
+    const label = row.querySelector("span");
+    if (label) label.textContent = `Step ${i + 1}`;
+  });
+}
+
+async function submitTemplate() {
+  const editId = document.getElementById("template-edit-id").value;
+  const name = document.getElementById("template-name").value.trim();
+  const description = document.getElementById("template-description").value.trim();
+  if (!name) { showToast("Template name is required", "error"); return; }
+
+  const stepRows = document.getElementById("template-steps-list").children;
+  if (stepRows.length === 0) { showToast("At least one step is required", "error"); return; }
+
+  const steps = [];
+  for (let i = 0; i < stepRows.length; i++) {
+    const role = stepRows[i].querySelector(".step-role").value.trim();
+    const label = stepRows[i].querySelector(".step-label").value.trim();
+    if (!role || !label) { showToast(`Step ${i + 1}: role and label are required`, "error"); return; }
+    steps.push({ order: i, requiredRole: role, label });
+  }
+
+  try {
+    let json;
+    if (editId) {
+      json = await api(`/api/chain-templates/${encodeURIComponent(editId)}`, {
+        method: "PUT",
+        body: JSON.stringify({ name, description, steps }),
+      });
+    } else {
+      json = await api("/api/chain-templates", {
+        method: "POST",
+        body: JSON.stringify({ name, description, steps }),
+      });
+    }
+    if (!json.success) { showToast(json.error || "Save failed", "error"); return; }
+    showToast(editId ? "Template updated" : "Template created", "success");
+    cancelTemplateForm();
+    loadTemplates();
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Save failed", "error");
+  }
+}
+
+async function editTemplate(id) {
+  try {
+    const json = await api(`/api/chain-templates/${encodeURIComponent(id)}`);
+    if (!json.success) { showToast("Failed to load template", "error"); return; }
+    const t = json.data;
+    const wrap = document.getElementById("template-form-wrap");
+    document.getElementById("template-form-title").textContent = "Edit Template";
+    document.getElementById("template-edit-id").value = t.id;
+    document.getElementById("template-name").value = t.name;
+    document.getElementById("template-description").value = t.description || "";
+    templateStepCounter = 0;
+    document.getElementById("template-steps-list").innerHTML = "";
+    (t.steps || []).forEach(s => {
+      addTemplateStep();
+      const rows = document.getElementById("template-steps-list").children;
+      const last = rows[rows.length - 1];
+      last.querySelector(".step-role").value = s.requiredRole;
+      last.querySelector(".step-label").value = s.label;
+    });
+    wrap.style.display = "block";
+    wrap.scrollIntoView({ behavior: "smooth" });
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to load template", "error");
+  }
+}
+
 // ── Dashboard ─────────────────────────────────────────────────────────────
 async function loadStats() {
+  const loading = document.getElementById("dashboard-loading");
+  if (loading) loading.style.display = "block";
   try {
     const json = await api("/api/admin/stats");
+    if (loading) loading.style.display = "none";
     if (!json.success) return;
     const d = json.data;
 
@@ -752,7 +969,12 @@ async function loadStats() {
     document.getElementById("s-d-failure").textContent = d.dispatchFailure;
     document.getElementById("s-d-latency").textContent = d.avgDispatchLatencySec > 0 ? fmtDuration(d.avgDispatchLatencySec) : "—";
     document.getElementById("s-chain-steps").textContent = d.activeChainSteps;
+
+    // Update last-refreshed timestamp
+    const ts = document.getElementById("dashboard-last-refreshed");
+    if (ts) ts.textContent = "Last updated: " + new Date().toLocaleTimeString();
   } catch (e) {
+    if (loading) loading.style.display = "none";
     if (e.message !== "Unauthorized") showToast("Failed to load stats", "error");
   }
 
@@ -818,6 +1040,7 @@ async function refresh() {
     if (active === "queue") await loadApprovals();
     if (active === "dashboard") await loadStats();
     if (active === "chains") await loadTemplates();
+    if (active === "prr") await loadPRRQueue();
     if (active === "members") { await loadMembers(); await loadUsage(); }
   } finally {
     btn.disabled = false;
@@ -926,6 +1149,42 @@ async function sendInvite() {
     
     showToast(`Invitation sent to ${email}`, "success");
     closeInviteModal();
+    loadMembers();
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to send invitation", "error");
+  }
+}
+
+// ── Inline Invite Form ───────────────────────────────────────────────────
+function toggleInviteForm() {
+  const wrap = document.getElementById("invite-form-wrap");
+  if (wrap.style.display === "none") {
+    document.getElementById("invite-form-email").value = "";
+    document.getElementById("invite-form-role").value = "admin";
+    wrap.style.display = "block";
+  } else {
+    wrap.style.display = "none";
+  }
+}
+
+function cancelInviteForm() {
+  document.getElementById("invite-form-wrap").style.display = "none";
+}
+
+async function submitInviteForm() {
+  const email = document.getElementById("invite-form-email").value.trim();
+  const role = document.getElementById("invite-form-role").value;
+  if (!email) { showToast("Email is required", "error"); return; }
+  if (!email.includes("@")) { showToast("Please enter a valid email address", "error"); return; }
+
+  try {
+    const json = await api("/api/workspace/invite", {
+      method: "POST",
+      body: JSON.stringify({ email, role }),
+    });
+    if (!json.success) { showToast(json.error || "Failed to send invitation", "error"); return; }
+    showToast("Invitation sent", "success");
+    cancelInviteForm();
     loadMembers();
   } catch (e) {
     if (e.message !== "Unauthorized") showToast("Failed to send invitation", "error");
@@ -1106,17 +1365,60 @@ async function submitPlanChange() {
 }
 
 // ── PRR Management ────────────────────────────────────────────────────────
+function togglePRRForm() {
+  const wrap = document.getElementById("prr-form-wrap");
+  if (wrap.style.display === "none") {
+    document.getElementById("prr-form-name").value = "";
+    document.getElementById("prr-form-description").value = "";
+    document.getElementById("prr-form-due").value = "";
+    wrap.style.display = "block";
+  } else {
+    wrap.style.display = "none";
+  }
+}
+
+function cancelPRRForm() {
+  document.getElementById("prr-form-wrap").style.display = "none";
+}
+
+async function submitPRRForm() {
+  const requesterName = document.getElementById("prr-form-name").value.trim();
+  const description = document.getElementById("prr-form-description").value.trim();
+  const dueDate = document.getElementById("prr-form-due").value;
+  if (!requesterName) { showToast("Requester name is required", "error"); return; }
+  if (!description) { showToast("Description is required", "error"); return; }
+
+  try {
+    const body = { requesterName, description };
+    if (dueDate) body.dueDate = dueDate;
+    const json = await api("/api/prr", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    if (!json.success) { showToast(json.error || "Failed to create request", "error"); return; }
+    showToast("Request created", "success");
+    cancelPRRForm();
+    loadPRRQueue();
+  } catch (e) {
+    if (e.message !== "Unauthorized") showToast("Failed to create request", "error");
+  }
+}
+
 async function loadPRRQueue() {
   const statusFilter = document.getElementById('prr-status-filter')?.value || '';
   const params = new URLSearchParams();
   if (statusFilter) params.append('status', statusFilter);
+  const loading = document.getElementById("prr-loading");
+  if (loading) loading.style.display = "block";
   
   try {
     const json = await api(`/api/prr?${params}`);
+    if (loading) loading.style.display = "none";
     if (json.success) {
       renderPRRQueue(json.data.requests);
     }
   } catch (e) {
+    if (loading) loading.style.display = "none";
     if (e.message !== "Unauthorized") showToast("Failed to load PRRs", "error");
   }
 }
@@ -1269,6 +1571,47 @@ function closePRRDetail(event) {
   document.getElementById('prr-detail-overlay').style.display = 'none';
 }
 
+// ── Auto-refresh ──────────────────────────────────────────────────────────
+let autoRefreshApprovalTimer = null;
+let autoRefreshDashboardTimer = null;
+let autoRefreshPRRTimer = null;
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  const indicator = document.getElementById("auto-refresh-indicator");
+  if (indicator) indicator.style.display = "inline";
+
+  autoRefreshApprovalTimer = setInterval(() => {
+    const active = document.querySelector(".tab.active");
+    if (active && active.dataset.tab === "queue") loadApprovals();
+  }, 30000);
+
+  autoRefreshDashboardTimer = setInterval(() => {
+    const active = document.querySelector(".tab.active");
+    if (active && active.dataset.tab === "dashboard") loadStats();
+  }, 60000);
+
+  autoRefreshPRRTimer = setInterval(() => {
+    const active = document.querySelector(".tab.active");
+    if (active && active.dataset.tab === "prr") loadPRRQueue();
+  }, 30000);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshApprovalTimer) { clearInterval(autoRefreshApprovalTimer); autoRefreshApprovalTimer = null; }
+  if (autoRefreshDashboardTimer) { clearInterval(autoRefreshDashboardTimer); autoRefreshDashboardTimer = null; }
+  if (autoRefreshPRRTimer) { clearInterval(autoRefreshPRRTimer); autoRefreshPRRTimer = null; }
+  const indicator = document.getElementById("auto-refresh-indicator");
+  if (indicator) indicator.style.display = "none";
+}
+
+// ── Hash navigation ──────────────────────────────────────────────────────
+window.addEventListener("hashchange", () => {
+  const hash = window.location.hash.replace("#", "");
+  const tab = HASH_TAB_MAP[hash];
+  if (tab) switchTab(tab);
+});
+
 // ── Init ──────────────────────────────────────────────────────────────────
 // Fetch user role and workspace before loading data
 (async function init() {
@@ -1284,7 +1627,18 @@ function closePRRDetail(event) {
       }
     }
   } catch { /* ignore */ }
-  loadApprovals();
+
+  // Restore tab from URL hash
+  const hash = window.location.hash.replace("#", "");
+  const tab = HASH_TAB_MAP[hash];
+  if (tab) {
+    switchTab(tab);
+  } else {
+    loadApprovals();
+  }
+
+  // Start auto-refresh timers
+  startAutoRefresh();
 })();
 </script>
 </body>

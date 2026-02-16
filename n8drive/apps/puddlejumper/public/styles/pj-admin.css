@@ -283,6 +283,12 @@ tbody tr:hover { background: var(--surface-hover); }
   .header-right { gap: 8px; }
 }
 /* ── Viewer role: hide mutations ───────────────────────────────────── */
+body.role-viewer #template-form-wrap,
+body.role-viewer #invite-form-wrap,
+body.role-viewer #prr-form-wrap,
+body.role-viewer [onclick*="toggleCreateTemplateForm"],
+body.role-viewer [onclick*="toggleInviteForm"],
+body.role-viewer [onclick*="togglePRRForm"] { display: none !important; }
 body.role-viewer .btn-approve,
 body.role-viewer .btn-reject,
 body.role-viewer .btn-dispatch,
