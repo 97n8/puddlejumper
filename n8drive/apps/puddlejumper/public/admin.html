@@ -9,13 +9,13 @@
 <body>
 
 <div class="header">
-  <div style="display:flex;align-items:baseline;gap:10px;">
+  <div class="header-left">
     <h1>PuddleJumper Admin</h1>
     <span class="subtitle">Control Plane</span>
-    <span id="workspace-name" class="subtitle" style="color:var(--green);display:none;"></span>
+    <span id="workspace-name" class="subtitle workspace-name hidden"></span>
   </div>
   <div class="header-right">
-    <span id="auto-refresh-indicator" style="font-size:11px;color:var(--text-dim);display:none;">⟳ Auto-refresh</span>
+    <span id="auto-refresh-indicator" class="auto-refresh-text hidden">⟳ Auto-refresh</span>
     <a class="guide-link" href="/pj/guide">Quick Start</a>
     <button class="refresh-btn" onclick="refresh()" id="refresh-btn">⟳ Refresh</button>
   </div>
@@ -30,10 +30,10 @@
 </div>
 
 <!-- Auth gate (shown when user isn't authenticated) -->
-<div id="auth-gate" style="display:none;">
+<div id="auth-gate" class="hidden">
   <h2>Welcome to PuddleJumper</h2>
   <p>Sign in to view governed operations and approval workflows.</p>
-  <a href="/api/auth/github/login" style="display:inline-flex;align-items:center;gap:8px;background:#24292e;color:#fff;padding:10px 20px;border-radius:var(--radius);font-size:14px;font-weight:500;text-decoration:none;margin-top:8px">
+  <a href="/api/auth/github/login" class="github-login-btn">
     <svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
     Sign in with GitHub
   </a>
@@ -62,7 +62,7 @@
   </div>
 
   <div id="approvals-table-wrap">
-    <div id="approvals-loading" class="empty-state" style="display:none;">Loading approvals…</div>
+    <div id="approvals-loading" class="empty-state hidden">Loading approvals…</div>
     <table>
       <thead>
         <tr>
@@ -76,12 +76,12 @@
       </thead>
       <tbody id="approvals-body"></tbody>
     </table>
-    <div id="empty-state" class="empty-state" style="display:none;">No approvals match the selected filter.</div>
+    <div id="empty-state" class="empty-state hidden">No approvals match the selected filter.</div>
   </div>
 
   <div class="pagination">
     <span id="page-info"></span>
-    <div style="display:flex;gap:8px;">
+    <div class="pagination-buttons">
       <button id="prev-btn" onclick="prevPage()" disabled>← Previous</button>
       <button id="next-btn" onclick="nextPage()">Next →</button>
     </div>
@@ -89,48 +89,48 @@
 </div>
 
 <!-- Chain Templates Tab -->
-<div class="main" id="tab-chains" style="display:none;">
+<div class="main hidden" id="tab-chains">
   <div class="table-header">
     <h2>Chain Templates</h2>
     <button class="btn btn-primary" onclick="toggleCreateTemplateForm()">+ Create Template</button>
   </div>
-  <div style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Define multi-step approval routing with sequential and parallel steps</div>
+  <div class="section-desc">Define multi-step approval routing with sequential and parallel steps</div>
 
   <!-- Create / Edit Template Form (hidden by default) -->
-  <div id="template-form-wrap" style="display:none;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-    <h3 style="font-size:15px;margin-bottom:16px;" id="template-form-title">Create Template</h3>
+  <div id="template-form-wrap" class="form-panel hidden">
+    <h3 class="form-panel-title" id="template-form-title">Create Template</h3>
     <input type="hidden" id="template-edit-id" value="">
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Name</label>
-      <input type="text" id="template-name" placeholder="e.g. Two-Step Legal Review" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input type="text" id="template-name" placeholder="e.g. Two-Step Legal Review" class="form-input">
     </div>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Description (optional)</label>
-      <input type="text" id="template-description" placeholder="Brief description" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    <div class="form-group">
+      <label class="form-label">Description (optional)</label>
+      <input type="text" id="template-description" placeholder="Brief description" class="form-input">
     </div>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:8px;font-size:13px;color:var(--text-dim);">Steps</label>
+    <div class="form-group">
+      <label class="form-label-gap">Steps</label>
       <div id="template-steps-list"></div>
-      <button class="btn btn-secondary" onclick="addTemplateStep()" style="margin-top:8px;">+ Add Step</button>
+      <button class="btn btn-secondary btn-mt" onclick="addTemplateStep()">+ Add Step</button>
     </div>
-    <div style="display:flex;gap:8px;margin-top:16px;">
+    <div class="form-actions">
       <button class="btn btn-primary" onclick="submitTemplate()">Save Template</button>
       <button class="btn btn-secondary" onclick="cancelTemplateForm()">Cancel</button>
     </div>
   </div>
 
-  <div id="templates-loading" class="empty-state" style="display:none;">Loading templates…</div>
+  <div id="templates-loading" class="empty-state hidden">Loading templates…</div>
   <div id="templates-grid" class="template-grid"></div>
-  <div id="templates-empty" class="empty-state" style="display:none;">No chain templates yet — create one above to define multi-step approval routing.</div>
+  <div id="templates-empty" class="empty-state hidden">No chain templates yet — create one above to define multi-step approval routing.</div>
 </div>
 
 <!-- Dashboard Tab -->
-<div class="main" id="tab-dashboard" style="display:none;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-    <h2 style="font-size:16px;font-weight:600;">Operational Dashboard</h2>
-    <span id="dashboard-last-refreshed" style="font-size:11px;color:var(--text-dim);"></span>
+<div class="main hidden" id="tab-dashboard">
+  <div class="dashboard-section-header">
+    <h2 class="dashboard-section-title">Operational Dashboard</h2>
+    <span id="dashboard-last-refreshed" class="dashboard-timestamp"></span>
   </div>
-  <div id="dashboard-loading" class="empty-state" style="display:none;">Loading dashboard…</div>
+  <div id="dashboard-loading" class="empty-state hidden">Loading dashboard…</div>
 
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card"><div class="label">Pending Approvals</div><div class="value pending" id="s-pending">—</div></div>
@@ -153,7 +153,7 @@
     <div class="stat-card"><div class="label">Active Chain Steps</div><div class="value pending" id="s-chain-steps">—</div></div>
   </div>
 
-  <h2 style="font-size:16px;font-weight:600;margin:24px 0 12px;">Recent Dispatches</h2>
+  <h2 class="dashboard-subtitle">Recent Dispatches</h2>
   <table>
     <thead>
       <tr>
@@ -165,11 +165,11 @@
     </thead>
     <tbody id="dispatch-body"></tbody>
   </table>
-  <div id="dispatch-empty" class="empty-state" style="display:none;">No recent dispatches yet.</div>
+  <div id="dispatch-empty" class="empty-state hidden">No recent dispatches yet.</div>
 </div>
 
 <!-- Members Tab -->
-<div class="main" id="tab-members" style="display:none;">
+<div class="main hidden" id="tab-members">
   
   <!-- Usage & Plan Card -->
   <div class="usage-card" id="usage-card">
@@ -192,20 +192,20 @@
   </div>
 
   <!-- Invite Member Form (hidden by default) -->
-  <div id="invite-form-wrap" style="display:none;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-    <h3 style="font-size:15px;margin-bottom:16px;">Invite Member</h3>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Email</label>
-      <input type="email" id="invite-form-email" placeholder="user@example.com" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+  <div id="invite-form-wrap" class="form-panel hidden">
+    <h3 class="form-panel-title">Invite Member</h3>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input type="email" id="invite-form-email" placeholder="user@example.com" class="form-input">
     </div>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Role</label>
-      <select id="invite-form-role" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    <div class="form-group">
+      <label class="form-label">Role</label>
+      <select id="invite-form-role" class="form-input">
         <option value="admin">Admin</option>
         <option value="viewer">Viewer</option>
       </select>
     </div>
-    <div style="display:flex;gap:8px;margin-top:16px;">
+    <div class="form-actions">
       <button class="btn btn-primary" onclick="submitInviteForm()">Send Invitation</button>
       <button class="btn btn-secondary" onclick="cancelInviteForm()">Cancel</button>
     </div>
@@ -224,10 +224,10 @@
       </thead>
       <tbody id="members-body"></tbody>
     </table>
-    <div id="members-empty" class="empty-state" style="display:none;">No workspace members found. Use the Invite Member button to add team members.</div>
+    <div id="members-empty" class="empty-state hidden">No workspace members found. Use the Invite Member button to add team members.</div>
   </div>
 
-  <div class="table-header" style="margin-top:40px;">
+  <div class="table-header section-mt">
     <h2>Pending Invitations</h2>
   </div>
 
@@ -244,15 +244,15 @@
       </thead>
       <tbody id="invitations-body"></tbody>
     </table>
-    <div id="invitations-empty" class="empty-state" style="display:none;">No pending invitations. Send an invite using the button above.</div>
+    <div id="invitations-empty" class="empty-state hidden">No pending invitations. Send an invite using the button above.</div>
   </div>
 </div>
 
 <!-- PRR Tab -->
-<div class="main" id="tab-prr" style="display:none;">
+<div class="main hidden" id="tab-prr">
   <div class="table-header">
     <h2>Public Records Requests</h2>
-    <div style="display:flex;gap:8px;align-items:center;">
+    <div class="flex-row">
       <div class="filter-group">
         <select id="prr-status-filter" onchange="loadPRRQueue()">
           <option value="">All Status</option>
@@ -267,28 +267,28 @@
   </div>
 
   <!-- New PRR Form (hidden by default) -->
-  <div id="prr-form-wrap" style="display:none;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-    <h3 style="font-size:15px;margin-bottom:16px;">New Public Records Request</h3>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Requester Name</label>
-      <input type="text" id="prr-form-name" placeholder="e.g. Jane Sullivan" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+  <div id="prr-form-wrap" class="form-panel hidden">
+    <h3 class="form-panel-title">New Public Records Request</h3>
+    <div class="form-group">
+      <label class="form-label">Requester Name</label>
+      <input type="text" id="prr-form-name" placeholder="e.g. Jane Sullivan" class="form-input">
     </div>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Description</label>
-      <textarea id="prr-form-description" placeholder="Describe the records being requested…" rows="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);resize:vertical;"></textarea>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea id="prr-form-description" placeholder="Describe the records being requested…" rows="4" class="form-textarea"></textarea>
     </div>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Due Date</label>
-      <input type="date" id="prr-form-due" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    <div class="form-group">
+      <label class="form-label">Due Date</label>
+      <input type="date" id="prr-form-due" class="form-input">
     </div>
-    <div style="display:flex;gap:8px;margin-top:16px;">
+    <div class="form-actions">
       <button class="btn btn-primary" onclick="submitPRRForm()">Create Request</button>
       <button class="btn btn-secondary" onclick="cancelPRRForm()">Cancel</button>
     </div>
   </div>
 
   <div id="prr-queue-wrap">
-    <div id="prr-loading" class="empty-state" style="display:none;">Loading PRRs…</div>
+    <div id="prr-loading" class="empty-state hidden">Loading PRRs…</div>
     <table>
       <thead>
         <tr>
@@ -303,7 +303,7 @@
       </thead>
       <tbody id="prr-queue-body"></tbody>
     </table>
-    <div id="prr-queue-empty" class="empty-state" style="display:none;">No public records requests match the selected filter.</div>
+    <div id="prr-queue-empty" class="empty-state hidden">No public records requests match the selected filter.</div>
   </div>
 </div>
 
@@ -327,20 +327,20 @@
       <span>Invite Member</span>
       <button class="detail-close" onclick="closeInviteModal()">✕</button>
     </h3>
-    <div style="padding:20px;">
-      <div class="detail-field" style="margin-bottom:16px;">
-        <label style="display:block;margin-bottom:4px;font-weight:600;">Email</label>
-        <input type="email" id="invite-email" placeholder="user@example.com" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);">
+    <div class="modal-body">
+      <div class="detail-field modal-field">
+        <label class="modal-label">Email</label>
+        <input type="email" id="invite-email" placeholder="user@example.com" class="form-input">
       </div>
-      <div class="detail-field" style="margin-bottom:16px;">
-        <label style="display:block;margin-bottom:4px;font-weight:600;">Role</label>
-        <select id="invite-role" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);">
+      <div class="detail-field modal-field">
+        <label class="modal-label">Role</label>
+        <select id="invite-role" class="form-input">
           <option value="member">Member (can create/decide approvals)</option>
           <option value="admin">Admin (can also manage templates & invites)</option>
           <option value="viewer">Viewer (read-only access)</option>
         </select>
       </div>
-      <div style="display:flex;gap:8px;">
+      <div class="form-actions">
         <button class="btn btn-primary" onclick="sendInvite()">Send Invitation</button>
         <button class="btn btn-secondary" onclick="closeInviteModal()">Cancel</button>
       </div>
@@ -349,42 +349,42 @@
 </div>
 
 <!-- Upgrade Plan Modal -->
-<div class="detail-overlay" id="upgrade-modal" onclick="closeUpgradeModal(event)" style="display:none;">
+<div class="detail-overlay" id="upgrade-modal" onclick="closeUpgradeModal(event)">
   <div class="detail-panel" onclick="event.stopPropagation()">
     <h3>
       <span>Upgrade Workspace Plan</span>
       <button class="detail-close" onclick="closeUpgradeModal()">✕</button>
     </h3>
-    <div style="padding:20px;">
-      <div style="margin-bottom:20px;">
+    <div class="modal-body">
+      <div class="plan-current-info">
         <strong>Current Plan:</strong> <span id="current-plan-display" class="plan-badge">FREE</span>
       </div>
       
-      <div class="detail-field" style="margin-bottom:16px;">
-        <label style="display:block;margin-bottom:8px;font-weight:600;">Select New Plan</label>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:12px;border:2px solid var(--border);border-radius:var(--radius);background:var(--card-bg);">
+      <div class="detail-field modal-field">
+        <label class="modal-label-gap">Select New Plan</label>
+        <div class="plan-options">
+          <label class="plan-option">
             <input type="radio" name="plan-choice" value="free" checked>
             <div>
-              <div style="font-weight:600;">Free</div>
-              <div style="font-size:12px;color:var(--muted);">3 templates, 50 approvals/mo, 1 member</div>
+              <div class="plan-option-name">Free</div>
+              <div class="plan-option-desc">3 templates, 50 approvals/mo, 1 member</div>
             </div>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:12px;border:2px solid var(--green);border-radius:var(--radius);background:var(--card-bg);">
+          <label class="plan-option plan-option-pro">
             <input type="radio" name="plan-choice" value="pro">
             <div>
-              <div style="font-weight:600;color:var(--green);">Pro</div>
-              <div style="font-size:12px;color:var(--muted);">Unlimited templates, approvals, and members</div>
+              <div class="plan-option-name-pro">Pro</div>
+              <div class="plan-option-desc">Unlimited templates, approvals, and members</div>
             </div>
           </label>
         </div>
       </div>
       
-      <div style="background:var(--warning-bg,#3a2f1f);border:1px solid var(--warning,#f59e0b);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;">
+      <div class="upgrade-warning">
         ⚠️ Note: This is a manual admin operation. Billing is not yet implemented.
       </div>
       
-      <div style="display:flex;gap:8px;">
+      <div class="form-actions">
         <button class="btn btn-primary" onclick="submitPlanChange()">Confirm Upgrade</button>
         <button class="btn btn-secondary" onclick="closeUpgradeModal()">Cancel</button>
       </div>
@@ -443,15 +443,15 @@ async function api(path, opts = {}) {
 // ── Auth gate ─────────────────────────────────────────────────────────────
 function showAuthGate() {
   authenticated = false;
-  document.getElementById("auth-gate").style.display = "flex";
-  document.querySelectorAll(".main").forEach(el => el.style.display = "none");
-  document.querySelector(".tabs").style.display = "none";
+  document.getElementById("auth-gate").classList.remove("hidden");
+  document.querySelectorAll(".main").forEach(el => el.classList.add("hidden"));
+  document.querySelector(".tabs").classList.add("hidden");
 }
 
 function hideAuthGate() {
   authenticated = true;
-  document.getElementById("auth-gate").style.display = "none";
-  document.querySelector(".tabs").style.display = "flex";
+  document.getElementById("auth-gate").classList.add("hidden");
+  document.querySelector(".tabs").classList.remove("hidden");
   // Apply role class
   if (userRole && userRole !== "admin") {
     document.body.classList.add("role-viewer");
@@ -469,9 +469,9 @@ const HASH_TAB_MAP = Object.fromEntries(Object.entries(TAB_HASH_MAP).map(([k, v]
 
 function switchTab(tab) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
-  document.querySelectorAll(".main").forEach(el => el.style.display = "none");
+  document.querySelectorAll(".main").forEach(el => el.classList.add("hidden"));
   const el = document.getElementById("tab-" + tab);
-  if (el) el.style.display = "block";
+  if (el) el.classList.remove("hidden");
   // Update URL hash
   const hash = TAB_HASH_MAP[tab] || tab;
   if (window.location.hash !== "#" + hash) {
@@ -490,17 +490,17 @@ async function loadApprovals() {
   const qs = status ? `?status=${status}&limit=${PAGE_SIZE}&offset=${currentPage * PAGE_SIZE}` :
                        `?limit=${PAGE_SIZE}&offset=${currentPage * PAGE_SIZE}`;
   const loading = document.getElementById("approvals-loading");
-  if (loading) loading.style.display = "block";
+  if (loading) loading.classList.remove("hidden");
   try {
     const json = await api("/api/approvals" + qs);
-    if (loading) loading.style.display = "none";
+    if (loading) loading.classList.add("hidden");
     if (!json.success) { showToast(json.error || "Failed to load", "error"); return; }
     hideAuthGate();
     approvals = json.data.approvals;
     renderApprovals();
     renderPagination(json.data.pendingCount, json.data.total);
   } catch (e) {
-    if (loading) loading.style.display = "none";
+    if (loading) loading.classList.add("hidden");
     if (e.message !== "Unauthorized") showToast("Failed to load approvals", "error");
   }
 }
@@ -510,10 +510,10 @@ function renderApprovals() {
   const empty = document.getElementById("empty-state");
   if (approvals.length === 0) {
     tbody.innerHTML = "";
-    empty.style.display = "block";
+    empty.classList.remove("hidden");
     return;
   }
-  empty.style.display = "none";
+  empty.classList.add("hidden");
 
   // Sort client-side
   const sorted = [...approvals].sort((a, b) => {
@@ -533,14 +533,14 @@ function renderApprovals() {
     if (chain) {
       // Show parallel-aware progress: multiple active steps shown
       const activeCount = chain.activeSteps || 0;
-      const parallelHint = activeCount > 1 ? ` <span style="color:var(--purple);font-size:10px" title="${activeCount} steps active in parallel">⊕${activeCount}</span>` : "";
+      const parallelHint = activeCount > 1 ? ` <span class="parallel-hint" title="${activeCount} steps active in parallel">⊕${activeCount}</span>` : "";
       chainHtml = `<div class="chain-progress">
            <div class="chain-bar"><div class="chain-bar-fill" style="width:${(chain.completedSteps / chain.totalSteps * 100)}%"></div></div>
            <span>${chain.completedSteps}/${chain.totalSteps}${parallelHint}</span>
-           ${chain.currentStepLabel ? `<span style="color:var(--text-dim)">· ${esc(chain.currentStepLabel)}</span>` : ""}
+           ${chain.currentStepLabel ? `<span class="text-dim">· ${esc(chain.currentStepLabel)}</span>` : ""}
          </div>`;
     } else {
-      chainHtml = `<span style="color:var(--text-dim)">—</span>`;
+      chainHtml = `<span class="text-dim">—</span>`;
     }
 
     const actions = [];
@@ -552,7 +552,7 @@ function renderApprovals() {
       actions.push(`<button class="btn btn-dispatch" onclick="dispatch('${a.id}')">Dispatch</button>`);
     }
 
-    return `<tr onclick="showDetail('${a.id}')" style="cursor:pointer">
+    return `<tr onclick="showDetail('${a.id}')" class="cursor-pointer">
       <td>${esc(a.action_intent || "—")}</td>
       <td><span class="status-badge ${a.approval_status}">${a.approval_status}</span></td>
       <td>${chainHtml}</td>
@@ -628,7 +628,7 @@ async function showDetail(id) {
     let html = `
       <div class="detail-section">
         <h4>Overview</h4>
-        <div class="detail-field"><span class="lbl">ID</span><span style="font-family:var(--mono);font-size:12px">${esc(a.id)}</span></div>
+        <div class="detail-field"><span class="lbl">ID</span><span class="mono-sm">${esc(a.id)}</span></div>
         <div class="detail-field"><span class="lbl">Status</span><span class="status-badge ${a.approval_status}">${a.approval_status}</span></div>
         <div class="detail-field"><span class="lbl">Intent</span><span>${esc(a.action_intent || "—")}</span></div>
         <div class="detail-field"><span class="lbl">Mode</span><span>${esc(a.action_mode || "—")}</span></div>
@@ -650,8 +650,8 @@ async function showDetail(id) {
       html += `
         <div class="detail-section">
           <h4>Chain Progress — ${esc(chain.templateName)}</h4>
-          <div class="chain-progress" style="margin-bottom:8px">
-            <div class="chain-bar" style="max-width:100%"><div class="chain-bar-fill" style="width:${(chain.completedSteps / chain.totalSteps * 100)}%"></div></div>
+          <div class="chain-progress chain-progress-mb">
+            <div class="chain-bar chain-bar-full"><div class="chain-bar-fill" style="width:${(chain.completedSteps / chain.totalSteps * 100)}%"></div></div>
             <span>${chain.completedSteps} of ${chain.totalSteps} steps complete</span>
           </div>
           <ul class="chain-steps-list">
@@ -663,10 +663,10 @@ async function showDetail(id) {
                 <span class="step-dot ${s.status}"></span>
                 <span>
                   <strong>${esc(s.label)}</strong>
-                  ${isParallel ? '<span style="color:var(--purple);font-size:10px;margin-left:4px" title="Parallel step">⊕</span>' : ''}
+                  ${isParallel ? '<span class="parallel-hint-ml" title="Parallel step">⊕</span>' : ''}
                   — <span class="status-badge ${s.status}">${s.status}</span>
                 </span>
-                ${s.deciderId ? `<span style="color:var(--text-dim);margin-left:auto;font-size:12px">${esc(s.deciderId)} · ${timeAgo(s.decidedAt)}</span>` : ""}
+                ${s.deciderId ? `<span class="step-decider">${esc(s.deciderId)} · ${timeAgo(s.decidedAt)}</span>` : ""}
               </li>`;
             }).join("")}
           </ul>
@@ -677,7 +677,7 @@ async function showDetail(id) {
       html += `
         <div class="detail-section">
           <h4>Plan (${a.plan.length} step${a.plan.length !== 1 ? "s" : ""})</h4>
-          <pre style="background:var(--surface);padding:12px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);overflow-x:auto;max-height:300px;white-space:pre-wrap">${esc(JSON.stringify(a.plan, null, 2))}</pre>
+          <pre class="code-block">${esc(JSON.stringify(a.plan, null, 2))}</pre>
         </div>`;
     }
 
@@ -685,21 +685,21 @@ async function showDetail(id) {
       html += `
         <div class="detail-section">
           <h4>Dispatch Result</h4>
-          <pre style="background:var(--surface);padding:12px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);overflow-x:auto;max-height:300px;white-space:pre-wrap">${esc(JSON.stringify(a.dispatchResult, null, 2))}</pre>
+          <pre class="code-block">${esc(JSON.stringify(a.dispatchResult, null, 2))}</pre>
         </div>`;
     }
 
     // Action buttons in detail
     if (a.approval_status === "pending") {
       html += `
-        <div style="display:flex;gap:8px;margin-top:16px">
+        <div class="form-actions">
           <button class="btn btn-approve" onclick="decide('${a.id}','approved');closeDetail()">Approve</button>
           <button class="btn btn-reject" onclick="decide('${a.id}','rejected');closeDetail()">Reject</button>
         </div>`;
     }
     if (a.approval_status === "approved") {
       html += `
-        <div style="margin-top:16px">
+        <div class="detail-actions-mt">
           <button class="btn btn-dispatch" onclick="dispatch('${a.id}');closeDetail()">Dispatch</button>
         </div>`;
     }
@@ -720,17 +720,17 @@ async function loadTemplates() {
   const loading = document.getElementById("templates-loading");
   const grid = document.getElementById("templates-grid");
   const empty = document.getElementById("templates-empty");
-  if (loading) loading.style.display = "block";
+  if (loading) loading.classList.remove("hidden");
   if (grid) grid.innerHTML = "";
-  if (empty) empty.style.display = "none";
+  if (empty) empty.classList.add("hidden");
   try {
     const json = await api("/api/chain-templates");
-    if (loading) loading.style.display = "none";
+    if (loading) loading.classList.add("hidden");
     if (!json.success) { showToast(json.error || "Failed to load templates", "error"); return; }
     hideAuthGate();
     renderTemplates(json.data);
   } catch (e) {
-    if (loading) loading.style.display = "none";
+    if (loading) loading.classList.add("hidden");
     if (e.message !== "Unauthorized") showToast("Failed to load templates", "error");
   }
 }
@@ -740,10 +740,10 @@ function renderTemplates(templates) {
   const empty = document.getElementById("templates-empty");
   if (!templates || templates.length === 0) {
     grid.innerHTML = "";
-    empty.style.display = "block";
+    empty.classList.remove("hidden");
     return;
   }
-  empty.style.display = "none";
+  empty.classList.add("hidden");
 
   grid.innerHTML = templates.map(t => {
     const steps = t.steps || [];
@@ -801,13 +801,13 @@ async function showTemplateDetail(id) {
     content.innerHTML = `
       <div class="detail-section">
         <h4>Template</h4>
-        <div class="detail-field"><span class="lbl">ID</span><span style="font-family:var(--mono);font-size:12px">${esc(t.id)}</span></div>
+        <div class="detail-field"><span class="lbl">ID</span><span class="mono-sm">${esc(t.id)}</span></div>
         <div class="detail-field"><span class="lbl">Name</span><span>${esc(t.name)}</span></div>
         <div class="detail-field"><span class="lbl">Steps</span><span>${(t.steps || []).length}</span></div>
       </div>
       <div class="detail-section">
         <h4>Definition</h4>
-        <pre style="background:var(--surface);padding:12px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);overflow-x:auto;max-height:400px;white-space:pre-wrap">${esc(JSON.stringify(t, null, 2))}</pre>
+        <pre class="code-block code-block-tall">${esc(JSON.stringify(t, null, 2))}</pre>
       </div>`;
   } catch (e) {
     if (e.message !== "Unauthorized") content.innerHTML = "<p>Failed to load</p>";
@@ -831,7 +831,7 @@ let templateStepCounter = 0;
 
 function toggleCreateTemplateForm() {
   const wrap = document.getElementById("template-form-wrap");
-  if (wrap.style.display === "none") {
+  if (wrap.classList.contains("hidden")) {
     document.getElementById("template-form-title").textContent = "Create Template";
     document.getElementById("template-edit-id").value = "";
     document.getElementById("template-name").value = "";
@@ -839,14 +839,14 @@ function toggleCreateTemplateForm() {
     templateStepCounter = 0;
     document.getElementById("template-steps-list").innerHTML = "";
     addTemplateStep(); // Start with one step
-    wrap.style.display = "block";
+    wrap.classList.remove("hidden");
   } else {
-    wrap.style.display = "none";
+    wrap.classList.add("hidden");
   }
 }
 
 function cancelTemplateForm() {
-  document.getElementById("template-form-wrap").style.display = "none";
+  document.getElementById("template-form-wrap").classList.add("hidden");
 }
 
 function addTemplateStep() {
@@ -855,11 +855,11 @@ function addTemplateStep() {
   const stepNum = list.children.length + 1;
   const div = document.createElement("div");
   div.id = `step-row-${idx}`;
-  div.style.cssText = "display:flex;gap:8px;align-items:center;margin-bottom:8px;";
+  div.className = "step-row";
   div.innerHTML = `
-    <span style="font-size:12px;color:var(--text-dim);min-width:40px;">Step ${stepNum}</span>
-    <input type="text" placeholder="Role (e.g. admin)" class="step-role" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
-    <input type="text" placeholder="Label (e.g. Legal Review)" class="step-label" style="flex:2;padding:6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
+    <span class="step-number">Step ${stepNum}</span>
+    <input type="text" placeholder="Role (e.g. admin)" class="step-role step-input-role">
+    <input type="text" placeholder="Label (e.g. Legal Review)" class="step-label step-input-label">
     <button class="btn btn-danger btn-sm" onclick="removeTemplateStep('step-row-${idx}')">✕</button>
   `;
   list.appendChild(div);
@@ -934,7 +934,7 @@ async function editTemplate(id) {
       last.querySelector(".step-role").value = s.requiredRole;
       last.querySelector(".step-label").value = s.label;
     });
-    wrap.style.display = "block";
+    wrap.classList.remove("hidden");
     wrap.scrollIntoView({ behavior: "smooth" });
   } catch (e) {
     if (e.message !== "Unauthorized") showToast("Failed to load template", "error");
@@ -944,10 +944,10 @@ async function editTemplate(id) {
 // ── Dashboard ─────────────────────────────────────────────────────────────
 async function loadStats() {
   const loading = document.getElementById("dashboard-loading");
-  if (loading) loading.style.display = "block";
+  if (loading) loading.classList.remove("hidden");
   try {
     const json = await api("/api/admin/stats");
-    if (loading) loading.style.display = "none";
+    if (loading) loading.classList.add("hidden");
     if (!json.success) return;
     const d = json.data;
 
@@ -974,7 +974,7 @@ async function loadStats() {
     const ts = document.getElementById("dashboard-last-refreshed");
     if (ts) ts.textContent = "Last updated: " + new Date().toLocaleTimeString();
   } catch (e) {
-    if (loading) loading.style.display = "none";
+    if (loading) loading.classList.add("hidden");
     if (e.message !== "Unauthorized") showToast("Failed to load stats", "error");
   }
 
@@ -985,8 +985,8 @@ async function loadStats() {
     const dispatches = json.data.approvals;
     const tbody = document.getElementById("dispatch-body");
     const empty = document.getElementById("dispatch-empty");
-    if (dispatches.length === 0) { tbody.innerHTML = ""; empty.style.display = "block"; return; }
-    empty.style.display = "none";
+    if (dispatches.length === 0) { tbody.innerHTML = ""; empty.classList.remove("hidden"); return; }
+    empty.classList.add("hidden");
     tbody.innerHTML = dispatches.map(a =>
       `<tr>
         <td>${esc(a.action_intent || "—")}</td>
@@ -1073,11 +1073,11 @@ function renderMembers(members) {
   
   if (!members || members.length === 0) {
     tbody.innerHTML = "";
-    empty.style.display = "block";
+    empty.classList.remove("hidden");
     return;
   }
   
-  empty.style.display = "none";
+  empty.classList.add("hidden");
   tbody.innerHTML = members.map(m => `
     <tr>
       <td>${esc(m.user_id)}</td>
@@ -1097,11 +1097,11 @@ function renderInvitations(invitations) {
   
   if (!invitations || invitations.length === 0) {
     tbody.innerHTML = "";
-    empty.style.display = "block";
+    empty.classList.remove("hidden");
     return;
   }
   
-  empty.style.display = "none";
+  empty.classList.add("hidden");
   tbody.innerHTML = invitations.map(inv => `
     <tr>
       <td>${esc(inv.email)}</td>
@@ -1158,17 +1158,17 @@ async function sendInvite() {
 // ── Inline Invite Form ───────────────────────────────────────────────────
 function toggleInviteForm() {
   const wrap = document.getElementById("invite-form-wrap");
-  if (wrap.style.display === "none") {
+  if (wrap.classList.contains("hidden")) {
     document.getElementById("invite-form-email").value = "";
     document.getElementById("invite-form-role").value = "admin";
-    wrap.style.display = "block";
+    wrap.classList.remove("hidden");
   } else {
-    wrap.style.display = "none";
+    wrap.classList.add("hidden");
   }
 }
 
 function cancelInviteForm() {
-  document.getElementById("invite-form-wrap").style.display = "none";
+  document.getElementById("invite-form-wrap").classList.add("hidden");
 }
 
 async function submitInviteForm() {
@@ -1301,9 +1301,9 @@ function renderUsageCard(usage) {
   // Show/hide upgrade button based on limits
   const upgradeBtn = document.getElementById("upgrade-btn");
   if (usage.plan === "free") {
-    upgradeBtn.style.display = "block";
+    upgradeBtn.classList.remove("hidden");
   } else {
-    upgradeBtn.style.display = "none";
+    upgradeBtn.classList.add("hidden");
   }
 }
 
@@ -1320,12 +1320,12 @@ function openUpgradeModal() {
   const planBadge = document.getElementById("plan-badge");
   currentPlanDisplay.textContent = planBadge.textContent;
   currentPlanDisplay.className = planBadge.className;
-  modal.style.display = "flex";
+  modal.classList.add("open");
 }
 
 function closeUpgradeModal(event) {
   if (event && event.target !== document.getElementById("upgrade-modal")) return;
-  document.getElementById("upgrade-modal").style.display = "none";
+  document.getElementById("upgrade-modal").classList.remove("open");
 }
 
 async function submitPlanChange() {
@@ -1367,18 +1367,18 @@ async function submitPlanChange() {
 // ── PRR Management ────────────────────────────────────────────────────────
 function togglePRRForm() {
   const wrap = document.getElementById("prr-form-wrap");
-  if (wrap.style.display === "none") {
+  if (wrap.classList.contains("hidden")) {
     document.getElementById("prr-form-name").value = "";
     document.getElementById("prr-form-description").value = "";
     document.getElementById("prr-form-due").value = "";
-    wrap.style.display = "block";
+    wrap.classList.remove("hidden");
   } else {
-    wrap.style.display = "none";
+    wrap.classList.add("hidden");
   }
 }
 
 function cancelPRRForm() {
-  document.getElementById("prr-form-wrap").style.display = "none";
+  document.getElementById("prr-form-wrap").classList.add("hidden");
 }
 
 async function submitPRRForm() {
@@ -1409,16 +1409,16 @@ async function loadPRRQueue() {
   const params = new URLSearchParams();
   if (statusFilter) params.append('status', statusFilter);
   const loading = document.getElementById("prr-loading");
-  if (loading) loading.style.display = "block";
+  if (loading) loading.classList.remove("hidden");
   
   try {
     const json = await api(`/api/prr?${params}`);
-    if (loading) loading.style.display = "none";
+    if (loading) loading.classList.add("hidden");
     if (json.success) {
       renderPRRQueue(json.data.requests);
     }
   } catch (e) {
-    if (loading) loading.style.display = "none";
+    if (loading) loading.classList.add("hidden");
     if (e.message !== "Unauthorized") showToast("Failed to load PRRs", "error");
   }
 }
@@ -1429,11 +1429,11 @@ function renderPRRQueue(requests) {
   
   if (!requests || requests.length === 0) {
     tbody.innerHTML = '';
-    empty.style.display = 'block';
+    empty.classList.remove("hidden");
     return;
   }
   
-  empty.style.display = 'none';
+  empty.classList.add("hidden");
   tbody.innerHTML = requests.map(prr => {
     const statusClass = prr.status.replace('_', '-');
     return `
@@ -1455,7 +1455,7 @@ async function openPRRDetail(id) {
     const json = await api(`/api/prr/${encodeURIComponent(id)}`);
     if (json.success) {
       renderPRRDetail(json.data);
-      document.getElementById('prr-detail-overlay').style.display = 'flex';
+      document.getElementById('prr-detail-overlay').classList.add('open');
     }
   } catch (e) {
     if (e.message !== "Unauthorized") showToast("Failed to load PRR", "error");
@@ -1505,20 +1505,20 @@ function renderPRRDetail(prr) {
       </div>
     ` : ''}
     
-    <div class="detail-field" style="margin-top:24px;">
+    <div class="detail-field detail-field-mt">
       <label>Comments</label>
       <div id="prr-comments-list">
         ${(prr.comments || []).map(c => `
-          <div class="comment" style="margin-bottom:12px;padding:12px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);">
-            <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">${timeAgo(c.created_at)} • ${c.user_id ? 'Admin' : 'System'}</div>
+          <div class="prr-comment">
+            <div class="prr-comment-meta">${timeAgo(c.created_at)} • ${c.user_id ? 'Admin' : 'System'}</div>
             <div>${esc(c.body)}</div>
           </div>
         `).join('')}
       </div>
       
-      <div style="margin-top:12px;">
-        <textarea id="prr-comment-input" placeholder="Add a comment..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);min-height:80px;"></textarea>
-        <button class="btn btn-primary" onclick="addPRRComment('${prr.id}')" style="margin-top:8px;">Add Comment</button>
+      <div class="prr-comment-form">
+        <textarea id="prr-comment-input" placeholder="Add a comment..." class="prr-comment-input"></textarea>
+        <button class="btn btn-primary btn-mt" onclick="addPRRComment('${prr.id}')">Add Comment</button>
       </div>
     </div>
   `;
@@ -1568,7 +1568,7 @@ async function addPRRComment(id) {
 
 function closePRRDetail(event) {
   if (event && event.target !== document.getElementById('prr-detail-overlay')) return;
-  document.getElementById('prr-detail-overlay').style.display = 'none';
+  document.getElementById('prr-detail-overlay').classList.remove('open');
 }
 
 // ── Auto-refresh ──────────────────────────────────────────────────────────
@@ -1579,7 +1579,7 @@ let autoRefreshPRRTimer = null;
 function startAutoRefresh() {
   stopAutoRefresh();
   const indicator = document.getElementById("auto-refresh-indicator");
-  if (indicator) indicator.style.display = "inline";
+  if (indicator) indicator.classList.remove("hidden");
 
   autoRefreshApprovalTimer = setInterval(() => {
     const active = document.querySelector(".tab.active");
@@ -1602,7 +1602,7 @@ function stopAutoRefresh() {
   if (autoRefreshDashboardTimer) { clearInterval(autoRefreshDashboardTimer); autoRefreshDashboardTimer = null; }
   if (autoRefreshPRRTimer) { clearInterval(autoRefreshPRRTimer); autoRefreshPRRTimer = null; }
   const indicator = document.getElementById("auto-refresh-indicator");
-  if (indicator) indicator.style.display = "none";
+  if (indicator) indicator.classList.add("hidden");
 }
 
 // ── Hash navigation ──────────────────────────────────────────────────────
@@ -1623,7 +1623,7 @@ window.addEventListener("hashchange", () => {
       if (me.workspaceName) {
         const ws = document.getElementById("workspace-name");
         ws.textContent = me.workspaceName;
-        ws.style.display = "inline";
+        ws.classList.remove("hidden");
       }
     }
   } catch { /* ignore */ }
