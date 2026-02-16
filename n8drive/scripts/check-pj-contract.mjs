@@ -40,6 +40,12 @@ const errors = [];
 const masterHtml = readFile(masterHtmlPath);
 const serverSource = readFile(serverPath);
 
+// Read route files for modular route definitions
+const governancePath = path.join(PJ_ROOT, "src", "api", "routes", "governance.ts");
+const configPath = path.join(PJ_ROOT, "src", "api", "routes", "config.ts");
+const governanceSource = readFile(governancePath);
+const configSource = readFile(configPath);
+
 const innerHtmlMatches = findLineMatches(masterHtml, /\binnerHTML\b/);
 if (innerHtmlMatches.length > 0) {
   errors.push(
@@ -101,12 +107,20 @@ if (!cspMatch || typeof cspMatch[1] !== "string") {
   }
 }
 
-if (!/app\.get\(\s*["']\/api\/pj\/actions["']/.test(serverSource)) {
-  errors.push(`${path.relative(ROOT, serverPath)} must expose GET /api/pj/actions`);
+// Verify routes are mounted in server.ts
+if (!/createGovernanceRoutes/.test(serverSource)) {
+  errors.push(`${path.relative(ROOT, serverPath)} must mount governance routes (createGovernanceRoutes)`);
+}
+if (!/createConfigRoutes/.test(serverSource)) {
+  errors.push(`${path.relative(ROOT, serverPath)} must mount config routes (createConfigRoutes)`);
 }
 
-if (!/app\.post\(\s*["']\/api\/pj\/execute["']/.test(serverSource)) {
-  errors.push(`${path.relative(ROOT, serverPath)} must expose POST /api/pj/execute`);
+// Verify route definitions exist in their respective files
+if (!/router\.(get|use)\(\s*["']\/pj\/actions["']/.test(configSource)) {
+  errors.push(`${path.relative(ROOT, configPath)} must define GET /pj/actions`);
+}
+if (!/router\.(post|use)\(\s*["']\/pj\/execute["']/.test(governanceSource)) {
+  errors.push(`${path.relative(ROOT, governancePath)} must define POST /pj/execute`);
 }
 
 if (errors.length > 0) {

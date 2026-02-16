@@ -56,10 +56,12 @@ jobs:
 
       - name: Contract check
         run: pnpm run check:pj-contract
-        continue-on-error: true  # Some contracts are aspirational (pj/execute, pj/actions)
 
       - name: Unit tests – core
         run: pnpm --filter @publiclogic/core run test
+
+      - name: Unit tests – logic-commons
+        run: pnpm --filter @publiclogic/logic-commons run test
 
       - name: Unit tests – puddlejumper
         run: pnpm --filter @publiclogic/puddlejumper run test
@@ -115,7 +117,7 @@ jobs:
 
       - name: Upload docker image (optional)
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           push: false
           tags: publiclogic/puddlejumper:ci
