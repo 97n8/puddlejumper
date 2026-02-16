@@ -116,10 +116,10 @@ if (!/createConfigRoutes/.test(serverSource)) {
 }
 
 // Verify route definitions exist in their respective files
-if (!/router\.(get|use)\(\s*["']\/pj\/actions["']/.test(configSource)) {
+if (!/router\.get\(\s*["']\/pj\/actions["']/.test(configSource)) {
   errors.push(`${path.relative(ROOT, configPath)} must define GET /pj/actions`);
 }
-if (!/router\.(post|use)\(\s*["']\/pj\/execute["']/.test(governanceSource)) {
+if (!/router\.post\(\s*["']\/pj\/execute["']/.test(governanceSource)) {
   errors.push(`${path.relative(ROOT, governancePath)} must define POST /pj/execute`);
 }
 
