@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "framework": "nextjs",
   "rootDirectory": "n8drive/web",
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
