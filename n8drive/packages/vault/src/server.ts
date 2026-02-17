@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cookieParser from "cookie-parser";
-import { createJwtAuthenticationMiddleware } from "@publiclogic/core";
+import { createJwtAuthenticationMiddleware } from "./jwtAuth.js";
 import { FileSystemVaultStorage } from "./fileSystemStorage.js";
 import { AuditLedger } from "./auditLedger.js";
 import { ManifestRegistry } from "./manifestRegistry.js";

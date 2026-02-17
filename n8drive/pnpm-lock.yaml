@@ -171,9 +171,6 @@ importers:
 
   packages/vault:
     dependencies:
-      '@publiclogic/core':
-        specifier: workspace:*
-        version: link:../core
       better-sqlite3:
         specifier: ^11.10.0
         version: 11.10.0
