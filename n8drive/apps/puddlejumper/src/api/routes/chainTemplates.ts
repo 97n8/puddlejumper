@@ -29,7 +29,7 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
   const { chainStore } = opts;
 
   // ── List templates (workspace-scoped) ────────────────────────────────
-  router.get("/chain-templates", requireAuthenticated(), (req, res) => {
+  router.get("/chain-templates", requireAuthenticated(), requireRole("owner", "admin"), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
     if (!auth) { res.status(401).json({ success: false, correlationId, error: "Unauthorized" }); return; }
@@ -38,7 +38,7 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
   });
 
   // ── Get single template (workspace-scoped) ───────────────────────────
-  router.get("/chain-templates/:id", requireAuthenticated(), (req, res) => {
+  router.get("/chain-templates/:id", requireAuthenticated(), requireRole("owner", "admin"), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
     if (!auth) { res.status(401).json({ success: false, correlationId, error: "Unauthorized" }); return; }
@@ -178,7 +178,8 @@ export function createChainTemplateRoutes(opts: ChainTemplateRouteOptions): expr
     if (inUseCount > 0) {
       res.status(409).json({
         success: false, correlationId,
-        error: `Template is in use by ${inUseCount} active chain(s) and cannot be deleted`,
+        error: "Template in use by active chains",
+        activeCount: inUseCount,
       });
       return;
     }
