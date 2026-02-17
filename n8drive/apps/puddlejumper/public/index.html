@@ -41,6 +41,17 @@
     <div class="status">
       <strong>Status:</strong> System operational • Multi-tenant isolation active • All tests passing
     </div>
+
+    <div class="command-panel">
+      <h2>⚡ Quick Commands</h2>
+      <div class="command-card">
+        <h3>📊 Summarize Dashboard</h3>
+        <p>Generate a quick summary of active policies, pending reviews, and violations.</p>
+        <button class="command-btn">Run</button>
+        <div class="command-loading">Running…</div>
+        <div class="command-result"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Auth gate (shown when user isn't authenticated) -->
@@ -120,5 +131,6 @@
     // Check auth on page load
     checkAuth();
   </script>
+  <script src="/scripts/pj-commands.js"></script>
 </body>
 </html>

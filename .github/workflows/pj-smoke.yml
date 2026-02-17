@@ -1,0 +1,58 @@
+name: PJ Smoke Tests
+
+on:
+  pull_request:
+    paths:
+      - "n8drive/**"
+      - ".github/workflows/pj-smoke.yml"
+
+jobs:
+  smoke:
+    name: Playwright Quick Start smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: n8drive
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable corepack/pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@8.15.8 --activate
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: n8drive/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: |
+          pnpm --filter @publiclogic/core run build
+          pnpm --filter @publiclogic/logic-commons run build
+          pnpm --filter @publiclogic/puddlejumper run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Quick Start smoke tests
+        run: npx playwright test tests/quickstart.spec.ts --project=chromium
+        env:
+          JWT_SECRET: ci-test-secret-min-32-chars-long-0000000000
+          AUTH_ISSUER: puddle-jumper
+          AUTH_AUDIENCE: puddle-jumper-api
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: n8drive/test-results/
+          retention-days: 7
