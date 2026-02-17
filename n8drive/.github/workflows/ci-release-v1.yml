@@ -38,6 +38,10 @@ jobs:
       
       - name: Run unit tests
         run: pnpm -r test --filter puddlejumper
+        env:
+          JWT_SECRET: ci-test-secret-min-32-chars-long-0000000000
+          AUTH_ISSUER: puddle-jumper
+          AUTH_AUDIENCE: puddle-jumper-api
       
       - name: Upload coverage
         uses: actions/upload-artifact@v4
