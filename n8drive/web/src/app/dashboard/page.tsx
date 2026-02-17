@@ -28,15 +28,26 @@ function DashboardContent() {
   const [records, setRecords] = useState<PrrRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
+  const [usage, setUsage] = useState<{ plan?: string; templates?: { used: number; limit: number }; approvals?: { used: number; limit: number }; members?: { used: number; limit: number } } | null>(null);
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await pjFetch("/api/prr?limit=50");
-      if (!res.ok) throw new Error(`Failed to load PRRs (${res.status})`);
-      const data = await res.json();
+      const [prrRes, countRes, usageRes] = await Promise.all([
+        pjFetch("/api/prr?limit=50"),
+        pjFetch("/api/approvals/count/pending"),
+        pjFetch("/api/workspace/usage"),
+      ]);
+      if (!prrRes.ok) throw new Error(`Failed to load PRRs (${prrRes.status})`);
+      const data = await prrRes.json();
       setRecords(Array.isArray(data) ? data : data.data ?? []);
+      if (countRes.ok) {
+        const countData = await countRes.json();
+        setPendingCount(typeof countData === "number" ? countData : countData.count ?? null);
+      }
+      if (usageRes.ok) setUsage(await usageRes.json());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -69,6 +80,26 @@ function DashboardContent() {
 
       <main className="mx-auto max-w-6xl px-6 py-8">
         {error && <p className="mb-4 text-sm text-red-400">{error}</p>}
+
+        {/* Summary cards */}
+        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+          {pendingCount !== null && (
+            <Link href="/approvals" className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 transition hover:border-amber-500/60">
+              <p className="text-xs text-zinc-500">Pending Approvals</p>
+              <p className="mt-1 text-2xl font-semibold text-amber-300">{pendingCount}</p>
+            </Link>
+          )}
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+            <p className="text-xs text-zinc-500">Public Records</p>
+            <p className="mt-1 text-2xl font-semibold text-zinc-100">{records.length}</p>
+          </div>
+          {usage?.plan && (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+              <p className="text-xs text-zinc-500">Workspace Plan</p>
+              <p className="mt-1 text-2xl font-semibold text-blue-300">{usage.plan}</p>
+            </div>
+          )}
+        </div>
 
         {!loading && records.length === 0 && (
           <p className="text-zinc-500">No public records requests found.</p>

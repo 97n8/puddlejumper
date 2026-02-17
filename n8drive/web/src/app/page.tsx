@@ -17,6 +17,8 @@ const NAV_LINKS: {
 }[] = [
   { capability: "missionControl.capabilities.read", label: "Governance", icon: "\u2696\uFE0F", href: "/governance" },
   { capability: "missionControl.tiles.read", label: "Dashboard", icon: "\u{1F4CB}", href: "/dashboard" },
+  { capability: "missionControl.capabilities.read", label: "Approvals", icon: "\u2705", href: "/approvals" },
+  { capability: "missionControl.capabilities.read", label: "Admin", icon: "\u2699\uFE0F", href: "/admin" },
 ];
 
 function PortalBadge({ status }: { status: PortalAppLink["status"] }) {

@@ -23,6 +23,11 @@ function GovernanceContent() {
   const [actions, setActions] = useState<{ id: string; label: string }[] | null>(null);
   const [actionsLoading, setActionsLoading] = useState(false);
 
+  const [evalInput, setEvalInput] = useState("");
+  const [evalResult, setEvalResult] = useState<Record<string, unknown> | null>(null);
+  const [evalLoading, setEvalLoading] = useState(false);
+  const [evalError, setEvalError] = useState<string | null>(null);
+
   const canExecute = manifest?.capabilities["evaluate.execute"] === true;
   const canEditPrompt = manifest?.capabilities["corePrompt.edit"] === true;
 
@@ -53,6 +58,27 @@ function GovernanceContent() {
       setActions([]);
     } finally {
       setActionsLoading(false);
+    }
+  };
+
+  const handleEvaluate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!evalInput.trim()) return;
+    setEvalLoading(true);
+    setEvalError(null);
+    setEvalResult(null);
+    try {
+      const res = await pjFetch("/api/evaluate", {
+        method: "POST",
+        body: JSON.stringify({ request: evalInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Evaluation failed (${res.status})`);
+      setEvalResult(data);
+    } catch (err) {
+      setEvalError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setEvalLoading(false);
     }
   };
 
@@ -131,6 +157,38 @@ function GovernanceContent() {
               <pre className="mt-2 max-h-96 overflow-auto rounded-lg border border-zinc-800 bg-zinc-950/60 p-4 text-xs text-zinc-300 whitespace-pre-wrap">
                 {prompt}
               </pre>
+            )}
+          </section>
+        )}
+
+        {/* Evaluate Request */}
+        {canExecute && (
+          <section className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+            <h2 className="mb-3 text-lg font-semibold">Submit for Evaluation</h2>
+            <form onSubmit={handleEvaluate} className="space-y-3">
+              <textarea
+                value={evalInput}
+                onChange={(e) => setEvalInput(e.target.value)}
+                placeholder="Describe the governance request to evaluate…"
+                rows={3}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/60 focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={evalLoading || !evalInput.trim()}
+                className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-medium text-emerald-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {evalLoading ? "Evaluating…" : "Evaluate"}
+              </button>
+            </form>
+            {evalError && <p className="mt-3 text-sm text-red-400">{evalError}</p>}
+            {evalResult && (
+              <div className="mt-4 rounded-lg border border-emerald-800 bg-emerald-950/40 p-4">
+                <h3 className="mb-2 text-sm font-medium text-emerald-300">Evaluation Result</h3>
+                <pre className="max-h-48 overflow-auto text-xs text-zinc-300 whitespace-pre-wrap">
+                  {JSON.stringify(evalResult, null, 2)}
+                </pre>
+              </div>
             )}
           </section>
         )}
