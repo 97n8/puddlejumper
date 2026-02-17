@@ -8,6 +8,8 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: n8drive
@@ -25,7 +27,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Build packages
-        run: npm run build || true
+        run: npm run build
 
       - name: Run Quick Start smoke tests
         run: npx playwright test tests/quickstart.spec.ts

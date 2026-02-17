@@ -34,8 +34,8 @@ test.describe('Quick Start guide page', () => {
 
   test('guide page loads external CSS (no inline style block)', async ({ page }) => {
     await page.goto('/pj/guide');
-    const styleTag = await page.locator('head style').count();
-    expect(styleTag).toBe(0);
+    const styleTagCount = await page.locator('head style').count();
+    expect(styleTagCount).toBe(0);
     const cssLink = page.locator('link[href="/styles/pj-guide.css"]');
     await expect(cssLink).toHaveCount(1);
   });
