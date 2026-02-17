@@ -1,7 +1,7 @@
 # PuddleJumper — 12-Week Next Phase Plan
 
 > **Date:** 2026-02-17
-> **Authors:** Nate (Founder/Systems Architect), Allie (Partner)
+> **Authors:** Nate (Founder/Systems Architect), Allie (Dr. Allison Rothschild, Partner)
 > **Status:** Ready for execution
 > **Baseline:** V1.0.0 shipped 2026-02-16
 
@@ -9,11 +9,14 @@
 
 ## Executive Summary
 
-**Objective:** Prepare PuddleJumper for production-grade deployment and deliver the Logicville pilot operating system so that Nate & Allie can run a repeatable, compliant municipal pilot within 12 weeks.
+**Objective (one sentence):**
+Prepare PuddleJumper for a repeatable, compliant Logicville municipal pilot by stabilizing core platform/auth, completing pilot product work (Logicville), and delivering operations playbooks and compliance sign-offs.
 
-- ✅ **Platform ready:** Auth fixes merged, staging deployed, all tests green, cookie/session flow verified end-to-end.
-- ✅ **Pilot operational:** Logicville agenda bootstrapped with current seed items, first public artifact published, weekly cadence running.
-- ✅ **Compliance baseline:** OML/PRR flags active, WCAG 2.1 AA audit passed for public artifacts, 201 CMR 17.00 checklist signed off.
+**Success criteria (3 bullets):**
+
+- **Production platform stable:** End-to-end auth flows work in dev/staging/prod with tests green (auth callback + cookie behavior) and Fly.io staging smoke pass.
+- **Logicville pilot ready:** Seeded agenda, SOPs, public artifacts, and WCAG/201-CMR compliance checklist completed.
+- **Pilot operations and measurements in place:** Deployment runbooks, monitoring/dashboards, metrics/alerts, and handoff package for towns.
 
 ---
 
@@ -21,29 +24,36 @@
 
 | Phase | Weeks | Goal |
 |-------|-------|------|
-| **Readiness & Stabilize** | 1–4 | Fix auth, harden platform, deploy to staging, bootstrap Logicville agenda, draft first SOPs and public artifacts. |
-| **Live Tests & Pilot Launch** | 5–8 | Run Logicville pilot on production, ship audit log viewer, notification integrations, first board packet, weekly cadence active. |
-| **Refinement & Handoff** | 9–12 | Approval export, email delivery, WCAG audit, continuity/handoff docs, retrospective, V1.1 release. |
+| **Readiness & Stabilize** | 1–4 | Fix critical auth bugs, infra hardening, core tests & security baseline, developer experience for local/staging. |
+| **Live Tests & Pilot Launch** | 5–8 | Full staging pilot run with invited users, resolve issues, accessibility/PRR/OML checks, begin public artifacts. |
+| **Refinement & Handoff** | 9–12 | Complete pilot feedback loop, finalize SOPs, legal signoffs, production hardening, and handoff materials. |
+
+> **Owners shorthand:** **Nate** (Founder / Systems), **Allie** (Behavioral / Pilot Product), **Dev** (Backend dev), **Frontend** (UI), **Ops** (Infra/Deploy), **QA** (Tests & QA), **Product** (Product owner / pilot coordination), **Legal** (Counsel).
 
 ---
 
 ## Workstream A — Platform / Infrastructure
 
-**Goal:** Production-grade deployment with verified auth, observability, and backup/restore.
+**Goal:** Harden deployments (Fly.io / Vercel), make staging production-like, and ensure identity/cookie behavior across envs.
 
 ### Tasks
 
 | # | Task | Owner(s) | Week(s) | Acceptance Criteria | Priority | Effort | Dependencies |
 |---|------|----------|---------|---------------------|----------|--------|--------------|
-| A-1 | **Fix cookie domain bug in `cookie.ts`** | Dev (Nate) | 1 | `createJwtCookie` omits `Domain` when `COOKIE_DOMAIN` is unset; includes `Domain` only when explicitly configured. Unit test `cookie.test.ts` covers both cases. | High | S | — |
-| A-2 | **Fix Set-Cookie overwrite in `setJwtCookieOnResponse`** | Dev (Nate) | 1 | `setJwtCookieOnResponse` appends to existing `Set-Cookie` headers instead of overwriting. Integration test confirms `jwt` + `pj_refresh` cookies coexist after login. | High | S | A-1 |
-| A-3 | **Remove `COOKIE_DOMAIN` default from `.env.sample`** | Dev (Nate) | 1 | `.env.sample` has `COOKIE_DOMAIN=` (empty). `ENV_REFERENCE.md` documents that `COOKIE_DOMAIN` should be set only in production. | High | S | — |
-| A-4 | **Deploy to Fly.io staging** | Ops (Nate) | 1–2 | `fly deploy --config fly.staging.toml` succeeds. `/health` returns 200. OAuth login sets cookies on staging domain. `pj_refresh` cookie present after login. | High | M | A-1, A-2, A-3 |
-| A-5 | **Vercel frontend staging deploy** | Ops (Nate) | 1–2 | Vercel preview deploy with `BACKEND_URL` pointing to staging Fly.io. Login → redirect → session restore works. Root Directory confirmed as `n8drive/web`. | High | M | A-4 |
-| A-6 | **Automated backup verification** | Ops (Nate) | 3 | `scripts/deploy-fly.sh` includes pre-deploy backup step. `db:validate-restore` passes on backup. Documented in `LAUNCH_CHECKLIST.md`. | High | M | A-4 |
-| A-7 | **Grafana dashboard import** | Ops (Nate) | 3–4 | Grafana dashboard JSON in `ops/grafana/` imported to hosted Grafana. Shows approval chain metrics, request latency, error rate. | Med | M | A-4 |
-| A-8 | **Alert rules for production** | Ops (Nate) | 4 | Alertmanager rules in `ops/alertmanager/`: health-down >2min, approval-step stuck >24h, error rate >5%. Documented in runbook. | Med | M | A-7 |
-| A-9 | **Production deploy (Fly.io + Vercel)** | Ops (Nate) | 5 | Production Fly.io app at `publiclogic-puddlejumper.fly.dev`. Vercel at `pj.publiclogic.org`. `COOKIE_DOMAIN=.publiclogic.org` set in production env. OAuth end-to-end verified. | High | M | A-4, A-5, A-6 |
+| P1 | **Patch cookie domain & header behavior** — fix hardcoded domain & stop overwriting Set-Cookie | Dev, review Nate | Week 1 | `createJwtCookie` omits `Domain` when `COOKIE_DOMAIN` is unset; includes `Domain` only when explicitly configured. `setJwtCookieOnResponse` appends instead of overwriting. Unit test `cookie.test.ts` covers both cases. ✅ **Done** (this PR). | High | S | — |
+| P2 | **Unify cookie helper & API usage** — central cookie helper used by all flows | Dev, review Nate | Weeks 1–2 | All auth entry points (OAuth callback, `POST /api/login`, refresh) use unified cookie helper. No duplicated cookie-setting logic. | High | M | P1 |
+| P3 | **Update `.env.sample` and docs for `COOKIE_DOMAIN`** | Dev, Ops, Nate | Week 1 | `.env.sample` leaves `COOKIE_DOMAIN` blank. README/ENV_REFERENCE updated. ✅ **Done** (this PR). | High | S | P1 |
+| P4 | **Staging Fly.io smoke & deploy automation** | Ops, Dev | Weeks 1–3 | `./scripts/deploy-fly.sh` into staging succeeds. `/health` returns 200. OAuth login sets cookies on staging domain. `pj_refresh` cookie present after login. Script idempotent and documented. | High | M | P1 |
+| P5 | **Vercel frontend staging deploy** | Ops, Nate | Weeks 1–2 | Vercel preview deploy with `BACKEND_URL` pointing to staging Fly.io. Login → redirect → session restore works. Root Directory confirmed as `n8drive/web`. | High | M | P4 |
+| P6 | **Harden CORS and cookie policy for prod** | Ops, Dev | Weeks 2–3 | `CORS_ALLOWED_ORIGINS` validated, SameSite/secure behavior confirmed for prod, domain handling documented in `ENV_REFERENCE.md`. | Med | M | P1, P4 |
+| P7 | **Automated backup verification** | Ops, Nate | Week 3 | `scripts/deploy-fly.sh` includes pre-deploy backup step. `db:validate-restore` passes on backup. Documented in `LAUNCH_CHECKLIST.md`. | High | M | P4 |
+| P8 | **Secrets & keys rotation plan** | Ops, Nate | Weeks 3–4 | Documented secret rotation steps for OAuth client secrets, JWT signing keys on Fly.io. Filed as `ops/runbooks/jwt-rotation.md`. | Med | S | P4 |
+| P9 | **Deploy rollback & continuity** | Ops | Weeks 3–4 | Runbook: rollback procedure, DB migrations backup. `LAUNCH_CHECKLIST.md` updated. | Med | S | P4 |
+| P10 | **Grafana dashboard import** | Ops, Nate | Weeks 3–4 | Grafana dashboard JSON in `ops/grafana/` imported. Shows approval chain metrics, request latency, error rate. | Med | M | P4 |
+| P11 | **Alert rules for production** | Ops, Nate | Week 4 | Alertmanager rules: health-down >2min, approval-step stuck >24h, error rate >5%, auth failure spike >10/5min. | Med | M | P10 |
+| P12 | **Production deploy (Fly.io + Vercel)** | Ops, Nate | Week 5 | Production Fly.io app at `publiclogic-puddlejumper.fly.dev`. Vercel at `pj.publiclogic.org`. `COOKIE_DOMAIN=.publiclogic.org` set in production env. OAuth end-to-end verified. | High | M | P4, P5, P7 |
+
+> **Note:** P1, P2, P3 are the **auth mandate** and must be completed Weeks 1–2.
 
 ### Files to edit (auth fixes)
 
@@ -74,22 +84,37 @@
 
 ## Workstream B — Codebase & QA
 
-**Goal:** All auth flows tested, unified cookie helper, test coverage above 500, CI green on every merge.
+**Goal:** Ensure auth correctness, tests and CI, QA coverage for key flows. All auth flows tested, unified cookie helper, test coverage above 500, CI green on every merge.
 
 ### Tasks
 
 | # | Task | Owner(s) | Week(s) | Acceptance Criteria | Priority | Effort | Dependencies |
 |---|------|----------|---------|---------------------|----------|--------|--------------|
-| B-1 | **Add `authCallback.ts` integration test** | Dev (Nate) | 1–2 | New test file `test/authCallback.test.ts` with: missing-token → 400, Logic Commons down → 502, success → cookie set + redirect, redirect target respects `PJ_UI_URL`. | High | M | A-1 |
-| B-2 | **Unify cookie-setting helper** | Dev (Nate) | 2 | All login flows (OAuth callback, built-in login, refresh) use consistent cookie attributes. `setJwtCookieOnResponse` and `createSessionAndSetCookies` produce cookies with identical `SameSite`/`Secure`/`Path` for the same `nodeEnv`. Integration test verifies. | High | M | A-1, A-2 |
-| B-3 | **Add auth runbook** | Dev (Nate) | 2 | New `ops/runbooks/auth-smoke.md` with: local dev cookie check, staging OAuth flow, prod session restore, refresh cycle verification. Follows existing runbook format. | High | S | — |
-| B-4 | **Audit log viewer API** | Dev (Nate) | 3–5 | `GET /api/audit` — paginated, filterable by workspace/action/date/actor. Workspace isolation enforced. Tests for pagination, filtering, isolation. (V1.1 Priority 1) | High | L | — |
-| B-5 | **Audit log viewer UI** | Frontend (Nate) | 5–6 | Admin UI tab/page rendering audit trail with search and time filters. Read-only. Accessible (WCAG 2.1 AA keyboard nav). | High | L | B-4 |
-| B-6 | **Webhook idempotency (SQLite)** | Dev (Nate) | 5–6 | Processed event IDs stored in SQLite with TTL. Duplicate delivery returns 200 without re-processing. Tests for dedup, TTL expiry, unknown event ack. (V1.1 Priority 2) | Med | M | — |
-| B-7 | **Slack notification dispatcher** | Dev (Nate) | 7–8 | `SlackDispatcher` sends approval-pending and approval-decided to configured webhook URL. Retry on 5xx. Tests for formatting, retry, channel routing. (V1.1 Priority 3) | Med | M | — |
-| B-8 | **Approval export (CSV/JSON)** | Dev (Nate) | 9–10 | `GET /api/approvals/export?format=csv|json` — workspace-scoped, date-range filtered, includes chain step detail. Streamed response. Tests for column correctness, JSON schema, isolation. (V1.1 Priority 4) | Med | M | — |
-| B-9 | **Email delivery for invitations** | Dev (Nate) | 10–11 | Integrate transactional email (SendGrid/Postmark). Invitation emails sent with accept-link. Graceful fallback. Tests for send call, token URL, unavailable provider. (V1.1 Priority 5) | Med | M | — |
-| B-10 | **V1.1 release & CHANGELOG** | Dev (Nate) | 12 | `CHANGELOG.md` updated. Tag `v1.1.0`. All new tests green. Total test count ≥ 520. | High | S | B-4 through B-9 |
+| C1 | **Add `authCallback` integration test** — cover provider callback cookie behavior | QA, Dev | Weeks 1–2 | New tests: `test/auth-callback.test.ts` verifying cookies (`jwt` set with correct domain), redirect to `PJ_UI_URL`, error paths (missing token → 400, Logic Commons down → 502/500, no token returned → 502), dev-token endpoint toggle. ✅ **Done** (this PR, 11 tests). | High | M | P1 |
+| C2 | **Unit tests for cookie helpers** | QA, Dev | Weeks 1–2 | `packages/core/test/cookie.test.ts` verifies domain handling, sameSite, secure flag, and Set-Cookie append behavior. ✅ **Done** (this PR, 9 tests). | High | S | — |
+| C3 | **Unify cookie helper usage across login endpoints** (see Platform P2) | Dev | Weeks 1–2 | All login paths pass unit/integration tests. `authCallback.ts` and `routes/auth.ts` use consistent cookie attributes with `session.ts`. | High | M | C1, C2 |
+| C4 | **Add E2E smoke test for auth refresh flow** | QA | Weeks 2–3 | `pjFetch` flow: get 401 → calls `/api/refresh` → retries and succeeds. Deterministic mocks for CI. | High | M | C1 |
+| C5 | **Auth-smoke operational runbook** | Dev, Nate | Week 2 | New `ops/runbooks/auth-smoke.md` with: local dev cookie check, staging OAuth flow, prod session restore, refresh cycle verification. Follows existing runbook format. | High | S | — |
+| C6 | **CI pipeline add staging smoke** | QA, Dev, Ops | Weeks 2–3 | GitHub Actions workflow to deploy to staging and run smoke e2e tests. Timeouts and retries configured. | Med | M | P4 |
+| C7 | **Review and expand auth tests for edge cases** (missing refresh cookie, expired JWT, missing provider token) | QA, Dev | Weeks 3–4 | Tests added for error paths in `test/`. Coverage for expired JWT, missing refresh cookie, concurrent refresh dedup. | Med | M | C1 |
+| C8 | **Test coverage dashboard & flakiness fixes** | QA | Weeks 3–4 | Coverage report artifact in CI. Flaky tests identified and remediation tickets created. | Med | M | CI |
+| C9 | **Audit log viewer API** | Dev, Nate | Weeks 3–5 | `GET /api/audit` — paginated, filterable by workspace/action/date/actor. Workspace isolation enforced. Tests for pagination, filtering, isolation. (V1.1 Priority 1) | High | L | — |
+| C10 | **Audit log viewer UI** | Frontend, Nate | Weeks 5–6 | Admin UI tab/page rendering audit trail with search and time filters. Read-only. Accessible (WCAG 2.1 AA keyboard nav). | High | L | C9 |
+| C11 | **Webhook idempotency (SQLite)** | Dev | Weeks 5–6 | Processed event IDs stored in SQLite with TTL. Duplicate delivery returns 200 without re-processing. Tests for dedup, TTL expiry, unknown event ack. (V1.1 Priority 2) | Med | M | — |
+| C12 | **Slack notification dispatcher** | Dev | Weeks 7–8 | `SlackDispatcher` sends approval-pending and approval-decided to configured webhook URL. Retry on 5xx. Tests for formatting, retry, channel routing. (V1.1 Priority 3) | Med | M | — |
+| C13 | **Approval export (CSV/JSON)** | Dev | Weeks 9–10 | `GET /api/approvals/export?format=csv|json` — workspace-scoped, date-range filtered, includes chain step detail. Streamed response. Tests. (V1.1 Priority 4) | Med | M | — |
+| C14 | **Email delivery for invitations** | Dev | Weeks 10–11 | Integrate transactional email (SendGrid/Postmark). Invitation emails sent with accept-link. Graceful fallback. (V1.1 Priority 5) | Med | M | — |
+| C15 | **V1.1 release & CHANGELOG** | Dev, Product | Week 12 | `CHANGELOG.md` updated. Tag `v1.1.0`. All new tests green. Total test count ≥ 520. | High | S | C9–C14 |
+
+### Exact files to edit for auth tasks
+
+| Fix | Files | Tests |
+|-----|-------|-------|
+| Cookie domain + append | `n8drive/packages/core/src/cookie.ts` | `n8drive/packages/core/test/cookie.test.ts` (9 tests) ✅ |
+| authCallback coverage | `n8drive/apps/puddlejumper/src/api/authCallback.ts` | `n8drive/apps/puddlejumper/test/auth-callback.test.ts` (11 tests) ✅ |
+| Unify cookie helper | `n8drive/apps/puddlejumper/src/api/routes/auth.ts`, `n8drive/apps/puddlejumper/src/api/authCallback.ts` | Existing tests verify consistency |
+| Session cookie alignment | `n8drive/apps/logic-commons/src/lib/session.ts` | Confirm cookie semantics align |
+| `.env.sample` default | `n8drive/.env.sample` | — (config) ✅ |
 
 ### Key Deliverables
 
@@ -174,20 +199,42 @@
 
 ## Workstream E — Cross-Cutting: Security, Accessibility, Retention, Legal
 
-**Goal:** Compliance baseline established for MA municipal pilot.
+**Goal:** Ensure compliance with 201 CMR 17.00, Mass Open Meeting/Records law & WCAG 2.1 AA.
 
 ### Tasks
 
 | # | Task | Owner(s) | Week(s) | Acceptance Criteria | Priority | Effort | Dependencies |
 |---|------|----------|---------|---------------------|----------|--------|--------------|
-| E-1 | **201 CMR 17.00 data security checklist** | Dev (Nate), Product (Allie) | 2–3 | Checklist completed against PuddleJumper: PII handling, access controls, encryption, audit logging. Sign-off recorded in `n8drive/docs/compliance/201cmr-checklist.md`. | High | M | — |
-| E-2 | **WCAG 2.1 AA audit (public artifacts)** | Product (Allie) | 6–7 | All public-facing artifacts (board packet, FAQ, one-pager, OS UI) audited with axe-core or equivalent. Issues logged as GitHub issues. Remediation plan for any failures. | High | M | C-3, C-4, C-8 |
-| E-3 | **WCAG 2.1 AA audit (admin UI)** | Frontend (Nate) | 7–8 | Admin UI pages audited for keyboard navigation, color contrast, screen reader compatibility. Issues logged. Critical issues fixed before pilot end. | Med | M | B-5 |
-| E-4 | **OML compliance review** | Product (Allie) | 4 | Review agenda/meeting features against M.G.L. c.30A requirements: agenda posting, notice, minutes, recordings. Document gaps and plan. | High | S | — |
-| E-5 | **PRR readiness demo** | Dev (Nate), Product (Allie) | 5 | Demo PRR intake → status tracking → public response flow. Verify retention tags applied. Document in auth-smoke runbook. | High | S | C-6 |
-| E-6 | **Data ownership & continuity doc** | Product (Allie) | 8–9 | Document confirming town owns all data. Backup/export procedures. Handoff steps if vendor relationship ends. Filed in `publiclogic-operating-system/templates/data-ownership.md`. | High | M | — |
-| E-7 | **JWT secret rotation runbook** | Ops (Nate) | 3 | Documented procedure for rotating `JWT_SECRET` or keypair in production without downtime. Filed in `ops/runbooks/jwt-rotation.md`. | Med | S | — |
-| E-8 | **Security scan (CodeQL + dependency audit)** | Dev (Nate) | 4, 8, 12 | CodeQL scan green. `npm audit` / `pnpm audit` with no high/critical vulnerabilities. Run at Weeks 4, 8, 12. | High | S | — |
+| S1 | **Threat model review (auth & cookies)** | Nate, Dev, Ops | Weeks 1–2 | Threat model updated; mitigations added for cookie stealing, CSRF, session fixation. One-page doc filed. | High | S | P1 |
+| S2 | **201 CMR 17.00 data security checklist** | Dev (Nate), Product (Allie), Legal | Weeks 2–4 | Checklist completed against PuddleJumper: PII handling, encryption at rest & in transit, key rotation, access controls, audit logging. Sign-off recorded in `n8drive/docs/compliance/201cmr-checklist.md`. | High | M | — |
+| S3 | **WCAG 2.1 AA audit (public artifacts)** | Product (Allie), Frontend, QA | Weeks 6–7 | All public-facing artifacts (board packet, FAQ, one-pager, OS UI) audited with axe-core or equivalent. >90% pass or remediation tickets filed. | High | M | C-3, C-4, C-8 |
+| S4 | **WCAG 2.1 AA audit (admin UI)** | Frontend (Nate), QA | Weeks 7–8 | Admin UI pages audited for keyboard navigation, color contrast, screen reader compatibility. Issues logged. Critical issues fixed before pilot end. | Med | M | C10 |
+| S5 | **OML compliance review** | Product (Allie), Legal | Week 4 | Review agenda/meeting features against M.G.L. c.30A requirements: agenda posting, notice, minutes, recordings. Document gaps and plan. | High | S | — |
+| S6 | **PRR readiness demo** | Dev (Nate), Product (Allie) | Week 5 | Demo PRR intake → status tracking → public response flow. Verify retention tags applied. Document in auth-smoke runbook. | High | S | C-6 |
+| S7 | **Data ownership & continuity doc** | Product (Allie), Nate | Weeks 8–9 | Document confirming town owns all data. Backup/export procedures. Handoff steps if vendor relationship ends. Town can export all data at any time. | High | M | — |
+| S8 | **Security scan (CodeQL + dependency audit)** | Dev (Nate), Ops | Weeks 4, 8, 12 | CodeQL scan green. `pnpm audit` with no high/critical vulnerabilities. Run at 3 checkpoints. | High | S | — |
+| S9 | **Retention and ARCHIEVE integration** | Nate, Dev | Weeks 5–9 | Retention policies implemented at high level & demo. Decision log entries with `retentionTag` stored and queryable. No proprietary mechanics exposed. | Med | M | S6 |
+
+### Sign-off Record
+
+Record all sign-offs in `n8drive/ops/COMPLIANCE_SIGNOFF.md` with reviewer, date, and notes:
+
+| Check | Standard | Signoff by | Target Week |
+|-------|----------|------------|-------------|
+| Cookie domain fix verified | Auth review finding | Dev + QA | Week 1 ✅ |
+| Set-Cookie append verified | Auth review finding | Dev + QA | Week 1 ✅ |
+| authCallback integration test green | Auth review finding | QA | Week 1 ✅ |
+| Threat model reviewed | Security baseline | Nate + Dev | Week 2 |
+| OAuth end-to-end on staging | Auth review finding | Ops | Week 2 |
+| 201 CMR 17.00 checklist | MA data security | Nate + Legal | Week 4 |
+| JWT secret is not `dev-secret` in prod | SECURITY.md | Ops | Week 4 |
+| OML compliance review | M.G.L. c.30A | Allie + Legal | Week 4 |
+| PRR demo route works | M.G.L. c.66 §10 | Nate + Allie | Week 5 |
+| WCAG 2.1 AA audit (public artifacts) | WCAG 2.1 AA | Frontend + QA | Week 7 |
+| WCAG 2.1 AA audit (admin UI) | WCAG 2.1 AA | Frontend + QA | Week 8 |
+| Data ownership doc signed | Town data ownership | Allie + Nate | Week 9 |
+| CodeQL scan green (3 checkpoints) | Security best practice | Dev | Weeks 4/8/12 |
+| `pnpm audit` no high/critical vulns | Dependency security | Dev | Weeks 4/8/12 |
 
 ### Key Deliverables
 
@@ -238,21 +285,26 @@
 
 ## Security, Accessibility & Legal Checklist
 
-| Check | Standard | Where to Record Sign-Off | Target Week |
-|-------|----------|--------------------------|-------------|
-| Cookie domain fix verified | Auth review finding | PR merge + cookie.test.ts green | Week 1 |
-| Set-Cookie append verified | Auth review finding | PR merge + cookie.test.ts green | Week 1 |
-| authCallback integration test green | Auth review finding | `authCallback.test.ts` passing | Week 2 |
-| OAuth end-to-end on staging | Auth review finding | Auth-smoke runbook execution log | Week 2 |
-| 201 CMR 17.00 checklist | MA data security | `n8drive/docs/compliance/201cmr-checklist.md` | Week 3 |
-| JWT secret is not `dev-secret` in prod | SECURITY.md | Production env-var audit | Week 4 |
-| PRR demo route works | M.G.L. c.66 §10 | Auth-smoke runbook execution log | Week 5 |
-| WCAG 2.1 AA audit (public artifacts) | WCAG 2.1 AA | GitHub Issues + remediation PR | Week 7 |
-| WCAG 2.1 AA audit (admin UI) | WCAG 2.1 AA | GitHub Issues + remediation PR | Week 8 |
-| OML compliance review | M.G.L. c.30A | `publiclogic-operating-system/compliance/oml-review.md` | Week 4 |
-| Data ownership doc signed | Town data ownership | `publiclogic-operating-system/templates/data-ownership.md` | Week 9 |
-| CodeQL scan green (3 checkpoints) | Security best practice | CI results at Weeks 4, 8, 12 | Week 4/8/12 |
-| `pnpm audit` no high/critical vulns | Dependency security | CI results at Weeks 4, 8, 12 | Week 4/8/12 |
+All checks recorded in `n8drive/ops/COMPLIANCE_SIGNOFF.md` with reviewer, date, and notes.
+See Workstream E sign-off table for full details.
+
+| Check | Standard | Target Week | Status |
+|-------|----------|-------------|--------|
+| Cookie domain fix verified | Auth review | Week 1 | ✅ Done |
+| Set-Cookie append verified | Auth review | Week 1 | ✅ Done |
+| authCallback integration test green | Auth review | Week 1 | ✅ Done (11 tests) |
+| Threat model reviewed | Security baseline | Week 2 | ☐ |
+| OAuth end-to-end on staging | Auth review | Week 2 | ☐ |
+| 201 CMR 17.00 checklist | MA data security | Week 4 | ☐ |
+| JWT secret is not `dev-secret` in prod | SECURITY.md | Week 4 | ☐ |
+| OML compliance review | M.G.L. c.30A | Week 4 | ☐ |
+| PRR demo route works | M.G.L. c.66 §10 | Week 5 | ☐ |
+| WCAG 2.1 AA audit (public artifacts) | WCAG 2.1 AA | Week 7 | ☐ |
+| WCAG 2.1 AA audit (admin UI) | WCAG 2.1 AA | Week 8 | ☐ |
+| Data ownership doc signed | Town ownership | Week 9 | ☐ |
+| CodeQL scan green (3 checkpoints) | Security | Weeks 4/8/12 | ☐ |
+| `pnpm audit` no high/critical vulns | Dependencies | Weeks 4/8/12 | ☐ |
+| Security smoke pre-launch | Pen test checklist | Weeks 4, 8 | ☐ |
 
 ---
 
@@ -295,13 +347,15 @@
 
 ### Platform
 
-- [ ] Auth tests green: cookie domain, Set-Cookie append, authCallback integration
-- [ ] Cookie issues fixed and deployed to production
-- [ ] OAuth end-to-end verified on production (GitHub, Google, Microsoft)
+- [x] Auth tests green: cookie domain, Set-Cookie append, authCallback integration (20 tests added)
+- [x] Cookie issues fixed and `.env.sample` updated
+- [ ] Staging deployed and OAuth end-to-end verified
+- [ ] Production deployed with `COOKIE_DOMAIN=.publiclogic.org`
 - [ ] `/health` returns 200 on production with all 5 subsystems healthy
 - [ ] Backup/restore validation completed within 24 hours of go-live
 - [ ] Grafana dashboard live with approval chain and request metrics
 - [ ] Alert rules firing correctly (test with synthetic failure)
+- [ ] Threat model reviewed and mitigations documented
 
 ### Product
 
@@ -322,11 +376,12 @@
 ### Compliance
 
 - [ ] 201 CMR 17.00 checklist signed off
-- [ ] WCAG 2.1 AA audit completed for public artifacts (≥ 95% pass)
+- [ ] WCAG 2.1 AA audit completed for public artifacts (≥ 90% pass or remediation plan)
 - [ ] OML compliance review documented
 - [ ] Data ownership & continuity document signed
 - [ ] No high/critical vulnerabilities in dependency audit
 - [ ] CodeQL scan green at all 3 checkpoints
+- [ ] Security smoke pre-launch report (Weeks 4, 8)
 
 ---
 
@@ -400,22 +455,22 @@
 
 ## Immediate Next Steps (First 14 Days)
 
-| # | Item | Owner | Due | Deliverable |
-|---|------|-------|-----|-------------|
-| 1 | ✅ Patch `cookie.ts` — remove hardcoded `.publiclogic.org` domain | Nate | Day 1 | PR merged, `cookie.test.ts` green |
-| 2 | ✅ Fix `setJwtCookieOnResponse` — append instead of overwrite | Nate | Day 1 | PR merged, append test green |
-| 3 | ✅ Remove `COOKIE_DOMAIN` default from `.env.sample` | Nate | Day 1 | PR merged |
-| 4 | Add `authCallback.test.ts` integration test | Nate | Day 4 | Test file with 4+ cases, CI green |
-| 5 | Unify cookie-setting across OAuth and built-in login | Nate | Day 5 | All flows produce identical cookie attributes for same env |
-| 6 | Write auth-smoke runbook (`ops/runbooks/auth-smoke.md`) | Nate | Day 5 | Runbook with local + staging + prod verification steps |
-| 7 | Deploy to Fly.io staging + verify cookie flow end-to-end | Nate | Day 7 | `/health` 200, OAuth login sets cookies, refresh works |
-| 8 | Deploy Vercel frontend staging + verify login→redirect→session | Nate | Day 7 | Login page → OAuth → redirect → session restored |
-| 9 | Kickoff call — confirm plan, assign lanes, lock deliverables | Both | Day 1 | Meeting notes in workspace |
-| 10 | Review and update 12 seed agenda items | Allie | Day 5 | Updated `logicvilleAgendaStore.ts` committed |
-| 11 | Start board packet insert template | Allie | Day 10 | Draft with 3 bullets + 1 visual slot |
-| 12 | Define pilot metrics (6–8) | Both | Day 10 | Metrics doc in `publiclogic-operating-system/` |
-
-Items 1–3 are already completed in this PR.
+| # | Item | Owner | Due | Deliverable | Status |
+|---|------|-------|-----|-------------|--------|
+| 1 | Patch `cookie.ts` — remove hardcoded `.publiclogic.org` domain | Dev (Nate) | Day 1 | PR merged, `cookie.test.ts` green | ✅ Done |
+| 2 | Fix `setJwtCookieOnResponse` — append instead of overwrite | Dev (Nate) | Day 1 | PR merged, append test green | ✅ Done |
+| 3 | Remove `COOKIE_DOMAIN` default from `.env.sample` | Dev (Nate) | Day 1 | PR merged | ✅ Done |
+| 4 | Add `auth-callback.test.ts` integration test (11 tests) | QA/Dev | Day 1 | Test file with 11 cases, CI green | ✅ Done |
+| 5 | Add `cookie.test.ts` unit tests (9 tests) | QA/Dev | Day 1 | 9 unit tests passing | ✅ Done |
+| 6 | Kickoff call — confirm plan, assign lanes, lock deliverables | Both | Day 2 | Meeting notes in workspace | ☐ |
+| 7 | Threat model & cookie security review | Nate, Dev | Day 5 | One-page threat model doc | ☐ |
+| 8 | Unify cookie-setting across OAuth and built-in login | Dev | Day 5 | All flows produce identical cookie attributes for same env | ☐ |
+| 9 | Write auth-smoke runbook (`ops/runbooks/auth-smoke.md`) | Dev, Nate | Day 5 | Runbook with local + staging + prod verification steps | ☐ |
+| 10 | Review & update 12 seed agenda items | Allie, Product | Day 5 | Updated `logicvilleAgendaStore.ts` committed | ☐ |
+| 11 | Deploy to Fly.io staging + verify cookie flow end-to-end | Ops, Nate | Day 7 | `/health` 200, OAuth login sets cookies, refresh works | ☐ |
+| 12 | Deploy Vercel frontend staging + verify login→redirect→session | Ops, Nate | Day 7 | Login page → OAuth → redirect → session restored | ☐ |
+| 13 | Start board packet insert template | Product (Allie) | Day 10 | Draft with 3 bullets + 1 visual slot | ☐ |
+| 14 | Define pilot metrics (6–8) | Both | Day 10 | Metrics doc filed | ☐ |
 
 ---
 
@@ -594,20 +649,22 @@ with alt text for any images. Font size ≥ 12pt. Plain language throughout.*
 
 | Day | Item | Owner | Status |
 |-----|------|-------|--------|
-| 1 | ✅ Patch `cookie.ts` — fix domain + append | Nate | Done (this PR) |
-| 1 | ✅ Fix `.env.sample` COOKIE_DOMAIN default | Nate | Done (this PR) |
-| 1 | ✅ Add `cookie.test.ts` unit tests (9 tests) | Nate | Done (this PR) |
-| 1 | Kickoff call — confirm plan, lock lanes | Both | ☐ |
-| 4 | Add `authCallback.test.ts` integration test | Nate | ☐ |
-| 5 | Unify cookie-setting across login flows | Nate | ☐ |
-| 5 | Write auth-smoke runbook | Nate | ☐ |
+| 1 | Patch `cookie.ts` — fix domain + append | Dev (Nate) | ✅ Done |
+| 1 | Fix `.env.sample` COOKIE_DOMAIN default | Dev (Nate) | ✅ Done |
+| 1 | Add `cookie.test.ts` unit tests (9 tests) | QA/Dev | ✅ Done |
+| 1 | Add `auth-callback.test.ts` integration tests (11 tests) | QA/Dev | ✅ Done |
+| 2 | Kickoff call — confirm plan, lock lanes | Both | ☐ |
+| 5 | Threat model & cookie security review | Nate, Dev | ☐ |
+| 5 | Unify cookie-setting across login flows | Dev | ☐ |
+| 5 | Write auth-smoke runbook | Dev, Nate | ☐ |
 | 5 | Review & update 12 seed agenda items | Allie | ☐ |
-| 7 | Deploy to Fly.io staging | Nate | ☐ |
-| 7 | Deploy Vercel frontend staging | Nate | ☐ |
-| 7 | Verify OAuth + cookies end-to-end on staging | Nate | ☐ |
-| 10 | Draft board packet insert template | Allie | ☐ |
+| 7 | Deploy to Fly.io staging | Ops, Nate | ☐ |
+| 7 | Deploy Vercel frontend staging | Ops, Nate | ☐ |
+| 7 | Verify OAuth + cookies end-to-end on staging | Ops, Nate | ☐ |
+| 10 | Draft board packet insert template | Product (Allie) | ☐ |
 | 10 | Define pilot metrics (6–8) | Both | ☐ |
-| 14 | Start Staff FAQ (6 Qs) | Allie | ☐ |
+| 14 | CI staging smoke job created | QA, Ops | ☐ |
+| 14 | Start Staff FAQ (6 Qs) | Product (Allie) | ☐ |
 
 ---
 
