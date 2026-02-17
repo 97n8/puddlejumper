@@ -39,7 +39,11 @@ test.describe('PJ smoke', () => {
       { steps: 10 }
     );
     await page.mouse.up();
-    await page.waitForTimeout(400);
+    // Wait for position to be saved to localStorage
+    await page.waitForFunction(
+      () => localStorage.getItem('pj_pos_v3') !== null,
+      { timeout: 5000 }
+    );
     const saved = await page.evaluate(() =>
       localStorage.getItem('pj_pos_v3')
     );
@@ -60,7 +64,11 @@ test.describe('PJ smoke', () => {
       (await page.evaluate(() => window.innerWidth)) - 10;
     await page.mouse.move(targetX, box.y + box.height / 2, { steps: 15 });
     await page.mouse.up();
-    await page.waitForTimeout(400);
+    // Wait for position to be saved to localStorage
+    await page.waitForFunction(
+      () => localStorage.getItem('pj_pos_v3') !== null,
+      { timeout: 5000 }
+    );
     const saved = JSON.parse(
       (await page.evaluate(() =>
         localStorage.getItem('pj_pos_v3')
@@ -93,9 +101,8 @@ test.describe('PJ smoke', () => {
     await expect(result).toBeVisible();
     await expect(result).toContainText('Processing');
 
-    // Wait for the mock result (700ms delay)
-    await page.waitForTimeout(900);
-    await expect(result).toContainText('Dashboard Summary');
+    // Wait for the mock result to appear (replaces loading state)
+    await expect(result).toContainText('Dashboard Summary', { timeout: 5000 });
     await expect(result).toContainText('Revenue running');
   });
 });

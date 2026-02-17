@@ -90,7 +90,7 @@ export default function PJAssistant() {
   const [commandResult, setCommandResult] = useState<{
     id: string;
     loading: boolean;
-    html: string;
+    content?: { title: string; items: string[] };
   } | null>(null);
 
   const dragRef = useRef<{
@@ -166,21 +166,21 @@ export default function PJAssistant() {
       return;
     }
 
-    setCommandResult({ id: cmd.id, loading: true, html: "" });
+    setCommandResult({ id: cmd.id, loading: true });
 
     if (cmd.id === "summarize-dashboard") {
       setTimeout(() => {
         setCommandResult({
           id: cmd.id,
           loading: false,
-          html: [
-            "<strong>Dashboard Summary</strong>",
-            "<ul style='margin:8px 0 0 16px;padding:0;'>",
-            "<li>Revenue running +3.7% vs forecast</li>",
-            "<li>3 open 30B items need attention</li>",
-            "<li>Retention mapping 72% complete</li>",
-            "</ul>",
-          ].join(""),
+          content: {
+            title: "Dashboard Summary",
+            items: [
+              "Revenue running +3.7% vs forecast",
+              "3 open 30-day items need attention",
+              "Retention mapping 72% complete",
+            ],
+          },
         });
       }, 700);
       return;
@@ -191,7 +191,10 @@ export default function PJAssistant() {
         setCommandResult({
           id: cmd.id,
           loading: false,
-          html: "<strong>Health:</strong> All systems operational ✓",
+          content: {
+            title: "Health Check",
+            items: ["All systems operational ✓"],
+          },
         });
       }, 500);
       return;
@@ -338,11 +341,16 @@ export default function PJAssistant() {
                       Generating response
                     </div>
                   </>
-                ) : (
-                  <div
-                    dangerouslySetInnerHTML={{ __html: commandResult.html }}
-                  />
-                )}
+                ) : commandResult.content ? (
+                  <div>
+                    <strong>{commandResult.content.title}</strong>
+                    <ul style={{ margin: "8px 0 0 16px", padding: 0 }}>
+                      {commandResult.content.items.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
