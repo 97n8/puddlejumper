@@ -6,6 +6,6 @@
     "vercel-build": "cd n8drive/web && npm install && npm run build"
   },
   "engines": {
-    "node": ">=20"
+    "node": "20.x"
   }
 }

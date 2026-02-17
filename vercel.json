@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd n8drive/web && npm install && npm run build",
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "n8drive/web/.next",
   "framework": "nextjs",
   "installCommand": "echo 'skip root install'"
