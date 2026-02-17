@@ -1,3 +1,5 @@
+import './setup-admin';
+
 // ── Tier Enforcement Tests ─────────────────────────────────────────────────
 //
 // Tests for tier limit enforcement, usage tracking, and plan upgrades.

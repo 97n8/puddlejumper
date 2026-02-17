@@ -3,9 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'sha256-seCudkMT4wRjO/nPyFtGWLLhGgxJcHm5CGI2gNLPj2E='; style-src 'sha256-smJ11o5yEy2X4SqKUnfG81FV7di4eBTmvX2IxR0EAIU='; connect-src 'self'; img-src 'self' data:; font-src 'self';" />
     <title>PuddleJumper — Workspace Control</title>
     <style>
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
       :root {
         --bg: #0f1117;
         --surface: #1a1d27;
@@ -76,10 +83,20 @@
         opacity: 0.9;
       }
       @media (max-width: 480px) {
-        .container { padding: 32px 20px; }
-        h1 { font-size: 20px; }
-        .nav-links { flex-direction: column; align-items: center; }
-        .nav-links a { width: 200px; text-align: center; }
+        .container {
+          padding: 32px 20px;
+        }
+        h1 {
+          font-size: 20px;
+        }
+        .nav-links {
+          flex-direction: column;
+          align-items: center;
+        }
+        .nav-links a {
+          width: 200px;
+          text-align: center;
+        }
       }
     </style>
   </head>
@@ -93,5 +110,13 @@
         <a href="/health">Health Check</a>
       </div>
     </div>
+    <script>
+      const PJ_EXECUTE = "/api/pj/execute";
+      const ENABLE_BACKEND = true;
+      window.PJ_BOOT_CONFIG = Object.freeze({
+        executePath: PJ_EXECUTE,
+        enableBackend: ENABLE_BACKEND,
+      });
+    </script>
   </body>
 </html>
