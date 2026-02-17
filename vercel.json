@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/login", "destination": "/portal-signin.html" },
+    { "source": "/login", "destination": "$ADMIN_FILE" }
+  ]
+}
