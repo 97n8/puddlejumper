@@ -1,12 +1,12 @@
 {
-  "name": "puddlejumper",
+  "name": "puddlejumper-monorepo",
   "version": "0.0.0",
   "private": true,
   "engines": {
     "node": "20.x"
   },
   "scripts": {
-    "vercel-build": "cd n8drive/web && npm ci && npm run build",
-    "build": "npm run vercel-build"
+    "build": "cd n8drive/web && npm ci && npm run build",
+    "dev": "cd n8drive/web && npm run dev"
   }
 }

@@ -1,6 +1,4 @@
 {
-  "version": 2,
-  "rootDirectory": "n8drive/web",
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": ".next"
