@@ -102,3 +102,5 @@ When running bootstrap/tests, logs are captured at:
 - `better-sqlite3` / `NODE_MODULE_VERSION` mismatch errors usually mean modules were built under a different Node runtime.
 - Run `source ~/.nvm/nvm.sh && nvm use 20` before ad-hoc `pnpm` commands.
 - If mismatch errors persist, rerun `bash scripts/bootstrap.sh` to rebuild native modules under Node 20.
+- Staging SQLite `CANTOPEN` usually means `/app/data` is not writable by the `node` user; verify mount + Fly env DB paths and check entrypoint diagnostics.
+- After Fly env/path changes, redeploy and confirm `/health` is stable and logs do not show repeated sqlite open failures.

@@ -31,4 +31,11 @@ primary_region = 'ewr'
 
 [[env]]
   CONTROLLED_DATA_DIR = '/app/data'
+  DATA_DIR = '/app/data'
+  LOGIC_COMMONS_DATA_DIR = '/app/data'
+  APPROVAL_DB_PATH = '/app/data/approvals.db'
+  PRR_DB_PATH = '/app/data/prr.db'
+  CONNECTOR_DB_PATH = '/app/data/connectors.db'
+  IDEMPOTENCY_DB_PATH = '/app/data/idempotency.db'
+  RATE_LIMIT_DB_PATH = '/app/data/rate-limit.db'
   PORT = '8080'
