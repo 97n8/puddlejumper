@@ -177,7 +177,7 @@ export default function Home() {
                   </a>
                 );
               }
-              return <div key={app.id} aria-disabled="true">{inner}</div>;
+              return <div key={app.id}>{inner}</div>;
             })}
           </div>
         </section>
