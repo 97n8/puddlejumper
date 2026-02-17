@@ -1,0 +1,44 @@
+name: PJ smoke tests
+
+on:
+  pull_request:
+    paths:
+      - 'n8drive/**'
+      - '.github/workflows/pj-smoke.yml'
+
+jobs:
+  quickstart-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: n8drive
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable corepack/pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@8.15.8 --activate
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: n8drive/pnpm-lock.yaml
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: |
+          pnpm --filter @publiclogic/core run build
+          pnpm --filter @publiclogic/logic-commons run build
+          pnpm --filter @publiclogic/puddlejumper run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Quick Start smoke tests
+        run: npx playwright test tests/quickstart.spec.ts
