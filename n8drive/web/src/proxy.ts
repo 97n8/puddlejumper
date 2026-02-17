@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * Per-request CSP nonce middleware.
+ * Per-request CSP nonce proxy.
  * Generates a unique nonce for every request and injects it into the
  * Content-Security-Policy header, replacing the static unsafe-inline
  * directives from next.config.ts.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';

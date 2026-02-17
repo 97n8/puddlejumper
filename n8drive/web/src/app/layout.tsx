@@ -15,7 +15,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Read the CSP nonce injected by middleware — forces dynamic rendering
+  // Read the CSP nonce injected by proxy — forces dynamic rendering
   // so every page gets a fresh nonce matching the CSP header.
   const nonce = (await headers()).get("x-nonce") ?? "";
   return (
