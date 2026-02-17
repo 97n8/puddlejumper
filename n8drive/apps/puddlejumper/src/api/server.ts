@@ -571,6 +571,15 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     store: connectorStore, stateHmacKey: connectorStateSecret,
   }));
 
+  // ── Next.js Proxy (MUST BE LAST) ─────────────────────────────────────────
+  // All frontend routes (/, /admin, /vault, etc.) are proxied to Next.js standalone server
+  // This must be mounted after all API routes so Express handles APIs directly
+  if (nodeEnv === "production") {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { createNextProxyMiddleware } = require("./nextProxy.js");
+    app.use(createNextProxyMiddleware());
+  }
+
   // ── Global error handler ──────────────────────────────────────────────
   app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (error instanceof SyntaxError) { res.status(400).json({ error: "Invalid JSON body" }); return; }
