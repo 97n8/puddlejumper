@@ -1,0 +1,87 @@
+{
+  "id": "prr-intake",
+  "version": "1.0.0",
+  "title": "Public Records Request Intake",
+  "description": "Structured intake and processing workflow for Massachusetts public records requests under M.G.L. c.66 §10. Ensures compliance with statutory timelines and response requirements.",
+  "formKeys": ["prr.intake.v1", "public-records-request-v1"],
+  "manifest": {
+    "planHash": "sha256:a7c3f1e2d4b9a8c5e7f3d2a1b4c8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+    "assets": [
+      {
+        "path": "forms/prr-intake.json",
+        "hash": "sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        "mime": "application/json",
+        "sizeBytes": 2048
+      }
+    ],
+    "schemaVersion": "1.0.0"
+  },
+  "mglCitations": [
+    {
+      "citation": "M.G.L. c.66 §10",
+      "context": "Every person having custody of any public record shall, at reasonable times, permit it to be inspected and examined by any person, under his supervision, and shall furnish one copy thereof upon payment of a reasonable fee.",
+      "url": "https://malegislature.gov/Laws/GeneralLaws/PartI/TitleX/Chapter66/Section10"
+    }
+  ],
+  "execution": {
+    "connectors": ["email", "webhook"],
+    "timeoutSeconds": 600,
+    "retry": {
+      "maxAttempts": 3,
+      "baseDelayMs": 1000,
+      "maxDelayMs": 30000
+    }
+  },
+  "releaseConstraints": {
+    "requiresComplianceReview": false,
+    "ttlSeconds": 86400
+  },
+  "tenantScope": "all",
+  "requiredPermissions": ["prr:submit", "records:read"],
+  "steps": [
+    {
+      "id": "intake",
+      "title": "Request Intake",
+      "description": "Capture requester information and record description",
+      "mglCitation": {
+        "citation": "M.G.L. c.66 §10",
+        "context": "Requester must provide sufficient detail to identify records"
+      },
+      "requiredInput": {
+        "requesterName": "string",
+        "requesterEmail": "string",
+        "recordDescription": "string"
+      }
+    },
+    {
+      "id": "acknowledgment",
+      "title": "Send Acknowledgment",
+      "description": "Confirm receipt within 10 business days per statute",
+      "mglCitation": {
+        "citation": "M.G.L. c.66 §10(b)",
+        "context": "Public records must be provided within 10 business days or explanation of delay"
+      }
+    },
+    {
+      "id": "review",
+      "title": "Records Review",
+      "description": "Locate and review requested records for exemptions",
+      "requiredInput": {
+        "recordsFound": "boolean",
+        "exemptionsClaimed": "string[]"
+      }
+    },
+    {
+      "id": "response",
+      "title": "Provide Response",
+      "description": "Deliver records or formal denial with appeal rights",
+      "expectedOutput": {
+        "responseType": "provided | denied | partial",
+        "responseDate": "datetime"
+      }
+    }
+  ],
+  "createdBy": "nate@publiclogic.org",
+  "createdAt": "2026-02-17T00:00:00Z",
+  "deprecated": false
+}

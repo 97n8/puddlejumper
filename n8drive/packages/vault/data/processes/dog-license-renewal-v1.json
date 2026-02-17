@@ -1,0 +1,83 @@
+{
+  "id": "dog-license-renewal",
+  "version": "1.0.0",
+  "title": "Dog License Renewal",
+  "description": "Annual dog licensing renewal workflow for Massachusetts municipalities. Ensures compliance with rabies vaccination requirements under M.G.L. c.140 §137.",
+  "formKeys": ["dog.license.renewal.v1"],
+  "manifest": {
+    "planHash": "sha256:b8d4e2f3a5c9b7d6e8f4a3b2c5d9e0f1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7",
+    "assets": [
+      {
+        "path": "forms/dog-license.json",
+        "hash": "sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+        "mime": "application/json",
+        "sizeBytes": 1024
+      }
+    ],
+    "schemaVersion": "1.0.0"
+  },
+  "mglCitations": [
+    {
+      "citation": "M.G.L. c.140 §137",
+      "context": "The owner or keeper of a dog six months old or older shall annually before April 1, or within 30 days of acquiring ownership, obtain a license.",
+      "url": "https://malegislature.gov/Laws/GeneralLaws/PartI/TitleXX/Chapter140/Section137"
+    },
+    {
+      "citation": "M.G.L. c.140 §145B",
+      "context": "No dog license shall be issued unless the owner presents a certificate from a licensed veterinarian showing current rabies vaccination.",
+      "url": "https://malegislature.gov/Laws/GeneralLaws/PartI/TitleXX/Chapter140/Section145B"
+    }
+  ],
+  "execution": {
+    "connectors": ["email", "payment"],
+    "timeoutSeconds": 300,
+    "retry": {
+      "maxAttempts": 3,
+      "baseDelayMs": 1000,
+      "maxDelayMs": 10000
+    }
+  },
+  "releaseConstraints": {
+    "requiresComplianceReview": false
+  },
+  "tenantScope": "all",
+  "requiredPermissions": ["license:issue"],
+  "steps": [
+    {
+      "id": "verify-vaccination",
+      "title": "Verify Rabies Vaccination",
+      "description": "Confirm current rabies certificate on file",
+      "mglCitation": {
+        "citation": "M.G.L. c.140 §145B",
+        "context": "Vaccination certificate required"
+      },
+      "requiredInput": {
+        "dogName": "string",
+        "ownerName": "string",
+        "vaccinationExpiry": "date"
+      }
+    },
+    {
+      "id": "collect-fee",
+      "title": "Collect License Fee",
+      "description": "Process annual license fee payment",
+      "requiredInput": {
+        "feeAmount": "number",
+        "paymentMethod": "string"
+      }
+    },
+    {
+      "id": "issue-license",
+      "title": "Issue License",
+      "description": "Generate and deliver dog license and tag",
+      "expectedOutput": {
+        "licenseNumber": "string",
+        "issueDate": "datetime",
+        "expiryDate": "datetime"
+      }
+    }
+  ],
+  "createdBy": "nate@publiclogic.org",
+  "createdAt": "2026-02-17T00:00:00Z",
+  "deprecated": false
+}

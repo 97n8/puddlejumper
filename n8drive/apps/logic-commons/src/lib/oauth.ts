@@ -5,6 +5,7 @@
 // described by a declarative OAuthProvider config object.
 
 import express from "express";
+import crypto from "node:crypto";
 import { authEvent, createSessionAndSetCookies } from "./session.js";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -18,8 +19,8 @@ export interface OAuthUserInfo {
 
 /** Structural interface for the OAuth state store (avoids private-field compatibility issues). */
 export interface IOAuthStateStore {
-  create(provider: string): string;
-  consume(state: string): string | null;
+  create(provider: string, codeVerifier?: string): string;
+  consume(state: string): { provider: string; codeVerifier?: string } | null;
 }
 
 /** Declarative description of an OAuth 2.0 provider. */
@@ -104,7 +105,14 @@ export function createOAuthRoutes(
       return res.status(500).json({ error: `${provider.name} OAuth not configured` });
     }
 
-    const state = opts.oauthStateStore.create(provider.name);
+    // Generate PKCE code_verifier and code_challenge for enhanced security
+    const codeVerifier = crypto.randomBytes(32).toString("base64url");
+    const codeChallenge = crypto
+      .createHash("sha256")
+      .update(codeVerifier)
+      .digest("base64url");
+
+    const state = opts.oauthStateStore.create(provider.name, codeVerifier);
     const redirectUri =
       process.env[provider.redirectUriEnvVar] || provider.defaultRedirectUri;
 
@@ -135,6 +143,10 @@ export function createOAuthRoutes(
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("scope", provider.scopes);
     authUrl.searchParams.set("state", state);
+    
+    // Add PKCE parameters (S256 = SHA-256)
+    authUrl.searchParams.set("code_challenge", codeChallenge);
+    authUrl.searchParams.set("code_challenge_method", "S256");
 
     if (provider.extraAuthorizeParams) {
       for (const [k, v] of Object.entries(provider.extraAuthorizeParams)) {
@@ -187,7 +199,8 @@ export function createOAuthRoutes(
     }
 
     // Validate + consume CSRF state (single-use, SQLite-backed)
-    if (!state || !opts.oauthStateStore.consume(state)) {
+    const stateResult = state ? opts.oauthStateStore.consume(state) : null;
+    if (!stateResult) {
       res.clearCookie(provider.stateCookieName);
       return res.status(400).json({ error: "Invalid or expired state parameter" });
     }
@@ -216,6 +229,11 @@ export function createOAuthRoutes(
         grant_type: "authorization_code",
         ...(provider.extraTokenParams ?? {}),
       };
+      
+      // Add PKCE code_verifier if it was stored (for providers requiring PKCE)
+      if (stateResult.codeVerifier) {
+        tokenParams.code_verifier = stateResult.codeVerifier;
+      }
 
       // Exchange code for access token — server-side, secret never exposed
       let fetchOpts: RequestInit;

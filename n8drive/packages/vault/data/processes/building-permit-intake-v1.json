@@ -1,0 +1,116 @@
+{
+  "id": "building-permit-intake",
+  "version": "1.0.0",
+  "title": "Building Permit Intake",
+  "description": "Multi-step building permit application workflow with departmental review chain. Ensures compliance with Massachusetts State Building Code (780 CMR) and local zoning bylaws.",
+  "formKeys": ["building.permit.intake.v1"],
+  "manifest": {
+    "planHash": "sha256:c9e5f3a4b6d0c8e7f5b4a3c6d0e1f2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9",
+    "assets": [
+      {
+        "path": "forms/building-permit-application.json",
+        "hash": "sha256:fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
+        "mime": "application/json",
+        "sizeBytes": 4096
+      },
+      {
+        "path": "templates/permit-decision-letter.docx",
+        "hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "sizeBytes": 8192
+      }
+    ],
+    "schemaVersion": "1.0.0"
+  },
+  "mglCitations": [
+    {
+      "citation": "780 CMR 110.1",
+      "context": "Buildings or structures hereafter erected, constructed, enlarged, altered, repaired, moved, removed, demolished or converted shall be in conformance with the provisions of 780 CMR.",
+      "url": "https://www.mass.gov/regulations/780-CMR-1100-administration-and-enforcement"
+    },
+    {
+      "citation": "M.G.L. c.143 §3",
+      "context": "Building permits required for new construction, alterations, and repairs. Enforced by local building inspector.",
+      "url": "https://malegislature.gov/Laws/GeneralLaws/PartI/TitleXX/Chapter143/Section3"
+    }
+  ],
+  "execution": {
+    "connectors": ["github", "webhook", "email"],
+    "timeoutSeconds": 1800,
+    "retry": {
+      "maxAttempts": 3,
+      "baseDelayMs": 2000,
+      "maxDelayMs": 60000
+    }
+  },
+  "releaseConstraints": {
+    "requiresComplianceReview": true,
+    "ttlSeconds": 604800,
+    "budgetCap": 1000.00
+  },
+  "tenantScope": "all",
+  "requiredPermissions": ["permit:review", "permit:approve"],
+  "steps": [
+    {
+      "id": "application-intake",
+      "title": "Application Intake",
+      "description": "Accept and validate building permit application with plans",
+      "mglCitation": {
+        "citation": "780 CMR 110.3",
+        "context": "Application must include plans, specifications, and site information"
+      },
+      "requiredInput": {
+        "applicantName": "string",
+        "propertyAddress": "string",
+        "projectDescription": "string",
+        "plansAttached": "boolean"
+      }
+    },
+    {
+      "id": "building-inspector-review",
+      "title": "Building Inspector Review",
+      "description": "Initial review by building inspector for code compliance",
+      "mglCitation": {
+        "citation": "M.G.L. c.143 §3",
+        "context": "Building inspector reviews for structural and safety compliance"
+      },
+      "requiredInput": {
+        "inspectorNotes": "string",
+        "codeViolations": "string[]",
+        "recommendation": "approve | deny | revise"
+      }
+    },
+    {
+      "id": "zoning-review",
+      "title": "Zoning Board Review",
+      "description": "Review for zoning bylaw compliance (if required)",
+      "requiredInput": {
+        "zoningCompliant": "boolean",
+        "varianceRequired": "boolean"
+      }
+    },
+    {
+      "id": "approval-decision",
+      "title": "Final Approval Decision",
+      "description": "Issue permit or formal denial with appeal rights",
+      "expectedOutput": {
+        "decision": "approved | denied",
+        "permitNumber": "string",
+        "conditions": "string[]",
+        "decisionDate": "datetime"
+      }
+    },
+    {
+      "id": "notification",
+      "title": "Notify Applicant",
+      "description": "Send decision letter and permit (if approved)",
+      "expectedOutput": {
+        "notificationSent": "boolean",
+        "notificationDate": "datetime"
+      }
+    }
+  ],
+  "createdBy": "nate@publiclogic.org",
+  "createdAt": "2026-02-17T00:00:00Z",
+  "deprecated": false
+}
