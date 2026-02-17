@@ -190,7 +190,7 @@ export class VaultPolicyProvider {
    */
   async registerManifest(input: ManifestInput): Promise<ManifestResponse> {
     // Validate process exists
-    const process = await this.storage.getProcessById(input.processId);
+    const process = await this.storage.getProcess(input.processId);
     if (!process) {
       return {
         accepted: false,
@@ -229,6 +229,7 @@ export class VaultPolicyProvider {
       registeredBy: input.operatorId,
       registeredAt: new Date().toISOString(),
       metadata: input.metadata,
+      status: 'registered',
     });
 
     // Audit
