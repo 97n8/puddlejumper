@@ -1,0 +1,12 @@
+{
+  "name": "puddlejumper-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "engines": {
+    "node": "20.x"
+  },
+  "scripts": {
+    "build": "cd n8drive/web && npm ci && npm run build",
+    "dev": "cd n8drive/web && npm run dev"
+  }
+}

@@ -151,7 +151,7 @@ export function createGovernanceRoutes(opts) {
                         try {
                             let templateId;
                             if (opts.policyProvider) {
-                                const resolved = opts.policyProvider.getChainTemplate({
+                                const resolved = await opts.policyProvider.getChainTemplate({
                                     actionIntent: evaluatePayload.action.intent,
                                     actionMode: evaluatePayload.action.mode ?? "governed",
                                     municipalityId: evaluatePayload.municipality.id,
@@ -169,7 +169,7 @@ export function createGovernanceRoutes(opts) {
                     // Write audit event through policy provider
                     if (opts.policyProvider) {
                         try {
-                            opts.policyProvider.writeAuditEvent({
+                            await opts.policyProvider.writeAuditEvent({
                                 eventId: crypto.randomUUID(),
                                 eventType: "approval_created",
                                 workspaceId: evaluatePayload.workspace.id,

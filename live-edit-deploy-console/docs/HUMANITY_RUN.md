@@ -5,7 +5,7 @@ This is the plain-language operating run for PublicLogic operators.
 ## 1. Start the system
 
 ```bash
-cd "/Users/n8/Documents/New project/live-edit-deploy-console"
+cd live-edit-deploy-console
 npm run dev
 ```
 
@@ -65,7 +65,7 @@ This proves Tenebrux Veritas can create real filesystem artifacts for the select
 7. Click `Create Proof Document`.
 8. Confirm new rows appear in the proof table and audit panel.
 9. Confirm files exist on disk under:
-   - `/Users/n8/Documents/New project/live-edit-deploy-console/data/proof-system/<env-id>/`
+   - `live-edit-deploy-console/data/proof-system/<env-id>/`
 
 ## 6. Deploy remote actions (real GitHub + SharePoint)
 
