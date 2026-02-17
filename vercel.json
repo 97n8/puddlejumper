@@ -1,9 +1,4 @@
 {
-  "rewrites": [
-    { "source": "/login", "destination": "/portal-signin.html" },
-    { "source": "/login", "destination": "$ADMIN_FILE" }
-  ]
-  "version": 2,
   "rootDirectory": "n8drive/web",
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
