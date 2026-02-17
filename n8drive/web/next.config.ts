@@ -6,8 +6,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   async redirects() {
     return [
-      // Legacy backend routes — redirect to the frontend sign-in page
-      { source: "/login", destination: "/", permanent: false },
+      // Legacy backend route — redirect to the frontend home page
       { source: "/pj/admin", destination: "/", permanent: false },
     ];
   },
