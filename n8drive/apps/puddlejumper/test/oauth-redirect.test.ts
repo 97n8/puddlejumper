@@ -110,7 +110,7 @@ describe("GitHub OAuth redirect flow", () => {
       .get("/api/auth/github/callback?code=test-code&state=wrong-state")
       .set("Cookie", "oauth_state=correct-state");
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("state");
+    expect(res.body.error).toContain("CSRF");
   });
 
   it("completes full OAuth flow with refresh token", async () => {

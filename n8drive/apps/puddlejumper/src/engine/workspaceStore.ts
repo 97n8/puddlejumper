@@ -121,9 +121,24 @@ export function listWorkspaces(dataDir: string): WorkspaceRow[] {
 export function ensurePersonalWorkspace(dataDir: string, userId: string, username: string): WorkspaceRow {
   let ws = getWorkspaceByOwner(dataDir, userId);
   if (ws) return ws;
+  
   const id = `ws-${userId}`;
   const name = `${username || userId}'s Workspace`;
-  createWorkspace(dataDir, id, name, userId);
+  
+  // Check if workspace with this ID already exists (edge case: stale data or race condition)
+  let existing = getWorkspace(dataDir, id);
+  if (existing) {
+    // If workspace exists with this ID but different owner, regenerate ID with timestamp
+    if (existing.owner_id !== userId) {
+      const newId = `ws-${userId}-${Date.now()}`;
+      createWorkspace(dataDir, newId, name, userId);
+      existing = getWorkspace(dataDir, newId)!;
+    }
+  } else {
+    // Safe to create with standard ID
+    createWorkspace(dataDir, id, name, userId);
+    existing = getWorkspace(dataDir, id)!;
+  }
   
   // Create owner member entry
   const db = getDb(dataDir);
@@ -132,13 +147,13 @@ export function ensurePersonalWorkspace(dataDir: string, userId: string, usernam
     db.prepare(`
       INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at)
       VALUES (?, ?, ?, 'owner', datetime('now'))
-    `).run(memberId, id, userId);
+    `).run(memberId, existing.id, userId);
   } catch (err: any) {
     // Ignore duplicate entry errors (member already exists)
     if (err.code !== 'SQLITE_CONSTRAINT_UNIQUE') throw err;
   }
   
-  return getWorkspace(dataDir, id)!;
+  return existing;
 }
 
 export function resetWorkspaceDb(): void {
