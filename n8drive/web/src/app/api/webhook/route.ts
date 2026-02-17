@@ -15,6 +15,8 @@ function safeCompare(a: string, b: string) {
   }
 }
 
+// In-memory idempotency guard — sufficient for single-instance deploys.
+// For multi-instance, swap to a shared store (Redis / DB).
 const SEEN_CAP = 10_000;
 const seenIds = new Set<string>();
 
