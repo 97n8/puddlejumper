@@ -330,7 +330,9 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 // ── Start Server ────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log(`[Vault] HTTP server listening on port ${PORT}`);
-  console.log(`[Vault] Health check: http://localhost:${PORT}/health`);
+const HOST = NODE_ENV === "production" ? "0.0.0.0" : "localhost";
+
+app.listen(PORT, HOST, () => {
+  console.log(`[Vault] HTTP server listening on ${HOST}:${PORT}`);
+  console.log(`[Vault] Health check: http://${HOST}:${PORT}/health`);
 });

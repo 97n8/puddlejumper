@@ -1,0 +1,62 @@
+# Multi-stage build for Vault (from monorepo root)
+FROM node:20-alpine AS base
+
+# Stage 1: Install dependencies
+FROM base AS deps
+WORKDIR /app
+
+# Copy root package files
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
+
+# Copy package.json files for all dependencies
+COPY packages/core/package.json ./packages/core/
+COPY packages/vault/package.json ./packages/vault/
+
+# Install pnpm and all dependencies
+RUN corepack enable pnpm && \
+    pnpm install
+
+# Stage 2: Build
+FROM base AS builder
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages ./packages
+
+# Copy root config files
+COPY tsconfig.base.json package.json pnpm-workspace.yaml ./
+
+# Copy source code
+COPY packages/core ./packages/core
+COPY packages/vault ./packages/vault
+
+# Build packages
+RUN cd packages/core && npm run build && \
+    cd ../vault && npm run build
+
+# Stage 3: Production runtime
+FROM base AS runner
+WORKDIR /app/packages/vault
+
+# Copy built application
+COPY --from=builder /app/packages/vault/dist ./dist
+COPY --from=builder /app/packages/vault/data ./data
+COPY --from=builder /app/packages/vault/package.json ./package.json
+
+# Copy node_modules from workspace root (pnpm workspace structure)
+COPY --from=builder /app/node_modules /app/node_modules
+COPY --from=builder /app/packages /app/packages
+
+# Create data directories
+RUN mkdir -p /app/packages/vault/data/db
+
+# Expose port
+EXPOSE 3003
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3003/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+
+# Run server
+CMD ["node", "dist/server.js"]
