@@ -89,6 +89,27 @@ export function getDb(dataDir: string): Database.Database {
       CREATE INDEX idx_workspace_invitations_workspace ON workspace_invitations(workspace_id);
     `);
   }
+
+  // Deployed processes table (FormKey deployments from Vault)
+  const hasDeployedProcessesTable = _db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='deployed_processes'`).get();
+  if (!hasDeployedProcessesTable) {
+    _db.exec(`
+      CREATE TABLE deployed_processes (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+        form_key TEXT NOT NULL,
+        process_id TEXT NOT NULL,
+        process_version TEXT NOT NULL,
+        deployed_by TEXT NOT NULL,
+        deployed_at TEXT NOT NULL DEFAULT (datetime('now')),
+        manifest_hash TEXT,
+        status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','archived','error')),
+        UNIQUE(workspace_id, form_key)
+      );
+      CREATE INDEX idx_deployed_processes_workspace ON deployed_processes(workspace_id);
+      CREATE INDEX idx_deployed_processes_form_key ON deployed_processes(form_key);
+    `);
+  }
   
   return _db;
 }

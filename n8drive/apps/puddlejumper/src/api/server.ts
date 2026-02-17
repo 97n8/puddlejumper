@@ -94,6 +94,7 @@ import { createWorkspaceUsageRoutes } from "./routes/workspaceUsage.js";
 import { createWorkspaceCollaborationRoutes } from "./routes/workspaceCollaboration.js";
 import { createPublicPRRRoutes } from "./routes/publicPrr.js";
 import { createAdminPRRRoutes } from "./routes/prrAdmin.js";
+import { createVaultRoutes } from "./vaultRoutes.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
@@ -545,6 +546,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createAdminRoutes({ approvalStore, chainStore }));
   app.use("/api", createWorkspaceUsageRoutes());
   app.use("/api", createWorkspaceCollaborationRoutes());
+  app.use("/api", createVaultRoutes({ 
+    dataDir: CONTROLLED_DATA_DIR, 
+    vaultUrl: process.env.VAULT_URL 
+  }));
   app.use(createPublicPRRRoutes());
   app.use("/api", createAdminPRRRoutes());
   app.use("/api", createWebhookActionRoutes({
