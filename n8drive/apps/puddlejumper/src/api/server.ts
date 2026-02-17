@@ -274,10 +274,11 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use(requestLogger);
   app.use(createCorsMiddleware(nodeEnv));
 
-  // Add HSTS header for production
+  // Add HSTS and Referrer-Policy headers for production
   if (nodeEnv === "production") {
     app.use((_req, res, next) => {
       res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+      res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
       next();
     });
   }
@@ -337,6 +338,16 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       checks,
       secrets,
     });
+  });
+  app.get("/ready", (_req, res) => {
+    // Lightweight readiness probe — verifies DB connectivity only
+    try {
+      (prrStore as any).db.prepare("SELECT 1").get();
+      (approvalStore as any).db.prepare("SELECT 1").get();
+      res.json({ status: "ready" });
+    } catch {
+      res.status(503).json({ status: "not_ready" });
+    }
   });
   app.get("/metrics", (req, res) => {
     // Optional bearer-token auth: set METRICS_TOKEN env to restrict scraping
@@ -586,10 +597,37 @@ export function startServer() {
 
   const app = createApp();
   const port = Number.parseInt(process.env.PORT ?? "3002", 10);
-  app.listen(port, () => {
+  const server = app.listen(port, () => {
     // eslint-disable-next-line no-console
     console.log(`Puddle Jumper Deploy Remote running on http://localhost:${port}`);
   });
+
+  // ── Graceful shutdown ──────────────────────────────────────────────────
+  const shutdownGracePeriodMs = 10_000;
+  let shuttingDown = false;
+
+  const gracefulShutdown = (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    // eslint-disable-next-line no-console
+    console.log(JSON.stringify({ level: "info", scope: "server.shutdown", signal, timestamp: new Date().toISOString() }));
+
+    server.close(() => {
+      // eslint-disable-next-line no-console
+      console.log(JSON.stringify({ level: "info", scope: "server.shutdown.complete", timestamp: new Date().toISOString() }));
+      process.exit(0);
+    });
+
+    // Force exit after grace period
+    setTimeout(() => {
+      // eslint-disable-next-line no-console
+      console.error(JSON.stringify({ level: "error", scope: "server.shutdown.forced", timestamp: new Date().toISOString() }));
+      process.exit(1);
+    }, shutdownGracePeriodMs).unref();
+  };
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {

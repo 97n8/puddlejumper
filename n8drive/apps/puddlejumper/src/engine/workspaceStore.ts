@@ -28,6 +28,8 @@ export function getDb(dataDir: string): Database.Database {
   const dbPath = path.join(dataDir, "approvals.db");
   _db = new Database(dbPath);
   _db.pragma("journal_mode = WAL");
+  _db.pragma("synchronous = NORMAL");
+  _db.pragma("wal_autocheckpoint = 1000");
   // Create workspaces table if not exists
   _db.exec(`
     CREATE TABLE IF NOT EXISTS workspaces (

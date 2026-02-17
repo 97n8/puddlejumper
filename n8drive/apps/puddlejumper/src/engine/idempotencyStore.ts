@@ -48,6 +48,8 @@ export class IdempotencyStore<TOutput> {
     fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
     this.db = new Database(resolvedPath);
     this.db.pragma("journal_mode = WAL");
+    this.db.pragma("synchronous = NORMAL");
+    this.db.pragma("wal_autocheckpoint = 1000");
     this.db.pragma("foreign_keys = ON");
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS idempotency (
