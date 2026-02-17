@@ -91,6 +91,8 @@ export class ApprovalStore {
     fs.mkdirSync(path.dirname(resolved), { recursive: true });
     this.db = new Database(resolved);
     this.db.pragma("journal_mode = WAL");
+    this.db.pragma("synchronous = NORMAL");
+    this.db.pragma("wal_autocheckpoint = 1000");
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS approvals (
         id TEXT PRIMARY KEY,

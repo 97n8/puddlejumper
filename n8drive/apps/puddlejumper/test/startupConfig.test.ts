@@ -6,7 +6,7 @@ import { loadConfig, StartupConfigError, startupConfigSchema } from "../src/api/
 /** Minimal valid env for loadConfig. */
 function validEnv(): Record<string, string> {
   return {
-    JWT_SECRET: "super-secret-key",
+    JWT_SECRET: "super-secret-key-that-is-at-least-32-characters-long",
     AUTH_ISSUER: "https://auth.example.com",
     AUTH_AUDIENCE: "https://api.example.com",
     PRR_DB_PATH: "/app/data/prr.db",
@@ -19,7 +19,7 @@ function validEnv(): Record<string, string> {
 describe("loadConfig", () => {
   it("succeeds with all required env vars", () => {
     const config = loadConfig(validEnv());
-    expect(config.JWT_SECRET).toBe("super-secret-key");
+    expect(config.JWT_SECRET).toBe("super-secret-key-that-is-at-least-32-characters-long");
     expect(config.AUTH_ISSUER).toBe("https://auth.example.com");
     expect(config.AUTH_AUDIENCE).toBe("https://api.example.com");
     expect(config.PRR_DB_PATH).toBe("/app/data/prr.db");
@@ -89,15 +89,25 @@ describe("loadConfig", () => {
   it("trims whitespace from required values", () => {
     const env = {
       ...validEnv(),
-      JWT_SECRET: "  my-secret  ",
+      JWT_SECRET: "  my-secret-that-is-at-least-32-characters-long  ",
     };
     const config = loadConfig(env);
-    expect(config.JWT_SECRET).toBe("my-secret");
+    expect(config.JWT_SECRET).toBe("my-secret-that-is-at-least-32-characters-long");
   });
 
   it("rejects invalid FRONTEND_URL when provided", () => {
     const env = { ...validEnv(), FRONTEND_URL: "not-a-url" };
     expect(() => loadConfig(env)).toThrow(StartupConfigError);
+  });
+
+  it("rejects JWT_SECRET shorter than 32 characters", () => {
+    const env = { ...validEnv(), JWT_SECRET: "too-short" };
+    expect(() => loadConfig(env)).toThrow(StartupConfigError);
+    try {
+      loadConfig(env);
+    } catch (err) {
+      expect((err as StartupConfigError).message).toContain("32 characters");
+    }
   });
 
   it("accepts empty string for FRONTEND_URL (treated as undefined)", () => {

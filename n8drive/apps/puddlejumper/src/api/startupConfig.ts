@@ -23,7 +23,7 @@ const nonEmptyString = z.string().trim().min(1);
  */
 export const startupConfigSchema = z.object({
   // ── Required ────────────────────────────────────────────────────────
-  JWT_SECRET: nonEmptyString,
+  JWT_SECRET: nonEmptyString.min(32, "JWT_SECRET must be at least 32 characters for production safety"),
   AUTH_ISSUER: nonEmptyString,
   AUTH_AUDIENCE: nonEmptyString,
 
