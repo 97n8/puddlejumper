@@ -11,10 +11,19 @@
       try { document.cookie = "jwt=; Max-Age=0; path=/"; } catch(e) {}
       try { document.cookie = "token=; Max-Age=0; path=/"; } catch(e) {}
       try {
-        if (typeof openAuthGate === 'function') openAuthGate();
-        else {
-          var ag = document.getElementById('authGate');
-          if (ag) ag.classList.remove('hidden');
+        if (typeof openAuthGate === 'function') {
+          openAuthGate();
+          return;
+        }
+        var ids = ['authGate','auth-gate','auth_gate','authModal','auth-modal','auth_gate_modal'];
+        for (var i=0;i<ids.length;i++){
+          var el = document.getElementById(ids[i]);
+          if (el){
+            try { el.classList.remove('hidden'); } catch(e) {}
+            try { el.style.display = 'block'; } catch(e) {}
+            try { el.style.visibility = 'visible'; } catch(e) {}
+            return;
+          }
         }
       } catch(e) {}
     }
