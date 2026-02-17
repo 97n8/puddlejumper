@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../lib/auth";
+import PJAssistant from "../components/PJAssistant";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,6 +35,7 @@ export default async function RootLayout({
         nonce={nonce}
       >
         <AuthProvider>{children}</AuthProvider>
+        <PJAssistant />
       </body>
     </html>
   );
