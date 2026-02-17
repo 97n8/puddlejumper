@@ -16,14 +16,16 @@ export function createNextProxyMiddleware(): RequestHandler {
     target: NEXTJS_URL,
     changeOrigin: true,
     ws: true, // Proxy websockets (for Next.js dev HMR, not used in prod but harmless)
-    onError: (err: Error, req: any, res: any) => {
-      console.error(`[Next.js Proxy Error] ${req.method} ${req.url}:`, err.message);
-      if (!res.headersSent) {
-        res.status(502).json({
-          error: "Next.js server unavailable",
-          details: process.env.NODE_ENV === "production" ? undefined : err.message,
-        });
-      }
+    on: {
+      error: (err: any, req: any, res: any) => {
+        console.error(`[Next.js Proxy Error] ${req.method} ${req.url}:`, err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            error: "Next.js server unavailable",
+            details: process.env.NODE_ENV === "production" ? undefined : err.message,
+          });
+        }
+      },
     },
   });
 }
