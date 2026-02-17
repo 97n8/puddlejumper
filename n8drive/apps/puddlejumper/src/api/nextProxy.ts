@@ -16,8 +16,7 @@ export function createNextProxyMiddleware(): RequestHandler {
     target: NEXTJS_URL,
     changeOrigin: true,
     ws: true, // Proxy websockets (for Next.js dev HMR, not used in prod but harmless)
-    logLevel: process.env.NODE_ENV === "production" ? "warn" : "info",
-    onError: (err, req, res) => {
+    onError: (err: Error, req: any, res: any) => {
       console.error(`[Next.js Proxy Error] ${req.method} ${req.url}:`, err.message);
       if (!res.headersSent) {
         res.status(502).json({
