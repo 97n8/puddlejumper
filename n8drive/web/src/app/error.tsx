@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 /**
  * Page-level error boundary. Catches errors from page components
  * while keeping the root layout (AuthProvider, etc.) intact.
@@ -32,12 +34,12 @@ export default function Error({
           >
             Try again
           </button>
-          <a
+          <Link
             href="/"
             className="rounded-full border border-zinc-700 px-5 py-2 text-sm text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
           >
             Go home
-          </a>
+          </Link>
         </div>
       </div>
     </div>
