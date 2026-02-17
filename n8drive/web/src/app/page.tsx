@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "../lib/auth";
 import type { LiveTile } from "../lib/auth";
 import { pjFetch } from "../lib/pjFetch";
+import { getPortalApps, type PortalAppLink } from "../portalApps";
 
 type HealthPayload = Record<string, unknown>;
 
@@ -105,7 +106,7 @@ export default function Home() {
       {/* ── Header ──────────────────────────────────────────── */}
       <header className="border-b border-zinc-800 bg-zinc-900/70">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
-          <h1 className="text-3xl font-semibold">PuddleJumper</h1>
+          <h1 className="text-3xl font-semibold">PublicLogic Control Center</h1>
           <div className="flex items-center gap-4">
             {runtimeCtx && (
               <span className="text-xs text-zinc-500">
@@ -133,6 +134,54 @@ export default function Home() {
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-10">
+        {/* ── Launcher ─────────────────────────────────────── */}
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-lg">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">Internal Launcher</h2>
+            <p className="mt-1 text-sm text-zinc-400">
+              Pick a surface to work on. Missing links show as &quot;Not configured&quot;.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="PublicLogic apps">
+            {getPortalApps().map((app) => {
+              const disabled = app.status !== 'available';
+              const inner = (
+                <div
+                  key={app.id}
+                  className={`rounded-xl border p-4 transition ${
+                    disabled
+                      ? "border-zinc-800 bg-zinc-950/40 opacity-60"
+                      : "border-zinc-800 bg-zinc-950/60 hover:border-emerald-500/60 hover:shadow-lg"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-zinc-100">{app.label}</h3>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      disabled
+                        ? "bg-zinc-800 text-zinc-500"
+                        : "bg-emerald-500/20 text-emerald-300"
+                    }`}>
+                      {disabled ? "Not configured" : "Available"}
+                    </span>
+                  </div>
+                  {app.description && (
+                    <p className="mt-1 text-xs text-zinc-500">{app.description}</p>
+                  )}
+                </div>
+              );
+
+              if (!disabled && app.url) {
+                return (
+                  <a key={app.id} href={app.url} target="_blank" rel="noopener noreferrer" className="block no-underline">
+                    {inner}
+                  </a>
+                );
+              }
+              return <div key={app.id} aria-disabled="true">{inner}</div>;
+            })}
+          </div>
+        </section>
+
         {/* ── Login ────────────────────────────────────────── */}
         {!user && (
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-lg">

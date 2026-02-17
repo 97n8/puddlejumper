@@ -1,33 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is the **PublicLogic Control Center** — the internal launcher and front door for the PublicLogic platform. Built with [Next.js](https://nextjs.org).
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Launcher Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The home page launcher reads the following env vars to build app cards. If a var is missing, the card shows as "Not configured" (no broken link).
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_PL_URL_MAIN` | PublicLogic main web app |
+| `NEXT_PUBLIC_PL_URL_PJ` | PuddleJumper workspace |
+| `NEXT_PUBLIC_PL_URL_PJ_ADMIN` | PuddleJumper admin console |
+| `NEXT_PUBLIC_PL_URL_PJ_GUIDE` | PuddleJumper Quick Start guide |
+| `NEXT_PUBLIC_PL_URL_OS` | PublicLogic OS (HMLP) surface |
+| `NEXT_PUBLIC_PL_URL_DEPLOY_CONSOLE` | Deploy console (optional) |
+| `NEXT_PUBLIC_PL_URL_CHAMBER_CONNECT` | Chamber Connect (optional) |
+
+Copy `.env.local.example` or set these in your `.env.local`.
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
-
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
 ## Deploy on Vercel
 
