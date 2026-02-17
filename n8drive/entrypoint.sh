@@ -48,12 +48,12 @@ ensure_db_file_writable "$RATE_LIMIT_DB_PATH"
 # Start Next.js standalone server in background (production only)
 if [ "${NODE_ENV:-}" = "production" ]; then
   echo "[entrypoint] Starting Next.js server on port 3003..."
-  gosu node sh -c "cd /app/web-standalone/web && PORT=3003 node server.js" &
+  gosu node sh -c "cd /app/web-standalone/web && PORT=3003 node server.js" > /tmp/nextjs.log 2>&1 &
   NEXTJS_PID=$!
   echo "[entrypoint] Next.js server started (PID: $NEXTJS_PID)"
   
   # Give Next.js a moment to bind to port
-  sleep 2
+  sleep 3
 fi
 
 # Start Express server (foreground)
