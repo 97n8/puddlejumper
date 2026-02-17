@@ -79,27 +79,32 @@ fly deploy --app publiclogic-puddlejumper</code></pre>
   <div class="sys-layer">
     <div class="sys-layer-label clients">Clients</div>
     <div class="sys-nodes">
+      <div class="sys-node green">Next.js Frontend (Vercel)</div>
       <div class="sys-node green">PJ Workspace UI</div>
-      <div class="sys-node green">Admin UI</div>
+      <div class="sys-node green">Admin Panel</div>
       <div class="sys-node green">AI Agent / CLI</div>
       <div class="sys-node green">Webhook Consumer</div>
     </div>
   </div>
 
-  <div class="sys-arrow">↕ HTTPS + JWT</div>
+  <div class="sys-arrow">↕ HTTPS + JWT + CSRF</div>
 
   <div class="sys-layer">
-    <div class="sys-layer-label api">API Layer (Express)</div>
+    <div class="sys-layer-label api">API Layer (Express on Fly.io)</div>
     <div class="sys-nodes">
       <div class="sys-node">Auth &amp; OAuth</div>
       <div class="sys-node">Config &amp; Capabilities</div>
-      <div class="sys-node">PRR Intake</div>
-      <div class="sys-node">Access Requests</div>
       <div class="sys-node">Governance / Execute</div>
       <div class="sys-node">Approvals</div>
       <div class="sys-node">Chain Templates</div>
+      <div class="sys-node">PRR Intake</div>
+      <div class="sys-node">Access Requests</div>
       <div class="sys-node">Webhook Actions</div>
       <div class="sys-node">Admin Stats</div>
+      <div class="sys-node">Audit Export</div>
+      <div class="sys-node">Workspace Collaboration</div>
+      <div class="sys-node">Workspace Usage</div>
+      <div class="sys-node">Vault Routes</div>
       <div class="sys-node">Connectors</div>
     </div>
   </div>
@@ -107,15 +112,18 @@ fly deploy --app publiclogic-puddlejumper</code></pre>
   <div class="sys-arrow">↕</div>
 
   <div class="sys-layer">
-    <div class="sys-layer-label engine">Engine</div>
+    <div class="sys-layer-label engine">Engine &amp; Middleware</div>
     <div class="sys-nodes">
       <div class="sys-node purple">Governance Engine</div>
+      <div class="sys-node purple">Policy Provider</div>
       <div class="sys-node purple">Approval Store</div>
       <div class="sys-node purple">Chain Store</div>
+      <div class="sys-node purple">Workspace Store</div>
       <div class="sys-node purple">Dispatcher Registry</div>
+      <div class="sys-node purple">Idempotency Store</div>
+      <div class="sys-node purple">Rate Limiter</div>
       <div class="sys-node purple">Approval Metrics</div>
       <div class="sys-node purple">Validation</div>
-      <div class="sys-node purple">Idempotency Store</div>
     </div>
   </div>
 
@@ -124,9 +132,12 @@ fly deploy --app publiclogic-puddlejumper</code></pre>
   <div class="sys-layer">
     <div class="sys-layer-label stores">Data Stores (SQLite WAL)</div>
     <div class="sys-nodes">
-      <div class="sys-node orange">prr.db</div>
       <div class="sys-node orange">approvals.db</div>
+      <div class="sys-node orange">prr.db</div>
       <div class="sys-node orange">connectors.db</div>
+      <div class="sys-node orange">idempotency.db</div>
+      <div class="sys-node orange">rate-limit.db</div>
+      <div class="sys-node orange">audit.db</div>
       <div class="sys-node orange">oauth_state.db</div>
     </div>
   </div>
@@ -138,6 +149,7 @@ fly deploy --app publiclogic-puddlejumper</code></pre>
     <div class="sys-nodes">
       <div class="sys-node yellow">GitHub (Issues/PRs)</div>
       <div class="sys-node yellow">Slack (Messages)</div>
+      <div class="sys-node yellow">SharePoint (Documents)</div>
       <div class="sys-node yellow">Webhook (HTTP POST)</div>
     </div>
   </div>
@@ -146,21 +158,32 @@ fly deploy --app publiclogic-puddlejumper</code></pre>
 
 <h3>Monorepo structure</h3>
 <pre><code>n8drive/
-├── packages/core/          @publiclogic/core — JWT auth, middleware, CSRF
-├── apps/logic-commons/     @publiclogic/logic-commons — OAuth providers, session routes
-├── apps/puddlejumper/      The control plane application
+├── packages/core/          @publiclogic/core — JWT auth, middleware, CSRF, cookies
+├── packages/vault/          @publiclogic/vault — Vault policy provider
+├── apps/logic-commons/     @publiclogic/logic-commons — OAuth providers, session routes, audit store
+├── apps/puddlejumper/      The governance control plane application
 │   ├── public/             Static assets (admin.html, guide.html, workspace)
 │   ├── src/api/            Express server, routes, middleware
-│   │   ├── server.ts       App factory + route wiring
-│   │   └── routes/         auth, config, prr, access, governance,
-│   │                       approvals, chainTemplates, admin, webhookAction
+│   │   ├── server.ts       App factory + route wiring + health/ready endpoints
+│   │   ├── routes/         auth, config, prr, access, governance,
+│   │   │                   approvals, chainTemplates, admin, webhookAction,
+│   │   │                   workspaceCollaboration, workspaceUsage
+│   │   ├── rateLimit.ts    SQLite-backed rate limiting
+│   │   └── vaultRoutes.ts  Vault integration endpoints
 │   ├── src/engine/         Business logic
 │   │   ├── approvalStore   Approval CRUD + status machine
 │   │   ├── chainStore      Chain templates, steps, parallel progression
-│   │   ├── dispatch        DispatcherRegistry + GitHub/Slack/Webhook dispatchers
+│   │   ├── workspaceStore  Workspace + member management
+│   │   ├── idempotencyStore Idempotent request handling
+│   │   ├── dispatch        DispatcherRegistry + dispatchers:
+│   │   │   dispatchers/      GitHub, Slack, SharePoint, Webhook
 │   │   ├── governanceEngine  Policy evaluation + approval gate
 │   │   └── approvalMetrics Prometheus-format counters &amp; histograms
-│   └── test/               Automated suite for auth, governance, chain routing, and dispatch
+│   └── test/               500+ tests for auth, governance, chains, dispatch
+├── web/                    Next.js frontend (Vercel)
+│   └── src/app/            Pages: home, login, dashboard, governance,
+│                           approvals, admin, vault
+├── ops/                    Runbooks, DR plan, operational handoff
 ├── Dockerfile              Multi-stage build (Fly.io)
 └── fly.toml                Deployment config (app: publiclogic-puddlejumper)</code></pre>
 
@@ -231,7 +254,10 @@ fly deploy --app publiclogic-puddlejumper</code></pre>
     <tr><td><span class="method get">GET</span></td><td class="path">/api/pj/actions</td><td><span class="auth-badge">user</span></td><td>Available actions</td></tr>
     <tr><td><span class="method get">GET</span></td><td class="path">/api/admin/stats</td><td><span class="auth-badge admin">admin</span></td><td>Operational dashboard stats</td></tr>
     <tr><td><span class="method get">GET</span></td><td class="path">/api/admin/audit</td><td><span class="auth-badge admin">admin</span></td><td>Auth audit log</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/health</td><td><span class="auth-badge public">public</span></td><td>Health check (db + secrets)</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/admin/audit/export</td><td><span class="auth-badge admin">admin</span></td><td>Audit export (CSV/JSON)</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/workspace/usage</td><td><span class="auth-badge">user</span></td><td>Workspace usage &amp; limits</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/health</td><td><span class="auth-badge public">public</span></td><td>Health check (db + volume + secrets)</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/ready</td><td><span class="auth-badge public">public</span></td><td>Readiness probe (db ping)</td></tr>
     <tr><td><span class="method get">GET</span></td><td class="path">/metrics</td><td><span class="auth-badge public">token</span></td><td>Prometheus metrics</td></tr>
   </tbody>
 </table>
@@ -282,7 +308,7 @@ fly deploy --app publiclogic-puddlejumper</code></pre>
 <h2>Key Environment Variables</h2>
 
 <div class="env-grid">
-  <div class="ek">JWT_SECRET</div><div class="ev">Secret for signing JWTs (required)</div>
+  <div class="ek">JWT_SECRET</div><div class="ev">Secret for signing JWTs (≥32 chars, required)</div>
   <div class="ek">AUTH_ISSUER</div><div class="ev">JWT issuer claim</div>
   <div class="ek">AUTH_AUDIENCE</div><div class="ev">JWT audience claim</div>
   <div class="ek">GITHUB_CLIENT_ID / _SECRET</div><div class="ev">GitHub OAuth app credentials</div>
@@ -290,12 +316,16 @@ fly deploy --app publiclogic-puddlejumper</code></pre>
   <div class="ek">MICROSOFT_CLIENT_ID / _SECRET</div><div class="ev">Microsoft OAuth credentials</div>
   <div class="ek">CONNECTOR_STATE_SECRET</div><div class="ev">HMAC key for connector state integrity</div>
   <div class="ek">METRICS_TOKEN</div><div class="ev">Bearer token for /metrics scraping (optional)</div>
+  <div class="ek">PRR_DB_PATH</div><div class="ev">Path to PRR database (required in production)</div>
+  <div class="ek">IDEMPOTENCY_DB_PATH</div><div class="ev">Path to idempotency database (required in production)</div>
+  <div class="ek">RATE_LIMIT_DB_PATH</div><div class="ev">Path to rate limit database (required in production)</div>
+  <div class="ek">FRONTEND_URL</div><div class="ev">Frontend URL for CORS (required in production)</div>
   <div class="ek">PORT</div><div class="ev">Server port (default: 3002)</div>
   <div class="ek">NODE_ENV</div><div class="ev">production | development | test</div>
 </div>
 
 <p class="footer-note">
-  PuddleJumper Control Plane · Workspace isolation, RBAC, tier enforcement, and chain-step observability · Deployed on <a href="https://fly.io">Fly.io</a> as publiclogic-puddlejumper
+  PuddleJumper Control Plane · Workspace isolation, RBAC, tier enforcement, chain-step observability, and audit export · Backend on <a href="https://fly.io">Fly.io</a> · Frontend on <a href="https://vercel.com">Vercel</a>
 </p>
 
 </div>
