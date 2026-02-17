@@ -7,7 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 
-const STATE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes (extended for real-world OAuth delays)
 const PRUNE_INTERVAL_MS = 60 * 1000; // 60 seconds
 
 export class OAuthStateStore {

@@ -112,7 +112,7 @@ export function createOAuthRoutes(
     res.cookie(provider.stateCookieName, state, {
       httpOnly: true,
       secure: opts.nodeEnv === "production",
-      maxAge: 5 * 60 * 1000,
+      maxAge: 10 * 60 * 1000, // Match state TTL (10 minutes)
       sameSite: "lax",
     });
 
@@ -152,8 +152,36 @@ export function createOAuthRoutes(
         .json({ error, error_description: error_description || "Auth error" });
     }
 
+    // CSRF validation: verify cookie matches state query parameter
+    const stateCookieValue = req.cookies?.[provider.stateCookieName];
+    
+    // Diagnostic logging for debugging
+    console.log(`[OAuth ${provider.name}] Callback received:`, {
+      hasQueryState: !!state,
+      hasCookie: !!stateCookieValue,
+      cookieValue: stateCookieValue?.substring(0, 8) + "...",
+      stateValue: state?.substring(0, 8) + "...",
+      match: stateCookieValue === state,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Verify cookie is present and matches query state
+    if (!stateCookieValue || stateCookieValue !== state) {
+      res.clearCookie(provider.stateCookieName);
+      console.error(`[OAuth ${provider.name}] CSRF validation failed: cookie/state mismatch`);
+      return res.status(400).json({ 
+        error: "CSRF validation failed",
+        details: opts.nodeEnv === "development" ? {
+          hasCookie: !!stateCookieValue,
+          hasState: !!state,
+          match: stateCookieValue === state
+        } : undefined
+      });
+    }
+
     // Validate + consume CSRF state (single-use, SQLite-backed)
     if (!state || !opts.oauthStateStore.consume(state)) {
+      res.clearCookie(provider.stateCookieName);
       return res.status(400).json({ error: "Invalid or expired state parameter" });
     }
     res.clearCookie(provider.stateCookieName);
