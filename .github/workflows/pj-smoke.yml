@@ -45,7 +45,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run Quick Start smoke tests
-        run: npx playwright test tests/quickstart.spec.ts --project=chromium
+        run: npx playwright test tests/quickstart.spec.ts
         env:
           JWT_SECRET: ci-test-secret-min-32-chars-long-0000000000
           AUTH_ISSUER: puddle-jumper
