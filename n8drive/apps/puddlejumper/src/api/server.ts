@@ -97,6 +97,7 @@ import { createAdminPRRRoutes } from "./routes/prrAdmin.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
+import { createPolicyProvider } from "../engine/remotePolicyProvider.js";
 import { DispatcherRegistry } from "../engine/dispatch.js";
 import { GitHubDispatcher } from "../engine/dispatchers/github.js";
 import { SlackDispatcher } from "../engine/dispatchers/slack.js";
@@ -168,7 +169,22 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   }
   const approvalStore = new ApprovalStore(approvalDbPath);
   const chainStore = new ChainStore(approvalStore.db);
-  const policyProvider = new LocalPolicyProvider(approvalStore.db, chainStore);
+  
+  // ── PolicyProvider: Local or Remote (Vault) ──────────────────────────
+  // If VAULT_URL is set, use RemotePolicyProvider to call Vault HTTP service.
+  // Otherwise, use LocalPolicyProvider (SQLite-backed, shipped with PJ today).
+  // This enables config-swap migration without code rewrite.
+  const localPolicyProvider = new LocalPolicyProvider(approvalStore.db, chainStore);
+  const policyProvider = createPolicyProvider(
+    localPolicyProvider,
+    // getAccessToken: extract JWT from request context (future: implement proper token refresh)
+    async () => {
+      // For now, we don't pass a token - Vault will use the same JWT from cookies
+      // In production, we'd implement proper service-to-service token exchange
+      return null;
+    }
+  );
+  
   const dispatcherRegistry = new DispatcherRegistry();
   const defaultRetryPolicy = {
     maxAttempts: 3,
