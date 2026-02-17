@@ -373,17 +373,21 @@ export function assertProductionInvariants(nodeEnv: string, authOptions: AuthOpt
     }
   }
 
-  // OAuth provider credentials – each provider needs both client ID and secret
+  // OAuth provider credentials – Microsoft can be public client (ID only), others need ID + secret
   const oauthProviders = [
-    { name: "GitHub",    idVar: "GITHUB_CLIENT_ID",    secretVar: "GITHUB_CLIENT_SECRET",    redirectVar: "GITHUB_REDIRECT_URI" },
-    { name: "Google",    idVar: "GOOGLE_CLIENT_ID",    secretVar: "GOOGLE_CLIENT_SECRET",    redirectVar: "GOOGLE_REDIRECT_URI" },
-    { name: "Microsoft", idVar: "MICROSOFT_CLIENT_ID", secretVar: "MICROSOFT_CLIENT_SECRET", redirectVar: "MICROSOFT_REDIRECT_URI" },
+    { name: "GitHub",    idVar: "GITHUB_CLIENT_ID",    secretVar: "GITHUB_CLIENT_SECRET",    redirectVar: "GITHUB_REDIRECT_URI", allowPublic: false },
+    { name: "Google",    idVar: "GOOGLE_CLIENT_ID",    secretVar: "GOOGLE_CLIENT_SECRET",    redirectVar: "GOOGLE_REDIRECT_URI", allowPublic: false },
+    { name: "Microsoft", idVar: "MICROSOFT_CLIENT_ID", secretVar: "MICROSOFT_CLIENT_SECRET", redirectVar: "MICROSOFT_REDIRECT_URI", allowPublic: true },
   ];
-  for (const { name, idVar, secretVar, redirectVar } of oauthProviders) {
+  for (const { name, idVar, secretVar, redirectVar, allowPublic } of oauthProviders) {
     const hasId = Boolean(process.env[idVar]?.trim());
     const hasSecret = Boolean(process.env[secretVar]?.trim());
-    if (hasId !== hasSecret) {
-      throw new Error(`${name} OAuth: both ${idVar} and ${secretVar} must be set (or both unset)`);
+    // Public clients (Microsoft PKCE) can have ID without secret
+    if (hasId && !hasSecret && !allowPublic) {
+      throw new Error(`${name} OAuth: ${idVar} is set but ${secretVar} is missing (confidential clients need both)`);
+    }
+    if (!hasId && hasSecret) {
+      throw new Error(`${name} OAuth: ${secretVar} is set but ${idVar} is missing`);
     }
     if (hasId && !process.env[redirectVar]?.trim()) {
       throw new Error(`${name} OAuth: ${redirectVar} must be configured when ${idVar} is set`);
