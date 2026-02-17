@@ -4,6 +4,9 @@ primary_region = "ewr"
 [build]
   dockerfile = "Dockerfile"
 
+[env]
+  NEXTJS_URL = "http://localhost:3003"
+
 [http_service]
   internal_port = 3002
   force_https = true

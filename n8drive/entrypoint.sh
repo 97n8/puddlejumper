@@ -45,5 +45,17 @@ ensure_db_file_writable "$CONNECTOR_DB_PATH"
 ensure_db_file_writable "$IDEMPOTENCY_DB_PATH"
 ensure_db_file_writable "$RATE_LIMIT_DB_PATH"
 
-# Drop privileges and run as node user
+# Start Next.js standalone server in background (production only)
+if [ "${NODE_ENV:-}" = "production" ]; then
+  echo "[entrypoint] Starting Next.js server on port 3003..."
+  gosu node sh -c "cd /app/web-standalone/web && PORT=3003 node server.js" &
+  NEXTJS_PID=$!
+  echo "[entrypoint] Next.js server started (PID: $NEXTJS_PID)"
+  
+  # Give Next.js a moment to bind to port
+  sleep 2
+fi
+
+# Start Express server (foreground)
+echo "[entrypoint] Starting Express server on port ${PORT:-3002}..."
 exec gosu node "$@"
