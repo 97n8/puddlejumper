@@ -32,47 +32,56 @@ BASE_URL=https://your-domain.com
 # See logic-commons OAuth setup for GitHub, Google, Microsoft
 ```
 
-## Vercel Deployment
+## Vercel Deployment (Frontend)
 
-### Setup
+The Next.js frontend (`n8drive/web`) deploys to Vercel.
 
-1. Install Vercel CLI:
-   ```bash
-   npm install -g vercel
-   ```
+### Project Settings
 
-2. Login to Vercel:
-   ```bash
-   vercel login
-   ```
+In the Vercel dashboard, the project **Root Directory** must be set to
+`n8drive/web`. Verify with:
 
-3. Link your project:
-   ```bash
-   cd apps/puddlejumper
-   vercel link
-   ```
+```bash
+vercel project inspect
+# Look for:  Root Directory   n8drive/web
+```
+
+If the Root Directory is wrong (e.g. `n8/web`), update it in the Vercel
+dashboard: **Project → Settings → General → Root Directory** → set to
+`n8drive/web` → **Save**.
+
+> The `vercel project update` CLI command does not exist. Root Directory
+> changes must be made through the dashboard or the Vercel API.
+
+### Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `vercel.json` (repo root) | Sets `rootDirectory: "n8drive/web"` for projects linked at repo root |
+| `n8drive/web/vercel.json` | Build commands (`npm ci`, `npm run build`, output `.next`) |
+
+When the Vercel project has a **Root Directory set in the dashboard**, it reads
+`n8drive/web/vercel.json` directly and ignores the root `vercel.json`.
+
+### Environment Variables
+
+Set in Vercel dashboard (**Project → Settings → Environment Variables**):
+
+| Variable | Value |
+|----------|-------|
+| `NEXT_PUBLIC_API_URL` | `https://api.publiclogic.org` |
+| `ACCESS_NOTIFICATION_WEBHOOK_SECRET` | *(secret)* |
 
 ### Deploy
 
-```bash
-# From project root
-./scripts/deploy-vercel.sh
-```
+Vercel auto-deploys on push to `main`. For manual deploys:
 
-Or manually:
 ```bash
-pnpm run build
-cd apps/puddlejumper
+cd n8drive/web
+npm ci
+npm run build
 vercel --prod
 ```
-
-### Vercel Configuration
-
-The `apps/puddlejumper/vercel.json` configures:
-- Serverless function for API routes
-- Static file serving for public assets
-- 60-second timeout for long-running operations
-- 1GB memory allocation
 
 ## Fly.io Deployment
 
@@ -173,9 +182,12 @@ Configure OAuth providers in your deployment environment:
 
 ### Vercel Issues
 
-- Check function logs: `vercel logs`
-- Ensure all dependencies are in `package.json`
-- Verify `vercel.json` paths are correct
+- **"Root Directory does not exist"**: The Vercel dashboard Root Directory is
+  wrong. Go to **Project → Settings → General → Root Directory** and set it to
+  `n8drive/web`.
+- Check build logs: `vercel logs` or Vercel dashboard **Deployments** tab.
+- Ensure `n8drive/web/package-lock.json` is committed (Vercel uses `npm ci`).
+- Verify environment variables are set in Vercel dashboard.
 
 ### Fly.io Issues
 
