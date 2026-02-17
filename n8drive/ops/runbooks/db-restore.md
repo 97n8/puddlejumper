@@ -89,6 +89,7 @@ fly machines stop <machine-id> --app publiclogic-puddlejumper
 fly ssh console --app publiclogic-puddlejumper -C "ls /app/data/"
 
 # Move existing DBs aside (safety)
+# Note: \$ escaping is required because the command runs inside a -C "..." string
 fly ssh console --app publiclogic-puddlejumper -C "
   cd /app/data &&
   for f in prr.db connectors.db approvals.db oauth_state.db; do

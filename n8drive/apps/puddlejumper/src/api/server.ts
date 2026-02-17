@@ -63,7 +63,6 @@ import {
   renderPjWorkspaceHtml,
   getCorrelationId,
   logServerError,
-  logServerWarn,
   logServerInfo,
   requestLogger,
 } from "./serverMiddleware.js";
@@ -293,7 +292,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       checks.volume = readBack === "ok" ? { status: "ok" } : { status: "error", detail: "read-back mismatch" };
     } catch (err: unknown) {
       checks.volume = { status: "error", detail: err instanceof Error ? err.message : String(err) };
-      try { fs.unlinkSync(volumeProbe); } catch { /* best-effort cleanup */ }
+      // Best-effort cleanup — primary error is already surfaced in checks.volume
+      try { fs.unlinkSync(volumeProbe); } catch { /* probe file may not exist */ }
     }
 
     // Critical secrets presence (never leak values)
