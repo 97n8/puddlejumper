@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-// CSP is now applied per-request via src/middleware.ts with nonces.
+// CSP is now applied per-request via src/proxy.ts with nonces.
 // Only non-CSP security headers remain here.
 
 const nextConfig: NextConfig = {
