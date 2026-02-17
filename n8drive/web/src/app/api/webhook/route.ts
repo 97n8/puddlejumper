@@ -15,6 +15,19 @@ function safeCompare(a: string, b: string) {
   }
 }
 
+const SEEN_CAP = 10_000;
+const seenIds = new Set<string>();
+
+function markSeen(id: string): boolean {
+  if (seenIds.has(id)) return true;
+  if (seenIds.size >= SEEN_CAP) {
+    const first = seenIds.values().next().value as string;
+    seenIds.delete(first);
+  }
+  seenIds.add(id);
+  return false;
+}
+
 export async function POST(request: Request) {
   const rawBody = await request.text();
   const signatureHeader = (request.headers.get("x-pj-signature") || "").trim();
@@ -59,7 +72,16 @@ export async function POST(request: Request) {
     });
   }
 
-  // TODO: Implement idempotency and business logic for the received event.
+  if (markSeen(event.id)) {
+    return new NextResponse(
+      JSON.stringify({ received: true, duplicate: true, id: event.id }),
+      { status: 200 },
+    );
+  }
+
+  console.log(
+    JSON.stringify({ webhook: "received", id: event.id, type: event.type ?? null }),
+  );
 
   return new NextResponse(
     JSON.stringify({ received: true, id: event.id, type: event.type ?? null }),

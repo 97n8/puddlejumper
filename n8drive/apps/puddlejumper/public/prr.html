@@ -182,8 +182,8 @@
 </div>
 
 <script>
-// Get workspace ID from config or default
-const WORKSPACE_ID = 'default'; // TODO: Make this dynamic or configurable
+// Read workspace ID from URL query parameter (?workspace=…), fall back to 'default'
+const WORKSPACE_ID = new URLSearchParams(window.location.search).get('workspace') || 'default';
 
 let submittedToken = '';
 
