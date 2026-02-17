@@ -229,6 +229,58 @@
       font-size: 0.9rem;
       color: var(--text-dim);
     }
+    /* ── Command panel ──────────────────────────────────────── */
+    .command-panel {
+      margin-top: 40px;
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      text-align: left;
+    }
+    .command-panel h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .command-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 14px 18px;
+      margin-bottom: 8px;
+      background: var(--surface-hover);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+    .command-card:hover {
+      border-color: var(--accent);
+      background: rgba(59, 130, 246, 0.08);
+    }
+    .command-icon {
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+    .command-label {
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .command-desc {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+    .command-loading {
+      opacity: 0.5;
+      pointer-events: none;
+      animation: pulse 1s ease-in-out infinite;
+    }
     @media (max-width: 640px) {
       .features {
         grid-template-columns: 1fr;

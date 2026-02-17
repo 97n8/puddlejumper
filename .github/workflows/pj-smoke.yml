@@ -1,0 +1,52 @@
+name: PJ smoke tests
+
+on:
+  pull_request:
+    paths:
+      - 'n8drive/apps/puddlejumper/**'
+      - 'n8drive/web/**'
+      - 'n8drive/tests/**'
+      - 'n8drive/packages/**'
+
+jobs:
+  smoke:
+    name: Playwright Quick Start smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: n8drive
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable corepack/pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@8.15.8 --activate
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+          cache-dependency-path: n8drive/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: |
+          pnpm --filter @publiclogic/core run build
+          pnpm --filter @publiclogic/logic-commons run build
+          pnpm --filter @publiclogic/puddlejumper run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Quick Start smoke tests
+        env:
+          JWT_SECRET: ci-test-secret-min-32-chars-long-0000000000
+          AUTH_ISSUER: test-issuer
+          AUTH_AUDIENCE: test-audience
+        run: npx playwright test tests/quickstart.spec.ts --reporter=list
