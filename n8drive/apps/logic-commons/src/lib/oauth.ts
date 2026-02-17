@@ -214,7 +214,7 @@ export function createOAuthRoutes(
       const redirectUri =
         process.env[provider.redirectUriEnvVar] || provider.defaultRedirectUri;
       const clientId = process.env[provider.clientIdEnvVar]!;
-      const clientSecret = process.env[provider.clientSecretEnvVar]!;
+      const clientSecret = process.env[provider.clientSecretEnvVar];
 
       const tokenUrl =
         typeof provider.tokenUrl === "function"
@@ -223,12 +223,17 @@ export function createOAuthRoutes(
 
       const tokenParams: Record<string, string> = {
         client_id: clientId,
-        client_secret: clientSecret,
         code,
         redirect_uri: redirectUri,
         grant_type: "authorization_code",
         ...(provider.extraTokenParams ?? {}),
       };
+      
+      // Add client_secret only if it's configured (for confidential clients)
+      // Public clients using PKCE don't need client_secret
+      if (clientSecret) {
+        tokenParams.client_secret = clientSecret;
+      }
       
       // Add PKCE code_verifier if it was stored (for providers requiring PKCE)
       if (stateResult.codeVerifier) {
