@@ -82,8 +82,14 @@ async function tryPostPaths(app: any, paths: string[], payload: Record<string, a
 let app: any;
 let adminToken = '';
 
-beforeAll(async () => {
-  app = await loadApp();
+export async function getAdminToken(): Promise<string> {
+  if (adminToken) {
+    return adminToken;
+  }
+
+  if (!app) {
+    app = await loadApp();
+  }
 
   const adminEmail = process.env.PJ_ADMIN_EMAIL ?? process.env.TEST_ADMIN_EMAIL ?? 'admin@local.test';
   const adminPassword = process.env.PJ_ADMIN_PASSWORD ?? process.env.TEST_ADMIN_PASSWORD ?? 'changeme';
@@ -139,13 +145,16 @@ beforeAll(async () => {
   }
 
   if (!token) {
-    throw new Error(
-      'setup-admin: failed to seed or log in admin. Verify PJ_ADMIN_EMAIL/PJ_ADMIN_PASSWORD in .env and that auth endpoints exist.'
-    );
+    throw new Error('setup-admin: failed to obtain admin token');
   }
 
   adminToken = token;
   process.env.TEST_ADMIN_TOKEN = token;
   globalThis.ADMIN_TOKEN = token;
   console.log('setup-admin: obtained admin token length=%d', token.length);
+  return adminToken;
+}
+
+beforeAll(async () => {
+  await getAdminToken();
 });

@@ -1,3 +1,5 @@
+import './setup-admin';
+
 // ── Admin UI Tests ──────────────────────────────────────────────────────────
 //
 // Tests for the admin API endpoints and the admin HTML page serving.
