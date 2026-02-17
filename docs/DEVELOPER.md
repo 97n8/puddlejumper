@@ -96,3 +96,9 @@ Optional overrides:
 When running bootstrap/tests, logs are captured at:
 - `.pj-test-logs/bootstrap.log`
 - `.pj-test-logs/pj-tests.log`
+
+## 7. Known pitfalls
+
+- `better-sqlite3` / `NODE_MODULE_VERSION` mismatch errors usually mean modules were built under a different Node runtime.
+- Run `source ~/.nvm/nvm.sh && nvm use 20` before ad-hoc `pnpm` commands.
+- If mismatch errors persist, rerun `bash scripts/bootstrap.sh` to rebuild native modules under Node 20.
