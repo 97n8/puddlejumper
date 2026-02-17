@@ -4,6 +4,13 @@ import type { NextConfig } from "next";
 // Only non-CSP security headers remain here.
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      // Legacy backend routes — redirect to the frontend sign-in page
+      { source: "/login", destination: "/", permanent: false },
+      { source: "/pj/admin", destination: "/", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {
