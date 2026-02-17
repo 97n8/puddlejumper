@@ -101,21 +101,23 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
   });
 
   // ── Decide (approve or reject) ────────────────────────────────────────
-  // POST /api/approvals/:id/decide  { status: "approved"|"rejected", note?: string }
+  // POST /api/approvals/:id/decide  { status: "approved"|"rejected", note?: string, stepId?: string }
   router.post("/approvals/:id/decide", requireAuthenticated(), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
     if (!auth) { res.status(401).json({ success: false, correlationId, error: "Unauthorized" }); return; }
 
-    // Only admins can approve/reject
-    if (auth.role !== "admin") {
-      res.status(403).json({ success: false, correlationId, error: "Only admins can approve or reject" });
+    const { status, note, stepId } = req.body ?? {};
+    if (status !== "approved" && status !== "rejected") {
+      res.status(400).json({ success: false, correlationId, error: "status must be 'approved' or 'rejected'" });
       return;
     }
 
-    const { status, note } = req.body ?? {};
-    if (status !== "approved" && status !== "rejected") {
-      res.status(400).json({ success: false, correlationId, error: "status must be 'approved' or 'rejected'" });
+    // Validate stepId type when present — must be a non-empty string.
+    // Role matching (auth.role === step.requiredRole) is exact string equality;
+    // chain templates and JWT tokens must use identical role strings.
+    if (stepId !== undefined && (typeof stepId !== "string" || stepId === "")) {
+      res.status(400).json({ success: false, correlationId, error: "stepId must be a non-empty string" });
       return;
     }
 
@@ -124,12 +126,42 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
     // ── Chain-aware decision logic ─────────────────────────────────────
     // If a chain exists for this approval, route through chain progression.
     // If no chain exists (legacy), fall back to direct approvalStore.decide().
-    const activeStep = chainStore?.getActiveStep(req.params.id) ?? null;
 
-    if (activeStep && chainStore) {
-      // Decide the active chain step
+    // When stepId is provided, target that specific step (parallel support).
+    // Otherwise fall back to the first active step (backward-compatible).
+    const targetStep = stepId && chainStore
+      ? chainStore.getStep(stepId)
+      : chainStore?.getActiveStep(req.params.id) ?? null;
+
+    // If a stepId was explicitly provided but not found, return an error
+    // rather than silently falling through to legacy behavior.
+    if (stepId && chainStore && !targetStep) {
+      res.status(404).json({ success: false, correlationId, error: "Chain step not found" });
+      return;
+    }
+
+    if (targetStep && chainStore) {
+      // ── Role gate for chain steps ──
+      // Admin is a superrole — can decide any step regardless of requiredRole.
+      // Non-admin roles may decide a step only when their role matches requiredRole.
+      if (auth.role !== "admin" && auth.role !== targetStep.requiredRole) {
+        res.status(403).json({
+          success: false,
+          correlationId,
+          error: `Role "${auth.role}" cannot decide this step (requires "${targetStep.requiredRole}")`,
+        });
+        return;
+      }
+
+      // Validate the targeted step belongs to this approval
+      if (targetStep.approvalId !== req.params.id) {
+        res.status(400).json({ success: false, correlationId, error: "Step does not belong to this approval" });
+        return;
+      }
+
+      // Decide the chain step
       const chainResult = chainStore.decideStep({
-        stepId: activeStep.id,
+        stepId: targetStep.id,
         deciderId: approverId,
         status,
         note: typeof note === "string" ? note : undefined,
@@ -216,8 +248,8 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
 
       emitApprovalEvent("chain_step_decided", {
         approvalId: req.params.id,
-        stepId: activeStep.id,
-        stepOrder: activeStep.stepOrder,
+        stepId: targetStep.id,
+        stepOrder: targetStep.stepOrder,
         status,
         advanced: chainResult.advanced,
         approverId,
@@ -233,6 +265,12 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
     }
 
     // ── Legacy fallback: no chain exists ─────────────────────────────
+    // Legacy approvals require admin role (no chain roles to match against).
+    if (auth.role !== "admin") {
+      res.status(403).json({ success: false, correlationId, error: "Only admins can approve or reject" });
+      return;
+    }
+
     const updated = approvalStore.decide({
       approvalId: req.params.id,
       approverId,
