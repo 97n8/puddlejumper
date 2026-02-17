@@ -575,9 +575,18 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   // All frontend routes (/, /admin, /vault, etc.) are proxied to Next.js standalone server
   // This must be mounted after all API routes so Express handles APIs directly
   if (nodeEnv === "production") {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { createNextProxyMiddleware } = require("./nextProxy.js");
-    app.use(createNextProxyMiddleware());
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { createNextProxyMiddleware } = require("./nextProxy.js");
+      app.use(createNextProxyMiddleware());
+      // eslint-disable-next-line no-console
+      console.log("[server] Next.js proxy middleware mounted");
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[server] Failed to load Next.js proxy:", (err as Error).message);
+      // eslint-disable-next-line no-console
+      console.error("[server] Frontend routes will return 404");
+    }
   }
 
   // ── Global error handler ──────────────────────────────────────────────
