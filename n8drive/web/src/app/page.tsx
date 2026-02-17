@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "../lib/auth";
 import type { LiveTile } from "../lib/auth";
 import { pjFetch } from "../lib/pjFetch";
-import { getPortalApps, type PortalAppLink } from "../portalApps";
+import { getPortalApps } from "../portalApps";
 
 type HealthPayload = Record<string, unknown>;
 
