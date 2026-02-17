@@ -271,7 +271,13 @@ function UsageBar({ label, used, limit }: { label: string; used: number; limit: 
 }
 
 function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
-  const textColor = color ? `text-${color}-300` : "text-zinc-100";
+  const colorMap: Record<string, string> = {
+    amber: "text-amber-300",
+    emerald: "text-emerald-300",
+    red: "text-red-300",
+    blue: "text-blue-300",
+  };
+  const textColor = color ? colorMap[color] ?? "text-zinc-100" : "text-zinc-100";
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
       <p className="text-xs text-zinc-500">{label}</p>
