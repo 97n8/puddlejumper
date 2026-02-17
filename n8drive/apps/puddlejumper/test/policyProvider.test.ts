@@ -349,14 +349,14 @@ describe("PolicyProvider", () => {
   // ── LocalPolicyProvider.checkAuthorization ────────────────────────────
 
   describe("LocalPolicyProvider.checkAuthorization", () => {
-    it("delegates to evaluateAuthorization", () => {
-      const result = provider.checkAuthorization(authQuery());
+    it("delegates to evaluateAuthorization", async () => {
+      const result = await provider.checkAuthorization(authQuery());
       expect(result.allowed).toBe(true);
       expect(result.delegationEvaluation.source).toBe("role");
     });
 
-    it("rejects insufficient permissions", () => {
-      const result = provider.checkAuthorization(authQuery({ operatorPermissions: [] }));
+    it("rejects insufficient permissions", async () => {
+      const result = await provider.checkAuthorization(authQuery({ operatorPermissions: [] }));
       expect(result.allowed).toBe(false);
     });
   });
@@ -364,21 +364,21 @@ describe("PolicyProvider", () => {
   // ── LocalPolicyProvider.getChainTemplate ──────────────────────────────
 
   describe("LocalPolicyProvider.getChainTemplate", () => {
-    it("returns default template for any action/municipality", () => {
-      const template = provider.getChainTemplate(chainTemplateQuery());
+    it("returns default template for any action/municipality", async () => {
+      const template = await provider.getChainTemplate(chainTemplateQuery());
       expect(template).not.toBeNull();
       expect(template!.id).toBe(DEFAULT_TEMPLATE_ID);
       expect(template!.steps.length).toBeGreaterThanOrEqual(1);
     });
 
-    it("returns default template regardless of municipality", () => {
-      const t1 = provider.getChainTemplate(chainTemplateQuery({ municipalityId: "muni-a" }));
-      const t2 = provider.getChainTemplate(chainTemplateQuery({ municipalityId: "muni-b" }));
+    it("returns default template regardless of municipality", async () => {
+      const t1 = await provider.getChainTemplate(chainTemplateQuery({ municipalityId: "muni-a" }));
+      const t2 = await provider.getChainTemplate(chainTemplateQuery({ municipalityId: "muni-b" }));
       expect(t1!.id).toBe(t2!.id);
     });
 
-    it("returns template with valid step structure", () => {
-      const template = provider.getChainTemplate(chainTemplateQuery());
+    it("returns template with valid step structure", async () => {
+      const template = await provider.getChainTemplate(chainTemplateQuery());
       expect(template!.steps[0]).toHaveProperty("order");
       expect(template!.steps[0]).toHaveProperty("requiredRole");
       expect(template!.steps[0]).toHaveProperty("label");
@@ -388,9 +388,9 @@ describe("PolicyProvider", () => {
   // ── LocalPolicyProvider.writeAuditEvent ───────────────────────────────
 
   describe("LocalPolicyProvider.writeAuditEvent", () => {
-    it("persists an audit event to SQLite", () => {
+    it("persists an audit event to SQLite", async () => {
       const event = auditEvent();
-      provider.writeAuditEvent(event);
+      await provider.writeAuditEvent(event);
 
       const events = provider.getAuditEvents();
       expect(events).toHaveLength(1);
@@ -402,66 +402,66 @@ describe("PolicyProvider", () => {
       expect(events[0].details).toEqual({ planHash: "abc123" });
     });
 
-    it("persists multiple events", () => {
-      provider.writeAuditEvent(auditEvent({ eventType: "action_evaluated" }));
-      provider.writeAuditEvent(auditEvent({ eventType: "approval_created" }));
-      provider.writeAuditEvent(auditEvent({ eventType: "approval_decided" }));
+    it("persists multiple events", async () => {
+      await provider.writeAuditEvent(auditEvent({ eventType: "action_evaluated" }));
+      await provider.writeAuditEvent(auditEvent({ eventType: "approval_created" }));
+      await provider.writeAuditEvent(auditEvent({ eventType: "approval_decided" }));
 
       expect(provider.countAuditEvents()).toBe(3);
     });
 
-    it("handles duplicate eventId with INSERT OR IGNORE", () => {
+    it("handles duplicate eventId with INSERT OR IGNORE", async () => {
       const event = auditEvent();
-      provider.writeAuditEvent(event);
-      provider.writeAuditEvent(event); // same eventId
+      await provider.writeAuditEvent(event);
+      await provider.writeAuditEvent(event); // same eventId
 
       expect(provider.countAuditEvents()).toBe(1);
     });
 
-    it("filters events by eventType", () => {
-      provider.writeAuditEvent(auditEvent({ eventType: "action_evaluated" }));
-      provider.writeAuditEvent(auditEvent({ eventType: "approval_created" }));
-      provider.writeAuditEvent(auditEvent({ eventType: "action_evaluated" }));
+    it("filters events by eventType", async () => {
+      await provider.writeAuditEvent(auditEvent({ eventType: "action_evaluated" }));
+      await provider.writeAuditEvent(auditEvent({ eventType: "approval_created" }));
+      await provider.writeAuditEvent(auditEvent({ eventType: "action_evaluated" }));
 
       const filtered = provider.getAuditEvents({ eventType: "action_evaluated" });
       expect(filtered).toHaveLength(2);
       expect(filtered.every((e) => e.eventType === "action_evaluated")).toBe(true);
     });
 
-    it("filters events by workspaceId", () => {
-      provider.writeAuditEvent(auditEvent({ workspaceId: "ws-1" }));
-      provider.writeAuditEvent(auditEvent({ workspaceId: "ws-2" }));
+    it("filters events by workspaceId", async () => {
+      await provider.writeAuditEvent(auditEvent({ workspaceId: "ws-1" }));
+      await provider.writeAuditEvent(auditEvent({ workspaceId: "ws-2" }));
 
       const filtered = provider.getAuditEvents({ workspaceId: "ws-1" });
       expect(filtered).toHaveLength(1);
       expect(filtered[0].workspaceId).toBe("ws-1");
     });
 
-    it("filters events by municipalityId", () => {
-      provider.writeAuditEvent(auditEvent({ municipalityId: "muni-1" }));
-      provider.writeAuditEvent(auditEvent({ municipalityId: "muni-2" }));
+    it("filters events by municipalityId", async () => {
+      await provider.writeAuditEvent(auditEvent({ municipalityId: "muni-1" }));
+      await provider.writeAuditEvent(auditEvent({ municipalityId: "muni-2" }));
 
       const filtered = provider.getAuditEvents({ municipalityId: "muni-1" });
       expect(filtered).toHaveLength(1);
     });
 
-    it("respects limit parameter", () => {
+    it("respects limit parameter", async () => {
       for (let i = 0; i < 10; i++) {
-        provider.writeAuditEvent(auditEvent());
+        await provider.writeAuditEvent(auditEvent());
       }
 
       const limited = provider.getAuditEvents({ limit: 3 });
       expect(limited).toHaveLength(3);
     });
 
-    it("returns events in newest-first order", () => {
-      provider.writeAuditEvent(
+    it("returns events in newest-first order", async () => {
+      await provider.writeAuditEvent(
         auditEvent({ timestamp: "2026-02-15T10:00:00Z", outcome: "first" }),
       );
-      provider.writeAuditEvent(
+      await provider.writeAuditEvent(
         auditEvent({ timestamp: "2026-02-15T12:00:00Z", outcome: "second" }),
       );
-      provider.writeAuditEvent(
+      await provider.writeAuditEvent(
         auditEvent({ timestamp: "2026-02-15T11:00:00Z", outcome: "middle" }),
       );
 
@@ -471,17 +471,17 @@ describe("PolicyProvider", () => {
       expect(events[2].outcome).toBe("first");
     });
 
-    it("counts events by type", () => {
-      provider.writeAuditEvent(auditEvent({ eventType: "action_evaluated" }));
-      provider.writeAuditEvent(auditEvent({ eventType: "action_evaluated" }));
-      provider.writeAuditEvent(auditEvent({ eventType: "approval_created" }));
+    it("counts events by type", async () => {
+      await provider.writeAuditEvent(auditEvent({ eventType: "action_evaluated" }));
+      await provider.writeAuditEvent(auditEvent({ eventType: "action_evaluated" }));
+      await provider.writeAuditEvent(auditEvent({ eventType: "approval_created" }));
 
       expect(provider.countAuditEvents("action_evaluated")).toBe(2);
       expect(provider.countAuditEvents("approval_created")).toBe(1);
       expect(provider.countAuditEvents()).toBe(3);
     });
 
-    it("stores all audit event types", () => {
+    it("stores all audit event types", async () => {
       const types: AuditEventType[] = [
         "action_evaluated",
         "approval_created",
@@ -491,7 +491,7 @@ describe("PolicyProvider", () => {
         "authorization_checked",
       ];
       for (const type of types) {
-        provider.writeAuditEvent(auditEvent({ eventType: type }));
+        await provider.writeAuditEvent(auditEvent({ eventType: type }));
       }
       expect(provider.countAuditEvents()).toBe(types.length);
     });
@@ -500,14 +500,18 @@ describe("PolicyProvider", () => {
   // ── PolicyProvider interface contract ─────────────────────────────────
 
   describe("interface contract", () => {
-    it("implements all three PolicyProvider methods", () => {
+    it("implements all PolicyProvider methods", () => {
+      expect(typeof provider.getProviderType).toBe("function");
       expect(typeof provider.checkAuthorization).toBe("function");
       expect(typeof provider.getChainTemplate).toBe("function");
       expect(typeof provider.writeAuditEvent).toBe("function");
+      expect(typeof provider.registerManifest).toBe("function");
+      expect(typeof provider.authorizeRelease).toBe("function");
+      expect(typeof provider.classifyDrift).toBe("function");
     });
 
-    it("checkAuthorization returns a complete AuthorizationResult", () => {
-      const result = provider.checkAuthorization(authQuery());
+    it("checkAuthorization returns a complete AuthorizationResult", async () => {
+      const result = await provider.checkAuthorization(authQuery());
       expect(result).toHaveProperty("allowed");
       expect(result).toHaveProperty("required");
       expect(result).toHaveProperty("delegationUsed");
@@ -515,13 +519,81 @@ describe("PolicyProvider", () => {
       expect(Array.isArray(result.required)).toBe(true);
     });
 
-    it("getChainTemplate returns ChainTemplate with expected shape", () => {
-      const template = provider.getChainTemplate(chainTemplateQuery());
+    it("getChainTemplate returns ChainTemplate with expected shape", async () => {
+      const template = await provider.getChainTemplate(chainTemplateQuery());
       expect(template).toHaveProperty("id");
       expect(template).toHaveProperty("name");
       expect(template).toHaveProperty("steps");
       expect(template).toHaveProperty("createdAt");
       expect(template).toHaveProperty("updatedAt");
+    });
+  });
+
+  // ── LocalPolicyProvider.getProviderType ───────────────────────────────
+
+  describe("LocalPolicyProvider.getProviderType", () => {
+    it("returns 'local' provider type", () => {
+      const providerType = provider.getProviderType();
+      expect(providerType).toBe("local");
+    });
+  });
+
+  // ── LocalPolicyProvider.registerManifest ──────────────────────────────
+
+  describe("LocalPolicyProvider.registerManifest", () => {
+    it("accepts all manifests (stub implementation)", async () => {
+      const input = {
+        manifestId: "manifest-1",
+        workspaceId: "ws-1",
+        operatorId: "op-1",
+        municipalityId: "muni-1",
+        intent: "deploy_policy",
+        planHash: "abc123",
+        description: "Deploy new policy configuration",
+        connectors: ["github"],
+        timestamp: NOW,
+      };
+      const result = await provider.registerManifest(input);
+      expect(result.accepted).toBe(true);
+      expect(result.manifestId).toBe("manifest-1");
+    });
+  });
+
+  // ── LocalPolicyProvider.authorizeRelease ──────────────────────────────
+
+  describe("LocalPolicyProvider.authorizeRelease", () => {
+    it("authorizes all releases (stub implementation)", async () => {
+      const query = {
+        approvalId: "approval-1",
+        manifestId: "manifest-1",
+        workspaceId: "ws-1",
+        municipalityId: "muni-1",
+        operatorId: "op-1",
+        planHash: "abc123",
+        timestamp: NOW,
+      };
+      const result = await provider.authorizeRelease(query);
+      expect(result.authorized).toBe(true);
+      expect(result.expiresAt).toBe(null);
+    });
+  });
+
+  // ── LocalPolicyProvider.classifyDrift ─────────────────────────────────
+
+  describe("LocalPolicyProvider.classifyDrift", () => {
+    it("returns no drift (stub implementation)", async () => {
+      const query = {
+        approvalId: "approval-1",
+        manifestId: "manifest-1",
+        workspaceId: "ws-1",
+        municipalityId: "muni-1",
+        changedFields: ["connectors", "targets"],
+        driftContext: { deployedAt: NOW, approvedAt: "2026-02-15T11:00:00Z" },
+        timestamp: NOW,
+      };
+      const result = await provider.classifyDrift(query);
+      expect(result.severity).toBe("none");
+      expect(result.requiresReapproval).toBe(false);
     });
   });
 });
