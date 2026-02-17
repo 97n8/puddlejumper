@@ -237,3 +237,23 @@
         flex-direction: column;
       }
     }
+
+    /* ── Focus states ──────────────────────────────────── */
+    .btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-bright), 0 12px 32px rgba(59, 130, 246, 0.4);
+    }
+    .btn.secondary:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-bright);
+    }
+
+    /* ── GitHub button ─────────────────────────────────── */
+    .github-btn {
+      background: #24292e;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    .github-btn:hover {
+      background: #2f363d;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
