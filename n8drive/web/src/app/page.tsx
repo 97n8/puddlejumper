@@ -19,6 +19,7 @@ const NAV_LINKS: {
   { capability: "missionControl.tiles.read", label: "Dashboard", icon: "\u{1F4CB}", href: "/dashboard" },
   { capability: "missionControl.capabilities.read", label: "Approvals", icon: "\u2705", href: "/approvals" },
   { capability: "missionControl.capabilities.read", label: "Admin", icon: "\u2699\uFE0F", href: "/admin" },
+  { capability: "missionControl.capabilities.read", label: "Vault", icon: "\u{1F4E6}", href: "/vault" },
 ];
 
 function PortalBadge({ status }: { status: PortalAppLink["status"] }) {
