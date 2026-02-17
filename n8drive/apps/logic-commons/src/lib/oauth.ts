@@ -109,12 +109,19 @@ export function createOAuthRoutes(
       process.env[provider.redirectUriEnvVar] || provider.defaultRedirectUri;
 
     // Set CSRF state cookie (lax is fine here — it's a top-level navigation)
-    res.cookie(provider.stateCookieName, state, {
+    const cookieOpts: any = {
       httpOnly: true,
       secure: opts.nodeEnv === "production",
       maxAge: 10 * 60 * 1000, // Match state TTL (10 minutes)
       sameSite: "lax",
-    });
+    };
+    
+    // Add domain if COOKIE_DOMAIN is set (for production cross-subdomain support)
+    if (process.env.COOKIE_DOMAIN) {
+      cookieOpts.domain = process.env.COOKIE_DOMAIN;
+    }
+    
+    res.cookie(provider.stateCookieName, state, cookieOpts);
 
     // Build the authorize URL
     const authorizeUrl =

@@ -17,13 +17,20 @@ export const REFRESH_TTL_SEC = 7 * 24 * 60 * 60;
  */
 export function getRefreshCookieOpts(nodeEnv: string) {
   const isProduction = nodeEnv === "production";
-  return {
+  const opts: any = {
     httpOnly: true,
     secure: isProduction,
     sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
     path: "/api",
     maxAge: REFRESH_TTL_SEC * 1000,
   };
+  
+  // Add domain if COOKIE_DOMAIN is set (for production cross-subdomain support)
+  if (process.env.COOKIE_DOMAIN) {
+    opts.domain = process.env.COOKIE_DOMAIN;
+  }
+  
+  return opts;
 }
 
 /**
@@ -32,13 +39,20 @@ export function getRefreshCookieOpts(nodeEnv: string) {
  */
 export function getAccessCookieOpts(nodeEnv: string) {
   const isProduction = nodeEnv === "production";
-  return {
+  const opts: any = {
     httpOnly: true,
     secure: isProduction,
     sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
     path: "/",
     maxAge: 60 * 60 * 1000, // 1 hour
   };
+  
+  // Add domain if COOKIE_DOMAIN is set (for production cross-subdomain support)
+  if (process.env.COOKIE_DOMAIN) {
+    opts.domain = process.env.COOKIE_DOMAIN;
+  }
+  
+  return opts;
 }
 
 // ── Structured auth event logger ────────────────────────────────────────────
