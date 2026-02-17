@@ -45,6 +45,18 @@ describe("/health endpoint", () => {
     expect(res.body.checks.connectors.status).toBe("ok");
   });
 
+  it("reports approval store connectivity in checks", async () => {
+    const res = await request(app).get("/health").expect(200);
+    expect(res.body.checks.approvals).toBeDefined();
+    expect(res.body.checks.approvals.status).toBe("ok");
+  });
+
+  it("reports volume writability in checks", async () => {
+    const res = await request(app).get("/health").expect(200);
+    expect(res.body.checks.volume).toBeDefined();
+    expect(res.body.checks.volume.status).toBe("ok");
+  });
+
   it("reports secret presence (boolean values, never leaked)", async () => {
     const res = await request(app).get("/health").expect(200);
     for (const key of Object.keys(res.body.secrets)) {

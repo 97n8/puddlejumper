@@ -410,7 +410,7 @@ METRICS_TOKEN="xxx" ADMIN_TOKEN="yyy" ./ops/sanity-test.sh
 ### Deploy
 
 ```bash
-cd /Users/n8/puddlejumper/n8drive
+cd n8drive
 fly deploy --app publiclogic-puddlejumper --no-cache
 ```
 

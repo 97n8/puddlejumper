@@ -13,7 +13,9 @@ export declare function createCorsMiddleware(nodeEnv: string): (req: express.Req
 export declare function withCorrelationId(req: express.Request, res: express.Response, next: express.NextFunction): void;
 export declare function getCorrelationId(res: express.Response): string;
 export declare function logServerError(scope: string, correlationId: string, error: unknown): void;
+export declare function logServerWarn(scope: string, correlationId: string, details: Record<string, unknown>): void;
 export declare function logServerInfo(scope: string, correlationId: string, details: Record<string, unknown>): void;
+export declare function requestLogger(req: express.Request, res: express.Response, next: express.NextFunction): void;
 export declare function truncateText(value: string, maxLength: number): string;
 export declare function initials(name: string): string;
 export declare function summarizePrompt(prompt: string): string;
