@@ -13,7 +13,8 @@ export default function LoginPage() {
     if (user) router.replace("/");
   }, [user, router]);
 
-  if (user) return null;
+  // Show nothing while auth state is loading or user is authenticated (redirecting)
+  if (loading || user) return null;
 
   const apiUrl =
     process.env.NEXT_PUBLIC_API_URL ||
