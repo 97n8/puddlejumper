@@ -1,7 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "npm run vercel-build",
-  "outputDirectory": "n8drive/web/.next",
   "framework": "nextjs",
-  "installCommand": "echo skip root install"
+  "rootDirectory": "n8drive/web",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next"
 }

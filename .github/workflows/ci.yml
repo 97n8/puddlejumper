@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: [main]
   pull_request:
-    branches: ["main", "master"]
+    branches: [main]
 
 jobs:
   build-and-test:
@@ -48,10 +48,9 @@ jobs:
           pnpm --filter @publiclogic/puddlejumper run build
 
       - name: Lint frontend (if present)
-        working-directory: n8drive/web
         if: ${{ hashFiles('n8drive/web/package.json') != '' }}
         run: |
-          pnpm --filter web -w run -s lint || echo "No lint script or lint failed"
+          cd web && npx eslint . || echo "No lint script or lint failed"
 
       - name: Typecheck (root)
         run: pnpm run typecheck
@@ -112,15 +111,7 @@ jobs:
           exit 1
 
       - name: Stop and cleanup container
-        if: success()
+        if: always()
         run: |
           docker logs pj-ci --tail 80 || true
           docker rm -f pj-ci || true
-
-      - name: Upload docker image (optional)
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        uses: docker/build-push-action@v6
-        with:
-          push: false
-          tags: publiclogic/puddlejumper:ci
-          context: n8drive
