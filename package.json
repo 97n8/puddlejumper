@@ -1,0 +1,11 @@
+{
+  "name": "puddlejumper",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "vercel-build": "cd n8drive/web && npm install && npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "buildCommand": "cd n8drive/web && npm install && npm run build",
+  "outputDirectory": "n8drive/web/.next",
+  "framework": "nextjs",
+  "installCommand": "echo 'skip root install'"
+}
