@@ -246,6 +246,18 @@ export function logServerError(scope: string, correlationId: string, error: unkn
   console.error(JSON.stringify(serialized));
 }
 
+export function logServerWarn(scope: string, correlationId: string, details: Record<string, unknown>): void {
+  const serialized = {
+    level: "warn",
+    scope,
+    correlationId,
+    timestamp: new Date().toISOString(),
+    ...details,
+  };
+  // eslint-disable-next-line no-console
+  console.warn(JSON.stringify(serialized));
+}
+
 export function logServerInfo(scope: string, correlationId: string, details: Record<string, unknown>): void {
   const serialized = {
     level: "info",
@@ -256,6 +268,30 @@ export function logServerInfo(scope: string, correlationId: string, details: Rec
   };
   // eslint-disable-next-line no-console
   console.info(JSON.stringify(serialized));
+}
+
+// ── Request logging middleware ───────────────────────────────────────────────
+
+export function requestLogger(req: express.Request, res: express.Response, next: express.NextFunction): void {
+  const start = Date.now();
+  res.on("finish", () => {
+    const correlationId = getCorrelationId(res);
+    const durationMs = Date.now() - start;
+    const entry = {
+      method: req.method,
+      path: req.path,
+      statusCode: res.statusCode,
+      durationMs,
+    };
+    if (res.statusCode >= 500) {
+      logServerError("http.request", correlationId, new Error(`${req.method} ${req.path} → ${res.statusCode}`));
+    } else if (res.statusCode >= 400) {
+      logServerWarn("http.request", correlationId, entry);
+    } else {
+      logServerInfo("http.request", correlationId, entry);
+    }
+  });
+  next();
 }
 
 // ── Misc helpers ────────────────────────────────────────────────────────────

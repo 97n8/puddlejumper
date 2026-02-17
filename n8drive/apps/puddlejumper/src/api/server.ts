@@ -1,5 +1,6 @@
 // Load environment variables from .env file
 import dotenv from 'dotenv';
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -62,7 +63,9 @@ import {
   renderPjWorkspaceHtml,
   getCorrelationId,
   logServerError,
+  logServerWarn,
   logServerInfo,
+  requestLogger,
 } from "./serverMiddleware.js";
 import { processAccessNotificationQueueOnce } from "./accessNotificationWorker.js";
 import { OAuthStateStore } from "@publiclogic/logic-commons";
@@ -252,6 +255,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   // Global middleware (must come before routes for CORS to apply)
   app.use(withCorrelationId);
+  app.use(requestLogger);
   app.use(createCorsMiddleware(nodeEnv));
 
   // Add HSTS header for production
@@ -266,14 +270,30 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.get("/health", (_req, res) => {
     const checks: Record<string, { status: string; detail?: string }> = {};
 
-    // Database connectivity
-    for (const [label, store] of [["prr", prrStore], ["connectors", connectorStore]] as const) {
+    // Database connectivity — PRR, connectors, and approvals
+    for (const [label, store] of [
+      ["prr", prrStore],
+      ["connectors", connectorStore],
+      ["approvals", approvalStore],
+    ] as const) {
       try {
         (store as any).db.prepare("SELECT 1").get();
         checks[label] = { status: "ok" };
       } catch (err: unknown) {
         checks[label] = { status: "error", detail: err instanceof Error ? err.message : String(err) };
       }
+    }
+
+    // Volume writability — verify data directory is read/write
+    const volumeProbe = path.join(CONTROLLED_DATA_DIR, `.health-probe-${Date.now()}`);
+    try {
+      fs.writeFileSync(volumeProbe, "ok", "utf8");
+      const readBack = fs.readFileSync(volumeProbe, "utf8");
+      fs.unlinkSync(volumeProbe);
+      checks.volume = readBack === "ok" ? { status: "ok" } : { status: "error", detail: "read-back mismatch" };
+    } catch (err: unknown) {
+      checks.volume = { status: "error", detail: err instanceof Error ? err.message : String(err) };
+      try { fs.unlinkSync(volumeProbe); } catch { /* best-effort cleanup */ }
     }
 
     // Critical secrets presence (never leak values)
