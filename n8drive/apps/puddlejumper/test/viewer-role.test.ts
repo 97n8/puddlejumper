@@ -3,11 +3,12 @@
 // Tests for:
 //   1a. User store: upsertUser creates viewer by default, preserves admin
 //   1b. GET /api/me endpoint returns user profile + role
-//   1c. Viewer can GET approvals, chain progress, stats, templates (200)
-//   1d. Viewer cannot POST/PUT/DELETE mutations (403)
-//   1e. Admin retains full access (no regression)
-//   1f. Admin HTML serves to unauthenticated users (200)
-//   1g. onUserAuthenticated hook resolves role into JWT
+//   1c. Viewer can GET approvals, chain progress, stats (200)
+//   1d. Viewer cannot GET chain templates (403, admin-only)
+//   1e. Viewer cannot POST/PUT/DELETE mutations (403)
+//   1f. Admin retains full access (no regression)
+//   1g. Admin HTML serves to unauthenticated users (200)
+//   1h. onUserAuthenticated hook resolves role into JWT
 //
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
@@ -266,18 +267,16 @@ describe("Viewer read-only access", () => {
     expect(res.body.data).toBeDefined();
   });
 
-  it("viewer can GET /api/chain-templates", async () => {
+  it("viewer cannot GET /api/chain-templates (403)", async () => {
     const app = buildApp();
     const token = await tokenFor(VIEWER);
     const h = { Authorization: `Bearer ${token}`, "X-PuddleJumper-Request": "true" };
 
     const res = await request(app).get("/api/chain-templates").set(h);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.status).toBe(403);
   });
 
-  it("viewer can GET /api/chain-templates/:id", async () => {
+  it("viewer cannot GET /api/chain-templates/:id (403)", async () => {
     const app = buildApp();
     const token = await tokenFor(VIEWER);
     const h = { Authorization: `Bearer ${token}`, "X-PuddleJumper-Request": "true" };
@@ -285,8 +284,7 @@ describe("Viewer read-only access", () => {
     // After cloning, the template ID is workspace-scoped
     const workspaceScopedId = `default-${WORKSPACE_ID}`;
     const res = await request(app).get(`/api/chain-templates/${workspaceScopedId}`).set(h);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
+    expect(res.status).toBe(403);
   });
 
   it("viewer can GET /api/admin/stats", async () => {
