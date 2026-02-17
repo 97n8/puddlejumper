@@ -16,9 +16,9 @@ export default function LoginPage() {
   // Show nothing while auth state is loading or user is authenticated (redirecting)
   if (loading || user) return null;
 
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_URL ||
-    "https://publiclogic-puddlejumper.fly.dev";
+  // OAuth login flows go through the Next.js rewrite proxy so that
+  // callbacks, cookies, and sessions share the frontend origin.
+  const oauthBase = "/api/auth";
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -39,7 +39,7 @@ export default function LoginPage() {
           {/* OAuth buttons */}
           <div className="flex flex-col gap-3 max-w-md">
             <a
-              href={`${apiUrl}/api/auth/github/login`}
+              href={`${oauthBase}/github/login`}
               className="flex items-center justify-center gap-3 rounded-lg bg-zinc-100 px-5 py-3 text-sm font-medium text-zinc-900 transition hover:bg-white"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
@@ -53,7 +53,7 @@ export default function LoginPage() {
             </a>
 
             <a
-              href={`${apiUrl}/api/auth/google/login`}
+              href={`${oauthBase}/google/login`}
               className="flex items-center justify-center gap-3 rounded-lg bg-zinc-100 px-5 py-3 text-sm font-medium text-zinc-900 transition hover:bg-white"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -78,7 +78,7 @@ export default function LoginPage() {
             </a>
 
             <a
-              href={`${apiUrl}/api/auth/microsoft/login`}
+              href={`${oauthBase}/microsoft/login`}
               className="flex items-center justify-center gap-3 rounded-lg bg-zinc-100 px-5 py-3 text-sm font-medium text-zinc-900 transition hover:bg-white"
             >
               <svg className="h-5 w-5" viewBox="0 0 21 21">

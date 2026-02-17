@@ -72,7 +72,9 @@ export default function Home() {
   const [executingTile, setExecutingTile] = useState<string | null>(null);
   const [executeResult, setExecuteResult] = useState<{ tileId: string; ok: boolean; data: unknown } | null>(null);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://publiclogic-puddlejumper.fly.dev";
+  // OAuth login flows go through the Next.js rewrite proxy so that
+  // callbacks, cookies, and sessions share the frontend origin.
+  const oauthBase = "/api/auth";
   const portalApps = getPortalApps();
 
   const handleHealthCheck = async () => {
@@ -188,7 +190,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => {
-                  window.location.href = `${apiUrl}/api/auth/github/login`;
+                  window.location.href = `${oauthBase}/github/login`;
                 }}
                 className="flex w-full items-center justify-center gap-3 rounded-lg bg-zinc-100 px-5 py-3 text-sm font-medium text-zinc-900 transition hover:bg-white"
               >
@@ -205,7 +207,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => {
-                  window.location.href = `${apiUrl}/api/auth/google/login`;
+                  window.location.href = `${oauthBase}/google/login`;
                 }}
                 className="flex w-full items-center justify-center gap-3 rounded-lg bg-zinc-100 px-5 py-3 text-sm font-medium text-zinc-900 transition hover:bg-white"
               >
@@ -221,7 +223,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => {
-                  window.location.href = `${apiUrl}/api/auth/microsoft/login`;
+                  window.location.href = `${oauthBase}/microsoft/login`;
                 }}
                 className="flex w-full items-center justify-center gap-3 rounded-lg bg-zinc-100 px-5 py-3 text-sm font-medium text-zinc-900 transition hover:bg-white"
               >
