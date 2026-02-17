@@ -10,6 +10,5 @@ export default defineConfig({
   },
   test: {
     globals: false,
-    setupFiles: ['./test/setup-admin.ts'],
   },
 });
