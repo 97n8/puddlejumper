@@ -13,6 +13,8 @@ jobs:
     name: Playwright Quick Start smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: n8drive
