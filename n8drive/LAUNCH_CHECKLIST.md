@@ -1,19 +1,19 @@
 # Launch Checklist (Phillipston)
 
 ## 1) Backup Location
-- Primary SQLite data directory: `/Users/n8/Documents/New project/n8drive/data`
-- Recommended backup directory: `/Users/n8/Documents/New project/n8drive/backups`
+- Primary SQLite data directory: `n8drive/data` (local dev) or `/app/data` (Fly.io production)
+- Recommended backup directory: `n8drive/backups` (local dev)
 - Idempotency/audit DB path in production must be inside `data/` (`IDEMPOTENCY_DB_PATH`)
 - Rate-limit DB path in production must be inside `data/` (`RATE_LIMIT_DB_PATH`)
 
 ## 2) Backup Steps
 1. Run:
 ```bash
-npm run db:backup -- --source /Users/n8/Documents/New\ project/n8drive/data/idempotency.db --out /Users/n8/Documents/New\ project/n8drive/backups/idempotency-$(date +%F-%H%M%S).db
+npm run db:backup -- --source n8drive/data/idempotency.db --out n8drive/backups/idempotency-$(date +%F-%H%M%S).db
 ```
 2. Validate backup:
 ```bash
-npm run db:validate-restore -- --db /Users/n8/Documents/New\ project/n8drive/backups/<backup-file>.db
+npm run db:validate-restore -- --db n8drive/backups/<backup-file>.db
 ```
 3. Confirm output contains `"ok": true` and required tables `idempotency`, `decision_audit`.
 
@@ -21,11 +21,11 @@ npm run db:validate-restore -- --db /Users/n8/Documents/New\ project/n8drive/bac
 1. Stop application process.
 2. Copy selected backup file into the controlled data directory:
 ```bash
-cp /Users/n8/Documents/New\ project/n8drive/backups/<backup-file>.db /Users/n8/Documents/New\ project/n8drive/data/idempotency.db
+cp n8drive/backups/<backup-file>.db n8drive/data/idempotency.db
 ```
 3. Run restore validation:
 ```bash
-npm run db:validate-restore -- --db /Users/n8/Documents/New\ project/n8drive/data/idempotency.db
+npm run db:validate-restore -- --db n8drive/data/idempotency.db
 ```
 4. Start application and verify `/health` and one authenticated `/api/identity` request.
 

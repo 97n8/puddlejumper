@@ -12,7 +12,6 @@
   "scripts": {
     "dev": "tsx watch src/api/server.ts",
     "build": "tsc",
-    "vercel-build": "cd ../.. && pnpm run build && cd apps/puddlejumper",
     "start": "node dist/api/server.js",
     "test": "vitest run"
   },
