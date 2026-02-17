@@ -97,7 +97,29 @@ When running bootstrap/tests, logs are captured at:
 - `.pj-test-logs/bootstrap.log`
 - `.pj-test-logs/pj-tests.log`
 
-## 7. Known pitfalls
+## 7. Central entrance (web)
+
+`n8drive/web` is the internal PublicLogic Control Center launcher.
+
+Launcher link env vars:
+- `NEXT_PUBLIC_PL_URL_MAIN`
+- `NEXT_PUBLIC_PL_URL_PJ`
+- `NEXT_PUBLIC_PL_URL_PJ_ADMIN`
+- `NEXT_PUBLIC_PL_URL_PJ_GUIDE`
+- `NEXT_PUBLIC_PL_URL_OS`
+- `NEXT_PUBLIC_PL_URL_DEPLOY_CONSOLE` (optional)
+- `NEXT_PUBLIC_PL_URL_CHAMBER_CONNECT` (optional)
+
+If a URL is unset, the launcher card is shown as **Not configured** and does not render a broken link.
+
+### Quick Start CSS/CSP note
+
+`/pj/guide` now uses an external stylesheet at
+`n8drive/apps/puddlejumper/public/styles/pj-guide.css`.
+The CSP in `serverMiddleware.ts` stays strict (`style-src 'self' https://fonts.googleapis.com`)
+and intentionally does not allow `unsafe-inline`.
+
+## 8. Known pitfalls
 
 - `better-sqlite3` / `NODE_MODULE_VERSION` mismatch errors usually mean modules were built under a different Node runtime.
 - Run `source ~/.nvm/nvm.sh && nvm use 20` before ad-hoc `pnpm` commands.
