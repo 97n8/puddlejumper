@@ -1074,11 +1074,13 @@ window.addEventListener('hashchange',()=>{
     // Network error — show all providers as fallback
     document.querySelectorAll('.oauth-optional').forEach(el=>el.style.display='inline-flex');
   }
+  let isAuthenticated=false;
   try{
     const res=await fetch('/api/me',{headers:authHeaders()});
     if(res.ok){
       const me=await res.json();
       userRole=me.role;
+      isAuthenticated=true;
       if(me.workspaceName){
         const chip=document.getElementById('ws-chip');
         chip.textContent=me.workspaceName;
@@ -1086,11 +1088,15 @@ window.addEventListener('hashchange',()=>{
       }
     }
   }catch{}
-  const hash=location.hash.replace('#','');
-  const tab=HASH_TAB[hash];
-  if(tab) switchTab(tab);
-  else{hideAuthGate();loadApprovals()}
-  startAutoRefresh();
+  if(isAuthenticated){
+    const hash=location.hash.replace('#','');
+    const tab=HASH_TAB[hash];
+    if(tab) switchTab(tab);
+    else{hideAuthGate();loadApprovals()}
+    startAutoRefresh();
+  }else{
+    showAuthGate();
+  }
 })();
 </script>
 </body>
