@@ -475,6 +475,8 @@ label {
 
 .toggle svg { width: 16px; height: 16px; }
 
+.eye-hidden { display: none; }
+
 .row {
   display: flex;
   align-items: center;
