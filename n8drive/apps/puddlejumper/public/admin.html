@@ -1,26 +1,489 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PuddleJumper — Control Plane Admin</title>
-<link rel="stylesheet" href="/styles/pj-admin.css">
+<title>PuddleJumper — Control Plane</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Reset + Design System ─────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030506;
+  --bg-2:#080d0f;
+  --bg-3:#0d1417;
+  --surface:#111820;
+  --surface-2:#172028;
+  --surface-hover:#1e2c38;
+  --border:#1e2e3a;
+  --border-bright:#2a4050;
+  --text:#cdd8e0;
+  --text-dim:#607585;
+  --text-muted:#3f5566;
+  --accent:#00e5a0;
+  --accent-dim:rgba(0,229,160,0.12);
+  --accent-glow:rgba(0,229,160,0.25);
+  --red:#ff4d6a;
+  --red-dim:rgba(255,77,106,0.12);
+  --yellow:#f5c842;
+  --yellow-dim:rgba(245,200,66,0.12);
+  --blue:#3fa9f5;
+  --blue-dim:rgba(63,169,245,0.12);
+  --purple:#b57bee;
+  --purple-dim:rgba(181,123,238,0.12);
+  --radius:6px;
+  --radius-lg:10px;
+  --font:'IBM Plex Sans',sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+}
+
+html{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;line-height:1.5}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Scanline overlay ──────────────────────────────────── */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,0.04) 0px,rgba(0,0,0,0.04) 1px,transparent 1px,transparent 2px);
+}
+
+/* ── Header ────────────────────────────────────────────── */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:52px;
+  background:var(--bg-2);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+}
+.header-brand{display:flex;align-items:center;gap:12px}
+.header-brand .logo{
+  font-family:var(--mono);font-size:14px;font-weight:600;color:var(--accent);
+  letter-spacing:-0.02em;
+}
+.header-brand .logo span{color:var(--text-muted)}
+.header-brand .sep{width:1px;height:20px;background:var(--border)}
+.header-brand .subtitle{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)}
+.header-right{display:flex;align-items:center;gap:10px}
+.ws-chip{
+  font-family:var(--mono);font-size:11px;color:var(--accent);
+  background:var(--accent-dim);border:1px solid rgba(0,229,160,0.2);
+  padding:3px 10px;border-radius:999px;display:none;
+}
+.header-btn{
+  background:var(--surface);border:1px solid var(--border);color:var(--text-dim);
+  padding:5px 12px;border-radius:var(--radius);font-size:12px;cursor:pointer;
+  font-family:var(--font);transition:all 0.15s;
+}
+.header-btn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--border-bright)}
+.header-btn:disabled{opacity:0.4;cursor:not-allowed}
+.auto-ref-badge{
+  font-size:10px;color:var(--text-muted);font-family:var(--mono);
+  display:none;align-items:center;gap:4px;
+}
+.auto-ref-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ── Tabs ──────────────────────────────────────────────── */
+.tabs{
+  display:flex;background:var(--bg-2);
+  border-bottom:1px solid var(--border);
+  padding:0 20px;overflow-x:auto;gap:2px;
+}
+.tab{
+  padding:10px 16px;font-size:12px;cursor:pointer;border:none;
+  background:transparent;color:var(--text-dim);border-bottom:2px solid transparent;
+  font-family:var(--font);font-weight:500;transition:color 0.15s,border-color 0.15s;
+  white-space:nowrap;letter-spacing:0.02em;
+}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ── Auth gate ─────────────────────────────────────────── */
+#auth-gate{
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  min-height:70vh;gap:16px;padding:40px 20px;
+}
+#auth-gate h2{font-size:18px;font-weight:500;font-family:var(--mono);color:var(--text)}
+#auth-gate p{color:var(--text-dim);font-size:13px;max-width:360px;text-align:center}
+.sign-in-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:24px;display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px;
+}
+.oauth-btn{
+  display:inline-flex;align-items:center;gap:10px;padding:10px 16px;
+  border-radius:var(--radius);font-size:13px;font-weight:500;
+  text-decoration:none;transition:all 0.15s;font-family:var(--font);
+}
+.oauth-github{background:#161b22;color:#fff;border:1px solid #30363d}
+.oauth-github:hover{background:#21262d;text-decoration:none}
+
+/* ── Viewer banner ─────────────────────────────────────── */
+.viewer-banner{
+  background:var(--accent-dim);border-bottom:1px solid rgba(0,229,160,0.15);
+  color:var(--accent);padding:8px 20px;font-size:12px;
+  display:none;align-items:center;gap:4px;
+}
+body.role-viewer .viewer-banner{display:flex}
+
+/* ── Main layout ───────────────────────────────────────── */
+.main{padding:20px;max-width:1280px;animation:fade-in 0.2s ease}
+@keyframes fade-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ── Stats grid ────────────────────────────────────────── */
+.stats-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:10px;margin-bottom:20px;
+}
+.stat{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:16px 18px;
+  transition:border-color 0.2s;
+}
+.stat:hover{border-color:var(--border-bright)}
+.stat .lbl{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)}
+.stat .val{font-size:26px;font-weight:600;margin-top:6px;font-family:var(--mono);letter-spacing:-0.03em}
+.stat .val.pending{color:var(--yellow)}
+.stat .val.success{color:var(--accent)}
+.stat .val.failure{color:var(--red)}
+.stat .val.neutral{color:var(--text)}
+.stat .val.info{color:var(--blue)}
+
+/* ── Table header row ──────────────────────────────────── */
+.tbl-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:12px;
+}
+.tbl-header h2{font-size:14px;font-weight:600;letter-spacing:0.01em}
+.tbl-actions{display:flex;align-items:center;gap:8px}
+.filter-select{
+  background:var(--surface);border:1px solid var(--border);color:var(--text);
+  border-radius:var(--radius);padding:5px 10px;font-size:12px;font-family:var(--font);
+  cursor:pointer;
+}
+.filter-select:focus{outline:1px solid var(--border-bright)}
+
+/* ── Table ─────────────────────────────────────────────── */
+.tbl-wrap{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  overflow:hidden;
+}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{
+  padding:9px 12px;text-align:left;color:var(--text-dim);
+  font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;
+  border-bottom:1px solid var(--border);background:var(--bg-3);cursor:pointer;
+  user-select:none;font-family:var(--mono);white-space:nowrap;
+}
+thead th:hover{color:var(--text)}
+tbody td{
+  padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;
+  color:var(--text);
+}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-hover);cursor:pointer}
+
+/* ── Status badges ─────────────────────────────────────── */
+.badge{
+  display:inline-block;padding:2px 8px;border-radius:4px;
+  font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:0.05em;font-family:var(--mono);
+}
+.badge.pending{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,200,66,0.2)}
+.badge.approved{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,229,160,0.2)}
+.badge.rejected{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,77,106,0.2)}
+.badge.dispatched{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(63,169,245,0.2)}
+.badge.dispatching{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(63,169,245,0.2)}
+.badge.dispatch_failed{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,77,106,0.2)}
+.badge.expired{background:rgba(55,70,80,0.4);color:var(--text-muted);border:1px solid var(--border)}
+.badge.active{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,200,66,0.2)}
+.badge.skipped{background:rgba(55,70,80,0.4);color:var(--text-muted);border:1px solid var(--border)}
+/* Role badges */
+.badge.owner{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,200,66,0.2)}
+.badge.admin{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(181,123,238,0.2)}
+.badge.member{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,229,160,0.2)}
+.badge.viewer{background:rgba(55,70,80,0.4);color:var(--text-muted);border:1px solid var(--border)}
+/* PRR badges */
+.badge.prr-submitted,.badge.submitted{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(63,169,245,0.2)}
+.badge.prr-acknowledged,.badge.acknowledged{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,200,66,0.2)}
+.badge.prr-in-progress,.badge.in_progress{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,229,160,0.2)}
+.badge.prr-closed,.badge.closed{background:rgba(55,70,80,0.4);color:var(--text-muted);border:1px solid var(--border)}
+
+/* ── Chain progress ────────────────────────────────────── */
+.chain-prog{display:flex;align-items:center;gap:6px;font-size:11px}
+.chain-track{flex:0 0 60px;height:4px;border-radius:2px;background:var(--border);overflow:hidden}
+.chain-fill{height:100%;background:var(--accent);border-radius:2px;transition:width 0.3s}
+.chain-text{color:var(--text-dim);font-family:var(--mono);font-size:10px}
+.parallel-tag{color:var(--purple);font-size:9px;font-family:var(--mono)}
+
+/* ── Action buttons ────────────────────────────────────── */
+.actions-cell{display:flex;gap:5px}
+.btn{
+  border:none;border-radius:var(--radius);padding:4px 10px;
+  font-size:11px;cursor:pointer;font-family:var(--font);font-weight:500;
+  transition:all 0.15s;white-space:nowrap;
+}
+.btn-approve{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,229,160,0.25)}
+.btn-approve:hover{background:rgba(0,229,160,0.2)}
+.btn-reject{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,77,106,0.25)}
+.btn-reject:hover{background:rgba(255,77,106,0.2)}
+.btn-dispatch{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(63,169,245,0.25)}
+.btn-dispatch:hover{background:rgba(63,169,245,0.2)}
+.btn-primary{background:var(--accent);color:#000;font-weight:600}
+.btn-primary:hover{opacity:0.9}
+.btn-secondary{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--surface-hover);border-color:var(--border-bright)}
+.btn-danger{background:transparent;color:var(--red);border:1px solid rgba(255,77,106,0.3)}
+.btn-danger:hover{background:var(--red-dim)}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.btn-lg{padding:8px 18px;font-size:13px}
+
+/* ── Empty & loading states ────────────────────────────── */
+.empty{
+  text-align:center;padding:48px 24px;color:var(--text-muted);
+  font-family:var(--mono);font-size:12px;letter-spacing:0.04em;
+}
+.loading-row td{
+  text-align:center;padding:32px;color:var(--text-muted);
+  font-family:var(--mono);font-size:11px;
+}
+
+/* ── Pagination ────────────────────────────────────────── */
+.pagination{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:12px;font-size:11px;color:var(--text-dim);font-family:var(--mono);
+}
+.pagination-btns{display:flex;gap:6px}
+.pag-btn{
+  background:var(--surface);border:1px solid var(--border);color:var(--text-dim);
+  padding:4px 10px;border-radius:var(--radius);font-size:11px;cursor:pointer;
+  font-family:var(--mono);transition:all 0.15s;
+}
+.pag-btn:hover:not(:disabled){background:var(--surface-hover);color:var(--text)}
+.pag-btn:disabled{opacity:0.3;cursor:not-allowed}
+
+/* ── Detail panel ──────────────────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:none;backdrop-filter:blur(2px)}
+.overlay.open{display:flex;justify-content:flex-end}
+.panel{
+  width:min(560px,100%);background:var(--bg-2);border-left:1px solid var(--border);
+  height:100%;overflow-y:auto;display:flex;flex-direction:column;
+}
+.panel-head{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:var(--bg-2);z-index:1;
+}
+.panel-head h3{font-size:14px;font-weight:600;font-family:var(--mono)}
+.panel-close{background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:4px}
+.panel-close:hover{color:var(--text);background:var(--surface)}
+.panel-body{padding:20px;flex:1}
+.detail-section{margin-bottom:20px}
+.detail-section h4{
+  font-size:10px;text-transform:uppercase;letter-spacing:0.1em;
+  color:var(--text-muted);font-family:var(--mono);
+  margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);
+}
+.detail-row{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;font-size:12px}
+.detail-row .dk{color:var(--text-dim);font-family:var(--mono);font-size:11px}
+.detail-row .dv{color:var(--text);text-align:right;font-size:12px;max-width:65%}
+.code-block{
+  background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px;font-family:var(--mono);font-size:11px;overflow-x:auto;
+  max-height:260px;white-space:pre-wrap;color:var(--text-dim);
+  line-height:1.6;
+}
+.chain-steps-list{list-style:none;display:flex;flex-direction:column;gap:4px}
+.chain-step-item{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 10px;border-radius:var(--radius);
+  border:1px solid var(--border);background:var(--bg-3);font-size:12px;
+}
+.step-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.step-dot.approved{background:var(--accent)}
+.step-dot.active{background:var(--yellow)}
+.step-dot.pending{background:var(--border-bright)}
+.step-dot.rejected{background:var(--red)}
+.step-dot.skipped{background:var(--text-muted)}
+.step-decider{margin-left:auto;color:var(--text-dim);font-size:10px;font-family:var(--mono)}
+.parallel-mark{color:var(--purple);font-size:9px;margin-left:2px}
+
+/* ── Template cards ────────────────────────────────────── */
+.template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;margin-bottom:16px}
+.template-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:18px;position:relative;transition:border-color 0.2s;
+}
+.template-card:hover{border-color:var(--border-bright)}
+.template-card .tc-name{font-size:14px;font-weight:600;margin-bottom:3px}
+.template-card .tc-id{font-family:var(--mono);font-size:10px;color:var(--text-muted)}
+.template-card .tc-meta{font-size:11px;color:var(--text-dim);margin-top:8px}
+.tc-viz{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:12px;min-height:28px}
+.step-pill{
+  background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,229,160,0.2);
+  border-radius:3px;padding:2px 8px;font-size:10px;font-family:var(--mono);white-space:nowrap;
+}
+.step-pill.parallel{background:var(--purple-dim);color:var(--purple);border-color:rgba(181,123,238,0.2)}
+.step-arr{color:var(--text-muted);font-size:12px;padding:0 2px}
+.par-group{display:flex;flex-direction:column;gap:3px;align-items:center}
+.par-label{font-size:9px;color:var(--purple);font-family:var(--mono);letter-spacing:0.04em}
+.tc-footer{
+  display:flex;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);
+}
+.tc-default-badge{
+  position:absolute;top:12px;right:14px;font-size:9px;color:var(--accent);
+  text-transform:uppercase;letter-spacing:0.06em;font-family:var(--mono);
+}
+
+/* ── Form inputs ───────────────────────────────────────── */
+.form-panel{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:20px;margin-bottom:16px;display:none;
+}
+.form-panel.show{display:block}
+.form-title{font-size:14px;font-weight:600;margin-bottom:16px;font-family:var(--mono)}
+.form-row{margin-bottom:12px}
+.form-row label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;font-family:var(--mono);letter-spacing:0.04em}
+.form-row input,.form-row textarea,.form-row select{
+  width:100%;padding:8px 10px;background:var(--bg-3);border:1px solid var(--border);
+  color:var(--text);border-radius:var(--radius);font-family:var(--font);font-size:13px;
+  transition:border-color 0.15s;
+}
+.form-row input:focus,.form-row textarea:focus,.form-row select:focus{
+  outline:none;border-color:var(--border-bright);
+}
+.form-row textarea{resize:vertical;min-height:80px}
+.form-row input[type="date"]{color-scheme:dark}
+.form-btns{display:flex;gap:8px;margin-top:16px}
+
+/* ── Step builder ──────────────────────────────────────── */
+.step-row{
+  display:flex;gap:8px;align-items:center;margin-bottom:6px;
+  background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius);padding:8px;
+}
+.step-num{font-size:10px;color:var(--text-muted);font-family:var(--mono);min-width:32px}
+.step-row input{margin:0;padding:6px 8px;font-size:12px}
+
+/* ── Usage card ────────────────────────────────────────── */
+.usage-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:20px;margin-bottom:20px;
+}
+.usage-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.usage-head h3{font-size:14px;font-weight:600}
+.plan-badge{
+  display:inline-block;padding:3px 10px;border-radius:3px;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
+  font-family:var(--mono);margin-top:4px;
+}
+.plan-badge.plan-free{background:rgba(55,70,80,0.6);color:var(--text-dim);border:1px solid var(--border)}
+.plan-badge.plan-pro{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,229,160,0.3)}
+.usage-metrics{display:flex;flex-direction:column;gap:12px}
+.usage-item .usage-lbl{display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px}
+.usage-item .usage-lbl strong{color:var(--text)}
+.usage-count-text{font-family:var(--mono);color:var(--text-dim)}
+.usage-track{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.usage-bar{height:100%;background:var(--accent);border-radius:3px;transition:width 0.4s}
+.usage-bar.near{background:var(--yellow)}
+.usage-bar.at-limit{background:var(--red);animation:bar-pulse 1.5s infinite}
+@keyframes bar-pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+.limit-chip{font-size:9px;font-family:var(--mono);font-weight:700;padding:1px 5px;border-radius:2px}
+.limit-chip.warn{background:var(--yellow-dim);color:var(--yellow)}
+.limit-chip.err{background:var(--red-dim);color:var(--red)}
+
+/* ── PRR detail overlay ─────────────────────────────────── */
+#prr-detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;justify-content:flex-end;backdrop-filter:blur(2px)}
+#prr-detail-overlay.open{display:flex}
+.detail-select{
+  background:var(--bg-3);border:1px solid var(--border);color:var(--text);
+  border-radius:var(--radius);padding:5px 8px;font-size:12px;font-family:var(--font);
+  width:100%;
+}
+
+/* ── Upgrade modal ─────────────────────────────────────── */
+#upgrade-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+#upgrade-modal.open{display:flex}
+.modal-card{
+  background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:28px;width:min(480px,calc(100% - 40px));max-height:90vh;overflow-y:auto;
+}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-head h3{font-size:15px;font-weight:600}
+.plan-option{
+  display:flex;align-items:center;gap:12px;cursor:pointer;
+  padding:12px;border:2px solid var(--border);border-radius:var(--radius);
+  margin-bottom:10px;transition:border-color 0.15s;
+}
+.plan-option:has(input:checked){border-color:var(--accent)}
+.plan-option input{accent-color:var(--accent)}
+.plan-option .po-name{font-weight:600;font-size:13px}
+.plan-option .po-desc{font-size:11px;color:var(--text-dim);margin-top:2px}
+.warn-notice{
+  background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);
+  border-radius:var(--radius);padding:10px 12px;font-size:11px;color:var(--yellow);
+  margin-bottom:16px;
+}
+
+/* ── Toast ─────────────────────────────────────────────── */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);
+  background:var(--surface);border:1px solid var(--border);
+  padding:9px 18px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);
+  z-index:500;opacity:0;transition:opacity 0.25s,transform 0.25s;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:rgba(0,229,160,0.4);color:var(--accent)}
+.toast.error{border-color:rgba(255,77,106,0.4);color:var(--red)}
+
+/* ── Responsive ────────────────────────────────────────── */
+@media(max-width:768px){
+  .main{padding:12px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .template-grid{grid-template-columns:1fr}
+  table{font-size:11px}
+  thead th,tbody td{padding:7px 8px}
+  .header{padding:0 12px}
+  .tabs{padding:0 12px}
+}
+
+/* ── Viewer hides ───────────────────────────────────────── */
+body.role-viewer .btn-approve,body.role-viewer .btn-reject,
+body.role-viewer .btn-dispatch,body.role-viewer .btn-danger,
+body.role-viewer .form-panel,body.role-viewer #btn-new-template,
+body.role-viewer #btn-invite,body.role-viewer #btn-new-prr,
+body.role-viewer .tc-footer .btn-danger,body.role-viewer .tc-footer .btn-secondary:nth-child(2){display:none!important}
+
+/* ── Mono td values ────────────────────────────────────── */
+.mono{font-family:var(--mono);font-size:11px}
+.dim{color:var(--text-dim)}
+.btn-link{background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-family:var(--font);padding:0;text-decoration:underline}
+</style>
 </head>
 <body>
 
+<!-- Header -->
 <div class="header">
-  <div style="display:flex;align-items:baseline;gap:10px;">
-    <h1>PuddleJumper Admin</h1>
-    <span class="subtitle">Control Plane</span>
-    <span id="workspace-name" class="subtitle" style="color:var(--green);display:none;"></span>
+  <div class="header-brand">
+    <div class="logo">Puddle<span>Jumper</span></div>
+    <div class="sep"></div>
+    <div class="subtitle">Control Plane</div>
+    <div class="ws-chip" id="ws-chip"></div>
   </div>
   <div class="header-right">
-    <span id="auto-refresh-indicator" style="font-size:11px;color:var(--text-dim);display:none;">⟳ Auto-refresh</span>
-    <a class="guide-link" href="/pj/guide">Quick Start</a>
-    <button class="refresh-btn" onclick="refresh()" id="refresh-btn">⟳ Refresh</button>
+    <div class="auto-ref-badge" id="auto-ref"><div class="dot"></div>Auto</div>
+    <a class="header-btn" href="/pj/guide">Guide</a>
+    <button class="header-btn" onclick="refresh()" id="refresh-btn">↻ Refresh</button>
   </div>
 </div>
 
+<!-- Viewer banner -->
+<div class="viewer-banner">
+  <span>Viewing as guest — <a href="/api/auth/github/login">sign in</a> to manage approvals</span>
+</div>
+
+<!-- Tabs -->
 <div class="tabs">
   <button class="tab active" data-tab="queue" onclick="switchTab('queue')">Approval Queue</button>
   <button class="tab" data-tab="chains" onclick="switchTab('chains')">Chain Templates</button>
@@ -29,27 +492,33 @@
   <button class="tab" data-tab="members" onclick="switchTab('members')">Members</button>
 </div>
 
-<!-- Auth gate (shown when user isn't authenticated) -->
-<div id="auth-gate" style="display:none;">
-  <h2>Welcome to PuddleJumper</h2>
-  <p>Sign in to view governed operations and approval workflows.</p>
-  <a href="/api/auth/github/login" style="display:inline-flex;align-items:center;gap:8px;background:#24292e;color:#fff;padding:10px 20px;border-radius:var(--radius);font-size:14px;font-weight:500;text-decoration:none;margin-top:8px">
-    <svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-    Sign in with GitHub
-  </a>
+<!-- Auth Gate -->
+<div id="auth-gate">
+  <h2>// sign in required</h2>
+  <p>Authentication required to access the control plane.</p>
+  <div class="sign-in-card">
+    <a href="/api/auth/github/login" class="oauth-btn oauth-github">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      Sign in with GitHub
+    </a>
+    <!-- Show Google/Microsoft only when those OAuth providers are configured in env -->
+    <a href="/api/auth/google/login" class="oauth-btn oauth-optional" data-provider="google" style="background:#fff;color:#333;border:1px solid #ddd;display:none">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M24 9.5c3.54 0 6.36 1.22 8.3 2.97l6.18-6.18C34.64 2.7 29.74 0 24 0 14.82 0 6.73 5.82 2.69 14.09l7.19 5.59C11.27 13.36 17.13 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.22-.42-4.74H24v9.01h12.42c-.54 2.9-2.18 5.36-4.66 7.01l7.19 5.59C43.27 37.27 46.1 31.45 46.1 24.55z"/><path fill="#FBBC05" d="M10.88 28.68a14.5 14.5 0 010-9.36l-7.19-5.59A23.94 23.94 0 000 24c0 3.77.9 7.34 2.69 10.91l7.19-5.59z"/><path fill="#EA4335" d="M24 46c6.48 0 11.92-2.15 15.89-5.86l-7.19-5.59c-2.01 1.35-4.59 2.15-8.7 2.15-6.87 0-12.73-3.86-15.12-9.09l-7.19 5.59C6.73 42.18 14.82 48 24 48z"/></svg>
+      Sign in with Google
+    </a>
+    <a href="/api/auth/microsoft/login" class="oauth-btn oauth-optional" data-provider="microsoft" style="background:#f3f3f3;color:#2F2F2F;border:1px solid #e5e5e5;display:none">
+      <svg width="18" height="18" viewBox="0 0 24 24"><rect fill="#F25022" x="1" y="1" width="10" height="10"/><rect fill="#7FBA00" x="13" y="1" width="10" height="10"/><rect fill="#00A4EF" x="1" y="13" width="10" height="10"/><rect fill="#FFB900" x="13" y="13" width="10" height="10"/></svg>
+      Sign in with Microsoft
+    </a>
+  </div>
 </div>
 
-<!-- Viewer banner -->
-<div class="viewer-banner">
-  <span>Viewing as guest — <a href="/api/auth/github/login">sign up</a> to govern your own operations</span>
-</div>
-
-<!-- Approval Queue Tab -->
-<div class="main" id="tab-queue">
-  <div class="table-header">
-    <h2>Approvals</h2>
-    <div class="filter-group">
-      <select id="status-filter" onchange="loadApprovals()">
+<!-- ── APPROVAL QUEUE TAB ─────────────────────────────── -->
+<div class="main" id="tab-queue" style="display:none">
+  <div class="tbl-header">
+    <h2>Approval Queue</h2>
+    <div class="tbl-actions">
+      <select class="filter-select" id="status-filter" onchange="currentPage=0;loadApprovals()">
         <option value="pending">Pending</option>
         <option value="approved">Approved</option>
         <option value="rejected">Rejected</option>
@@ -60,346 +529,240 @@
       </select>
     </div>
   </div>
-
-  <div id="approvals-table-wrap">
-    <div id="approvals-loading" class="empty-state" style="display:none;">Loading approvals…</div>
+  <div class="tbl-wrap">
     <table>
       <thead>
         <tr>
           <th onclick="sortBy('action_intent')">Intent</th>
           <th onclick="sortBy('approval_status')">Status</th>
-          <th onclick="sortBy('chain')">Chain Progress</th>
+          <th onclick="sortBy('chain')">Chain</th>
           <th onclick="sortBy('operator_id')">Operator</th>
-          <th onclick="sortBy('created_at')">Created</th>
+          <th onclick="sortBy('created_at')">Age</th>
           <th>Actions</th>
         </tr>
       </thead>
-      <tbody id="approvals-body"></tbody>
+      <tbody id="approvals-body">
+        <tr class="loading-row"><td colspan="6">Loading…</td></tr>
+      </tbody>
     </table>
-    <div id="empty-state" class="empty-state" style="display:none;">No approvals match the selected filter.</div>
   </div>
-
+  <div id="approvals-empty" class="empty" style="display:none">No approvals match this filter</div>
   <div class="pagination">
-    <span id="page-info"></span>
-    <div style="display:flex;gap:8px;">
-      <button id="prev-btn" onclick="prevPage()" disabled>← Previous</button>
-      <button id="next-btn" onclick="nextPage()">Next →</button>
+    <span id="page-info" class="mono dim"></span>
+    <div class="pagination-btns">
+      <button class="pag-btn" id="prev-btn" onclick="prevPage()" disabled>← prev</button>
+      <button class="pag-btn" id="next-btn" onclick="nextPage()">next →</button>
     </div>
   </div>
 </div>
 
-<!-- Chain Templates Tab -->
-<div class="main" id="tab-chains" style="display:none;">
-  <div class="table-header">
+<!-- ── CHAIN TEMPLATES TAB ──────────────────────────────── -->
+<div class="main" id="tab-chains" style="display:none">
+  <div class="tbl-header">
     <h2>Chain Templates</h2>
-    <button class="btn btn-primary" onclick="toggleCreateTemplateForm()">+ Create Template</button>
-  </div>
-  <div style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Define multi-step approval routing with sequential and parallel steps</div>
-
-  <!-- Create / Edit Template Form (hidden by default) -->
-  <div id="template-form-wrap" style="display:none;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-    <h3 style="font-size:15px;margin-bottom:16px;" id="template-form-title">Create Template</h3>
-    <input type="hidden" id="template-edit-id" value="">
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Name</label>
-      <input type="text" id="template-name" placeholder="e.g. Two-Step Legal Review" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
-    </div>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Description (optional)</label>
-      <input type="text" id="template-description" placeholder="Brief description" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
-    </div>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:8px;font-size:13px;color:var(--text-dim);">Steps</label>
-      <div id="template-steps-list"></div>
-      <button class="btn btn-secondary" onclick="addTemplateStep()" style="margin-top:8px;">+ Add Step</button>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:16px;">
-      <button class="btn btn-primary" onclick="submitTemplate()">Save Template</button>
-      <button class="btn btn-secondary" onclick="cancelTemplateForm()">Cancel</button>
-    </div>
+    <button class="btn btn-primary btn-lg" id="btn-new-template" onclick="toggleTemplateForm()">+ New Template</button>
   </div>
 
-  <div id="templates-loading" class="empty-state" style="display:none;">Loading templates…</div>
-  <div id="templates-grid" class="template-grid"></div>
-  <div id="templates-empty" class="empty-state" style="display:none;">No chain templates yet — create one above to define multi-step approval routing.</div>
+  <!-- Create/Edit form -->
+  <div class="form-panel" id="template-form">
+    <div class="form-title" id="template-form-title">Create Template</div>
+    <input type="hidden" id="template-edit-id">
+    <div class="form-row">
+      <label>Name</label>
+      <input type="text" id="tpl-name" placeholder="e.g. Two-Step Legal Review">
+    </div>
+    <div class="form-row">
+      <label>Description (optional)</label>
+      <input type="text" id="tpl-desc" placeholder="Brief description">
+    </div>
+    <div class="form-row">
+      <label>Steps</label>
+      <div id="tpl-steps-list"></div>
+      <button class="btn btn-secondary" style="margin-top:6px;font-size:11px" onclick="addStep()">+ Add Step</button>
+    </div>
+    <div class="form-btns">
+      <button class="btn btn-primary" onclick="submitTemplate()">Save</button>
+      <button class="btn btn-secondary" onclick="hideTemplateForm()">Cancel</button>
+    </div>
+  </div>
+
+  <div id="templates-loading" class="empty" style="display:none">Loading templates…</div>
+  <div class="template-grid" id="templates-grid"></div>
+  <div id="templates-empty" class="empty" style="display:none">No templates yet — create one above</div>
 </div>
 
-<!-- Dashboard Tab -->
-<div class="main" id="tab-dashboard" style="display:none;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-    <h2 style="font-size:16px;font-weight:600;">Operational Dashboard</h2>
-    <span id="dashboard-last-refreshed" style="font-size:11px;color:var(--text-dim);"></span>
+<!-- ── DASHBOARD TAB ────────────────────────────────────── -->
+<div class="main" id="tab-dashboard" style="display:none">
+  <div class="tbl-header">
+    <h2>Operational Dashboard</h2>
+    <span class="mono dim" id="dash-ts"></span>
   </div>
-  <div id="dashboard-loading" class="empty-state" style="display:none;">Loading dashboard…</div>
 
   <div class="stats-grid" id="stats-grid">
-    <div class="stat-card"><div class="label">Pending Approvals</div><div class="value pending" id="s-pending">—</div></div>
-    <div class="stat-card"><div class="label">Success Rate</div><div class="value success" id="s-success-rate">—</div></div>
-    <div class="stat-card"><div class="label">Dispatch Retries</div><div class="value neutral" id="s-retries">—</div></div>
-    <div class="stat-card"><div class="label">Avg Approval Time</div><div class="value neutral" id="s-avg-time">—</div></div>
+    <div class="stat"><div class="lbl">Pending</div><div class="val pending" id="s-pending">—</div></div>
+    <div class="stat"><div class="lbl">Success Rate</div><div class="val success" id="s-rate">—</div></div>
+    <div class="stat"><div class="lbl">Retries</div><div class="val neutral" id="s-retries">—</div></div>
+    <div class="stat"><div class="lbl">Avg Approval</div><div class="val neutral" id="s-avgtime">—</div></div>
+    <div class="stat"><div class="lbl">Created</div><div class="val neutral" id="s-created">—</div></div>
+    <div class="stat"><div class="lbl">Approved</div><div class="val success" id="s-approved">—</div></div>
+    <div class="stat"><div class="lbl">Rejected</div><div class="val failure" id="s-rejected">—</div></div>
+    <div class="stat"><div class="lbl">Expired</div><div class="val neutral" id="s-expired">—</div></div>
+    <div class="stat"><div class="lbl">Dispatched</div><div class="val info" id="s-dsuccess">—</div></div>
+    <div class="stat"><div class="lbl">Dispatch Failed</div><div class="val failure" id="s-dfailure">—</div></div>
+    <div class="stat"><div class="lbl">Dispatch Latency</div><div class="val neutral" id="s-dlat">—</div></div>
+    <div class="stat"><div class="lbl">Active Chain Steps</div><div class="val pending" id="s-chainsteps">—</div></div>
   </div>
 
-  <div class="stats-grid">
-    <div class="stat-card"><div class="label">Approvals Created</div><div class="value neutral" id="s-created">—</div></div>
-    <div class="stat-card"><div class="label">Approved</div><div class="value success" id="s-approved">—</div></div>
-    <div class="stat-card"><div class="label">Rejected</div><div class="value failure" id="s-rejected">—</div></div>
-    <div class="stat-card"><div class="label">Expired</div><div class="value neutral" id="s-expired">—</div></div>
+  <div class="tbl-header"><h2>Recent Dispatches</h2></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Intent</th><th>Status</th><th>Operator</th><th>Dispatched</th></tr></thead>
+      <tbody id="dispatch-body"><tr class="loading-row"><td colspan="4">Loading…</td></tr></tbody>
+    </table>
   </div>
-
-  <div class="stats-grid">
-    <div class="stat-card"><div class="label">Dispatch Success</div><div class="value success" id="s-d-success">—</div></div>
-    <div class="stat-card"><div class="label">Dispatch Failure</div><div class="value failure" id="s-d-failure">—</div></div>
-    <div class="stat-card"><div class="label">Avg Dispatch Latency</div><div class="value neutral" id="s-d-latency">—</div></div>
-    <div class="stat-card"><div class="label">Active Chain Steps</div><div class="value pending" id="s-chain-steps">—</div></div>
-  </div>
-
-  <h2 style="font-size:16px;font-weight:600;margin:24px 0 12px;">Recent Dispatches</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Intent</th>
-        <th>Status</th>
-        <th>Operator</th>
-        <th>Dispatched</th>
-      </tr>
-    </thead>
-    <tbody id="dispatch-body"></tbody>
-  </table>
-  <div id="dispatch-empty" class="empty-state" style="display:none;">No recent dispatches yet.</div>
+  <div id="dispatch-empty" class="empty" style="display:none">No recent dispatches</div>
 </div>
 
-<!-- Members Tab -->
-<div class="main" id="tab-members" style="display:none;">
-  
-  <!-- Usage & Plan Card -->
-  <div class="usage-card" id="usage-card">
-    <div class="usage-header">
+<!-- ── PRR TAB ───────────────────────────────────────────── -->
+<div class="main" id="tab-prr" style="display:none">
+  <div class="tbl-header">
+    <h2>Public Records Requests</h2>
+    <div class="tbl-actions">
+      <select class="filter-select" id="prr-status-filter" onchange="loadPRRQueue()">
+        <option value="">All Status</option>
+        <option value="submitted">Submitted</option>
+        <option value="acknowledged">Acknowledged</option>
+        <option value="in_progress">In Progress</option>
+        <option value="closed">Closed</option>
+      </select>
+      <button class="btn btn-primary" id="btn-new-prr" onclick="togglePRRForm()">+ New Request</button>
+    </div>
+  </div>
+
+  <!-- New PRR form -->
+  <div class="form-panel" id="prr-form">
+    <div class="form-title">New Public Records Request</div>
+    <div class="form-row"><label>Requester Name</label><input type="text" id="prr-name" placeholder="Jane Sullivan"></div>
+    <div class="form-row"><label>Description</label><textarea id="prr-desc" placeholder="Describe the records being requested…"></textarea></div>
+    <div class="form-row"><label>Due Date</label><input type="date" id="prr-due"></div>
+    <div class="form-btns">
+      <button class="btn btn-primary" onclick="submitPRRForm()">Create</button>
+      <button class="btn btn-secondary" onclick="hidePRRForm()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Requester</th><th>Summary</th><th>Status</th><th>Assigned</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody id="prr-body"><tr class="loading-row"><td colspan="7">Loading…</td></tr></tbody>
+    </table>
+  </div>
+  <div id="prr-empty" class="empty" style="display:none">No public records requests match this filter</div>
+</div>
+
+<!-- ── MEMBERS TAB ──────────────────────────────────────── -->
+<div class="main" id="tab-members" style="display:none">
+
+  <!-- Usage card -->
+  <div class="usage-card">
+    <div class="usage-head">
       <div>
         <h3>Workspace Usage</h3>
-        <div class="plan-badge" id="plan-badge">FREE</div>
+        <div class="plan-badge plan-free" id="plan-badge">FREE</div>
       </div>
-      <button class="btn btn-upgrade" id="upgrade-btn" onclick="openUpgradeModal()">⬆️ Upgrade</button>
+      <button class="btn btn-primary" id="upgrade-btn" onclick="openUpgradeModal()" style="display:none">↑ Upgrade</button>
     </div>
-    
     <div class="usage-metrics" id="usage-metrics">
-      <!-- Populated by renderUsageCard() -->
+      <div class="empty mono dim" style="padding:12px 0">Loading usage…</div>
     </div>
   </div>
 
-  <div class="table-header">
-    <h2>Workspace Members</h2>
-    <button class="btn btn-primary" onclick="toggleInviteForm()">+ Invite Member</button>
+  <div class="tbl-header">
+    <h2>Members</h2>
+    <button class="btn btn-primary" id="btn-invite" onclick="toggleInviteForm()">+ Invite</button>
   </div>
 
-  <!-- Invite Member Form (hidden by default) -->
-  <div id="invite-form-wrap" style="display:none;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-    <h3 style="font-size:15px;margin-bottom:16px;">Invite Member</h3>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Email</label>
-      <input type="email" id="invite-form-email" placeholder="user@example.com" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
-    </div>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Role</label>
-      <select id="invite-form-role" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
-        <option value="admin">Admin</option>
-        <option value="viewer">Viewer</option>
+  <!-- Invite form -->
+  <div class="form-panel" id="invite-form">
+    <div class="form-title">Invite Member</div>
+    <div class="form-row"><label>Email</label><input type="email" id="invite-email" placeholder="user@example.com"></div>
+    <div class="form-row">
+      <label>Role</label>
+      <select id="invite-role">
+        <option value="admin">Admin — manage templates & invites</option>
+        <option value="member" selected>Member — create & decide approvals</option>
+        <option value="viewer">Viewer — read-only</option>
       </select>
     </div>
-    <div style="display:flex;gap:8px;margin-top:16px;">
-      <button class="btn btn-primary" onclick="submitInviteForm()">Send Invitation</button>
-      <button class="btn btn-secondary" onclick="cancelInviteForm()">Cancel</button>
+    <div class="form-btns">
+      <button class="btn btn-primary" onclick="sendInvite()">Send Invitation</button>
+      <button class="btn btn-secondary" onclick="hideInviteForm()">Cancel</button>
     </div>
   </div>
 
-  <div id="members-table-wrap">
+  <div class="tbl-wrap">
     <table>
-      <thead>
-        <tr>
-          <th>User ID</th>
-          <th>Role</th>
-          <th>Joined</th>
-          <th>Invited By</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="members-body"></tbody>
+      <thead><tr><th>User ID</th><th>Role</th><th>Joined</th><th>Invited By</th><th>Actions</th></tr></thead>
+      <tbody id="members-body"><tr class="loading-row"><td colspan="5">Loading…</td></tr></tbody>
     </table>
-    <div id="members-empty" class="empty-state" style="display:none;">No workspace members found. Use the Invite Member button to add team members.</div>
   </div>
+  <div id="members-empty" class="empty" style="display:none">No members found</div>
 
-  <div class="table-header" style="margin-top:40px;">
-    <h2>Pending Invitations</h2>
-  </div>
-
-  <div id="invitations-table-wrap">
+  <div class="tbl-header" style="margin-top:28px"><h2>Pending Invitations</h2></div>
+  <div class="tbl-wrap">
     <table>
-      <thead>
-        <tr>
-          <th>Email</th>
-          <th>Role</th>
-          <th>Created</th>
-          <th>Expires</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="invitations-body"></tbody>
+      <thead><tr><th>Email</th><th>Role</th><th>Created</th><th>Expires</th><th>Actions</th></tr></thead>
+      <tbody id="invitations-body"><tr class="loading-row"><td colspan="5">Loading…</td></tr></tbody>
     </table>
-    <div id="invitations-empty" class="empty-state" style="display:none;">No pending invitations. Send an invite using the button above.</div>
+  </div>
+  <div id="invitations-empty" class="empty" style="display:none">No pending invitations</div>
+</div>
+
+<!-- ── APPROVAL DETAIL PANEL ────────────────────────────── -->
+<div class="overlay" id="detail-overlay" onclick="closeDetail(event)">
+  <div class="panel">
+    <div class="panel-head">
+      <h3 id="detail-title" class="mono">Approval Detail</h3>
+      <button class="panel-close" onclick="closeDetailPanel()">✕</button>
+    </div>
+    <div class="panel-body" id="detail-body">Loading…</div>
   </div>
 </div>
 
-<!-- PRR Tab -->
-<div class="main" id="tab-prr" style="display:none;">
-  <div class="table-header">
-    <h2>Public Records Requests</h2>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <div class="filter-group">
-        <select id="prr-status-filter" onchange="loadPRRQueue()">
-          <option value="">All Status</option>
-          <option value="submitted">Submitted</option>
-          <option value="acknowledged">Acknowledged</option>
-          <option value="in_progress">In Progress</option>
-          <option value="closed">Closed</option>
-        </select>
-      </div>
-      <button class="btn btn-primary" onclick="togglePRRForm()">+ New Request</button>
+<!-- ── PRR DETAIL PANEL ──────────────────────────────────── -->
+<div id="prr-detail-overlay" onclick="closePRRDetail(event)">
+  <div class="panel">
+    <div class="panel-head">
+      <h3 class="mono">PRR Detail</h3>
+      <button class="panel-close" onclick="closePRRDetailPanel()">✕</button>
     </div>
-  </div>
-
-  <!-- New PRR Form (hidden by default) -->
-  <div id="prr-form-wrap" style="display:none;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-    <h3 style="font-size:15px;margin-bottom:16px;">New Public Records Request</h3>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Requester Name</label>
-      <input type="text" id="prr-form-name" placeholder="e.g. Jane Sullivan" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
-    </div>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Description</label>
-      <textarea id="prr-form-description" placeholder="Describe the records being requested…" rows="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);resize:vertical;"></textarea>
-    </div>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text-dim);">Due Date</label>
-      <input type="date" id="prr-form-due" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
-    </div>
-    <div style="display:flex;gap:8px;margin-top:16px;">
-      <button class="btn btn-primary" onclick="submitPRRForm()">Create Request</button>
-      <button class="btn btn-secondary" onclick="cancelPRRForm()">Cancel</button>
-    </div>
-  </div>
-
-  <div id="prr-queue-wrap">
-    <div id="prr-loading" class="empty-state" style="display:none;">Loading PRRs…</div>
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Submitter</th>
-          <th>Summary</th>
-          <th>Status</th>
-          <th>Assigned</th>
-          <th>Created</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="prr-queue-body"></tbody>
-    </table>
-    <div id="prr-queue-empty" class="empty-state" style="display:none;">No public records requests match the selected filter.</div>
+    <div class="panel-body" id="prr-detail-body">Loading…</div>
   </div>
 </div>
 
-<!-- PRR Detail Modal -->
-<div class="detail-overlay" id="prr-detail-overlay" onclick="closePRRDetail(event)">
-  <div class="detail-panel" onclick="event.stopPropagation()">
-    <h3>
-      <span id="prr-detail-title">PRR Detail</span>
-      <button class="detail-close" onclick="closePRRDetail()">✕</button>
-    </h3>
-    <div class="detail-content" id="prr-detail-content">
-      <!-- Populated by renderPRRDetail() -->
+<!-- ── UPGRADE MODAL ─────────────────────────────────────── -->
+<div id="upgrade-modal" onclick="closeUpgradeModal(event)">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3>Upgrade Workspace</h3>
+      <button class="panel-close" onclick="closeUpgradeModal()">✕</button>
     </div>
-  </div>
-</div>
-
-<!-- Invite Member Modal -->
-<div class="detail-overlay" id="invite-modal" onclick="closeInviteModal(event)">
-  <div class="detail-panel" onclick="event.stopPropagation()">
-    <h3>
-      <span>Invite Member</span>
-      <button class="detail-close" onclick="closeInviteModal()">✕</button>
-    </h3>
-    <div style="padding:20px;">
-      <div class="detail-field" style="margin-bottom:16px;">
-        <label style="display:block;margin-bottom:4px;font-weight:600;">Email</label>
-        <input type="email" id="invite-email" placeholder="user@example.com" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);">
-      </div>
-      <div class="detail-field" style="margin-bottom:16px;">
-        <label style="display:block;margin-bottom:4px;font-weight:600;">Role</label>
-        <select id="invite-role" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);">
-          <option value="member">Member (can create/decide approvals)</option>
-          <option value="admin">Admin (can also manage templates & invites)</option>
-          <option value="viewer">Viewer (read-only access)</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-primary" onclick="sendInvite()">Send Invitation</button>
-        <button class="btn btn-secondary" onclick="closeInviteModal()">Cancel</button>
-      </div>
+    <div style="margin-bottom:16px">
+      Current plan: <span id="current-plan-badge" class="plan-badge plan-free">FREE</span>
     </div>
-  </div>
-</div>
-
-<!-- Upgrade Plan Modal -->
-<div class="detail-overlay" id="upgrade-modal" onclick="closeUpgradeModal(event)" style="display:none;">
-  <div class="detail-panel" onclick="event.stopPropagation()">
-    <h3>
-      <span>Upgrade Workspace Plan</span>
-      <button class="detail-close" onclick="closeUpgradeModal()">✕</button>
-    </h3>
-    <div style="padding:20px;">
-      <div style="margin-bottom:20px;">
-        <strong>Current Plan:</strong> <span id="current-plan-display" class="plan-badge">FREE</span>
-      </div>
-      
-      <div class="detail-field" style="margin-bottom:16px;">
-        <label style="display:block;margin-bottom:8px;font-weight:600;">Select New Plan</label>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:12px;border:2px solid var(--border);border-radius:var(--radius);background:var(--card-bg);">
-            <input type="radio" name="plan-choice" value="free" checked>
-            <div>
-              <div style="font-weight:600;">Free</div>
-              <div style="font-size:12px;color:var(--muted);">3 templates, 50 approvals/mo, 1 member</div>
-            </div>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:12px;border:2px solid var(--green);border-radius:var(--radius);background:var(--card-bg);">
-            <input type="radio" name="plan-choice" value="pro">
-            <div>
-              <div style="font-weight:600;color:var(--green);">Pro</div>
-              <div style="font-size:12px;color:var(--muted);">Unlimited templates, approvals, and members</div>
-            </div>
-          </label>
-        </div>
-      </div>
-      
-      <div style="background:var(--warning-bg,#3a2f1f);border:1px solid var(--warning,#f59e0b);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;">
-        ⚠️ Note: This is a manual admin operation. Billing is not yet implemented.
-      </div>
-      
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-primary" onclick="submitPlanChange()">Confirm Upgrade</button>
-        <button class="btn btn-secondary" onclick="closeUpgradeModal()">Cancel</button>
-      </div>
+    <label class="plan-option">
+      <input type="radio" name="plan-pick" value="free" checked>
+      <div><div class="po-name">Free</div><div class="po-desc">3 templates · 50 approvals/mo · 1 member</div></div>
+    </label>
+    <label class="plan-option">
+      <input type="radio" name="plan-pick" value="pro">
+      <div><div class="po-name" style="color:var(--accent)">Pro</div><div class="po-desc">Unlimited templates, approvals, and members</div></div>
+    </label>
+    <div class="warn-notice">⚠ Manual admin operation — billing not yet implemented.</div>
+    <div class="form-btns">
+      <button class="btn btn-primary" onclick="submitPlanChange()">Confirm</button>
+      <button class="btn btn-secondary" onclick="closeUpgradeModal()">Cancel</button>
     </div>
-  </div>
-</div>
-
-<!-- Detail slide-out panel -->
-<div class="detail-overlay" id="detail-overlay" onclick="closeDetail(event)">
-  <div class="detail-panel" id="detail-panel" onclick="event.stopPropagation()">
-    <h3>
-      <span id="detail-title">Approval Detail</span>
-      <button class="detail-close" onclick="closeDetail()">✕</button>
-    </h3>
-    <div id="detail-content"></div>
   </div>
 </div>
 
@@ -407,1237 +770,778 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ── State ─────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────
 let currentPage = 0;
 const PAGE_SIZE = 20;
-let sortField = "created_at";
-let sortDir = -1; // -1 = newest first
+let sortField = 'created_at', sortDir = -1;
 let approvals = [];
 let authenticated = false;
-let userRole = null; // 'admin' | 'viewer' | null
+let userRole = null;
 
-// ── API helpers ───────────────────────────────────────────────────────────
-function getCookie(name) {
-  const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
-  return m ? decodeURIComponent(m[1]) : null;
+const TAB_HASH = {queue:'approvals',chains:'templates',dashboard:'dashboard',prr:'prr',members:'members'};
+const HASH_TAB = Object.fromEntries(Object.entries(TAB_HASH).map(([k,v])=>[v,k]));
+
+// ── Helpers ───────────────────────────────────────────────
+function getCookie(n){const m=document.cookie.match(new RegExp("(?:^|; )"+n+"=([^;]*)"));return m?decodeURIComponent(m[1]):null}
+
+function authHeaders(){
+  const h={"Content-Type":"application/json"};
+  const t=getCookie("pj_token")||localStorage.getItem("pj_token");
+  if(t) h["Authorization"]="Bearer "+t;
+  const c=getCookie("csrf_token");
+  if(c) h["x-csrf-token"]=c;
+  return h;
 }
 
-function authHeaders() {
-  const headers = { "Content-Type": "application/json" };
-  const token = getCookie("pj_token") || localStorage.getItem("pj_token");
-  if (token) headers["Authorization"] = "Bearer " + token;
-  const csrf = getCookie("csrf_token");
-  if (csrf) headers["x-csrf-token"] = csrf;
-  return headers;
-}
-
-async function api(path, opts = {}) {
-  const res = await fetch(path, { headers: authHeaders(), ...opts });
-  if (res.status === 401 || res.status === 403) {
-    showAuthGate();
-    throw new Error("Unauthorized");
-  }
+async function api(path,opts={}){
+  const res=await fetch(path,{headers:authHeaders(),...opts});
+  if(res.status===401||res.status===403){showAuthGate();throw new Error("Unauthorized")}
   return res.json();
 }
 
-// ── Auth gate ─────────────────────────────────────────────────────────────
-function showAuthGate() {
-  authenticated = false;
-  document.getElementById("auth-gate").style.display = "flex";
-  document.querySelectorAll(".main").forEach(el => el.style.display = "none");
-  document.querySelector(".tabs").style.display = "none";
-}
-
-function hideAuthGate() {
-  authenticated = true;
-  document.getElementById("auth-gate").style.display = "none";
-  document.querySelector(".tabs").style.display = "flex";
-  // Apply role class
-  if (userRole && userRole !== "admin") {
-    document.body.classList.add("role-viewer");
-  } else {
-    document.body.classList.remove("role-viewer");
-  }
-  // Show the active tab
-  const active = document.querySelector(".tab.active").dataset.tab;
-  switchTab(active);
-}
-
-// ── Tabs ──────────────────────────────────────────────────────────────────
-const TAB_HASH_MAP = { queue: "approvals", chains: "templates", dashboard: "dashboard", prr: "prr", members: "members" };
-const HASH_TAB_MAP = Object.fromEntries(Object.entries(TAB_HASH_MAP).map(([k, v]) => [v, k]));
-
-function switchTab(tab) {
-  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
-  document.querySelectorAll(".main").forEach(el => el.style.display = "none");
-  const el = document.getElementById("tab-" + tab);
-  if (el) el.style.display = "block";
-  // Update URL hash
-  const hash = TAB_HASH_MAP[tab] || tab;
-  if (window.location.hash !== "#" + hash) {
-    history.replaceState(null, "", "#" + hash);
-  }
-  if (tab === "queue") loadApprovals();
-  if (tab === "dashboard") loadStats();
-  if (tab === "chains") loadTemplates();
-  if (tab === "prr") loadPRRQueue();
-  if (tab === "members") { loadMembers(); loadUsage(); }
-}
-
-// ── Approval Queue ────────────────────────────────────────────────────────
-async function loadApprovals() {
-  const status = document.getElementById("status-filter").value;
-  const qs = status ? `?status=${status}&limit=${PAGE_SIZE}&offset=${currentPage * PAGE_SIZE}` :
-                       `?limit=${PAGE_SIZE}&offset=${currentPage * PAGE_SIZE}`;
-  const loading = document.getElementById("approvals-loading");
-  if (loading) loading.style.display = "block";
-  try {
-    const json = await api("/api/approvals" + qs);
-    if (loading) loading.style.display = "none";
-    if (!json.success) { showToast(json.error || "Failed to load", "error"); return; }
-    hideAuthGate();
-    approvals = json.data.approvals;
-    renderApprovals();
-    renderPagination(json.data.pendingCount, json.data.total);
-  } catch (e) {
-    if (loading) loading.style.display = "none";
-    if (e.message !== "Unauthorized") showToast("Failed to load approvals", "error");
-  }
-}
-
-function renderApprovals() {
-  const tbody = document.getElementById("approvals-body");
-  const empty = document.getElementById("empty-state");
-  if (approvals.length === 0) {
-    tbody.innerHTML = "";
-    empty.style.display = "block";
-    return;
-  }
-  empty.style.display = "none";
-
-  // Sort client-side
-  const sorted = [...approvals].sort((a, b) => {
-    let va = a[sortField], vb = b[sortField];
-    if (sortField === "chain") {
-      va = a.chainSummary ? a.chainSummary.completedSteps : -1;
-      vb = b.chainSummary ? b.chainSummary.completedSteps : -1;
-    }
-    if (va < vb) return -1 * sortDir;
-    if (va > vb) return 1 * sortDir;
-    return 0;
-  });
-
-  tbody.innerHTML = sorted.map(a => {
-    const chain = a.chainSummary;
-    let chainHtml;
-    if (chain) {
-      // Show parallel-aware progress: multiple active steps shown
-      const activeCount = chain.activeSteps || 0;
-      const parallelHint = activeCount > 1 ? ` <span style="color:var(--purple);font-size:10px" title="${activeCount} steps active in parallel">⊕${activeCount}</span>` : "";
-      chainHtml = `<div class="chain-progress">
-           <div class="chain-bar"><div class="chain-bar-fill" style="width:${(chain.completedSteps / chain.totalSteps * 100)}%"></div></div>
-           <span>${chain.completedSteps}/${chain.totalSteps}${parallelHint}</span>
-           ${chain.currentStepLabel ? `<span style="color:var(--text-dim)">· ${esc(chain.currentStepLabel)}</span>` : ""}
-         </div>`;
-    } else {
-      chainHtml = `<span style="color:var(--text-dim)">—</span>`;
-    }
-
-    const actions = [];
-    if (a.approval_status === "pending") {
-      actions.push(`<button class="btn btn-approve" onclick="decide('${a.id}','approved')">Approve</button>`);
-      actions.push(`<button class="btn btn-reject" onclick="decide('${a.id}','rejected')">Reject</button>`);
-    }
-    if (a.approval_status === "approved") {
-      actions.push(`<button class="btn btn-dispatch" onclick="dispatch('${a.id}')">Dispatch</button>`);
-    }
-
-    return `<tr onclick="showDetail('${a.id}')" style="cursor:pointer">
-      <td>${esc(a.action_intent || "—")}</td>
-      <td><span class="status-badge ${a.approval_status}">${a.approval_status}</span></td>
-      <td>${chainHtml}</td>
-      <td>${esc(a.operator_id || "—")}</td>
-      <td>${timeAgo(a.created_at)}</td>
-      <td class="actions" onclick="event.stopPropagation()">${actions.join("") || "—"}</td>
-    </tr>`;
-  }).join("");
-}
-
-function renderPagination(pendingCount, total) {
-  document.getElementById("page-info").textContent =
-    `Showing ${approvals.length} result${approvals.length !== 1 ? "s" : ""} · ${pendingCount} pending total`;
-  document.getElementById("prev-btn").disabled = currentPage === 0;
-  document.getElementById("next-btn").disabled = approvals.length < PAGE_SIZE;
-}
-
-function prevPage() { if (currentPage > 0) { currentPage--; loadApprovals(); } }
-function nextPage() { currentPage++; loadApprovals(); }
-function sortBy(field) {
-  if (sortField === field) sortDir *= -1;
-  else { sortField = field; sortDir = field === "created_at" ? -1 : 1; }
-  renderApprovals();
-}
-
-// ── Decide / Dispatch ─────────────────────────────────────────────────────
-async function decide(id, status) {
-  try {
-    const json = await api(`/api/approvals/${id}/decide`, {
-      method: "POST",
-      body: JSON.stringify({ status }),
-    });
-    if (!json.success) { showToast(json.error || "Decision failed", "error"); return; }
-    showToast(`Approval ${status}`, "success");
-    loadApprovals();
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Decision failed", "error");
-  }
-}
-
-async function dispatch(id) {
-  try {
-    const json = await api(`/api/approvals/${id}/dispatch`, {
-      method: "POST",
-      body: JSON.stringify({}),
-    });
-    if (!json.success) { showToast(json.error || "Dispatch failed", "error"); return; }
-    showToast("Dispatched successfully", "success");
-    loadApprovals();
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Dispatch failed", "error");
-  }
-}
-
-// ── Detail panel ──────────────────────────────────────────────────────────
-async function showDetail(id) {
-  const overlay = document.getElementById("detail-overlay");
-  const content = document.getElementById("detail-content");
-  overlay.classList.add("open");
-
-  content.innerHTML = "<p>Loading…</p>";
-
-  try {
-    const [approvalJson, chainJson] = await Promise.all([
-      api(`/api/approvals/${id}`),
-      api(`/api/approvals/${id}/chain`).catch(() => null),
-    ]);
-
-    if (!approvalJson.success) { content.innerHTML = "<p>Failed to load</p>"; return; }
-    const a = approvalJson.data;
-    const chain = chainJson?.data;
-
-    let html = `
-      <div class="detail-section">
-        <h4>Overview</h4>
-        <div class="detail-field"><span class="lbl">ID</span><span style="font-family:var(--mono);font-size:12px">${esc(a.id)}</span></div>
-        <div class="detail-field"><span class="lbl">Status</span><span class="status-badge ${a.approval_status}">${a.approval_status}</span></div>
-        <div class="detail-field"><span class="lbl">Intent</span><span>${esc(a.action_intent || "—")}</span></div>
-        <div class="detail-field"><span class="lbl">Mode</span><span>${esc(a.action_mode || "—")}</span></div>
-        <div class="detail-field"><span class="lbl">Operator</span><span>${esc(a.operator_id || "—")}</span></div>
-        <div class="detail-field"><span class="lbl">Created</span><span>${new Date(a.created_at).toLocaleString()}</span></div>
-        <div class="detail-field"><span class="lbl">Expires</span><span>${new Date(a.expires_at).toLocaleString()}</span></div>
-        ${a.approver_id ? `<div class="detail-field"><span class="lbl">Approver</span><span>${esc(a.approver_id)}</span></div>` : ""}
-        ${a.approval_note ? `<div class="detail-field"><span class="lbl">Note</span><span>${esc(a.approval_note)}</span></div>` : ""}
-      </div>`;
-
-    if (chain) {
-      // Group steps by order for parallel visualization
-      const stepsByOrder = {};
-      chain.steps.forEach(s => {
-        if (!stepsByOrder[s.order]) stepsByOrder[s.order] = [];
-        stepsByOrder[s.order].push(s);
-      });
-
-      html += `
-        <div class="detail-section">
-          <h4>Chain Progress — ${esc(chain.templateName)}</h4>
-          <div class="chain-progress" style="margin-bottom:8px">
-            <div class="chain-bar" style="max-width:100%"><div class="chain-bar-fill" style="width:${(chain.completedSteps / chain.totalSteps * 100)}%"></div></div>
-            <span>${chain.completedSteps} of ${chain.totalSteps} steps complete</span>
-          </div>
-          <ul class="chain-steps-list">
-            ${chain.steps.map(s => {
-              const siblings = stepsByOrder[s.order];
-              const isParallel = siblings && siblings.length > 1;
-              return `
-              <li>
-                <span class="step-dot ${s.status}"></span>
-                <span>
-                  <strong>${esc(s.label)}</strong>
-                  ${isParallel ? '<span style="color:var(--purple);font-size:10px;margin-left:4px" title="Parallel step">⊕</span>' : ''}
-                  — <span class="status-badge ${s.status}">${s.status}</span>
-                </span>
-                ${s.deciderId ? `<span style="color:var(--text-dim);margin-left:auto;font-size:12px">${esc(s.deciderId)} · ${timeAgo(s.decidedAt)}</span>` : ""}
-              </li>`;
-            }).join("")}
-          </ul>
-        </div>`;
-    }
-
-    if (a.plan && Array.isArray(a.plan)) {
-      html += `
-        <div class="detail-section">
-          <h4>Plan (${a.plan.length} step${a.plan.length !== 1 ? "s" : ""})</h4>
-          <pre style="background:var(--surface);padding:12px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);overflow-x:auto;max-height:300px;white-space:pre-wrap">${esc(JSON.stringify(a.plan, null, 2))}</pre>
-        </div>`;
-    }
-
-    if (a.dispatchResult) {
-      html += `
-        <div class="detail-section">
-          <h4>Dispatch Result</h4>
-          <pre style="background:var(--surface);padding:12px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);overflow-x:auto;max-height:300px;white-space:pre-wrap">${esc(JSON.stringify(a.dispatchResult, null, 2))}</pre>
-        </div>`;
-    }
-
-    // Action buttons in detail
-    if (a.approval_status === "pending") {
-      html += `
-        <div style="display:flex;gap:8px;margin-top:16px">
-          <button class="btn btn-approve" onclick="decide('${a.id}','approved');closeDetail()">Approve</button>
-          <button class="btn btn-reject" onclick="decide('${a.id}','rejected');closeDetail()">Reject</button>
-        </div>`;
-    }
-    if (a.approval_status === "approved") {
-      html += `
-        <div style="margin-top:16px">
-          <button class="btn btn-dispatch" onclick="dispatch('${a.id}');closeDetail()">Dispatch</button>
-        </div>`;
-    }
-
-    content.innerHTML = html;
-  } catch (e) {
-    if (e.message !== "Unauthorized") content.innerHTML = "<p>Failed to load details</p>";
-  }
-}
-
-function closeDetail(e) {
-  if (e && e.target !== document.getElementById("detail-overlay")) return;
-  document.getElementById("detail-overlay").classList.remove("open");
-}
-
-// ── Chain Templates ───────────────────────────────────────────────────────
-async function loadTemplates() {
-  const loading = document.getElementById("templates-loading");
-  const grid = document.getElementById("templates-grid");
-  const empty = document.getElementById("templates-empty");
-  if (loading) loading.style.display = "block";
-  if (grid) grid.innerHTML = "";
-  if (empty) empty.style.display = "none";
-  try {
-    const json = await api("/api/chain-templates");
-    if (loading) loading.style.display = "none";
-    if (!json.success) { showToast(json.error || "Failed to load templates", "error"); return; }
-    hideAuthGate();
-    renderTemplates(json.data);
-  } catch (e) {
-    if (loading) loading.style.display = "none";
-    if (e.message !== "Unauthorized") showToast("Failed to load templates", "error");
-  }
-}
-
-function renderTemplates(templates) {
-  const grid = document.getElementById("templates-grid");
-  const empty = document.getElementById("templates-empty");
-  if (!templates || templates.length === 0) {
-    grid.innerHTML = "";
-    empty.style.display = "block";
-    return;
-  }
-  empty.style.display = "none";
-
-  grid.innerHTML = templates.map(t => {
-    const steps = t.steps || [];
-    // Group by order for parallel visualization
-    const byOrder = {};
-    steps.forEach(s => {
-      if (!byOrder[s.order]) byOrder[s.order] = [];
-      byOrder[s.order].push(s);
-    });
-    const orders = Object.keys(byOrder).sort((a, b) => Number(a) - Number(b));
-
-    let vizHtml = "";
-    orders.forEach((ord, i) => {
-      const group = byOrder[ord];
-      if (i > 0) vizHtml += `<span class="step-arrow">→</span>`;
-      if (group.length > 1) {
-        // Parallel group
-        vizHtml += `<div class="step-group">
-          <span class="parallel-bracket">⊕ parallel</span>
-          ${group.map(s => `<span class="step-pill parallel">${esc(s.label)}</span>`).join("")}
-        </div>`;
-      } else {
-        vizHtml += `<span class="step-pill">${esc(group[0].label)}</span>`;
-      }
-    });
-
-    const isDefault = t.id === "default";
-    const created = t.created_at ? new Date(t.created_at).toLocaleDateString() : "";
-
-    return `<div class="template-card">
-      ${isDefault ? '<span class="template-default">Default</span>' : ""}
-      <div class="template-name">${esc(t.name)}</div>
-      <div class="template-id">${esc(t.id)}</div>
-      <div class="template-meta">${steps.length} step${steps.length !== 1 ? "s" : ""} · ${orders.length} stage${orders.length !== 1 ? "s" : ""}${created ? " · Created " + created : ""}</div>
-      <div class="template-steps-viz">${vizHtml}</div>
-      <div class="template-actions">
-        <button class="btn btn-secondary" onclick="showTemplateDetail('${esc(t.id)}')">View JSON</button>
-        ${!isDefault ? `<button class="btn btn-secondary" onclick="editTemplate('${esc(t.id)}')">Edit</button>` : ""}
-        ${!isDefault ? `<button class="btn btn-danger" onclick="deleteTemplate('${esc(t.id)}')">Delete</button>` : ""}
-      </div>
-    </div>`;
-  }).join("");
-}
-
-async function showTemplateDetail(id) {
-  const overlay = document.getElementById("detail-overlay");
-  const content = document.getElementById("detail-content");
-  document.getElementById("detail-title").textContent = "Template Detail";
-  overlay.classList.add("open");
-  content.innerHTML = "<p>Loading…</p>";
-  try {
-    const json = await api(`/api/chain-templates/${encodeURIComponent(id)}`);
-    if (!json.success) { content.innerHTML = "<p>Failed to load</p>"; return; }
-    const t = json.data;
-    content.innerHTML = `
-      <div class="detail-section">
-        <h4>Template</h4>
-        <div class="detail-field"><span class="lbl">ID</span><span style="font-family:var(--mono);font-size:12px">${esc(t.id)}</span></div>
-        <div class="detail-field"><span class="lbl">Name</span><span>${esc(t.name)}</span></div>
-        <div class="detail-field"><span class="lbl">Steps</span><span>${(t.steps || []).length}</span></div>
-      </div>
-      <div class="detail-section">
-        <h4>Definition</h4>
-        <pre style="background:var(--surface);padding:12px;border-radius:var(--radius);font-size:12px;font-family:var(--mono);overflow-x:auto;max-height:400px;white-space:pre-wrap">${esc(JSON.stringify(t, null, 2))}</pre>
-      </div>`;
-  } catch (e) {
-    if (e.message !== "Unauthorized") content.innerHTML = "<p>Failed to load</p>";
-  }
-}
-
-async function deleteTemplate(id) {
-  if (!confirm(`Delete template "${id}"?`)) return;
-  try {
-    const json = await api(`/api/chain-templates/${encodeURIComponent(id)}`, { method: "DELETE" });
-    if (!json.success) { showToast(json.error || "Delete failed", "error"); return; }
-    showToast("Template deleted", "success");
-    loadTemplates();
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Delete failed", "error");
-  }
-}
-
-// ── Create / Edit Template Form ──────────────────────────────────────────
-let templateStepCounter = 0;
-
-function toggleCreateTemplateForm() {
-  const wrap = document.getElementById("template-form-wrap");
-  if (wrap.style.display === "none") {
-    document.getElementById("template-form-title").textContent = "Create Template";
-    document.getElementById("template-edit-id").value = "";
-    document.getElementById("template-name").value = "";
-    document.getElementById("template-description").value = "";
-    templateStepCounter = 0;
-    document.getElementById("template-steps-list").innerHTML = "";
-    addTemplateStep(); // Start with one step
-    wrap.style.display = "block";
-  } else {
-    wrap.style.display = "none";
-  }
-}
-
-function cancelTemplateForm() {
-  document.getElementById("template-form-wrap").style.display = "none";
-}
-
-function addTemplateStep() {
-  const list = document.getElementById("template-steps-list");
-  const idx = templateStepCounter++;
-  const stepNum = list.children.length + 1;
-  const div = document.createElement("div");
-  div.id = `step-row-${idx}`;
-  div.style.cssText = "display:flex;gap:8px;align-items:center;margin-bottom:8px;";
-  div.innerHTML = `
-    <span style="font-size:12px;color:var(--text-dim);min-width:40px;">Step ${stepNum}</span>
-    <input type="text" placeholder="Role (e.g. admin)" class="step-role" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
-    <input type="text" placeholder="Label (e.g. Legal Review)" class="step-label" style="flex:2;padding:6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font);">
-    <button class="btn btn-danger btn-sm" onclick="removeTemplateStep('step-row-${idx}')">✕</button>
-  `;
-  list.appendChild(div);
-}
-
-function removeTemplateStep(rowId) {
-  const el = document.getElementById(rowId);
-  if (el) el.remove();
-  // Re-number visible steps (1-based for display)
-  const list = document.getElementById("template-steps-list");
-  Array.from(list.children).forEach((row, i) => {
-    const label = row.querySelector("span");
-    if (label) label.textContent = `Step ${i + 1}`;
-  });
-}
-
-async function submitTemplate() {
-  const editId = document.getElementById("template-edit-id").value;
-  const name = document.getElementById("template-name").value.trim();
-  const description = document.getElementById("template-description").value.trim();
-  if (!name) { showToast("Template name is required", "error"); return; }
-
-  const stepRows = document.getElementById("template-steps-list").children;
-  if (stepRows.length === 0) { showToast("At least one step is required", "error"); return; }
-
-  const steps = [];
-  for (let i = 0; i < stepRows.length; i++) {
-    const role = stepRows[i].querySelector(".step-role").value.trim();
-    const label = stepRows[i].querySelector(".step-label").value.trim();
-    if (!role || !label) { showToast(`Step ${i + 1}: role and label are required`, "error"); return; }
-    steps.push({ order: i, requiredRole: role, label });
-  }
-
-  try {
-    let json;
-    if (editId) {
-      json = await api(`/api/chain-templates/${encodeURIComponent(editId)}`, {
-        method: "PUT",
-        body: JSON.stringify({ name, description, steps }),
-      });
-    } else {
-      json = await api("/api/chain-templates", {
-        method: "POST",
-        body: JSON.stringify({ name, description, steps }),
-      });
-    }
-    if (!json.success) { showToast(json.error || "Save failed", "error"); return; }
-    showToast(editId ? "Template updated" : "Template created", "success");
-    cancelTemplateForm();
-    loadTemplates();
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Save failed", "error");
-  }
-}
-
-async function editTemplate(id) {
-  try {
-    const json = await api(`/api/chain-templates/${encodeURIComponent(id)}`);
-    if (!json.success) { showToast("Failed to load template", "error"); return; }
-    const t = json.data;
-    const wrap = document.getElementById("template-form-wrap");
-    document.getElementById("template-form-title").textContent = "Edit Template";
-    document.getElementById("template-edit-id").value = t.id;
-    document.getElementById("template-name").value = t.name;
-    document.getElementById("template-description").value = t.description || "";
-    templateStepCounter = 0;
-    document.getElementById("template-steps-list").innerHTML = "";
-    (t.steps || []).forEach(s => {
-      addTemplateStep();
-      const rows = document.getElementById("template-steps-list").children;
-      const last = rows[rows.length - 1];
-      last.querySelector(".step-role").value = s.requiredRole;
-      last.querySelector(".step-label").value = s.label;
-    });
-    wrap.style.display = "block";
-    wrap.scrollIntoView({ behavior: "smooth" });
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Failed to load template", "error");
-  }
-}
-
-// ── Dashboard ─────────────────────────────────────────────────────────────
-async function loadStats() {
-  const loading = document.getElementById("dashboard-loading");
-  if (loading) loading.style.display = "block";
-  try {
-    const json = await api("/api/admin/stats");
-    if (loading) loading.style.display = "none";
-    if (!json.success) return;
-    const d = json.data;
-
-    document.getElementById("s-pending").textContent = d.pending;
-
-    const totalDecided = d.dispatchSuccess + d.dispatchFailure;
-    const rate = totalDecided > 0 ? ((d.dispatchSuccess / totalDecided) * 100).toFixed(1) + "%" : "—";
-    document.getElementById("s-success-rate").textContent = rate;
-
-    document.getElementById("s-retries").textContent = d.dispatchRetry;
-    document.getElementById("s-avg-time").textContent = d.avgApprovalTimeSec > 0 ? fmtDuration(d.avgApprovalTimeSec) : "—";
-
-    document.getElementById("s-created").textContent = d.approvalsCreated;
-    document.getElementById("s-approved").textContent = d.approvalsApproved;
-    document.getElementById("s-rejected").textContent = d.approvalsRejected;
-    document.getElementById("s-expired").textContent = d.approvalsExpired;
-
-    document.getElementById("s-d-success").textContent = d.dispatchSuccess;
-    document.getElementById("s-d-failure").textContent = d.dispatchFailure;
-    document.getElementById("s-d-latency").textContent = d.avgDispatchLatencySec > 0 ? fmtDuration(d.avgDispatchLatencySec) : "—";
-    document.getElementById("s-chain-steps").textContent = d.activeChainSteps;
-
-    // Update last-refreshed timestamp
-    const ts = document.getElementById("dashboard-last-refreshed");
-    if (ts) ts.textContent = "Last updated: " + new Date().toLocaleTimeString();
-  } catch (e) {
-    if (loading) loading.style.display = "none";
-    if (e.message !== "Unauthorized") showToast("Failed to load stats", "error");
-  }
-
-  // Also load recent dispatches
-  try {
-    const json = await api("/api/approvals?status=dispatched&limit=20");
-    if (!json.success) return;
-    const dispatches = json.data.approvals;
-    const tbody = document.getElementById("dispatch-body");
-    const empty = document.getElementById("dispatch-empty");
-    if (dispatches.length === 0) { tbody.innerHTML = ""; empty.style.display = "block"; return; }
-    empty.style.display = "none";
-    tbody.innerHTML = dispatches.map(a =>
-      `<tr>
-        <td>${esc(a.action_intent || "—")}</td>
-        <td><span class="status-badge dispatched">dispatched</span></td>
-        <td>${esc(a.operator_id || "—")}</td>
-        <td>${timeAgo(a.dispatched_at || a.updated_at)}</td>
-      </tr>`
-    ).join("");
-  } catch (e) { /* ignore */ }
-}
-
-// ── Utilities ─────────────────────────────────────────────────────────────
-function esc(s) {
-  if (!s) return "";
-  const d = document.createElement("div");
-  d.textContent = String(s);
+function esc(s){
+  if(!s) return '';
+  const d=document.createElement('div');
+  d.textContent=String(s);
   return d.innerHTML;
 }
 
-function timeAgo(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return Math.floor(diff / 60) + "m ago";
-  if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
-  return Math.floor(diff / 86400) + "d ago";
+function timeAgo(iso){
+  if(!iso) return '—';
+  const d=new Date(iso), diff=(Date.now()-d.getTime())/1000;
+  if(diff<60) return 'just now';
+  if(diff<3600) return Math.floor(diff/60)+'m ago';
+  if(diff<86400) return Math.floor(diff/3600)+'h ago';
+  return Math.floor(diff/86400)+'d ago';
 }
 
-function fmtDuration(sec) {
-  if (sec < 60) return sec.toFixed(1) + "s";
-  if (sec < 3600) return (sec / 60).toFixed(1) + "m";
-  return (sec / 3600).toFixed(1) + "h";
+function fmtDur(sec){
+  if(!sec||sec<=0) return '—';
+  if(sec<60) return sec.toFixed(1)+'s';
+  if(sec<3600) return (sec/60).toFixed(1)+'m';
+  return (sec/3600).toFixed(1)+'h';
 }
 
 let toastTimer;
-function showToast(msg, type) {
-  const el = document.getElementById("toast");
-  el.textContent = msg;
-  el.className = "toast show " + (type || "");
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast show '+(type||'');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove("show"), 3000);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),3000);
 }
 
-async function refresh() {
-  const btn = document.getElementById("refresh-btn");
-  btn.disabled = true;
-  btn.textContent = "⟳ Loading…";
-  try {
-    const active = document.querySelector(".tab.active").dataset.tab;
-    if (active === "queue") await loadApprovals();
-    if (active === "dashboard") await loadStats();
-    if (active === "chains") await loadTemplates();
-    if (active === "prr") await loadPRRQueue();
-    if (active === "members") { await loadMembers(); await loadUsage(); }
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "⟳ Refresh";
+// ── Auth gate ─────────────────────────────────────────────
+function showAuthGate(){
+  authenticated=false;
+  document.getElementById('auth-gate').style.display='flex';
+  document.querySelectorAll('.main,.tabs').forEach(el=>el.style.display='none');
+  document.querySelector('.tabs').style.display='none';
+}
+function hideAuthGate(){
+  authenticated=true;
+  document.getElementById('auth-gate').style.display='none';
+  document.querySelector('.tabs').style.display='flex';
+  if(userRole&&userRole!=='admin') document.body.classList.add('role-viewer');
+  else document.body.classList.remove('role-viewer');
+  const active=document.querySelector('.tab.active')?.dataset.tab||'queue';
+  switchTab(active);
+}
+
+// ── Tabs ──────────────────────────────────────────────────
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.querySelectorAll('.main').forEach(el=>el.style.display='none');
+  const el=document.getElementById('tab-'+tab);
+  if(el) el.style.display='block';
+  const hash=TAB_HASH[tab]||tab;
+  if(window.location.hash!=='#'+hash) history.replaceState(null,'','#'+hash);
+  if(tab==='queue') loadApprovals();
+  if(tab==='chains') loadTemplates();
+  if(tab==='dashboard') loadDashboard();
+  if(tab==='prr') loadPRRQueue();
+  if(tab==='members'){loadMembers();loadUsage()}
+}
+
+// ── Approval Queue ────────────────────────────────────────
+async function loadApprovals(){
+  const status=document.getElementById('status-filter').value;
+  const qs=`?${status?'status='+status+'&':''}limit=${PAGE_SIZE}&offset=${currentPage*PAGE_SIZE}`;
+  try{
+    const json=await api('/api/approvals'+qs);
+    if(!json.success){toast(json.error||'Load failed','error');return}
+    hideAuthGate();
+    approvals=json.data.approvals;
+    renderApprovals();
+    renderPagination(json.data.pendingCount,json.data.total);
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to load approvals','error')}
+}
+
+function renderApprovals(){
+  const tbody=document.getElementById('approvals-body');
+  const empty=document.getElementById('approvals-empty');
+  if(!approvals.length){
+    tbody.innerHTML='';empty.style.display='block';return;
   }
-}
-
-// ── Workspace Members ─────────────────────────────────────────────────────
-async function loadMembers() {
-  try {
-    const [membersRes, invitesRes] = await Promise.all([
-      api("/api/workspace/members"),
-      api("/api/workspace/invitations"),
-    ]);
-
-    if (membersRes.success) {
-      renderMembers(membersRes.data);
-    }
-    if (invitesRes.success) {
-      renderInvitations(invitesRes.data);
-    }
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Failed to load members", "error");
-  }
-}
-
-function renderMembers(members) {
-  const tbody = document.getElementById("members-body");
-  const empty = document.getElementById("members-empty");
-  
-  if (!members || members.length === 0) {
-    tbody.innerHTML = "";
-    empty.style.display = "block";
-    return;
-  }
-  
-  empty.style.display = "none";
-  tbody.innerHTML = members.map(m => `
-    <tr>
-      <td>${esc(m.user_id)}</td>
-      <td><span class="status-badge ${m.role}">${m.role}</span></td>
-      <td>${timeAgo(m.joined_at)}</td>
-      <td>${esc(m.invited_by || "—")}</td>
-      <td>
-        ${m.role !== "owner" ? `<button class="btn btn-sm btn-danger" onclick="removeMember('${m.user_id}')">Remove</button>` : ""}
-      </td>
-    </tr>
-  `).join("");
-}
-
-function renderInvitations(invitations) {
-  const tbody = document.getElementById("invitations-body");
-  const empty = document.getElementById("invitations-empty");
-  
-  if (!invitations || invitations.length === 0) {
-    tbody.innerHTML = "";
-    empty.style.display = "block";
-    return;
-  }
-  
-  empty.style.display = "none";
-  tbody.innerHTML = invitations.map(inv => `
-    <tr>
-      <td>${esc(inv.email)}</td>
-      <td><span class="status-badge ${inv.role}">${inv.role}</span></td>
-      <td>${timeAgo(inv.created_at)}</td>
-      <td>${new Date(inv.expires_at).toLocaleDateString()}</td>
-      <td>
-        <button class="btn btn-sm btn-secondary" onclick="copyInviteLink('${inv.token}')">Copy Link</button>
-        <button class="btn btn-sm btn-danger" onclick="revokeInvite('${inv.id}')">Revoke</button>
-      </td>
-    </tr>
-  `).join("");
-}
-
-function showInviteModal() {
-  document.getElementById("invite-modal").classList.add("open");
-  document.getElementById("invite-email").value = "";
-  document.getElementById("invite-role").value = "member";
-}
-
-function closeInviteModal(e) {
-  if (e && e.target !== document.getElementById("invite-modal")) return;
-  document.getElementById("invite-modal").classList.remove("open");
-}
-
-async function sendInvite() {
-  const email = document.getElementById("invite-email").value.trim();
-  const role = document.getElementById("invite-role").value;
-  
-  if (!email) {
-    showToast("Email is required", "error");
-    return;
-  }
-  
-  try {
-    const json = await api("/api/workspace/invite", {
-      method: "POST",
-      body: JSON.stringify({ email, role }),
-    });
-    
-    if (!json.success) {
-      showToast(json.error || "Failed to send invitation", "error");
-      return;
-    }
-    
-    showToast(`Invitation sent to ${email}`, "success");
-    closeInviteModal();
-    loadMembers();
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Failed to send invitation", "error");
-  }
-}
-
-// ── Inline Invite Form ───────────────────────────────────────────────────
-function toggleInviteForm() {
-  const wrap = document.getElementById("invite-form-wrap");
-  if (wrap.style.display === "none") {
-    document.getElementById("invite-form-email").value = "";
-    document.getElementById("invite-form-role").value = "admin";
-    wrap.style.display = "block";
-  } else {
-    wrap.style.display = "none";
-  }
-}
-
-function cancelInviteForm() {
-  document.getElementById("invite-form-wrap").style.display = "none";
-}
-
-async function submitInviteForm() {
-  const email = document.getElementById("invite-form-email").value.trim();
-  const role = document.getElementById("invite-form-role").value;
-  if (!email) { showToast("Email is required", "error"); return; }
-  if (!email.includes("@")) { showToast("Please enter a valid email address", "error"); return; }
-
-  try {
-    const json = await api("/api/workspace/invite", {
-      method: "POST",
-      body: JSON.stringify({ email, role }),
-    });
-    if (!json.success) { showToast(json.error || "Failed to send invitation", "error"); return; }
-    showToast("Invitation sent", "success");
-    cancelInviteForm();
-    loadMembers();
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Failed to send invitation", "error");
-  }
-}
-
-async function removeMember(userId) {
-  if (!confirm(`Remove user ${userId} from workspace?`)) return;
-  
-  try {
-    const json = await api(`/api/workspace/members/${encodeURIComponent(userId)}`, {
-      method: "DELETE",
-    });
-    
-    if (!json.success) {
-      showToast(json.error || "Failed to remove member", "error");
-      return;
-    }
-    
-    showToast("Member removed", "success");
-    loadMembers();
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Failed to remove member", "error");
-  }
-}
-
-async function revokeInvite(inviteId) {
-  if (!confirm("Revoke this invitation?")) return;
-  
-  try {
-    const json = await api(`/api/workspace/invitations/${encodeURIComponent(inviteId)}`, {
-      method: "DELETE",
-    });
-    
-    if (!json.success) {
-      showToast(json.error || "Failed to revoke invitation", "error");
-      return;
-    }
-    
-    showToast("Invitation revoked", "success");
-    loadMembers();
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Failed to revoke invitation", "error");
-  }
-}
-
-function copyInviteLink(token) {
-  const link = `${window.location.origin}/pj/invite/${token}`;
-  navigator.clipboard.writeText(link).then(() => {
-    showToast("Invitation link copied to clipboard", "success");
-  }).catch(() => {
-    showToast("Failed to copy link", "error");
+  empty.style.display='none';
+  const sorted=[...approvals].sort((a,b)=>{
+    let va=a[sortField],vb=b[sortField];
+    if(sortField==='chain'){va=a.chainSummary?.completedSteps??-1;vb=b.chainSummary?.completedSteps??-1}
+    return va<vb?-sortDir:va>vb?sortDir:0;
   });
-}
-
-// ── Workspace Usage & Upgrade ─────────────────────────────────────────────
-async function fetchWorkspaceUsage() {
-  try {
-    const json = await api("/api/workspace/usage");
-    if (json.success) {
-      return json.data;
+  tbody.innerHTML=sorted.map(a=>{
+    const ch=a.chainSummary;
+    let chainHtml='<span class="mono dim">—</span>';
+    if(ch){
+      const pct=ch.totalSteps>0?(ch.completedSteps/ch.totalSteps*100):0;
+      const par=ch.activeSteps>1?`<span class="parallel-mark" title="${ch.activeSteps} parallel">⊕${ch.activeSteps}</span>`:'';
+      chainHtml=`<div class="chain-prog">
+        <div class="chain-track"><div class="chain-fill" style="width:${pct}%"></div></div>
+        <span class="chain-text">${ch.completedSteps}/${ch.totalSteps}${par}</span>
+        ${ch.currentStepLabel?`<span class="dim" style="font-size:10px">${esc(ch.currentStepLabel)}</span>`:''}
+      </div>`;
     }
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Failed to load usage data", "error");
-  }
-  return null;
-}
-
-function renderUsageCard(usage) {
-  if (!usage) return;
-  
-  const planBadge = document.getElementById("plan-badge");
-  planBadge.textContent = usage.plan.toUpperCase();
-  planBadge.className = `plan-badge plan-${usage.plan}`;
-  
-  const metricsDiv = document.getElementById("usage-metrics");
-  const resources = [
-    { key: "templates", label: "Templates" },
-    { key: "approvals", label: "Approvals" },
-    { key: "members", label: "Members" }
-  ];
-  
-  metricsDiv.innerHTML = resources.map(({ key, label }) => {
-    const current = usage.usage[key];
-    const limit = usage.limits[key];
-    const percent = limit > 0 ? Math.min((current / limit) * 100, 100) : 0;
-    const isAtLimit = current >= limit;
-    const isNearLimit = percent >= 85;
-    
-    let statusClass = "";
-    let statusLabel = "";
-    if (isAtLimit) {
-      statusClass = "at-limit";
-      statusLabel = '<span class="limit-badge">LIMIT REACHED</span>';
-    } else if (isNearLimit) {
-      statusClass = "near-limit";
-      statusLabel = '<span class="limit-badge warn">NEAR LIMIT</span>';
+    const acts=[];
+    if(a.approval_status==='pending'){
+      acts.push(`<button class="btn btn-approve" onclick="decide('${a.id}','approved')">Approve</button>`);
+      acts.push(`<button class="btn btn-reject" onclick="decide('${a.id}','rejected')">Reject</button>`);
     }
-    
-    return `
-      <div class="usage-item">
-        <div class="usage-label">
-          <strong>${esc(label)}</strong>
-          ${statusLabel}
-        </div>
-        <div class="usage-bar-wrap">
-          <div class="usage-bar ${statusClass}" style="width:${percent}%"></div>
-        </div>
-        <div class="usage-count">${current} / ${limit === 999999 ? '∞' : limit}</div>
-      </div>
-    `;
-  }).join("");
-  
-  // Show/hide upgrade button based on limits
-  const upgradeBtn = document.getElementById("upgrade-btn");
-  if (usage.plan === "free") {
-    upgradeBtn.style.display = "block";
-  } else {
-    upgradeBtn.style.display = "none";
-  }
-}
-
-async function loadUsage() {
-  const usage = await fetchWorkspaceUsage();
-  if (usage) {
-    renderUsageCard(usage);
-  }
-}
-
-function openUpgradeModal() {
-  const modal = document.getElementById("upgrade-modal");
-  const currentPlanDisplay = document.getElementById("current-plan-display");
-  const planBadge = document.getElementById("plan-badge");
-  currentPlanDisplay.textContent = planBadge.textContent;
-  currentPlanDisplay.className = planBadge.className;
-  modal.style.display = "flex";
-}
-
-function closeUpgradeModal(event) {
-  if (event && event.target !== document.getElementById("upgrade-modal")) return;
-  document.getElementById("upgrade-modal").style.display = "none";
-}
-
-async function submitPlanChange() {
-  const selectedPlan = document.querySelector('input[name="plan-choice"]:checked').value;
-  
-  try {
-    // Get current workspace ID from /api/me
-    const meRes = await fetch("/api/me", { headers: authHeaders() });
-    if (!meRes.ok) {
-      showToast("Failed to get workspace info", "error");
-      return;
+    if(a.approval_status==='approved'){
+      acts.push(`<button class="btn btn-dispatch" onclick="dispatch('${a.id}')">Dispatch</button>`);
     }
-    const me = await meRes.json();
-    const workspaceId = me.workspaceId;
-    
-    const json = await api(`/api/admin/workspace/${encodeURIComponent(workspaceId)}/plan`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan: selectedPlan })
-    });
-    
-    if (!json.success) {
-      const errorMsg = json.error === "Admin only" 
-        ? "Admin privileges required to change plan"
-        : json.error || "Failed to update plan";
-      showToast(errorMsg, "error");
-      return;
-    }
-    
-    showToast(`Workspace plan updated to ${selectedPlan.toUpperCase()}. New limits applied.`, "success");
-    closeUpgradeModal();
-    await loadUsage();
-    
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Failed to update plan", "error");
-  }
-}
-
-// ── PRR Management ────────────────────────────────────────────────────────
-function togglePRRForm() {
-  const wrap = document.getElementById("prr-form-wrap");
-  if (wrap.style.display === "none") {
-    document.getElementById("prr-form-name").value = "";
-    document.getElementById("prr-form-description").value = "";
-    document.getElementById("prr-form-due").value = "";
-    wrap.style.display = "block";
-  } else {
-    wrap.style.display = "none";
-  }
-}
-
-function cancelPRRForm() {
-  document.getElementById("prr-form-wrap").style.display = "none";
-}
-
-async function submitPRRForm() {
-  const requesterName = document.getElementById("prr-form-name").value.trim();
-  const description = document.getElementById("prr-form-description").value.trim();
-  const dueDate = document.getElementById("prr-form-due").value;
-  if (!requesterName) { showToast("Requester name is required", "error"); return; }
-  if (!description) { showToast("Description is required", "error"); return; }
-
-  try {
-    const body = { requesterName, description };
-    if (dueDate) body.dueDate = dueDate;
-    const json = await api("/api/prr", {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-    if (!json.success) { showToast(json.error || "Failed to create request", "error"); return; }
-    showToast("Request created", "success");
-    cancelPRRForm();
-    loadPRRQueue();
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Failed to create request", "error");
-  }
-}
-
-async function loadPRRQueue() {
-  const statusFilter = document.getElementById('prr-status-filter')?.value || '';
-  const params = new URLSearchParams();
-  if (statusFilter) params.append('status', statusFilter);
-  const loading = document.getElementById("prr-loading");
-  if (loading) loading.style.display = "block";
-  
-  try {
-    const json = await api(`/api/prr?${params}`);
-    if (loading) loading.style.display = "none";
-    if (json.success) {
-      renderPRRQueue(json.data.requests);
-    }
-  } catch (e) {
-    if (loading) loading.style.display = "none";
-    if (e.message !== "Unauthorized") showToast("Failed to load PRRs", "error");
-  }
-}
-
-function renderPRRQueue(requests) {
-  const tbody = document.getElementById('prr-queue-body');
-  const empty = document.getElementById('prr-queue-empty');
-  
-  if (!requests || requests.length === 0) {
-    tbody.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-  
-  empty.style.display = 'none';
-  tbody.innerHTML = requests.map(prr => {
-    const statusClass = prr.status.replace('_', '-');
-    return `
-      <tr>
-        <td><code>${esc(prr.id.substring(0, 8))}</code></td>
-        <td>${esc(prr.submitter_name || 'Anonymous')}<br><small>${esc(prr.submitter_email || '—')}</small></td>
-        <td>${esc(prr.summary)}</td>
-        <td><span class="status-badge prr-${statusClass}">${esc(prr.status.replace('_', ' '))}</span></td>
-        <td>${esc(prr.assigned_to || '—')}</td>
-        <td>${timeAgo(prr.created_at)}</td>
-        <td><button class="btn-link" onclick="openPRRDetail('${prr.id}')">View</button></td>
-      </tr>
-    `;
+    return`<tr onclick="showDetail('${a.id}')">
+      <td><span class="mono" style="font-size:11px">${esc(a.action_intent||'—')}</span></td>
+      <td><span class="badge ${a.approval_status}">${a.approval_status}</span></td>
+      <td>${chainHtml}</td>
+      <td class="mono dim" style="font-size:11px">${esc(a.operator_id||'—')}</td>
+      <td class="mono dim" style="font-size:11px">${timeAgo(a.created_at)}</td>
+      <td class="actions-cell" onclick="event.stopPropagation()">${acts.join('')||'<span class="dim" style="font-size:11px">—</span>'}</td>
+    </tr>`;
   }).join('');
 }
 
-async function openPRRDetail(id) {
-  try {
-    const json = await api(`/api/prr/${encodeURIComponent(id)}`);
-    if (json.success) {
-      renderPRRDetail(json.data);
-      document.getElementById('prr-detail-overlay').style.display = 'flex';
+function renderPagination(pending,total){
+  document.getElementById('page-info').textContent=
+    `${approvals.length} result${approvals.length!==1?'s':''}${pending!=null?' · '+pending+' pending':''}`;
+  document.getElementById('prev-btn').disabled=currentPage===0;
+  document.getElementById('next-btn').disabled=approvals.length<PAGE_SIZE;
+}
+
+function prevPage(){if(currentPage>0){currentPage--;loadApprovals()}}
+function nextPage(){currentPage++;loadApprovals()}
+function sortBy(f){
+  if(sortField===f)sortDir*=-1;
+  else{sortField=f;sortDir=f==='created_at'?-1:1}
+  renderApprovals();
+}
+
+// ── Decide / Dispatch ─────────────────────────────────────
+async function decide(id,status){
+  try{
+    const json=await api(`/api/approvals/${id}/decide`,{method:'POST',body:JSON.stringify({status})});
+    if(!json.success){toast(json.error||'Decision failed','error');return}
+    toast('Approval '+status,'success');loadApprovals();
+  }catch(e){if(e.message!=='Unauthorized')toast('Decision failed','error')}
+}
+async function dispatch(id){
+  try{
+    const json=await api(`/api/approvals/${id}/dispatch`,{method:'POST',body:JSON.stringify({})});
+    if(!json.success){toast(json.error||'Dispatch failed','error');return}
+    toast('Dispatched','success');loadApprovals();
+  }catch(e){if(e.message!=='Unauthorized')toast('Dispatch failed','error')}
+}
+
+// ── Detail panel ──────────────────────────────────────────
+async function showDetail(id){
+  document.getElementById('detail-overlay').classList.add('open');
+  document.getElementById('detail-body').innerHTML='<div class="empty">Loading…</div>';
+  try{
+    const [ar,cr]=await Promise.all([
+      api(`/api/approvals/${id}`),
+      api(`/api/approvals/${id}/chain`).catch(()=>null),
+    ]);
+    if(!ar.success){document.getElementById('detail-body').innerHTML='<div class="empty">Failed to load</div>';return}
+    const a=ar.data,ch=cr?.data;
+    let html=`<div class="detail-section">
+      <h4>Overview</h4>
+      <div class="detail-row"><span class="dk">ID</span><span class="dv mono">${esc(a.id?.slice(0,16))}…</span></div>
+      <div class="detail-row"><span class="dk">Status</span><span class="dv"><span class="badge ${a.approval_status}">${a.approval_status}</span></span></div>
+      <div class="detail-row"><span class="dk">Intent</span><span class="dv mono">${esc(a.action_intent||'—')}</span></div>
+      <div class="detail-row"><span class="dk">Mode</span><span class="dv mono">${esc(a.action_mode||'—')}</span></div>
+      <div class="detail-row"><span class="dk">Operator</span><span class="dv mono">${esc(a.operator_id||'—')}</span></div>
+      <div class="detail-row"><span class="dk">Created</span><span class="dv">${new Date(a.created_at).toLocaleString()}</span></div>
+      <div class="detail-row"><span class="dk">Expires</span><span class="dv">${new Date(a.expires_at).toLocaleString()}</span></div>
+      ${a.approver_id?`<div class="detail-row"><span class="dk">Approver</span><span class="dv mono">${esc(a.approver_id)}</span></div>`:''}
+      ${a.approval_note?`<div class="detail-row"><span class="dk">Note</span><span class="dv">${esc(a.approval_note)}</span></div>`:''}
+    </div>`;
+    if(ch){
+      const byOrder={};
+      ch.steps.forEach(s=>{if(!byOrder[s.order])byOrder[s.order]=[];byOrder[s.order].push(s)});
+      const pct=ch.totalSteps>0?(ch.completedSteps/ch.totalSteps*100):0;
+      html+=`<div class="detail-section">
+        <h4>Chain — ${esc(ch.templateName)}</h4>
+        <div class="chain-prog" style="margin-bottom:12px">
+          <div class="chain-track" style="flex:1;max-width:100%;height:5px"><div class="chain-fill" style="width:${pct}%"></div></div>
+          <span class="chain-text">${ch.completedSteps}/${ch.totalSteps} complete</span>
+        </div>
+        <ul class="chain-steps-list">
+          ${ch.steps.map(s=>{
+            const sib=(byOrder[s.order]||[]).length>1;
+            return`<li class="chain-step-item">
+              <div class="step-dot ${s.status}"></div>
+              <span>${esc(s.label)}${sib?'<span class="parallel-mark">⊕</span>':''}</span>
+              <span class="badge ${s.status}" style="font-size:9px">${s.status}</span>
+              ${s.deciderId?`<span class="step-decider">${esc(s.deciderId)}</span>`:''}
+            </li>`;
+          }).join('')}
+        </ul>
+      </div>`;
     }
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Failed to load PRR", "error");
+    if(a.plan?.length){
+      html+=`<div class="detail-section">
+        <h4>Plan (${a.plan.length} steps)</h4>
+        <div class="code-block">${esc(JSON.stringify(a.plan,null,2))}</div>
+      </div>`;
+    }
+    if(a.dispatchResult){
+      html+=`<div class="detail-section">
+        <h4>Dispatch Result</h4>
+        <div class="code-block">${esc(JSON.stringify(a.dispatchResult,null,2))}</div>
+      </div>`;
+    }
+    if(a.approval_status==='pending'){
+      html+=`<div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-approve btn-lg" onclick="decide('${a.id}','approved');closeDetailPanel()">Approve</button>
+        <button class="btn btn-reject btn-lg" onclick="decide('${a.id}','rejected');closeDetailPanel()">Reject</button>
+      </div>`;
+    }
+    if(a.approval_status==='approved'){
+      html+=`<div style="margin-top:16px"><button class="btn btn-dispatch btn-lg" onclick="dispatch('${a.id}');closeDetailPanel()">Dispatch</button></div>`;
+    }
+    document.getElementById('detail-body').innerHTML=html;
+  }catch(e){
+    if(e.message!=='Unauthorized') document.getElementById('detail-body').innerHTML='<div class="empty">Failed to load details</div>';
+  }
+}
+function closeDetail(e){if(e?.target===document.getElementById('detail-overlay')) closeDetailPanel()}
+function closeDetailPanel(){document.getElementById('detail-overlay').classList.remove('open')}
+
+// ── Chain Templates ───────────────────────────────────────
+async function loadTemplates(){
+  document.getElementById('templates-loading').style.display='block';
+  document.getElementById('templates-grid').innerHTML='';
+  document.getElementById('templates-empty').style.display='none';
+  try{
+    const json=await api('/api/chain-templates');
+    document.getElementById('templates-loading').style.display='none';
+    if(!json.success){toast(json.error||'Load failed','error');return}
+    renderTemplates(json.data);
+  }catch(e){
+    document.getElementById('templates-loading').style.display='none';
+    if(e.message!=='Unauthorized') toast('Failed to load templates','error');
   }
 }
 
-function renderPRRDetail(prr) {
-  const attachments = prr.attachments || [];
-  
-  const content = document.getElementById('prr-detail-content');
-  content.innerHTML = `
-    <div class="detail-field">
-      <label>Status</label>
-      <select id="prr-status-select" onchange="updatePRRStatus('${prr.id}')">
-        <option value="submitted" ${prr.status === 'submitted' ? 'selected' : ''}>Submitted</option>
-        <option value="acknowledged" ${prr.status === 'acknowledged' ? 'selected' : ''}>Acknowledged</option>
-        <option value="in_progress" ${prr.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
-        <option value="closed" ${prr.status === 'closed' ? 'selected' : ''}>Closed</option>
+function renderTemplates(templates){
+  const grid=document.getElementById('templates-grid');
+  const empty=document.getElementById('templates-empty');
+  if(!templates?.length){grid.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  grid.innerHTML=templates.map(t=>{
+    const steps=t.steps||[];
+    const byOrder={};
+    steps.forEach(s=>{if(!byOrder[s.order])byOrder[s.order]=[];byOrder[s.order].push(s)});
+    const orders=Object.keys(byOrder).sort((a,b)=>Number(a)-Number(b));
+    let viz='';
+    orders.forEach((ord,i)=>{
+      const grp=byOrder[ord];
+      if(i>0) viz+=`<span class="step-arr">→</span>`;
+      if(grp.length>1){
+        viz+=`<div class="par-group"><span class="par-label">⊕ parallel</span>${grp.map(s=>`<span class="step-pill parallel">${esc(s.label)}</span>`).join('')}</div>`;
+      }else{
+        viz+=`<span class="step-pill">${esc(grp[0].label)}</span>`;
+      }
+    });
+    const isDefault=t.id==='default';
+    return`<div class="template-card">
+      ${isDefault?'<div class="tc-default-badge">default</div>':''}
+      <div class="tc-name">${esc(t.name)}</div>
+      <div class="tc-id">${esc(t.id)}</div>
+      <div class="tc-meta">${steps.length} step${steps.length!==1?'s':''} · ${orders.length} stage${orders.length!==1?'s':''}</div>
+      <div class="tc-viz">${viz||'<span class="dim" style="font-size:11px">No steps defined</span>'}</div>
+      <div class="tc-footer">
+        <button class="btn btn-secondary" onclick="showTemplateDtl('${esc(t.id)}')">View JSON</button>
+        ${!isDefault?`<button class="btn btn-secondary" onclick="editTemplate('${esc(t.id)}')">Edit</button>`:''}
+        ${!isDefault?`<button class="btn btn-danger" onclick="deleteTpl('${esc(t.id)}')">Delete</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let stepCounter=0;
+function addStep(){
+  const list=document.getElementById('tpl-steps-list');
+  const idx=stepCounter++;
+  const num=list.children.length+1;
+  const div=document.createElement('div');
+  div.id=`step-${idx}`;div.className='step-row';
+  div.innerHTML=`<span class="step-num">Step ${num}</span>
+    <input type="text" class="s-role" placeholder="Role (e.g. admin)" style="flex:1">
+    <input type="text" class="s-label" placeholder="Label (e.g. Legal Review)" style="flex:2">
+    <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="removeStep('step-${idx}')">✕</button>`;
+  list.appendChild(div);
+}
+function removeStep(id){
+  document.getElementById(id)?.remove();
+  Array.from(document.getElementById('tpl-steps-list').children).forEach((r,i)=>{
+    const sp=r.querySelector('.step-num');if(sp)sp.textContent=`Step ${i+1}`;
+  });
+}
+
+function toggleTemplateForm(){
+  const f=document.getElementById('template-form');
+  f.classList.contains('show')?hideTemplateForm():openNewTemplateForm();
+}
+function openNewTemplateForm(){
+  document.getElementById('template-form-title').textContent='Create Template';
+  document.getElementById('template-edit-id').value='';
+  document.getElementById('tpl-name').value='';
+  document.getElementById('tpl-desc').value='';
+  stepCounter=0;
+  document.getElementById('tpl-steps-list').innerHTML='';
+  addStep();
+  document.getElementById('template-form').classList.add('show');
+}
+function hideTemplateForm(){document.getElementById('template-form').classList.remove('show')}
+
+async function submitTemplate(){
+  const editId=document.getElementById('template-edit-id').value;
+  const name=document.getElementById('tpl-name').value.trim();
+  const desc=document.getElementById('tpl-desc').value.trim();
+  if(!name){toast('Name required','error');return}
+  const rows=document.getElementById('tpl-steps-list').children;
+  if(!rows.length){toast('Add at least one step','error');return}
+  const steps=[];
+  for(let i=0;i<rows.length;i++){
+    const role=rows[i].querySelector('.s-role').value.trim();
+    const label=rows[i].querySelector('.s-label').value.trim();
+    if(!role||!label){toast(`Step ${i+1}: role and label required`,'error');return}
+    steps.push({order:i,requiredRole:role,label});
+  }
+  try{
+    const json=editId
+      ?await api(`/api/chain-templates/${encodeURIComponent(editId)}`,{method:'PUT',body:JSON.stringify({name,description:desc,steps})})
+      :await api('/api/chain-templates',{method:'POST',body:JSON.stringify({name,description:desc,steps})});
+    if(!json.success){toast(json.error||'Save failed','error');return}
+    toast(editId?'Template updated':'Template created','success');
+    hideTemplateForm();loadTemplates();
+  }catch(e){if(e.message!=='Unauthorized')toast('Save failed','error')}
+}
+
+async function editTemplate(id){
+  try{
+    const json=await api(`/api/chain-templates/${encodeURIComponent(id)}`);
+    if(!json.success){toast('Failed to load template','error');return}
+    const t=json.data;
+    document.getElementById('template-form-title').textContent='Edit Template';
+    document.getElementById('template-edit-id').value=t.id;
+    document.getElementById('tpl-name').value=t.name;
+    document.getElementById('tpl-desc').value=t.description||'';
+    stepCounter=0;
+    document.getElementById('tpl-steps-list').innerHTML='';
+    (t.steps||[]).forEach(s=>{
+      addStep();
+      const rows=document.getElementById('tpl-steps-list').children;
+      const last=rows[rows.length-1];
+      last.querySelector('.s-role').value=s.requiredRole||'';
+      last.querySelector('.s-label').value=s.label||'';
+    });
+    document.getElementById('template-form').classList.add('show');
+    document.getElementById('template-form').scrollIntoView({behavior:'smooth'});
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to load template','error')}
+}
+
+async function deleteTpl(id){
+  if(!confirm(`Delete template "${id}"?`)) return;
+  try{
+    const json=await api(`/api/chain-templates/${encodeURIComponent(id)}`,{method:'DELETE'});
+    if(!json.success){toast(json.error||'Delete failed','error');return}
+    toast('Template deleted','success');loadTemplates();
+  }catch(e){if(e.message!=='Unauthorized')toast('Delete failed','error')}
+}
+
+async function showTemplateDtl(id){
+  document.getElementById('detail-title').textContent='Template';
+  document.getElementById('detail-overlay').classList.add('open');
+  document.getElementById('detail-body').innerHTML='<div class="empty">Loading…</div>';
+  try{
+    const json=await api(`/api/chain-templates/${encodeURIComponent(id)}`);
+    if(!json.success){document.getElementById('detail-body').innerHTML='<div class="empty">Failed to load</div>';return}
+    const t=json.data;
+    document.getElementById('detail-body').innerHTML=`
+      <div class="detail-section">
+        <h4>Template</h4>
+        <div class="detail-row"><span class="dk">ID</span><span class="dv mono">${esc(t.id)}</span></div>
+        <div class="detail-row"><span class="dk">Name</span><span class="dv">${esc(t.name)}</span></div>
+        <div class="detail-row"><span class="dk">Steps</span><span class="dv mono">${(t.steps||[]).length}</span></div>
+      </div>
+      <div class="detail-section">
+        <h4>Definition</h4>
+        <div class="code-block">${esc(JSON.stringify(t,null,2))}</div>
+      </div>`;
+  }catch(e){if(e.message!=='Unauthorized')document.getElementById('detail-body').innerHTML='<div class="empty">Failed to load</div>'}
+}
+
+// ── Dashboard ─────────────────────────────────────────────
+async function loadDashboard(){
+  document.getElementById('dash-ts').textContent='';
+  try{
+    const json=await api('/api/admin/stats');
+    if(!json.success) return;
+    const d=json.data;
+    document.getElementById('s-pending').textContent=d.pending;
+    const tot=d.dispatchSuccess+d.dispatchFailure;
+    document.getElementById('s-rate').textContent=tot>0?((d.dispatchSuccess/tot)*100).toFixed(1)+'%':'—';
+    document.getElementById('s-retries').textContent=d.dispatchRetry;
+    document.getElementById('s-avgtime').textContent=fmtDur(d.avgApprovalTimeSec);
+    document.getElementById('s-created').textContent=d.approvalsCreated;
+    document.getElementById('s-approved').textContent=d.approvalsApproved;
+    document.getElementById('s-rejected').textContent=d.approvalsRejected;
+    document.getElementById('s-expired').textContent=d.approvalsExpired;
+    document.getElementById('s-dsuccess').textContent=d.dispatchSuccess;
+    document.getElementById('s-dfailure').textContent=d.dispatchFailure;
+    document.getElementById('s-dlat').textContent=fmtDur(d.avgDispatchLatencySec);
+    document.getElementById('s-chainsteps').textContent=d.activeChainSteps;
+    document.getElementById('dash-ts').textContent='Updated '+new Date().toLocaleTimeString();
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to load stats','error')}
+  // Recent dispatches
+  try{
+    const json=await api('/api/approvals?status=dispatched&limit=20');
+    if(!json.success) return;
+    const dispatches=json.data.approvals;
+    const tbody=document.getElementById('dispatch-body');
+    const empty=document.getElementById('dispatch-empty');
+    if(!dispatches.length){tbody.innerHTML='';empty.style.display='block';return}
+    empty.style.display='none';
+    tbody.innerHTML=dispatches.map(a=>`<tr>
+      <td class="mono" style="font-size:11px">${esc(a.action_intent||'—')}</td>
+      <td><span class="badge dispatched">dispatched</span></td>
+      <td class="mono dim" style="font-size:11px">${esc(a.operator_id||'—')}</td>
+      <td class="mono dim" style="font-size:11px">${timeAgo(a.dispatched_at||a.updated_at)}</td>
+    </tr>`).join('');
+  }catch(e){}
+}
+
+// ── PRR ───────────────────────────────────────────────────
+function togglePRRForm(){
+  const f=document.getElementById('prr-form');
+  if(f.classList.contains('show')){hidePRRForm();return}
+  document.getElementById('prr-name').value='';
+  document.getElementById('prr-desc').value='';
+  document.getElementById('prr-due').value='';
+  f.classList.add('show');
+}
+function hidePRRForm(){document.getElementById('prr-form').classList.remove('show')}
+
+async function submitPRRForm(){
+  const name=document.getElementById('prr-name').value.trim();
+  const desc=document.getElementById('prr-desc').value.trim();
+  if(!name){toast('Requester name required','error');return}
+  if(!desc){toast('Description required','error');return}
+  try{
+    const body={requesterName:name,description:desc};
+    const due=document.getElementById('prr-due').value;
+    if(due) body.dueDate=due;
+    const json=await api('/api/prr',{method:'POST',body:JSON.stringify(body)});
+    if(!json.success){toast(json.error||'Failed to create','error');return}
+    toast('Request created','success');hidePRRForm();loadPRRQueue();
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to create','error')}
+}
+
+async function loadPRRQueue(){
+  const status=document.getElementById('prr-status-filter')?.value||'';
+  const params=new URLSearchParams();if(status)params.append('status',status);
+  try{
+    const json=await api(`/api/prr?${params}`);
+    if(json.success) renderPRRQueue(json.data.requests);
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to load PRRs','error')}
+}
+
+function renderPRRQueue(reqs){
+  const tbody=document.getElementById('prr-body');
+  const empty=document.getElementById('prr-empty');
+  if(!reqs?.length){tbody.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  tbody.innerHTML=reqs.map(p=>`<tr>
+    <td class="mono" style="font-size:10px">${esc(p.id?.substring(0,8))}</td>
+    <td><div style="font-size:12px">${esc(p.submitter_name||'Anon')}</div><div class="mono dim" style="font-size:10px">${esc(p.submitter_email||'')}</div></td>
+    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.summary)}</td>
+    <td><span class="badge prr-${p.status?.replace('_','-')}">${esc((p.status||'').replace('_',' '))}</span></td>
+    <td class="mono dim" style="font-size:11px">${esc(p.assigned_to||'—')}</td>
+    <td class="mono dim" style="font-size:11px">${timeAgo(p.created_at)}</td>
+    <td><button class="btn-link" onclick="openPRRDetail('${p.id}')">View</button></td>
+  </tr>`).join('');
+}
+
+async function openPRRDetail(id){
+  document.getElementById('prr-detail-overlay').classList.add('open');
+  document.getElementById('prr-detail-body').innerHTML='<div class="empty">Loading…</div>';
+  try{
+    const json=await api(`/api/prr/${encodeURIComponent(id)}`);
+    if(json.success) renderPRRDetail(json.data);
+  }catch(e){if(e.message!=='Unauthorized')document.getElementById('prr-detail-body').innerHTML='<div class="empty">Failed to load</div>'}
+}
+
+function renderPRRDetail(prr){
+  const comments=prr.comments||[];
+  document.getElementById('prr-detail-body').innerHTML=`
+    <div class="detail-section">
+      <h4>Status</h4>
+      <select class="detail-select" onchange="updatePRRStatus('${prr.id}',this.value)">
+        ${['submitted','acknowledged','in_progress','closed'].map(s=>`<option value="${s}"${prr.status===s?' selected':''}>${s.replace('_',' ')}</option>`).join('')}
       </select>
     </div>
-    
-    <div class="detail-field">
-      <label>Submitter</label>
-      <div>${esc(prr.submitter_name || 'Anonymous')}</div>
-      <div><small>${esc(prr.submitter_email || '—')}</small></div>
+    <div class="detail-section">
+      <h4>Details</h4>
+      <div class="detail-row"><span class="dk">Submitter</span><span class="dv">${esc(prr.submitter_name||'Anonymous')}</span></div>
+      <div class="detail-row"><span class="dk">Email</span><span class="dv mono">${esc(prr.submitter_email||'—')}</span></div>
+      <div class="detail-row"><span class="dk">Summary</span><span class="dv">${esc(prr.summary)}</span></div>
+      <div class="detail-row"><span class="dk">Created</span><span class="dv">${timeAgo(prr.created_at)}</span></div>
     </div>
-    
-    <div class="detail-field">
-      <label>Summary</label>
-      <div>${esc(prr.summary)}</div>
-    </div>
-    
-    <div class="detail-field">
-      <label>Details</label>
-      <div>${esc(prr.details || 'No additional details')}</div>
-    </div>
-    
-    <div class="detail-field">
-      <label>Created</label>
-      <div>${timeAgo(prr.created_at)}</div>
-    </div>
-    
-    ${attachments.length > 0 ? `
-      <div class="detail-field">
-        <label>Attachments</label>
-        ${attachments.map(att => `<div><a href="/api/prr/${prr.id}/attachment/${att.filename}">${esc(att.filename)}</a></div>`).join('')}
+    ${prr.details?`<div class="detail-section"><h4>Description</h4><div style="font-size:12px;color:var(--text-dim);line-height:1.6">${esc(prr.details)}</div></div>`:''}
+    <div class="detail-section">
+      <h4>Comments (${comments.length})</h4>
+      <div id="prr-comments">
+        ${comments.map(c=>`<div style="margin-bottom:10px;padding:10px;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius)">
+          <div class="mono dim" style="font-size:10px;margin-bottom:5px">${timeAgo(c.created_at)} · ${c.user_id?'Admin':'System'}</div>
+          <div style="font-size:12px">${esc(c.body)}</div>
+        </div>`).join('')||'<div class="dim" style="font-size:12px;padding-bottom:8px">No comments yet</div>'}
       </div>
-    ` : ''}
-    
-    <div class="detail-field" style="margin-top:24px;">
-      <label>Comments</label>
-      <div id="prr-comments-list">
-        ${(prr.comments || []).map(c => `
-          <div class="comment" style="margin-bottom:12px;padding:12px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);">
-            <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">${timeAgo(c.created_at)} • ${c.user_id ? 'Admin' : 'System'}</div>
-            <div>${esc(c.body)}</div>
-          </div>
-        `).join('')}
-      </div>
-      
-      <div style="margin-top:12px;">
-        <textarea id="prr-comment-input" placeholder="Add a comment..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);min-height:80px;"></textarea>
-        <button class="btn btn-primary" onclick="addPRRComment('${prr.id}')" style="margin-top:8px;">Add Comment</button>
-      </div>
-    </div>
-  `;
+      <textarea id="prr-comment-input" placeholder="Add a comment…" style="width:100%;padding:8px 10px;margin-top:8px;background:var(--bg-3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-family:var(--font);font-size:12px;min-height:70px;resize:vertical"></textarea>
+      <button class="btn btn-primary" style="margin-top:6px" onclick="addPRRComment('${prr.id}')">Add Comment</button>
+    </div>`;
 }
 
-async function updatePRRStatus(id) {
-  const status = document.getElementById('prr-status-select').value;
-  
-  try {
-    const json = await api(`/api/prr/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
-    });
-    
-    if (json.success) {
-      showToast('Status updated', 'success');
-      loadPRRQueue();
-    }
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Failed to update status", "error");
-  }
+async function updatePRRStatus(id,status){
+  try{
+    const json=await api(`/api/prr/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({status})});
+    if(json.success){toast('Status updated','success');loadPRRQueue()}
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to update','error')}
 }
 
-async function addPRRComment(id) {
-  const input = document.getElementById('prr-comment-input');
-  const body = input.value.trim();
-  
-  if (!body) return;
-  
-  try {
-    const json = await api(`/api/prr/${encodeURIComponent(id)}/comment`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body })
-    });
-    
-    if (json.success) {
-      showToast('Comment added', 'success');
-      input.value = '';
-      openPRRDetail(id); // Refresh detail
-    }
-  } catch (e) {
-    if (e.message !== "Unauthorized") showToast("Failed to add comment", "error");
-  }
+async function addPRRComment(id){
+  const inp=document.getElementById('prr-comment-input');
+  const body=inp.value.trim();if(!body) return;
+  try{
+    const json=await api(`/api/prr/${encodeURIComponent(id)}/comment`,{method:'POST',body:JSON.stringify({body})});
+    if(json.success){toast('Comment added','success');inp.value='';openPRRDetail(id)}
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to add comment','error')}
 }
 
-function closePRRDetail(event) {
-  if (event && event.target !== document.getElementById('prr-detail-overlay')) return;
-  document.getElementById('prr-detail-overlay').style.display = 'none';
+function closePRRDetail(e){if(!e||e.target===document.getElementById('prr-detail-overlay'))closePRRDetailPanel()}
+function closePRRDetailPanel(){document.getElementById('prr-detail-overlay').classList.remove('open')}
+
+// ── Members ───────────────────────────────────────────────
+async function loadMembers(){
+  try{
+    const [mr,ir]=await Promise.all([api('/api/workspace/members'),api('/api/workspace/invitations')]);
+    if(mr.success) renderMembers(mr.data);
+    if(ir.success) renderInvitations(ir.data);
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to load members','error')}
 }
 
-// ── Auto-refresh ──────────────────────────────────────────────────────────
-let autoRefreshApprovalTimer = null;
-let autoRefreshDashboardTimer = null;
-let autoRefreshPRRTimer = null;
+function renderMembers(members){
+  const tbody=document.getElementById('members-body');
+  const empty=document.getElementById('members-empty');
+  if(!members?.length){tbody.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  tbody.innerHTML=members.map(m=>`<tr>
+    <td class="mono" style="font-size:11px">${esc(m.user_id)}</td>
+    <td><span class="badge ${m.role}">${m.role}</span></td>
+    <td class="mono dim" style="font-size:11px">${timeAgo(m.joined_at)}</td>
+    <td class="mono dim" style="font-size:11px">${esc(m.invited_by||'—')}</td>
+    <td>${m.role!=='owner'?`<button class="btn btn-danger" onclick="removeMember('${m.user_id}')">Remove</button>`:''}</td>
+  </tr>`).join('');
+}
 
-function startAutoRefresh() {
+function renderInvitations(invs){
+  const tbody=document.getElementById('invitations-body');
+  const empty=document.getElementById('invitations-empty');
+  if(!invs?.length){tbody.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  tbody.innerHTML=invs.map(inv=>`<tr>
+    <td class="mono" style="font-size:11px">${esc(inv.email)}</td>
+    <td><span class="badge ${inv.role}">${inv.role}</span></td>
+    <td class="mono dim" style="font-size:11px">${timeAgo(inv.created_at)}</td>
+    <td class="mono dim" style="font-size:11px">${new Date(inv.expires_at).toLocaleDateString()}</td>
+    <td class="actions-cell">
+      <button class="btn btn-secondary" onclick="copyLink('${inv.token}')">Copy Link</button>
+      <button class="btn btn-danger" onclick="revokeInvite('${inv.id}')">Revoke</button>
+    </td>
+  </tr>`).join('');
+}
+
+function toggleInviteForm(){
+  const f=document.getElementById('invite-form');
+  if(f.classList.contains('show')){hideInviteForm();return}
+  document.getElementById('invite-email').value='';
+  document.getElementById('invite-role').value='member';
+  f.classList.add('show');
+}
+function hideInviteForm(){document.getElementById('invite-form').classList.remove('show')}
+
+async function sendInvite(){
+  const email=document.getElementById('invite-email').value.trim();
+  const role=document.getElementById('invite-role').value;
+  if(!email){toast('Email required','error');return}
+  try{
+    const json=await api('/api/workspace/invite',{method:'POST',body:JSON.stringify({email,role})});
+    if(!json.success){toast(json.error||'Failed to send','error');return}
+    toast(`Invited ${email}`,'success');hideInviteForm();loadMembers();
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to send invite','error')}
+}
+
+async function removeMember(uid){
+  if(!confirm(`Remove ${uid}?`)) return;
+  try{
+    const json=await api(`/api/workspace/members/${encodeURIComponent(uid)}`,{method:'DELETE'});
+    if(!json.success){toast(json.error||'Failed','error');return}
+    toast('Member removed','success');loadMembers();
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed','error')}
+}
+
+async function revokeInvite(id){
+  if(!confirm('Revoke invitation?')) return;
+  try{
+    const json=await api(`/api/workspace/invitations/${encodeURIComponent(id)}`,{method:'DELETE'});
+    if(!json.success){toast(json.error||'Failed','error');return}
+    toast('Invitation revoked','success');loadMembers();
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed','error')}
+}
+
+function copyLink(token){
+  navigator.clipboard.writeText(`${location.origin}/pj/invite/${token}`)
+    .then(()=>toast('Link copied','success'))
+    .catch(()=>toast('Copy failed','error'));
+}
+
+// ── Usage & Upgrade ───────────────────────────────────────
+async function loadUsage(){
+  try{
+    const json=await api('/api/workspace/usage');
+    if(json.success) renderUsage(json.data);
+  }catch(e){}
+}
+
+function renderUsage(usage){
+  const badge=document.getElementById('plan-badge');
+  badge.textContent=usage.plan.toUpperCase();
+  badge.className=`plan-badge plan-${usage.plan}`;
+  document.getElementById('upgrade-btn').style.display=usage.plan==='free'?'block':'none';
+  const metrics=document.getElementById('usage-metrics');
+  metrics.innerHTML=['templates','approvals','members'].map(k=>{
+    const cur=usage.usage[k],lim=usage.limits[k];
+    const pct=lim>0?Math.min((cur/lim)*100,100):0;
+    const atLim=cur>=lim,nearLim=pct>=85;
+    const barCls=atLim?'at-limit':nearLim?'near':'';
+    const chip=atLim?`<span class="limit-chip err">LIMIT</span>`:nearLim?`<span class="limit-chip warn">NEAR</span>`:'';
+    return`<div class="usage-item">
+      <div class="usage-lbl"><strong>${k.charAt(0).toUpperCase()+k.slice(1)}</strong><div>${chip}<span class="usage-count-text">${cur} / ${lim>=999999?'∞':lim}</span></div></div>
+      <div class="usage-track"><div class="usage-bar ${barCls}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function openUpgradeModal(){
+  const b=document.getElementById('plan-badge');
+  const cb=document.getElementById('current-plan-badge');
+  cb.textContent=b.textContent;cb.className=b.className;
+  document.getElementById('upgrade-modal').classList.add('open');
+}
+function closeUpgradeModal(e){if(!e||e.target===document.getElementById('upgrade-modal'))document.getElementById('upgrade-modal').classList.remove('open')}
+
+async function submitPlanChange(){
+  const plan=document.querySelector('input[name="plan-pick"]:checked')?.value;
+  try{
+    const me=await fetch('/api/me',{headers:authHeaders()});
+    if(!me.ok){toast('Failed to get workspace','error');return}
+    const meData=await me.json();
+    const json=await api(`/api/admin/workspace/${encodeURIComponent(meData.workspaceId)}/plan`,{method:'PATCH',body:JSON.stringify({plan})});
+    if(!json.success){toast(json.error||'Failed','error');return}
+    toast(`Plan updated to ${plan.toUpperCase()}`,'success');
+    closeUpgradeModal();loadUsage();
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to update plan','error')}
+}
+
+// ── Auto-refresh ──────────────────────────────────────────
+let timers=[];
+function startAutoRefresh(){
   stopAutoRefresh();
-  const indicator = document.getElementById("auto-refresh-indicator");
-  if (indicator) indicator.style.display = "inline";
-
-  autoRefreshApprovalTimer = setInterval(() => {
-    const active = document.querySelector(".tab.active");
-    if (active && active.dataset.tab === "queue") loadApprovals();
-  }, 30000);
-
-  autoRefreshDashboardTimer = setInterval(() => {
-    const active = document.querySelector(".tab.active");
-    if (active && active.dataset.tab === "dashboard") loadStats();
-  }, 60000);
-
-  autoRefreshPRRTimer = setInterval(() => {
-    const active = document.querySelector(".tab.active");
-    if (active && active.dataset.tab === "prr") loadPRRQueue();
-  }, 30000);
+  document.getElementById('auto-ref').style.display='flex';
+  timers.push(setInterval(()=>{if(document.querySelector('.tab.active')?.dataset.tab==='queue')loadApprovals()},30000));
+  timers.push(setInterval(()=>{if(document.querySelector('.tab.active')?.dataset.tab==='dashboard')loadDashboard()},60000));
+  timers.push(setInterval(()=>{if(document.querySelector('.tab.active')?.dataset.tab==='prr')loadPRRQueue()},30000));
+}
+function stopAutoRefresh(){
+  timers.forEach(clearInterval);timers=[];
+  document.getElementById('auto-ref').style.display='none';
 }
 
-function stopAutoRefresh() {
-  if (autoRefreshApprovalTimer) { clearInterval(autoRefreshApprovalTimer); autoRefreshApprovalTimer = null; }
-  if (autoRefreshDashboardTimer) { clearInterval(autoRefreshDashboardTimer); autoRefreshDashboardTimer = null; }
-  if (autoRefreshPRRTimer) { clearInterval(autoRefreshPRRTimer); autoRefreshPRRTimer = null; }
-  const indicator = document.getElementById("auto-refresh-indicator");
-  if (indicator) indicator.style.display = "none";
+// ── Refresh button ────────────────────────────────────────
+async function refresh(){
+  const btn=document.getElementById('refresh-btn');
+  btn.disabled=true;btn.textContent='↻…';
+  try{
+    const tab=document.querySelector('.tab.active')?.dataset.tab;
+    if(tab==='queue') await loadApprovals();
+    if(tab==='chains') await loadTemplates();
+    if(tab==='dashboard') await loadDashboard();
+    if(tab==='prr') await loadPRRQueue();
+    if(tab==='members'){await loadMembers();await loadUsage()}
+  }finally{btn.disabled=false;btn.textContent='↻ Refresh'}
 }
 
-// ── Hash navigation ──────────────────────────────────────────────────────
-window.addEventListener("hashchange", () => {
-  const hash = window.location.hash.replace("#", "");
-  const tab = HASH_TAB_MAP[hash];
-  if (tab) switchTab(tab);
+// ── Hash navigation ───────────────────────────────────────
+window.addEventListener('hashchange',()=>{
+  const tab=HASH_TAB[location.hash.replace('#','')];
+  if(tab) switchTab(tab);
 });
 
-// ── Init ──────────────────────────────────────────────────────────────────
-// Fetch user role and workspace before loading data
-(async function init() {
-  try {
-    const meRes = await fetch("/api/me", { headers: authHeaders() });
-    if (meRes.ok) {
-      const me = await meRes.json();
-      userRole = me.role;
-      if (me.workspaceName) {
-        const ws = document.getElementById("workspace-name");
-        ws.textContent = me.workspaceName;
-        ws.style.display = "inline";
+// ── Init ──────────────────────────────────────────────────
+(async function init(){
+  // Probe which OAuth providers are configured and show their buttons
+  try{
+    const ar=await fetch('/api/auth/status',{headers:authHeaders()});
+    if(ar.ok){
+      const ad=await ar.json();
+      const providers=ad.providers||[];
+      document.querySelectorAll('.oauth-optional').forEach(el=>{
+        const p=el.dataset.provider;
+        if(providers.includes(p)) el.style.display='inline-flex';
+      });
+    }else{
+      // If /api/auth/status isn't available, show all providers as a fallback
+      document.querySelectorAll('.oauth-optional').forEach(el=>el.style.display='inline-flex');
+    }
+  }catch{
+    // Network error — show all providers as fallback
+    document.querySelectorAll('.oauth-optional').forEach(el=>el.style.display='inline-flex');
+  }
+  try{
+    const res=await fetch('/api/me',{headers:authHeaders()});
+    if(res.ok){
+      const me=await res.json();
+      userRole=me.role;
+      if(me.workspaceName){
+        const chip=document.getElementById('ws-chip');
+        chip.textContent=me.workspaceName;
+        chip.style.display='inline-block';
       }
     }
-  } catch { /* ignore */ }
-
-  // Restore tab from URL hash
-  const hash = window.location.hash.replace("#", "");
-  const tab = HASH_TAB_MAP[hash];
-  if (tab) {
-    switchTab(tab);
-  } else {
-    loadApprovals();
-  }
-
-  // Start auto-refresh timers
+  }catch{}
+  const hash=location.hash.replace('#','');
+  const tab=HASH_TAB[hash];
+  if(tab) switchTab(tab);
+  else{hideAuthGate();loadApprovals()}
   startAutoRefresh();
 })();
 </script>
