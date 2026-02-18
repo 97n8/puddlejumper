@@ -76,6 +76,7 @@ import {
   configureRefreshStore,
   configureAuditStore,
   createSessionRoutes,
+  createTokenExchangeRoutes,
   type UserInfo,
 } from "@publiclogic/logic-commons";
 
@@ -452,11 +453,12 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     }
   });
 
-  // ── Auth gating for /api ──────────────────────────────────────────────
+   // ── Auth gating for /api ──────────────────────────────────────────────
   app.use("/api", (req, res, next) => {
     if (req.method === "POST" && req.path === "/login") { next(); return; }
     if (req.method === "POST" && req.path === "/refresh") { next(); return; }
     if (req.method === "POST" && req.path === "/auth/logout") { next(); return; }
+    if (req.method === "POST" && req.path === "/auth/token-exchange") { next(); return; }
     if (req.method === "POST" && req.path === "/auth/revoke") { optionalAuthMiddleware(req, res, next); return; }
     if (req.method === "POST" && req.path === "/prr/intake") { optionalAuthMiddleware(req, res, next); return; }
     if (req.method === "POST" && req.path === "/access/request") { optionalAuthMiddleware(req, res, next); return; }
@@ -544,6 +546,13 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createOAuthRoutes(githubProvider, oauthRouteOpts));
   app.use("/api", createOAuthRoutes(googleProvider, oauthRouteOpts));
   app.use("/api", createOAuthRoutes(microsoftProvider, oauthRouteOpts));
+  // Token exchange (SSO bridge — lets OS exchange an MSAL token for a PJ session)
+  app.use("/api/auth/token-exchange", oauthLoginRateLimit);
+  app.use("/api", createTokenExchangeRoutes({
+    nodeEnv,
+    providers: { microsoft: microsoftProvider, google: googleProvider, github: githubProvider },
+    onUserAuthenticated,
+  }));
   app.use("/api", createConfigRoutes({ runtimeContext, runtimeTiles, runtimeCapabilities }));
   app.use("/api", createPrrRoutes({ prrStore }));
   app.use("/api", createAccessRoutes({ prrStore }));
