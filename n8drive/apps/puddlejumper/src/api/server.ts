@@ -399,20 +399,17 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   }
 
   // ── PJ landing page ────────────────────────────────────────────────
-  // Legacy route - in production, Next.js handles all frontend routes
-  if (nodeEnv !== "production") {
-    const LANDING_HTML_FILE = path.join(PUBLIC_DIR, "index.html");
-    app.get("/pj", (_req, res) => {
-      try {
-        res.setHeader("Cache-Control", "no-store, max-age=0");
-        res.type("html").sendFile(LANDING_HTML_FILE);
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error("Failed to serve landing HTML:", (err as Error).message);
-        res.status(503).json({ error: "Landing HTML not available" });
-      }
-    });
-  }
+  const LANDING_HTML_FILE = path.join(PUBLIC_DIR, "index.html");
+  app.get("/pj", (_req, res) => {
+    try {
+      res.setHeader("Cache-Control", "no-store, max-age=0");
+      res.type("html").sendFile(LANDING_HTML_FILE);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to serve landing HTML:", (err as Error).message);
+      res.status(503).json({ error: "Landing HTML not available" });
+    }
+  });
 
   // ── PJ workspace HTML routes ──────────────────────────────────────────
   const sendPjWorkspace = (res: express.Response): void => {
@@ -429,36 +426,31 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.get("/pj-workspace", (_req, res) => sendPjWorkspace(res));
 
   // ── Admin UI ──────────────────────────────────────────────────────────
-  // Legacy static admin - in production, Next.js serves /admin page
-  if (nodeEnv !== "production") {
-    const ADMIN_HTML_FILE = path.join(PUBLIC_DIR, "admin.html");
-    app.get("/pj/admin", (_req, res) => {
-      try {
-        res.setHeader("Cache-Control", "no-store, max-age=0");
-        res.type("html").sendFile(ADMIN_HTML_FILE);
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error("Failed to serve admin HTML:", (err as Error).message);
-        res.status(503).json({ error: "Admin HTML not available" });
-      }
-    });
-  }
+  // Legacy static admin shell (separate from Next.js /admin page)
+  const ADMIN_HTML_FILE = path.join(PUBLIC_DIR, "admin.html");
+  app.get("/pj/admin", (_req, res) => {
+    try {
+      res.setHeader("Cache-Control", "no-store, max-age=0");
+      res.type("html").sendFile(ADMIN_HTML_FILE);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to serve admin HTML:", (err as Error).message);
+      res.status(503).json({ error: "Admin HTML not available" });
+    }
+  });
 
   // ── Quick Start / Systems Map ─────────────────────────────────────────
-  // Legacy route - keep for dev/legacy
-  if (nodeEnv !== "production") {
-    const GUIDE_HTML_FILE = path.join(PUBLIC_DIR, "guide.html");
-    app.get("/pj/guide", (_req, res) => {
-      try {
-        res.setHeader("Cache-Control", "no-store, max-age=0");
-        res.type("html").sendFile(GUIDE_HTML_FILE);
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error("Failed to serve guide HTML:", (err as Error).message);
-        res.status(503).json({ error: "Guide HTML not available" });
-      }
-    });
-  }
+  const GUIDE_HTML_FILE = path.join(PUBLIC_DIR, "guide.html");
+  app.get("/pj/guide", (_req, res) => {
+    try {
+      res.setHeader("Cache-Control", "no-store, max-age=0");
+      res.type("html").sendFile(GUIDE_HTML_FILE);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to serve guide HTML:", (err as Error).message);
+      res.status(503).json({ error: "Guide HTML not available" });
+    }
+  });
 
   // ── Auth gating for /api ──────────────────────────────────────────────
   app.use("/api", (req, res, next) => {
