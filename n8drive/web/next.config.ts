@@ -5,6 +5,19 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  async rewrites() {
+    const backendUrl = process.env.BACKEND_URL || "https://publiclogic-puddlejumper.fly.dev";
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
+      },
+      {
+        source: "/auth/:path*",
+        destination: `${backendUrl}/auth/:path*`,
+      },
+    ];
+  },
   async redirects() {
     return [
       // Legacy backend route — redirect to the frontend home page
