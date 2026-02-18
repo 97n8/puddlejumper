@@ -20,8 +20,8 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      // Legacy backend route — redirect to the frontend home page
-      { source: "/pj/admin", destination: "/", permanent: false },
+      // Redirect Next.js /admin to working backend admin
+      { source: "/admin", destination: "/pj/admin", permanent: false },
     ];
   },
   async headers() {
