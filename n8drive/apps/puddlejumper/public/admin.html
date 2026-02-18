@@ -786,7 +786,7 @@ function getCookie(n){const m=document.cookie.match(new RegExp("(?:^|; )"+n+"=([
 
 function authHeaders(){
   const h={"Content-Type":"application/json"};
-  const t=getCookie("pj_token")||localStorage.getItem("pj_token");
+  const t=getCookie("jwt")||getCookie("pj_token")||localStorage.getItem("pj_token");
   if(t) h["Authorization"]="Bearer "+t;
   const c=getCookie("csrf_token");
   if(c) h["x-csrf-token"]=c;
