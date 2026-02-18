@@ -540,7 +540,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     // Extend the returned object to include workspaceId and workspaceName
     return { ...userInfo, role: row.role, workspaceId: ws.id, workspaceName: ws.name } as typeof userInfo & { role: string; workspaceId: string; workspaceName: string };
   };
-  const oauthRouteOpts = { nodeEnv, oauthStateStore, onUserAuthenticated };
+  const oauthRouteOpts = { nodeEnv, oauthStateStore, onUserAuthenticated, frontendUrl: "https://pj.publiclogic.org/pj/admin" };
   app.use("/api", createOAuthRoutes(githubProvider, oauthRouteOpts));
   app.use("/api", createOAuthRoutes(googleProvider, oauthRouteOpts));
   app.use("/api", createOAuthRoutes(microsoftProvider, oauthRouteOpts));
