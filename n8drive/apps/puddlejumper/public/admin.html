@@ -27,8 +27,8 @@
 </div>
 
 <!-- Viewer banner -->
-<div class="viewer-banner">
-  <span>Viewing as guest — <a href="/api/auth/github/login">sign in</a> to manage approvals</span>
+<div class="viewer-banner" id="auth-status">
+  <span id="auth-status-text">Checking authentication...</span>
 </div>
 
 <!-- Tabs -->
@@ -1075,19 +1075,51 @@ window.addEventListener('hashchange',()=>{
     document.querySelectorAll('.oauth-optional').forEach(el=>el.style.display='inline-flex');
   }
   let isAuthenticated=false;
+  let userEmail='';
+  let userName='';
   try{
-    const res=await fetch('/api/me',{headers:authHeaders()});
+    const res=await fetch('/api/auth/status',{headers:authHeaders()});
     if(res.ok){
-      const me=await res.json();
-      userRole=me.role;
-      isAuthenticated=true;
-      if(me.workspaceName){
-        const chip=document.getElementById('ws-chip');
-        chip.textContent=me.workspaceName;
-        chip.style.display='inline-block';
+      const data=await res.json();
+      if(data.authenticated && data.user){
+        isAuthenticated=true;
+        userEmail=data.user.email||'';
+        userName=data.user.name||'';
+        userRole=data.user.role||'viewer';
+        const sub=data.user.sub;
+        // Optionally fetch workspace info
+        if(sub){
+          try{
+            const wsRes=await fetch('/api/workspace',{headers:authHeaders()});
+            if(wsRes.ok){
+              const ws=await wsRes.json();
+              if(ws.name){
+                const chip=document.getElementById('ws-chip');
+                chip.textContent=ws.name;
+                chip.style.display='inline-block';
+              }
+            }
+          }catch{}
+        }
       }
     }
   }catch{}
+  
+  // Update auth status banner
+  const statusBanner=document.getElementById('auth-status');
+  const statusText=document.getElementById('auth-status-text');
+  if(isAuthenticated){
+    statusBanner.style.background='var(--accent-dim)';
+    statusBanner.style.borderColor='rgba(0,229,160,0.3)';
+    const displayName=userName||userEmail||'Authenticated User';
+    const roleText=userRole==='admin'?' (Admin)':'';
+    statusText.innerHTML=`✓ Signed in as <strong>${displayName}</strong>${roleText} — <a href="/api/auth/logout" onclick="return confirm('Sign out?')">Sign out</a>`;
+  }else{
+    statusBanner.style.background='var(--yellow-dim)';
+    statusBanner.style.borderColor='rgba(245,200,66,0.3)';
+    statusText.innerHTML='Not signed in — <a href="#" onclick="document.getElementById(\'auth-gate\').scrollIntoView({behavior:\'smooth\'});return false">Sign in</a> to manage approvals';
+  }
+  
   if(isAuthenticated){
     const hash=location.hash.replace('#','');
     const tab=HASH_TAB[hash];
