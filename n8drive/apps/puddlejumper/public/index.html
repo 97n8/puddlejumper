@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,7 +33,8 @@
     </div>
 
     <div class="actions">
-      <a href="/pj/admin" class="btn">🎛️ Open Admin Panel</a>
+      <button id="signInBtn" class="btn" type="button" style="margin-bottom:8px;">🔑 Sign In</button>
+      <button id="adminPanelBtn" class="btn" type="button">🎛️ Open Admin Panel</button>
       <a href="/pj/guide" class="btn secondary">📚 Quick Start Guide</a>
       <a href="/health" class="btn secondary" target="_blank" rel="noopener noreferrer">🏥 System Health</a>
     </div>
@@ -90,6 +90,7 @@
   <script>
     // Unified token key
     const TOKEN_KEY = 'pj_token';
+    let isAuthenticated = false;
 
     function getCookie(name) {
       const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
@@ -103,6 +104,7 @@
     async function checkAuth() {
       const token = getStoredToken();
       if (!token) {
+        isAuthenticated = false;
         showAuthGate();
         return;
       }
@@ -112,12 +114,15 @@
           credentials: 'include'
         });
         if (res.ok) {
+          isAuthenticated = true;
           hideAuthGate();
         } else {
+          isAuthenticated = false;
           localStorage.removeItem(TOKEN_KEY);
           showAuthGate();
         }
       } catch (e) {
+        isAuthenticated = false;
         console.error('Auth check failed', e);
         showAuthGate();
       }
@@ -183,6 +188,34 @@
     document.getElementById('authClear').addEventListener('click', () => {
       document.getElementById('jwtInput').value = '';
       localStorage.removeItem(TOKEN_KEY);
+    });
+
+    // Add Sign In button logic
+    document.getElementById('signInBtn').addEventListener('click', () => {
+      showAuthGate();
+    });
+
+    // Admin Panel button logic
+    document.getElementById('adminPanelBtn').addEventListener('click', async () => {
+      const token = getStoredToken();
+      if (!token) {
+        showAuthGate();
+        return;
+      }
+      try {
+        const res = await fetch("/api/me", {
+          headers: { "Authorization": "Bearer " + token },
+          credentials: 'include'
+        });
+        if (res.ok) {
+          // Optionally, redirect to Vercel dashboard if that's the real admin UI
+          window.location.href = "/pj/admin";
+        } else {
+          showAuthGate();
+        }
+      } catch (e) {
+        showAuthGate();
+      }
     });
 
     // Check auth on page load
