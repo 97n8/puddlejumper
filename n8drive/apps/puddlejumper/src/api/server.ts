@@ -574,6 +574,12 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     store: connectorStore, stateHmacKey: connectorStateSecret,
   }));
 
+  // ── Redirects ────────────────────────────────────────────────────────────
+  // Redirect /admin to the working backend admin interface at /pj/admin
+  app.get("/admin", (req, res) => {
+    res.redirect(302, "/pj/admin");
+  });
+
   // ── Next.js Proxy (MUST BE LAST) ─────────────────────────────────────────
   // All frontend routes (/, /admin, /vault, etc.) are proxied to Next.js standalone server
   // This must be mounted after all API routes so Express handles APIs directly
