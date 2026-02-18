@@ -575,8 +575,11 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   }));
 
   // ── Redirects ────────────────────────────────────────────────────────────
-  // Redirect /admin to the working backend admin interface at /pj/admin
+  // Redirect /admin and /dashboard to the working backend admin interface at /pj/admin
   app.get("/admin", (req, res) => {
+    res.redirect(302, "/pj/admin");
+  });
+  app.get("/dashboard", (req, res) => {
     res.redirect(302, "/pj/admin");
   });
 
