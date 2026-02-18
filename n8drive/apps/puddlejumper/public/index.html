@@ -112,10 +112,21 @@
         </div>
       </div>
 
-      <div class="actions">
+      <div class="actions" style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-bottom:12px;">
+        <div style="margin-bottom:4px;font-size:14px;color:var(--text-dim);">
+          You only need to log in with one provider. Others can be added as connectors in the app.
+        </div>
         <a href="/api/auth/github/login" style="display:inline-flex;align-items:center;gap:8px;background:#24292e;color:#fff;padding:12px 24px;border-radius:var(--radius);font-size:1rem;font-weight:500;text-decoration:none;font-family:var(--font);transition:all 0.2s;">
           <svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
           Sign in with GitHub
+        </a>
+        <a href="/api/auth/google/login" style="display:inline-flex;align-items:center;gap:8px;background:#fff;color:#222;padding:12px 24px;border-radius:var(--radius);font-size:1rem;font-weight:500;text-decoration:none;font-family:var(--font);border:1px solid #dadce0;box-shadow:0 1px 2px rgba(60,64,67,.08);transition:all 0.2s;">
+          <svg width="20" height="20" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.36 1.22 8.3 2.97l6.18-6.18C34.64 2.7 29.74 0 24 0 14.82 0 6.73 5.82 2.69 14.09l7.19 5.59C11.27 13.36 17.13 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.22-.42-4.74H24v9.01h12.42c-.54 2.9-2.18 5.36-4.66 7.01l7.19 5.59C43.27 37.27 46.1 31.45 46.1 24.55z"/><path fill="#FBBC05" d="M10.88 28.68a14.5 14.5 0 010-9.36l-7.19-5.59A23.94 23.94 0 000 24c0 3.77.9 7.34 2.69 10.91l7.19-5.59z"/><path fill="#EA4335" d="M24 46c6.48 0 11.92-2.15 15.89-5.86l-7.19-5.59c-2.01 1.35-4.59 2.15-8.7 2.15-6.87 0-12.73-3.86-15.12-9.09l-7.19 5.59C6.73 42.18 14.82 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></g></svg>
+          Sign in with Google
+        </a>
+        <a href="/api/auth/microsoft/login" style="display:inline-flex;align-items:center;gap:8px;background:#f3f3f3;color:#2F2F2F;padding:12px 24px;border-radius:var(--radius);font-size:1rem;font-weight:500;text-decoration:none;font-family:var(--font);border:1px solid #e5e5e5;transition:all 0.2s;">
+          <svg width="20" height="20" viewBox="0 0 24 24"><g><rect fill="#F25022" x="1" y="1" width="10" height="10"/><rect fill="#7FBA00" x="13" y="1" width="10" height="10"/><rect fill="#00A4EF" x="1" y="13" width="10" height="10"/><rect fill="#FFB900" x="13" y="13" width="10" height="10"/></g></svg>
+          Sign in with Microsoft
         </a>
         <a href="/pj/guide" class="btn secondary">📚 Quick Start Guide</a>
       </div>
