@@ -32,6 +32,7 @@ function in `pages/`:
 | `#/projects` | Projects | `pages/projects.js` |
 | `#/playbooks` | Playbooks | `pages/playbooks.js` |
 | `#/tools` | Tools | `pages/tools.js` |
+| `#/puddlejumper` | ⚡ PuddleJumper | `pages/puddlejumper.js` |
 | `#/settings` | Settings | `pages/settings.js` |
 
 Routing is handled by `lib/router.js`; the route table lives in `app.js`

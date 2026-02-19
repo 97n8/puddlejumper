@@ -14,6 +14,7 @@ import { renderPlaybooks } from "./pages/playbooks.js";
 import { renderTools } from "./pages/tools.js";
 import { renderSettings } from "./pages/settings.js";
 import { renderAgenda } from "./pages/agenda.js";
+import { renderPuddleJumper } from "./pages/puddlejumper.js";
 
 function actionNode(a) {
   if (a.href) {
@@ -107,7 +108,7 @@ function renderNotAllowed(appEl, { email, allowedEmails, onLogout }) {
   appEl.appendChild(body);
 }
 
-function buildShell({ onLogout, whoText, pjAdminUrl }) {
+function buildShell({ onLogout, whoText }) {
   const sidebarTop = el("div", { class: "sidebar__top" }, [
     el("div", { class: "sidebar__who" }, [
       el("b", {}, ["Signed in"]),
@@ -125,6 +126,7 @@ function buildShell({ onLogout, whoText, pjAdminUrl }) {
     { path: "/projects", label: "Projects" },
     { path: "/playbooks", label: "Playbooks" },
     { path: "/tools", label: "Tools" },
+    { path: "/puddlejumper", label: "⚡ PuddleJumper" },
     { path: "/settings", label: "Settings" }
   ];
 
@@ -135,14 +137,6 @@ function buildShell({ onLogout, whoText, pjAdminUrl }) {
     a.dataset.path = n.path;
     return a;
   }));
-
-  // PJ link (external — opens governance engine in new tab)
-  if (pjAdminUrl) {
-    const pjLink = el("a", { class: "nav__external", href: pjAdminUrl, target: "_blank", rel: "noreferrer" }, [
-      el("span", {}, ["⚡ PuddleJumper"])
-    ]);
-    nav.appendChild(pjLink);
-  }
 
   const sidebar = el("aside", { class: "sidebar" }, [sidebarTop, nav]);
 
@@ -180,6 +174,7 @@ const PAGES = {
   "/projects": renderProjects,
   "/playbooks": renderPlaybooks,
   "/tools": renderTools,
+  "/puddlejumper": renderPuddleJumper,
   "/settings": renderSettings
 };
 
@@ -217,8 +212,7 @@ async function main() {
 
   const shell = buildShell({
     onLogout: () => auth.logout(),
-    whoText: userEmail,
-    pjAdminUrl: cfg.puddlejumper?.adminUrl || null
+    whoText: userEmail
   });
 
   clear(appEl);

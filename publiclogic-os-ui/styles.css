@@ -593,3 +593,200 @@ a.btn {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* ── PuddleJumper page ──────────────────────────────────────────────────────── */
+
+.btn--pj {
+  border-color: rgba(52, 211, 153, 0.32);
+  background: rgba(52, 211, 153, 0.14);
+  color: rgba(52, 211, 153, 0.98);
+}
+
+.pj-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.pj-hero__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pj-hero__mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(52, 211, 153, 0.35), transparent 55%),
+    linear-gradient(180deg, rgba(0,0,0,0.32), rgba(0,0,0,0.12));
+  border: 1px solid rgba(52, 211, 153, 0.28);
+}
+
+.pj-hero__title {
+  font-family: var(--font-serif);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.pj-hero__sub {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.pj-session-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.pj-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.pj-dot--ok {
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.55);
+}
+
+.pj-dot--none {
+  background: rgba(247, 245, 239, 0.30);
+}
+
+.pj-session-active,
+.pj-session-none {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pj-session-active { color: var(--accent); }
+.pj-session-none   { color: var(--muted); }
+
+/* Boundary notice */
+.pj-boundary-card {
+  border-color: rgba(251, 191, 36, 0.22);
+  background: rgba(251, 191, 36, 0.06);
+}
+
+.pj-boundary-inner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.pj-boundary-icon {
+  font-size: 22px;
+  color: rgba(251, 191, 36, 0.85);
+  flex-shrink: 0;
+}
+
+.pj-boundary-title {
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(251, 191, 36, 0.95);
+}
+
+/* View cards grid */
+.pj-view-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.14);
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.pj-view-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(52, 211, 153, 0.24);
+  background: rgba(52, 211, 153, 0.08);
+}
+
+.pj-view-card__icon {
+  font-size: 20px;
+  color: var(--accent);
+}
+
+.pj-view-card__label {
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.pj-view-card__desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.pj-view-card__arrow {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-top: auto;
+}
+
+/* Integration info */
+.pj-info-grid {
+  display: grid;
+  gap: 0;
+}
+
+.pj-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.pj-info-row:last-child {
+  border-bottom: none;
+}
+
+.pj-info-label {
+  font-weight: 700;
+  color: var(--muted);
+  min-width: 140px;
+  flex-shrink: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pj-info-value {
+  color: var(--ink);
+  word-break: break-all;
+}
+
+code.pj-info-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  background: rgba(0,0,0,0.20);
+  border: 1px solid rgba(247, 245, 239, 0.12);
+  padding: 2px 6px;
+  border-radius: 10px;
+  color: rgba(52, 211, 153, 0.95);
+}
