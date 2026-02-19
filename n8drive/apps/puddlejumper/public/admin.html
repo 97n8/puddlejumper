@@ -1059,43 +1059,29 @@ window.addEventListener('hashchange',()=>{
 
 // ── Init ──────────────────────────────────────────────────
 (async function init(){
+  // /api/me returns 200+data when authenticated, 401 when not.
+  // It provides sub, email, name, role, workspaceId, workspaceName in one call.
   let isAuthenticated=false;
   let userEmail='';
   let userName='';
+  let wsName='';
   try{
-    const res=await fetch('/api/auth/status',{credentials:'include',headers:authHeaders()});
+    const res=await fetch('/api/me',{credentials:'include',headers:authHeaders()});
     if(res.ok){
-      const data=await res.json();
-      // Show optional OAuth providers if server reports them
-      const providers=data.providers||[];
-      document.querySelectorAll('.oauth-optional').forEach(el=>{
-        if(providers.length===0||providers.includes(el.dataset.provider))
-          el.style.display='inline-flex';
-      });
-      if(data.authenticated && data.user){
-        isAuthenticated=true;
-        userEmail=data.user.email||'';
-        userName=data.user.name||'';
-        userRole=data.user.role||'viewer';
-        // Fetch workspace name
-        try{
-          const wsRes=await fetch('/api/workspace',{credentials:'include',headers:authHeaders()});
-          if(wsRes.ok){
-            const ws=await wsRes.json();
-            if(ws.name){
-              const chip=document.getElementById('ws-chip');
-              chip.textContent=ws.name;
-              chip.style.display='inline-block';
-            }
-          }
-        }catch{}
-      }
-    }else{
-      // /api/auth/status unavailable — show all optional providers as fallback
-      document.querySelectorAll('.oauth-optional').forEach(el=>el.style.display='inline-flex');
+      const me=await res.json();
+      isAuthenticated=true;
+      userEmail=me.email||'';
+      userName=me.name||'';
+      userRole=me.role||'viewer';
+      wsName=me.workspaceName||'';
     }
-  }catch{
-    document.querySelectorAll('.oauth-optional').forEach(el=>el.style.display='inline-flex');
+  }catch{}
+
+  // Update workspace chip
+  if(wsName){
+    const chip=document.getElementById('ws-chip');
+    chip.textContent=wsName;
+    chip.style.display='inline-block';
   }
 
   // Update auth status banner
