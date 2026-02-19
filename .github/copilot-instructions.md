@@ -110,7 +110,7 @@ pnpm run test:pj        # Test PuddleJumper
 
 ### Database (SQLite)
 - **Durability Pragmas**: All SQLite stores must use:
-  ```javascript
+  ```sql
   journal_mode = WAL
   synchronous = NORMAL
   wal_autocheckpoint = 1000
