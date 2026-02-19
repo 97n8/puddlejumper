@@ -2,16 +2,16 @@
 //
 // Fill in the missing values (clientId, tenantId).
 // Your URLs given in chat are already wired:
-// - https://www.publiclogic.org/HMLP/
+// - https://www.publiclogic.org/os
 // - https://publiclogic978.sharepoint.com/sites/PL
 window.PUBLICLOGIC_OS_CONFIG = {
   envName: "prod",
   msal: {
     clientId: "1b53d140-0779-4a64-943c-a11ba19ec0ce",
-    tenantId: "12879dad-927b-419b-8a2e-fda32e1732be",
-    redirectUri: "https://www.publiclogic.org/HMLP/",
-    postLogoutRedirectUri: "https://www.publiclogic.org/HMLP/",
-    cacheLocation: "sessionStorage"
+    tenantId: "12879da8-d927-419b-8a2e-fda32e1732be",
+    redirectUri: "https://www.publiclogic.org/os",
+    postLogoutRedirectUri: "https://www.publiclogic.org/os",
+    cacheLocation: "localStorage"
   },
   access: {
     // NOTE: Assuming Allie's email is allie@publiclogic.org (confirm if different).
