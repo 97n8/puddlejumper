@@ -334,7 +334,9 @@ function getCookie(n){const m=document.cookie.match(new RegExp("(?:^|; )"+n+"=([
 
 function authHeaders(){
   const h={"Content-Type":"application/json"};
-  const t=getCookie("jwt")||getCookie("pj_token")||localStorage.getItem("pj_token");
+  // jwt is httpOnly — can't read from JS; browser sends it automatically via credentials:'include'
+  // Fall back to localStorage token if present (manual JWT paste on index.html)
+  const t=localStorage.getItem("pj_token");
   if(t) h["Authorization"]="Bearer "+t;
   const c=getCookie("csrf_token");
   if(c) h["x-csrf-token"]=c;
@@ -342,7 +344,8 @@ function authHeaders(){
 }
 
 async function api(path,opts={}){
-  const res=await fetch(path,{headers:authHeaders(),...opts});
+  const {headers:extraHeaders,...rest}=opts;
+  const res=await fetch(path,{credentials:'include',headers:{...authHeaders(),...extraHeaders},...rest});
   if(res.status===401||res.status===403){showAuthGate();throw new Error("Unauthorized")}
   return res.json();
 }
@@ -1010,7 +1013,7 @@ function closeUpgradeModal(e){if(!e||e.target===document.getElementById('upgrade
 async function submitPlanChange(){
   const plan=document.querySelector('input[name="plan-pick"]:checked')?.value;
   try{
-    const me=await fetch('/api/me',{headers:authHeaders()});
+    const me=await fetch('/api/me',{credentials:'include',headers:authHeaders()});
     if(!me.ok){toast('Failed to get workspace','error');return}
     const meData=await me.json();
     const json=await api(`/api/admin/workspace/${encodeURIComponent(meData.workspaceId)}/plan`,{method:'PATCH',body:JSON.stringify({plan})});
@@ -1060,7 +1063,7 @@ window.addEventListener('hashchange',()=>{
   let userEmail='';
   let userName='';
   try{
-    const res=await fetch('/api/auth/status',{headers:authHeaders()});
+    const res=await fetch('/api/auth/status',{credentials:'include',headers:authHeaders()});
     if(res.ok){
       const data=await res.json();
       // Show optional OAuth providers if server reports them
@@ -1076,7 +1079,7 @@ window.addEventListener('hashchange',()=>{
         userRole=data.user.role||'viewer';
         // Fetch workspace name
         try{
-          const wsRes=await fetch('/api/workspace',{headers:authHeaders()});
+          const wsRes=await fetch('/api/workspace',{credentials:'include',headers:authHeaders()});
           if(wsRes.ok){
             const ws=await wsRes.json();
             if(ws.name){

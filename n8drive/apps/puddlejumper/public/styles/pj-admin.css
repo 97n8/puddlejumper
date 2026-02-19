@@ -68,7 +68,7 @@ a:hover { text-decoration: underline; }
 .header .guide-link:hover { color: var(--text); border-color: var(--text-dim); text-decoration: none; }
 
 .tabs {
-  display: flex; gap: 0; background: var(--surface); border-bottom: 1px solid var(--border);
+  display: none; gap: 0; background: var(--surface); border-bottom: 1px solid var(--border);
   padding: 0 24px; overflow-x: auto;
 }
 .tab {
