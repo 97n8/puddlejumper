@@ -17,6 +17,26 @@ It is designed for you + Allie to run the business from one place:
 - A public marketing site.
 - A new SaaS product.
 
+## Route → File Map
+
+The app uses hash-based routing (`#/path`). Each route maps to a render
+function in `pages/`:
+
+| URL hash | Label | Source file |
+|---|---|---|
+| `#/` or `#/dashboard` | Command Center | `pages/dashboard.js` |
+| `#/today` | Today | `pages/today.js` |
+| `#/agenda` | Agenda | `pages/agenda.js` |
+| `#/tasks` | Tasks | `pages/tasks.js` |
+| `#/pipeline` | Pipeline | `pages/pipeline.js` |
+| `#/projects` | Projects | `pages/projects.js` |
+| `#/playbooks` | Playbooks | `pages/playbooks.js` |
+| `#/tools` | Tools | `pages/tools.js` |
+| `#/settings` | Settings | `pages/settings.js` |
+
+Routing is handled by `lib/router.js`; the route table lives in `app.js`
+(the `PAGES` object).
+
 ## Quick Start (Local)
 This is a static site. You can serve it with Ruby:
 
