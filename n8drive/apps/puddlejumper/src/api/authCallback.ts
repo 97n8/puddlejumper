@@ -28,7 +28,7 @@ export default async function authCallback(req: Request, res: Response) {
     }
 
     setJwtCookieOnResponse(res, token, { maxAge: Number(process.env.JWT_MAX_AGE_SECONDS ?? 3600), sameSite: 'lax' });
-    res.redirect('https://pj.publiclogic.org/dashboard');
+    res.redirect('/pj/admin');
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('auth callback error', err);
