@@ -3,6 +3,7 @@ import { getConfig, validateConfig } from "./lib/config.js";
 import { createAuth, getSignedInEmail, isAllowedAccount } from "./lib/auth.js";
 import { createSharePointClient } from "./lib/sharepoint.js";
 import { getRoute, onRouteChange, setRoute } from "./lib/router.js";
+import { establishPjSession } from "./lib/pj.js";
 
 import { renderDashboard } from "./pages/dashboard.js";
 import { renderToday } from "./pages/today.js";
@@ -106,7 +107,7 @@ function renderNotAllowed(appEl, { email, allowedEmails, onLogout }) {
   appEl.appendChild(body);
 }
 
-function buildShell({ onLogout, whoText }) {
+function buildShell({ onLogout, whoText, pjAdminUrl }) {
   const sidebarTop = el("div", { class: "sidebar__top" }, [
     el("div", { class: "sidebar__who" }, [
       el("b", {}, ["Signed in"]),
@@ -134,6 +135,14 @@ function buildShell({ onLogout, whoText }) {
     a.dataset.path = n.path;
     return a;
   }));
+
+  // PJ link (external — opens governance engine in new tab)
+  if (pjAdminUrl) {
+    const pjLink = el("a", { class: "nav__external", href: pjAdminUrl, target: "_blank", rel: "noreferrer" }, [
+      el("span", {}, ["⚡ PuddleJumper"])
+    ]);
+    nav.appendChild(pjLink);
+  }
 
   const sidebar = el("aside", { class: "sidebar" }, [sidebarTop, nav]);
 
@@ -208,11 +217,17 @@ async function main() {
 
   const shell = buildShell({
     onLogout: () => auth.logout(),
-    whoText: userEmail
+    whoText: userEmail,
+    pjAdminUrl: cfg.puddlejumper?.adminUrl || null
   });
 
   clear(appEl);
   appEl.appendChild(shell.shell);
+
+  // Establish PJ session in the background (SSO bridge)
+  // This exchanges the OS MSAL token with PJ so the user can navigate
+  // to PuddleJumper without logging in again.
+  establishPjSession(auth).catch(() => { /* best-effort — non-fatal */ });
 
   const ctx = {
     cfg,

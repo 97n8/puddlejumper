@@ -1,6 +1,18 @@
 import type { Request, Response } from 'express';
-import { setJwtCookieOnResponse } from '@publiclogic/core';
 
+/**
+ * Legacy /auth/callback endpoint.
+ *
+ * Previously exchanged a providerToken with Logic Commons.  That flow is
+ * superseded by the standard OAuth routes (/api/auth/microsoft/login, etc.)
+ * and the new token-exchange endpoint (/api/auth/token-exchange).
+ *
+ * This handler now redirects callers to the standard Microsoft OAuth login
+ * so existing bookmarks and integrations still work.
+ */
+export default function authCallback(_req: Request, res: Response) {
+  const frontendUrl = process.env.FRONTEND_URL || 'https://pj.publiclogic.org';
+  res.redirect(`${frontendUrl}/login`);
 export default async function authCallback(req: Request, res: Response) {
   try {
     const providerToken = (req.query.providerToken as string) || (req.body && (req.body.providerToken as string));
@@ -28,7 +40,7 @@ export default async function authCallback(req: Request, res: Response) {
     }
 
     setJwtCookieOnResponse(res, token, { maxAge: Number(process.env.JWT_MAX_AGE_SECONDS ?? 3600), sameSite: 'lax' });
-    res.redirect('https://pj.publiclogic.org/dashboard');
+    res.redirect('/pj/admin');
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('auth callback error', err);
