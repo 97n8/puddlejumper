@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#062017" />
+    <title>PublicLogic Portal — Sign In</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Sora:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/pj-signin.css" />
+  </head>
+  <body>
+    <div class="bg" aria-hidden="true"></div>
+
+    <!-- PJ system navigation -->
+    <nav class="topnav" aria-label="PuddleJumper navigation">
+      <a href="/pj" class="topnav__brand">
+        <div class="topnav__mark" aria-hidden="true">PJ</div>
+        <span class="topnav__title">PuddleJumper</span>
+      </a>
+      <div class="topnav__links">
+        <a href="/pj" class="topnav__link">Home</a>
+        <a href="/pj/guide" class="topnav__link">Guide</a>
+        <a href="/pj/admin" class="topnav__link">Admin</a>
+        <a href="/pj/signin" class="topnav__link topnav__link--active">Sign In</a>
+      </div>
+    </nav>
+
+    <div class="wrap">
+      <main class="shell">
+        <section class="hero" aria-label="PublicLogic overview">
+          <div class="hero__top">
+            <div class="mark" aria-hidden="true">PL</div>
+            <div>
+              <h1 class="brandname">PublicLogic</h1>
+              <p class="tagline">Smarter systems. Stronger futures.</p>
+              <div class="badge" aria-label="Portal sign in">
+                <span aria-hidden="true">●</span>
+                Portal sign in
+              </div>
+            </div>
+          </div>
+
+          <div class="hero__art" aria-hidden="true">
+            <div class="duck">
+              <svg viewBox="0 0 900 360" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="w" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="rgba(52, 211, 153, 0.35)" />
+                    <stop offset="1" stop-color="rgba(52, 211, 153, 0.05)" />
+                  </linearGradient>
+                  <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#34d399" stop-opacity="0.92" />
+                    <stop offset="1" stop-color="#10b981" stop-opacity="0.72" />
+                  </linearGradient>
+                  <linearGradient id="duckBody" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#f8f7f2" />
+                    <stop offset="1" stop-color="#d8d6ce" />
+                  </linearGradient>
+                  <linearGradient id="duckWing" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#efece3" />
+                    <stop offset="1" stop-color="#cfcbbf" />
+                  </linearGradient>
+                  <linearGradient id="beak" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#fbbf24" />
+                    <stop offset="1" stop-color="#f59e0b" />
+                  </linearGradient>
+                </defs>
+
+                <!-- water -->
+                <path
+                  d="M0 248 C 120 220, 220 290, 340 248 C 460 206, 560 290, 680 248 C 780 214, 840 268, 900 248 L 900 360 L 0 360 Z"
+                  fill="url(#w)"
+                  opacity="0.85"
+                />
+                <path
+                  d="M30 252 C 140 226, 220 278, 340 252 C 460 226, 540 278, 660 252 C 760 230, 820 266, 870 252"
+                  fill="none"
+                  stroke="rgba(248,247,242,0.20)"
+                  stroke-width="2"
+                />
+
+                <!-- subtle gear silhouettes -->
+                <g opacity="0.20" fill="none" stroke="rgba(52, 211, 153, 0.90)" stroke-width="2">
+                  <circle cx="248" cy="302" r="28" />
+                  <circle cx="338" cy="318" r="18" />
+                  <circle cx="520" cy="308" r="24" />
+                  <circle cx="610" cy="326" r="14" />
+                </g>
+
+                <!-- duck -->
+                <g transform="translate(210 64)">
+                  <!-- body -->
+                  <path
+                    d="M120 178c-74 0-124-28-124-68 0-34 40-62 104-66 18-38 52-62 94-62 52 0 98 36 112 86 64 6 104 34 104 70 0 44-60 72-150 72H120z"
+                    fill="url(#duckBody)"
+                    opacity="0.98"
+                  />
+                  <path
+                    d="M70 134c28-24 68-38 114-38 64 0 110 28 110 62 0 30-40 54-104 60-62 6-120-10-140-34 2-18 8-34 20-50z"
+                    fill="url(#duckWing)"
+                    opacity="0.92"
+                  />
+
+                  <!-- head -->
+                  <path
+                    d="M318 118c0-48 40-86 90-86 50 0 90 38 90 86 0 48-40 86-90 86-50 0-90-38-90-86z"
+                    fill="url(#g)"
+                    opacity="0.95"
+                  />
+
+                  <!-- eye -->
+                  <circle cx="446" cy="98" r="10" fill="rgba(0,0,0,0.72)" />
+                  <circle cx="450" cy="94" r="4" fill="rgba(255,255,255,0.85)" />
+
+                  <!-- beak -->
+                  <path d="M492 116 L 610 144 L 492 172 Z" fill="url(#beak)" />
+                  <path d="M492 138 L 590 144 L 492 172 Z" fill="rgba(0,0,0,0.08)" />
+
+                  <!-- collar highlight -->
+                  <path
+                    d="M356 166c20-8 46-10 74 0"
+                    fill="none"
+                    stroke="rgba(248, 247, 242, 0.46)"
+                    stroke-width="4"
+                    stroke-linecap="round"
+                  />
+                </g>
+              </svg>
+            </div>
+          </div>
+
+          <div class="features" aria-label="Product pillars">
+            <article class="feature">
+              <div class="feature__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3v3" />
+                  <path d="M21 12h-3" />
+                  <path d="M12 21v-3" />
+                  <path d="M3 12h3" />
+                  <path d="M17.6 6.4l-2.1 2.1" />
+                  <path d="M8.5 15.5l-2.1 2.1" />
+                  <path d="M6.4 6.4l2.1 2.1" />
+                  <path d="M15.5 15.5l2.1 2.1" />
+                  <path d="M14.5 12a2.5 2.5 0 1 1-5 0a2.5 2.5 0 0 1 5 0Z" />
+                </svg>
+              </div>
+              <h3 class="feature__title">Integrate</h3>
+              <p class="feature__text">Connect data and processes with precision.</p>
+            </article>
+
+            <article class="feature">
+              <div class="feature__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 20h16" />
+                  <path d="M6 20V8" />
+                  <path d="M10 20V8" />
+                  <path d="M14 20V8" />
+                  <path d="M18 20V8" />
+                  <path d="M3 8h18" />
+                  <path d="M7 8V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3" />
+                </svg>
+              </div>
+              <h3 class="feature__title">Govern</h3>
+              <p class="feature__text">Make accountable decisions with authority.</p>
+            </article>
+
+            <article class="feature">
+              <div class="feature__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2a7 7 0 1 0 7 7" />
+                  <path d="M12 2v7l5 5" />
+                  <path d="M2 12a10 10 0 0 0 20 0" />
+                </svg>
+              </div>
+              <h3 class="feature__title">Sustain</h3>
+              <p class="feature__text">Manage finite resources for endurance.</p>
+            </article>
+          </div>
+
+          <div class="bottomline">Governance on the move.</div>
+        </section>
+
+        <section class="card" aria-label="Sign in form">
+          <div class="card__inner">
+            <h2>Sign in</h2>
+            <p class="sub">Use your municipal email + password, or continue with SSO.</p>
+
+            <div class="error" id="formError" role="alert" aria-live="polite">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v5" />
+                <path d="M12 16h.01" />
+              </svg>
+              <div id="errorText">We couldn't sign you in. Check your email and password and try again.</div>
+            </div>
+
+            <div class="success" id="formSuccess" role="status" aria-live="polite">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 12l3 3 5-5" />
+              </svg>
+              <div id="successText">Signed in — redirecting to dashboard…</div>
+            </div>
+
+            <form id="loginForm" novalidate>
+              <label for="email">
+                Email address
+                <div class="field">
+                  <input
+                    class="input"
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="you@municipality.gov"
+                    inputmode="email"
+                    autocomplete="email"
+                    autocapitalize="none"
+                    spellcheck="false"
+                    required
+                  />
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="2" y="4" width="20" height="16" rx="3" />
+                    <path d="M22 5L12 13 2 5" />
+                  </svg>
+                </div>
+              </label>
+
+              <label for="password">
+                Password
+                <div class="field">
+                  <input
+                    class="input"
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    minlength="8"
+                    required
+                  />
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    <circle cx="12" cy="16" r="1" />
+                  </svg>
+
+                  <button class="toggle" id="togglePw" type="button" aria-pressed="false" aria-label="Show password">
+                    <svg id="eyeOpen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    <svg id="eyeClosed" class="eye-hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                    <span id="togglePwText">Show</span>
+                  </button>
+                </div>
+              </label>
+
+              <div class="row">
+                <label class="remember">
+                  <input type="checkbox" name="remember" />
+                  Remember me
+                </label>
+                <a class="link" href="/pj" aria-label="Back to PuddleJumper home">Back to Home</a>
+              </div>
+
+              <button class="btn" id="signinBtn" type="submit" aria-busy="false">
+                Sign in
+              </button>
+
+              <div class="divider" aria-hidden="true">or continue with</div>
+
+              <div class="sso-group">
+                <a class="btn-sso btn-sso--microsoft" href="/api/auth/microsoft/login">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <rect x="1" y="1" width="10" height="10" fill="#f25022"/>
+                    <rect x="13" y="1" width="10" height="10" fill="#7fba00"/>
+                    <rect x="1" y="13" width="10" height="10" fill="#00a4ef"/>
+                    <rect x="13" y="13" width="10" height="10" fill="#ffb900"/>
+                  </svg>
+                  Municipal SSO (Microsoft)
+                </a>
+
+                <a class="btn-sso" href="/api/auth/github/login">
+                  <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                  </svg>
+                  Sign in with GitHub
+                </a>
+
+                <a class="btn-sso" href="/api/auth/google/login">
+                  <svg viewBox="0 0 48 48" aria-hidden="true">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                  </svg>
+                  Sign in with Google
+                </a>
+              </div>
+
+              <div class="foot">
+                Already signed in? <a class="link" href="/pj/admin">Go to Dashboard →</a>
+              </div>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="/scripts/pj-signin.js"></script>
+  </body>
+</html>

@@ -453,7 +453,20 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     }
   });
 
-   // ── Auth gating for /api ──────────────────────────────────────────────
+  // ── Portal Sign-In ───────────────────────────────────────────────────
+  const SIGNIN_HTML_FILE = path.join(PUBLIC_DIR, "portal-signin.html");
+  app.get("/pj/signin", (_req, res) => {
+    try {
+      res.setHeader("Cache-Control", "no-store, max-age=0");
+      res.type("html").sendFile(SIGNIN_HTML_FILE);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to serve signin HTML:", (err as Error).message);
+      res.status(503).json({ error: "Signin HTML not available" });
+    }
+  });
+
+  // ── Auth gating for /api ──────────────────────────────────────────────
   app.use("/api", (req, res, next) => {
     if (req.method === "POST" && req.path === "/login") { next(); return; }
     if (req.method === "POST" && req.path === "/refresh") { next(); return; }

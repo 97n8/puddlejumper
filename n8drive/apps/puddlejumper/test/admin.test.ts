@@ -273,6 +273,27 @@ describe("Admin HTML page — via full createApp", () => {
     expect(res.body.data).toHaveProperty("approvalsCreated");
     expect(res.body.data).toHaveProperty("avgApprovalTimeSec");
   });
+
+  it("GET /pj/signin serves the portal sign-in HTML page", async () => {
+    const dataDir = path.resolve(__dirname, "../data");
+    fs.mkdirSync(dataDir, { recursive: true });
+    process.env.CONNECTOR_STATE_SECRET = "test-signin-secret";
+
+    const { createApp } = await import("../src/api/server.js");
+    const app = createApp("test");
+
+    const res = await request(app)
+      .get("/pj/signin")
+      .expect(200);
+
+    expect(res.type).toMatch(/html/);
+    expect(res.text).toContain("PublicLogic Portal");
+    expect(res.text).toContain("pj-signin.js");
+    expect(res.text).toContain("/api/auth/microsoft/login");
+    expect(res.text).toContain("/api/auth/github/login");
+    expect(res.text).toContain("/api/auth/google/login");
+    expect(res.text).toContain("/pj/admin");
+  });
 });
 
 describe("Admin stats reflect chain state", () => {
