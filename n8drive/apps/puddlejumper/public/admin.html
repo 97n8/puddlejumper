@@ -14,7 +14,7 @@
 <!-- Header -->
 <div class="header">
   <div class="header-brand">
-    <div class="logo">Puddle<span>Jumper</span></div>
+    <a class="logo" href="/">Puddle<span>Jumper</span></a>
     <div class="sep"></div>
     <div class="subtitle">Control Plane</div>
     <div class="ws-chip" id="ws-chip"></div>
@@ -278,7 +278,7 @@
 </div>
 
 <!-- ── PRR DETAIL PANEL ──────────────────────────────────── -->
-<div id="prr-detail-overlay" onclick="closePRRDetail(event)">
+<div class="overlay" id="prr-detail-overlay" onclick="closePRRDetail(event)">
   <div class="panel">
     <div class="panel-head">
       <h3 class="mono">PRR Detail</h3>
@@ -334,7 +334,9 @@ function getCookie(n){const m=document.cookie.match(new RegExp("(?:^|; )"+n+"=([
 
 function authHeaders(){
   const h={"Content-Type":"application/json"};
-  const t=getCookie("jwt")||getCookie("pj_token")||localStorage.getItem("pj_token");
+  // jwt is httpOnly — can't read from JS; browser sends it automatically via credentials:'include'
+  // Fall back to localStorage token if present (manual JWT paste on index.html)
+  const t=localStorage.getItem("pj_token");
   if(t) h["Authorization"]="Bearer "+t;
   const c=getCookie("csrf_token");
   if(c) h["x-csrf-token"]=c;
@@ -342,7 +344,8 @@ function authHeaders(){
 }
 
 async function api(path,opts={}){
-  const res=await fetch(path,{headers:authHeaders(),...opts});
+  const {headers:extraHeaders,...rest}=opts;
+  const res=await fetch(path,{credentials:'include',headers:{...authHeaders(),...extraHeaders},...rest});
   if(res.status===401||res.status===403){showAuthGate();throw new Error("Unauthorized")}
   return res.json();
 }
@@ -1010,7 +1013,7 @@ function closeUpgradeModal(e){if(!e||e.target===document.getElementById('upgrade
 async function submitPlanChange(){
   const plan=document.querySelector('input[name="plan-pick"]:checked')?.value;
   try{
-    const me=await fetch('/api/me',{headers:authHeaders()});
+    const me=await fetch('/api/me',{credentials:'include',headers:authHeaders()});
     if(!me.ok){toast('Failed to get workspace','error');return}
     const meData=await me.json();
     const json=await api(`/api/admin/workspace/${encodeURIComponent(meData.workspaceId)}/plan`,{method:'PATCH',body:JSON.stringify({plan})});
@@ -1056,55 +1059,45 @@ window.addEventListener('hashchange',()=>{
 
 // ── Init ──────────────────────────────────────────────────
 (async function init(){
-  // Probe which OAuth providers are configured and show their buttons
-  try{
-    const ar=await fetch('/api/auth/status',{headers:authHeaders()});
-    if(ar.ok){
-      const ad=await ar.json();
-      const providers=ad.providers||[];
-      document.querySelectorAll('.oauth-optional').forEach(el=>{
-        const p=el.dataset.provider;
-        if(providers.includes(p)) el.style.display='inline-flex';
-      });
-    }else{
-      // If /api/auth/status isn't available, show all providers as a fallback
-      document.querySelectorAll('.oauth-optional').forEach(el=>el.style.display='inline-flex');
-    }
-  }catch{
-    // Network error — show all providers as fallback
-    document.querySelectorAll('.oauth-optional').forEach(el=>el.style.display='inline-flex');
-  }
   let isAuthenticated=false;
   let userEmail='';
   let userName='';
   try{
-    const res=await fetch('/api/auth/status',{headers:authHeaders()});
+    const res=await fetch('/api/auth/status',{credentials:'include',headers:authHeaders()});
     if(res.ok){
       const data=await res.json();
+      // Show optional OAuth providers if server reports them
+      const providers=data.providers||[];
+      document.querySelectorAll('.oauth-optional').forEach(el=>{
+        if(providers.length===0||providers.includes(el.dataset.provider))
+          el.style.display='inline-flex';
+      });
       if(data.authenticated && data.user){
         isAuthenticated=true;
         userEmail=data.user.email||'';
         userName=data.user.name||'';
         userRole=data.user.role||'viewer';
-        const sub=data.user.sub;
-        // Optionally fetch workspace info
-        if(sub){
-          try{
-            const wsRes=await fetch('/api/workspace',{headers:authHeaders()});
-            if(wsRes.ok){
-              const ws=await wsRes.json();
-              if(ws.name){
-                const chip=document.getElementById('ws-chip');
-                chip.textContent=ws.name;
-                chip.style.display='inline-block';
-              }
+        // Fetch workspace name
+        try{
+          const wsRes=await fetch('/api/workspace',{credentials:'include',headers:authHeaders()});
+          if(wsRes.ok){
+            const ws=await wsRes.json();
+            if(ws.name){
+              const chip=document.getElementById('ws-chip');
+              chip.textContent=ws.name;
+              chip.style.display='inline-block';
             }
-          }catch{}
-        }
+          }
+        }catch{}
       }
+    }else{
+      // /api/auth/status unavailable — show all optional providers as fallback
+      document.querySelectorAll('.oauth-optional').forEach(el=>el.style.display='inline-flex');
     }
-  }catch{}
-  
+  }catch{
+    document.querySelectorAll('.oauth-optional').forEach(el=>el.style.display='inline-flex');
+  }
+
   // Update auth status banner
   const statusBanner=document.getElementById('auth-status');
   const statusText=document.getElementById('auth-status-text');
@@ -1119,12 +1112,16 @@ window.addEventListener('hashchange',()=>{
     statusBanner.style.borderColor='rgba(245,200,66,0.3)';
     statusText.innerHTML='Not signed in — <a href="#" onclick="document.getElementById(\'auth-gate\').scrollIntoView({behavior:\'smooth\'});return false">Sign in</a> to manage approvals';
   }
-  
+
   if(isAuthenticated){
+    authenticated=true;
+    document.getElementById('auth-gate').style.display='none';
+    document.querySelector('.tabs').style.display='flex';
+    if(userRole&&userRole!=='admin') document.body.classList.add('role-viewer');
     const hash=location.hash.replace('#','');
     const tab=HASH_TAB[hash];
     if(tab) switchTab(tab);
-    else{hideAuthGate();loadApprovals()}
+    else switchTab('queue');
     startAutoRefresh();
   }else{
     showAuthGate();
