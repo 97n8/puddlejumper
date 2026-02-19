@@ -65,8 +65,12 @@ window.PUBLICLOGIC_OS_CONFIG = {
     { title: "SharePoint OS Site", url: "https://publiclogic978.sharepoint.com/sites/PL" }
   ],
 
-  // Optional: link to PuddleJumper governance engine admin panel.
-  // puddlejumper: {
-  //   adminUrl: "https://your-puddlejumper-host/pj/admin"
-  // }
+  // PuddleJumper governance engine — SSO bridge exchanges your Microsoft
+  // token with PJ so you can navigate without logging in again.
+  puddlejumper: {
+    // The PJ backend API origin (Fly.io deployment).
+    apiUrl: "https://publiclogic-puddlejumper.fly.dev",
+    // Link to the PJ admin panel (served by the Next.js frontend).
+    adminUrl: "https://pj.publiclogic.org/pj/admin"
+  }
 };

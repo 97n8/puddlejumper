@@ -52,6 +52,9 @@ export {
 // Session lifecycle routes
 export { createSessionRoutes, type SessionRoutesOptions } from "./routes/login.js";
 
+// Token exchange (SSO bridge for external apps)
+export { createTokenExchangeRoutes, type TokenExchangeOptions } from "./routes/token-exchange.js";
+
 // High-level mounting helper
 export {
   mountAuthRoutes,
