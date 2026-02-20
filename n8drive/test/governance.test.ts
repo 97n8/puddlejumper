@@ -52,7 +52,7 @@ function launchPayload(): InputPayload {
         }
       },
       intent: "open_repository",
-      targets: ["97n8/AGNOSTIC"],
+      targets: ["97n8/LogicCommons"],
       environment: "production",
       metadata: {
         description: "Open repository"
