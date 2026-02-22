@@ -41,6 +41,8 @@ import { ConnectorStore } from "./connectorStore.js";
 import { createPublicPrrRouter } from "./publicPrrRouter.js";
 import { createConnectorsRouter } from "./connectors.js";
 import { createGitHubProxyRoutes } from "./routes/githubProxy.js";
+import { createMicrosoftProxyRoutes } from "./routes/microsoftProxy.js";
+import { createGoogleProxyRoutes } from "./routes/googleProxy.js";
 import {
   LOGIN_WINDOW_MS,
   LOGIN_MAX_ATTEMPTS,
@@ -492,6 +494,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   // protection is provided by CORS + SameSite=None cookie rather than CSRF token.
   app.use("/api", (req, res, next) => {
     if (req.path.startsWith("/github/")) { next(); return; }
+    if (req.path.startsWith("/microsoft/")) { next(); return; }
+    if (req.path.startsWith("/google/")) { next(); return; }
     csrfProtection()(req, res, next);
   });
 
@@ -630,6 +634,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     store: connectorStore, stateHmacKey: connectorStateSecret,
   }));
   app.use("/api/github", createGitHubProxyRoutes({ store: connectorStore }));
+  app.use("/api/microsoft", createMicrosoftProxyRoutes({ store: connectorStore }));
+  app.use("/api/google", createGoogleProxyRoutes({ store: connectorStore }));
 
   // ── Redirects ────────────────────────────────────────────────────────────
   // Redirect /admin and /dashboard to the working backend admin interface at /pj/admin
