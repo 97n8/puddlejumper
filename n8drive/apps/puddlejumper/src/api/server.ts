@@ -40,6 +40,7 @@ import { PrrStore } from "./prrStore.js";
 import { ConnectorStore } from "./connectorStore.js";
 import { createPublicPrrRouter } from "./publicPrrRouter.js";
 import { createConnectorsRouter } from "./connectors.js";
+import { createGitHubProxyRoutes } from "./routes/githubProxy.js";
 import {
   LOGIN_WINDOW_MS,
   LOGIN_MAX_ATTEMPTS,
@@ -487,7 +488,12 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.path.startsWith("/auth/microsoft/")) { next(); return; }
     authMiddleware(req, res, next);
   });
-  app.use("/api", csrfProtection());
+  // GitHub proxy is cross-origin (LogicOS on Vercel → PJ on Fly.io) — CSRF
+  // protection is provided by CORS + SameSite=None cookie rather than CSRF token.
+  app.use("/api", (req, res, next) => {
+    if (req.path.startsWith("/github/")) { next(); return; }
+    csrfProtection()(req, res, next);
+  });
 
   // /api/health — unauthenticated alias for /health (bypassed in auth gate above)
   app.get("/api/health", (_req, res) => { res.json({ status: "ok" }); });
@@ -595,6 +601,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/connectors", createConnectorsRouter({
     store: connectorStore, stateHmacKey: connectorStateSecret,
   }));
+  app.use("/api/github", createGitHubProxyRoutes({ store: connectorStore }));
 
   // ── Redirects ────────────────────────────────────────────────────────────
   // Redirect /admin and /dashboard to the working backend admin interface at /pj/admin

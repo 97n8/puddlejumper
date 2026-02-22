@@ -688,7 +688,9 @@ export function createConnectorsRouter(options: CreateConnectorsRouterOptions): 
 
     try {
       await adapter.handleCallback(parsedQuery.data.code, redirectUri);
-      res.redirect(302, `/pj?connected=${encodeURIComponent(provider)}`);
+      // Redirect to LogicOS if configured, otherwise fall back to PJ dashboard
+      const successBase = (process.env.LOGIC_COMMONS_URL ?? "").trim() || "/pj";
+      res.redirect(302, `${successBase}?connected=${encodeURIComponent(provider)}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "OAuth failed";
       res.status(500).send(`OAuth failed: ${message}`);
