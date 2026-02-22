@@ -70,7 +70,7 @@ puddlejumper/
 └── README.md                         # Repo overview
 ```
 
-## Tech Stack (exact versions matter)
+## Tech Stack
 
 | Layer | Tech | Notes |
 |---|---|---|
@@ -83,7 +83,7 @@ puddlejumper/
 | Frontend framework | Next.js 16.x | App Router, React 19, TypeScript |
 | Frontend styling | Tailwind CSS 4.x | zinc/emerald palette, Geist font |
 | OS UI | Vanilla JS | Hash routing, MSAL auth. No React. |
-| Testing | Vitest | 473 tests. 6 known pre-existing failures (not your problem). |
+| Testing | Vitest | Comprehensive suite. Some known pre-existing failures exist — only fix failures related to your changes. |
 | Auth | JWT (jose) + OAuth | HS256/RS256. Cookie-first, then Bearer header. |
 | Deployment | Fly.io (backend), Vercel (frontend) | Docker also supported |
 
@@ -314,4 +314,4 @@ Fly.io config: 1 CPU, 1GB RAM, EWR region, `/data` persistent volume, `min_machi
 - **Don't merge PJ and VAULT.** They are separate by design. The PolicyProvider interface is the only bridge.
 - **Don't weaken injection detection patterns.** They protect the governance pipeline.
 - **Don't skip the CSRF header.** Every POST/PUT/PATCH/DELETE to `/api/*` needs `X-PuddleJumper-Request: true`.
-- **Don't remove the 6 known test failures.** They're pre-existing (vaultContract, config-validation, oauthStateStore). Only fix failures related to your changes.
+- **Don't fix unrelated test failures.** Some pre-existing failures exist. Only fix failures related to your changes.
