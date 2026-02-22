@@ -16,7 +16,6 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/puddlejumper/package.json apps/puddlejumper/
 COPY apps/logic-commons/package.json apps/logic-commons/
 COPY packages/core/package.json packages/core/
-COPY web/package.json web/
 
 ENV CI=true
 RUN pnpm install --frozen-lockfile
@@ -31,9 +30,6 @@ RUN find . -name "*.tsbuildinfo" -type f -delete
 RUN pnpm --filter @publiclogic/core run build && \
     pnpm --filter @publiclogic/logic-commons run build && \
     pnpm --filter @publiclogic/puddlejumper run build
-
-# Build Next.js frontend (standalone mode)
-RUN pnpm --filter web run build
 
 # Rebuild native addons for linux target
 RUN pnpm rebuild better-sqlite3
@@ -54,11 +50,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /prod /app
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
-
-# Copy Next.js standalone build
-COPY --from=builder /app/web/.next/standalone /app/web-standalone
-COPY --from=builder /app/web/.next/static /app/web-standalone/web/.next/static
-COPY --from=builder /app/web/public /app/web-standalone/web/public
 
 ENV NODE_ENV=production
 ENV PORT=3002
