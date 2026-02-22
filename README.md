@@ -2,19 +2,14 @@
 
 **Your Shortcut to the Clouds**
 
-PuddleJumper is a multi-tenant governance engine for municipal decision workflows, part of the [PublicLogic](https://publiclogic.org) ecosystem.
+PuddleJumper is a multi-tenant governance engine for municipal decision workflows, part of the [PublicLogic](https://publiclogic.org) ecosystem. The backend API — deployed on Fly.io — that [LogicOS](https://github.com/97n8/LogicOS) calls for all governance operations.
 
 ## Repository Structure
 
 | Directory | Description |
 |-----------|-------------|
 | `n8drive/` | Core PuddleJumper application (TypeScript, Express, pnpm monorepo) |
-| `publiclogic-operating-system/` | PublicLogic OS playbooks (canonical source) |
-| `publiclogic-os-ui/` | PublicLogic OS frontend (static vanilla JS app, canonical HMLP source) |
-| `publiclogic-site/` | Marketing/public site (includes HMLP, a mirror of OS UI) |
-| `scripts/` | Sync utilities and helper scripts |
-| `tests/` | E2E tests (Playwright) |
-| `_archived/` | Retired projects preserved for reference (see `_archived/README.md`) |
+| `_archived/` | Retired projects preserved for reference |
 
 ## Getting Started
 
@@ -24,25 +19,12 @@ pnpm install
 pnpm run dev
 ```
 
-## Playbook Sync
-
-Three directories hold playbook content and must stay in sync:
-- `publiclogic-operating-system/` — canonical source
-- `publiclogic-os-ui/content/playbooks/` — UI copy
-- `publiclogic-site/HMLP/content/playbooks/` — site copy
-
-```bash
-./scripts/sync-playbooks.sh          # sync all copies from canonical source
-./scripts/sync-playbooks.sh --check  # check for drift (CI-friendly, exits 1 if out of sync)
-```
-
 ## Documentation
 
 - See `n8drive/README.md` for detailed PuddleJumper documentation
 - See `n8drive/docs/` for architecture and release docs
 - See `n8drive/ops/ARCHITECTURE-NORTH-STAR.md` for strategic roadmap
 - See `n8drive/SECURITY.md` for security policy
-- See `publiclogic-operating-system/README.md` for Logicville connection
 
 ## License
 

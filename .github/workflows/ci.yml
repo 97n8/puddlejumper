@@ -49,11 +49,6 @@ jobs:
           pnpm --filter @publiclogic/logic-commons run build
           pnpm --filter @publiclogic/puddlejumper run build
 
-      - name: Lint frontend (if present)
-        if: ${{ hashFiles('n8drive/web/package.json') != '' }}
-        run: |
-          cd web && npx eslint . || echo "No lint script or lint failed"
-
       - name: Typecheck (root)
         run: pnpm run typecheck
 
