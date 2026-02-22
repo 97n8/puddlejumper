@@ -8,7 +8,7 @@
  * These tests ensure schema compatibility between PJ and Vault.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import type { 
   AuthorizationQuery, 
   AuthorizationResult,

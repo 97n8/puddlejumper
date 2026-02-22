@@ -44,21 +44,21 @@ describe("authCallback handler (legacy redirect)", () => {
     const app = buildApp();
     const res = await request(app).get("/auth/callback");
     expect(res.status).toBe(302);
-    expect(res.headers.location).toBe("https://pj.publiclogic.org/login");
+    expect(res.headers.location).toBe("https://pj.publiclogic.org/pj/signin");
   });
 
-  it("redirects to /login using FRONTEND_URL when set", async () => {
+  it("redirects to /pj/signin using FRONTEND_URL when set", async () => {
     process.env.FRONTEND_URL = "https://custom.example.com";
     const app = buildApp();
     const res = await request(app).get("/auth/callback");
     expect(res.status).toBe(302);
-    expect(res.headers.location).toBe("https://custom.example.com/login");
+    expect(res.headers.location).toBe("https://custom.example.com/pj/signin");
   });
 
   it("redirects even when providerToken is present (no longer processes it)", async () => {
     const app = buildApp();
     const res = await request(app).get("/auth/callback?providerToken=some-token");
     expect(res.status).toBe(302);
-    expect(res.headers.location).toBe("https://pj.publiclogic.org/login");
+    expect(res.headers.location).toBe("https://pj.publiclogic.org/pj/signin");
   });
 });

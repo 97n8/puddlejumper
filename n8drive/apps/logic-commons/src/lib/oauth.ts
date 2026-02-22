@@ -116,18 +116,15 @@ export function createOAuthRoutes(
     const redirectUri =
       process.env[provider.redirectUriEnvVar] || provider.defaultRedirectUri;
 
-    // Set CSRF state cookie (lax is fine here — it's a top-level navigation)
+    // Set CSRF state cookie (must survive cross-subdomain OAuth redirect)
     const cookieOpts: any = {
       httpOnly: true,
-      secure: opts.nodeEnv === "production",
+      secure: opts.nodeEnv === "production", // required for HTTPS
+      sameSite: "lax", // allow top-level navigation from Google
+      path: "/",
+      domain: process.env.COOKIE_DOMAIN || ".publiclogic.org",
       maxAge: 10 * 60 * 1000, // Match state TTL (10 minutes)
-      sameSite: "lax",
     };
-    
-    // Add domain if COOKIE_DOMAIN is set (for production cross-subdomain support)
-    if (process.env.COOKIE_DOMAIN) {
-      cookieOpts.domain = process.env.COOKIE_DOMAIN;
-    }
     
     res.cookie(provider.stateCookieName, state, cookieOpts);
 
@@ -169,6 +166,11 @@ export function createOAuthRoutes(
       return res
         .status(400)
         .json({ error, error_description: error_description || "Auth error" });
+    }
+
+    // Explicit check for missing state parameter (gives a clearer error than CSRF failure)
+    if (!state) {
+      return res.status(400).json({ error: "Missing state parameter" });
     }
 
     // CSRF validation: verify cookie matches state query parameter

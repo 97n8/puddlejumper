@@ -10,5 +10,6 @@ export default defineConfig({
   },
   test: {
     globals: false,
+    exclude: ['**/.claude/**', '**/node_modules/**'],
   },
 });

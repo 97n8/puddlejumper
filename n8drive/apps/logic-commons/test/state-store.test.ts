@@ -22,8 +22,8 @@ describe("OAuthStateStore", () => {
     const state = store.create("github");
     expect(typeof state).toBe("string");
     expect(state.length).toBeGreaterThan(0);
-    const provider = store.consume(state);
-    expect(provider).toBe("github");
+    const result = store.consume(state);
+    expect(result?.provider).toBe("github");
   });
 
   it("returns null when consuming a non-existent state", () => {
@@ -32,7 +32,7 @@ describe("OAuthStateStore", () => {
 
   it("is single-use — second consume returns null (atomic CAS)", () => {
     const state = store.create("google");
-    expect(store.consume(state)).toBe("google");
+    expect(store.consume(state)?.provider).toBe("google");
     expect(store.consume(state)).toBeNull();
   });
 
@@ -40,9 +40,9 @@ describe("OAuthStateStore", () => {
     const s1 = store.create("github");
     const s2 = store.create("google");
     const s3 = store.create("microsoft");
-    expect(store.consume(s1)).toBe("github");
-    expect(store.consume(s2)).toBe("google");
-    expect(store.consume(s3)).toBe("microsoft");
+    expect(store.consume(s1)?.provider).toBe("github");
+    expect(store.consume(s2)?.provider).toBe("google");
+    expect(store.consume(s3)?.provider).toBe("microsoft");
   });
 
   it("counts only active (non-used, non-expired) states", () => {
@@ -81,6 +81,6 @@ describe("OAuthStateStore", () => {
 
     // Reopen on same DB path
     store = new OAuthStateStore(path.join(tmpDir, "oauth_state.db"));
-    expect(store.consume(state)).toBe("github");
+    expect(store.consume(state)?.provider).toBe("github");
   });
 });

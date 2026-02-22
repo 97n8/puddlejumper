@@ -37,6 +37,7 @@ describe("Workspace Collaboration", () => {
   let app: express.Express;
 
   beforeEach(() => {
+    process.env.DATA_DIR = TEST_DATA_DIR;
     resetWorkspaceDb();
     
     const authOptions: AuthOptions = {
@@ -52,6 +53,11 @@ describe("Workspace Collaboration", () => {
     app.use(withCorrelationId);
     app.use(createJwtAuthenticationMiddleware(authOptions));
     app.use("/api", createWorkspaceCollaborationRoutes());
+  });
+
+  afterEach(() => {
+    delete process.env.DATA_DIR;
+    resetWorkspaceDb();
   });
 
   async function makeToken(payload: any): Promise<string> {

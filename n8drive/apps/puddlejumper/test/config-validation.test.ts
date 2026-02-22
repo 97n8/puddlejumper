@@ -95,7 +95,7 @@ describe("assertProductionInvariants", () => {
     setRequiredEnv();
     delete process.env.GITHUB_CLIENT_SECRET;
     expect(() => assertProductionInvariants("production", validAuthOptions(), CONTROLLED_DIR)).toThrow(
-      "GitHub OAuth: both GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET must be set"
+      "GitHub OAuth: GITHUB_CLIENT_ID is set but GITHUB_CLIENT_SECRET is missing (confidential clients need both)"
     );
   });
 
@@ -103,7 +103,7 @@ describe("assertProductionInvariants", () => {
     setRequiredEnv();
     delete process.env.GOOGLE_CLIENT_ID;
     expect(() => assertProductionInvariants("production", validAuthOptions(), CONTROLLED_DIR)).toThrow(
-      "Google OAuth: both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set"
+      "Google OAuth: GOOGLE_CLIENT_SECRET is set but GOOGLE_CLIENT_ID is missing"
     );
   });
 

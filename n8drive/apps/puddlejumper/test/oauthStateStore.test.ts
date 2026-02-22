@@ -23,8 +23,8 @@ describe("OAuthStateStore", () => {
     expect(typeof state).toBe("string");
     expect(state.length).toBeGreaterThan(0);
 
-    const provider = store.consume(state);
-    expect(provider).toBe("github");
+    const result = store.consume(state);
+    expect(result?.provider).toBe("github");
   });
 
   it("returns null when consuming a non-existent state", () => {
@@ -33,7 +33,7 @@ describe("OAuthStateStore", () => {
 
   it("is single-use — second consume returns null", () => {
     const state = store.create("google");
-    expect(store.consume(state)).toBe("google");
+    expect(store.consume(state)?.provider).toBe("google");
     expect(store.consume(state)).toBeNull();
   });
 
@@ -43,10 +43,10 @@ describe("OAuthStateStore", () => {
     const s3 = store.create("microsoft");
 
     expect(store.count()).toBe(3);
-    expect(store.consume(s2)).toBe("google");
+    expect(store.consume(s2)?.provider).toBe("google");
     expect(store.count()).toBe(2);
-    expect(store.consume(s1)).toBe("github");
-    expect(store.consume(s3)).toBe("microsoft");
+    expect(store.consume(s1)?.provider).toBe("github");
+    expect(store.consume(s3)?.provider).toBe("microsoft");
     expect(store.count()).toBe(0);
   });
 
@@ -80,7 +80,7 @@ describe("OAuthStateStore", () => {
 
     // Re-open same DB
     const store2 = new OAuthStateStore(dbPath);
-    expect(store2.consume(state)).toBe("microsoft");
+    expect(store2.consume(state)?.provider).toBe("microsoft");
     store2.close();
   });
 

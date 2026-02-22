@@ -20,18 +20,18 @@ export type WorkspaceRow = {
 
 export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
 
-let _db: Database.Database | null = null;
+const _dbs = new Map<string, Database.Database>();
 
 export function getDb(dataDir: string): Database.Database {
-  if (_db) return _db;
+  if (_dbs.has(dataDir)) return _dbs.get(dataDir)!;
   fs.mkdirSync(dataDir, { recursive: true });
   const dbPath = path.join(dataDir, "approvals.db");
-  _db = new Database(dbPath);
-  _db.pragma("journal_mode = WAL");
-  _db.pragma("synchronous = NORMAL");
-  _db.pragma("wal_autocheckpoint = 1000");
+  const db = new Database(dbPath);
+  db.pragma("journal_mode = WAL");
+  db.pragma("synchronous = NORMAL");
+  db.pragma("wal_autocheckpoint = 1000");
   // Create workspaces table if not exists
-  _db.exec(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS workspaces (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -43,11 +43,11 @@ export function getDb(dataDir: string): Database.Database {
   `);
   
   // Add usage tracking columns (idempotent migration)
-  const columns = _db.pragma("table_info(workspaces)") as Array<{ name: string }>;
+  const columns = db.pragma("table_info(workspaces)") as Array<{ name: string }>;
   const hasUsageColumns = columns.some(c => c.name === "plan");
   
   if (!hasUsageColumns) {
-    _db.exec(`
+    db.exec(`
       ALTER TABLE workspaces ADD COLUMN plan TEXT NOT NULL DEFAULT 'free';
       ALTER TABLE workspaces ADD COLUMN approval_count INTEGER NOT NULL DEFAULT 0;
       ALTER TABLE workspaces ADD COLUMN template_count INTEGER NOT NULL DEFAULT 0;
@@ -56,9 +56,9 @@ export function getDb(dataDir: string): Database.Database {
   }
   
   // Workspace members table (idempotent)
-  const hasMembersTable = _db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_members'`).get();
+  const hasMembersTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_members'`).get();
   if (!hasMembersTable) {
-    _db.exec(`
+    db.exec(`
       CREATE TABLE workspace_members (
         id TEXT PRIMARY KEY,
         workspace_id TEXT NOT NULL REFERENCES workspaces(id),
@@ -73,9 +73,9 @@ export function getDb(dataDir: string): Database.Database {
     `);
   }
 
-  const hasInvitationsTable = _db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_invitations'`).get();
+  const hasInvitationsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_invitations'`).get();
   if (!hasInvitationsTable) {
-    _db.exec(`
+    db.exec(`
       CREATE TABLE workspace_invitations (
         id TEXT PRIMARY KEY,
         workspace_id TEXT NOT NULL REFERENCES workspaces(id),
@@ -93,9 +93,9 @@ export function getDb(dataDir: string): Database.Database {
   }
 
   // Deployed processes table (FormKey deployments from Vault)
-  const hasDeployedProcessesTable = _db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='deployed_processes'`).get();
+  const hasDeployedProcessesTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='deployed_processes'`).get();
   if (!hasDeployedProcessesTable) {
-    _db.exec(`
+    db.exec(`
       CREATE TABLE deployed_processes (
         id TEXT PRIMARY KEY,
         workspace_id TEXT NOT NULL REFERENCES workspaces(id),
@@ -113,7 +113,8 @@ export function getDb(dataDir: string): Database.Database {
     `);
   }
   
-  return _db;
+  _dbs.set(dataDir, db);
+  return db;
 }
 
 export function createWorkspace(dataDir: string, id: string, name: string, ownerId: string): WorkspaceRow {
@@ -180,15 +181,14 @@ export function ensurePersonalWorkspace(dataDir: string, userId: string, usernam
 }
 
 export function resetWorkspaceDb(): void {
-  if (_db) {
-    // Clear all data
-    _db.exec(`
+  for (const [key, db] of _dbs.entries()) {
+    db.exec(`
       DELETE FROM workspace_invitations;
       DELETE FROM workspace_members;
       DELETE FROM workspaces;
     `);
-    _db.close();
-    _db = null;
+    db.close();
+    _dbs.delete(key);
   }
 }
 
