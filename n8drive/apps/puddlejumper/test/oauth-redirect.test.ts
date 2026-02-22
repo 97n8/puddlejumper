@@ -84,11 +84,6 @@ describe("GitHub OAuth redirect flow", () => {
     expect(location).toContain("client_id=test-client-id");
     expect(location).toContain("scope=user%3Aemail");
     expect(location).toContain("state=");
-
-    const cookies = res.headers["set-cookie"] as unknown as string[];
-    const stateCookie = cookies.find((c: string) => c.startsWith("oauth_state="));
-    expect(stateCookie).toBeDefined();
-    expect(stateCookie).toContain("HttpOnly");
   });
 
   it("returns 500 if GITHUB_CLIENT_ID is not set", async () => {
@@ -107,21 +102,18 @@ describe("GitHub OAuth redirect flow", () => {
   it("rejects callback with mismatched state", async () => {
     const app = await createTestApp();
     const res = await request(app)
-      .get("/api/auth/github/callback?code=test-code&state=wrong-state")
-      .set("Cookie", "oauth_state=correct-state");
+      .get("/api/auth/github/callback?code=test-code&state=wrong-state");
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("CSRF");
+    expect(res.body.error).toContain("state");
   });
 
   it("completes full OAuth flow with refresh token", async () => {
     const app = await createTestApp();
 
-    // Step 1: Get redirect and state
+    // Step 1: Get redirect and state from Location header
     const loginRes = await request(app).get("/api/auth/github/login");
     expect(loginRes.status).toBe(302);
-    const cookies = loginRes.headers["set-cookie"] as unknown as string[];
-    const stateCookie = cookies.find((c: string) => c.startsWith("oauth_state="));
-    const stateValue = stateCookie!.split("=")[1].split(";")[0];
+    const stateValue = new URL(loginRes.headers.location).searchParams.get("state")!;
 
     // Step 2: Mock GitHub APIs
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
@@ -134,10 +126,9 @@ describe("GitHub OAuth redirect flow", () => {
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    // Step 3: Hit callback
+    // Step 3: Hit callback (no cookie needed)
     const callbackRes = await request(app)
-      .get(`/api/auth/github/callback?code=test-auth-code&state=${stateValue}`)
-      .set("Cookie", `oauth_state=${stateValue}`);
+      .get(`/api/auth/github/callback?code=test-auth-code&state=${stateValue}`);
 
     expect(callbackRes.status).toBe(302);
     expect(callbackRes.headers.location).toBe("http://localhost:3000");
@@ -156,9 +147,7 @@ describe("GitHub OAuth redirect flow", () => {
     const app = await createTestApp();
 
     const loginRes = await request(app).get("/api/auth/github/login");
-    const cookies = loginRes.headers["set-cookie"] as unknown as string[];
-    const stateCookie = cookies.find((c: string) => c.startsWith("oauth_state="));
-    const stateValue = stateCookie!.split("=")[1].split(";")[0];
+    const stateValue = new URL(loginRes.headers.location).searchParams.get("state")!;
 
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       if (String(url).includes("login/oauth/access_token")) {
@@ -169,15 +158,13 @@ describe("GitHub OAuth redirect flow", () => {
 
     // First call succeeds
     const first = await request(app)
-      .get(`/api/auth/github/callback?code=code1&state=${stateValue}`)
-      .set("Cookie", `oauth_state=${stateValue}`);
+      .get(`/api/auth/github/callback?code=code1&state=${stateValue}`);
     expect(first.status).toBe(302);
     expect(first.headers.location).toBe("http://localhost:3000");
 
     // Replay rejected
     const replay = await request(app)
-      .get(`/api/auth/github/callback?code=code2&state=${stateValue}`)
-      .set("Cookie", `oauth_state=${stateValue}`);
+      .get(`/api/auth/github/callback?code=code2&state=${stateValue}`);
     expect(replay.status).toBe(400);
   });
 });
@@ -194,20 +181,13 @@ describe("Google OAuth redirect flow", () => {
     expect(location).toContain("client_id=test-google-client-id");
     expect(location).toContain("response_type=code");
     expect(location).toContain("state=");
-
-    const cookies = res.headers["set-cookie"] as unknown as string[];
-    const stateCookie = cookies.find((c: string) => c.startsWith("google_oauth_state="));
-    expect(stateCookie).toBeDefined();
-    expect(stateCookie).toContain("HttpOnly");
   });
 
   it("completes full Google OAuth flow with refresh token", async () => {
     const app = await createTestApp();
 
     const loginRes = await request(app).get("/api/auth/google/login");
-    const cookies = loginRes.headers["set-cookie"] as unknown as string[];
-    const stateCookie = cookies.find((c: string) => c.startsWith("google_oauth_state="));
-    const stateValue = stateCookie!.split("=")[1].split(";")[0];
+    const stateValue = new URL(loginRes.headers.location).searchParams.get("state")!;
 
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       if (String(url).includes("oauth2.googleapis.com/token")) {
@@ -220,8 +200,7 @@ describe("Google OAuth redirect flow", () => {
     });
 
     const callbackRes = await request(app)
-      .get(`/api/auth/google/callback?code=test-code&state=${stateValue}`)
-      .set("Cookie", `google_oauth_state=${stateValue}`);
+      .get(`/api/auth/google/callback?code=test-code&state=${stateValue}`);
 
     expect(callbackRes.status).toBe(302);
     expect(callbackRes.headers.location).toBe("http://localhost:3000");
@@ -244,20 +223,13 @@ describe("Microsoft OAuth redirect flow", () => {
     expect(location).toContain("client_id=test-microsoft-client-id");
     expect(location).toContain("response_type=code");
     expect(location).toContain("state=");
-
-    const cookies = res.headers["set-cookie"] as unknown as string[];
-    const stateCookie = cookies.find((c: string) => c.startsWith("microsoft_oauth_state="));
-    expect(stateCookie).toBeDefined();
-    expect(stateCookie).toContain("HttpOnly");
   });
 
   it("completes full Microsoft OAuth flow with refresh token", async () => {
     const app = await createTestApp();
 
     const loginRes = await request(app).get("/api/auth/microsoft/login");
-    const cookies = loginRes.headers["set-cookie"] as unknown as string[];
-    const stateCookie = cookies.find((c: string) => c.startsWith("microsoft_oauth_state="));
-    const stateValue = stateCookie!.split("=")[1].split(";")[0];
+    const stateValue = new URL(loginRes.headers.location).searchParams.get("state")!;
 
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       if (String(url).includes("login.microsoftonline.com") && String(url).includes("/token")) {
@@ -270,8 +242,7 @@ describe("Microsoft OAuth redirect flow", () => {
     });
 
     const callbackRes = await request(app)
-      .get(`/api/auth/microsoft/callback?code=test-code&state=${stateValue}`)
-      .set("Cookie", `microsoft_oauth_state=${stateValue}`);
+      .get(`/api/auth/microsoft/callback?code=test-code&state=${stateValue}`);
 
     expect(callbackRes.status).toBe(302);
     expect(callbackRes.headers.location).toBe("http://localhost:3000");

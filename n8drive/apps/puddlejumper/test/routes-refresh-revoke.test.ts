@@ -93,16 +93,13 @@ async function oauthLoginAndGetCookies(app: express.Express, oauthStateStore: an
     };
   });
 
-  // Get state
+  // Get state from redirect URL
   const loginRes = await request(app).get("/api/auth/github/login");
-  const cookies = loginRes.headers["set-cookie"] as unknown as string[];
-  const stateCookie = cookies.find((c: string) => c.startsWith("oauth_state="));
-  const stateValue = stateCookie!.split("=")[1].split(";")[0];
+  const stateValue = new URL(loginRes.headers.location).searchParams.get("state")!;
 
-  // Complete callback
+  // Complete callback (no cookie needed — state is server-side verified)
   const callbackRes = await request(app)
-    .get(`/api/auth/github/callback?code=test-code&state=${stateValue}`)
-    .set("Cookie", `oauth_state=${stateValue}`);
+    .get(`/api/auth/github/callback?code=test-code&state=${stateValue}`);
 
   expect(callbackRes.status).toBe(302);
 
@@ -471,13 +468,10 @@ describe("OAuth callback sets pj_sso cookie", () => {
     });
 
     const loginRes = await request(app).get("/api/auth/github/login");
-    const cookies = loginRes.headers["set-cookie"] as unknown as string[];
-    const stateCookie = cookies.find((c: string) => c.startsWith("oauth_state="));
-    const stateValue = stateCookie!.split("=")[1].split(";")[0];
+    const stateValue = new URL(loginRes.headers.location).searchParams.get("state")!;
 
     const callbackRes = await request(app)
-      .get(`/api/auth/github/callback?code=test-code&state=${stateValue}`)
-      .set("Cookie", `oauth_state=${stateValue}`);
+      .get(`/api/auth/github/callback?code=test-code&state=${stateValue}`);
 
     const responseCookies = callbackRes.headers["set-cookie"] as unknown as string[];
     const pjSsoCookie = responseCookies.find((c: string) => c.startsWith("pj_sso="));

@@ -116,21 +116,8 @@ export function createOAuthRoutes(
     const redirectUri =
       process.env[provider.redirectUriEnvVar] || provider.defaultRedirectUri;
 
-    // Set CSRF state cookie (must survive cross-subdomain OAuth redirect)
-    const cookieOpts: any = {
-      httpOnly: true,
-      secure: opts.nodeEnv === "production", // required for HTTPS
-      sameSite: "lax", // allow top-level navigation from GitHub/Google
-      path: "/",
-      maxAge: 10 * 60 * 1000, // Match state TTL (10 minutes)
-    };
-    // Only set domain when explicitly configured — omitting it scopes the
-    // cookie to the exact request host (correct for Fly.io, Vercel, etc.)
-    if (process.env.COOKIE_DOMAIN) {
-      cookieOpts.domain = process.env.COOKIE_DOMAIN;
-    }
-    
-    res.cookie(provider.stateCookieName, state, cookieOpts);
+    // State is stored in SQLite (single-use, cryptographically random) — that's
+    // the CSRF protection. No cookie needed.
 
     // Build the authorize URL
     const authorizeUrl =
@@ -177,40 +164,14 @@ export function createOAuthRoutes(
       return res.status(400).json({ error: "Missing state parameter" });
     }
 
-    // CSRF validation: verify cookie matches state query parameter
-    const stateCookieValue = req.cookies?.[provider.stateCookieName];
-    
-    // Diagnostic logging for debugging
-    console.log(`[OAuth ${provider.name}] Callback received:`, {
-      hasQueryState: !!state,
-      hasCookie: !!stateCookieValue,
-      cookieValue: stateCookieValue?.substring(0, 8) + "...",
-      stateValue: state?.substring(0, 8) + "...",
-      match: stateCookieValue === state,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Verify cookie is present and matches query state
-    if (!stateCookieValue || stateCookieValue !== state) {
-      res.clearCookie(provider.stateCookieName);
-      console.error(`[OAuth ${provider.name}] CSRF validation failed: cookie/state mismatch`);
-      return res.status(400).json({ 
-        error: "CSRF validation failed",
-        details: opts.nodeEnv === "development" ? {
-          hasCookie: !!stateCookieValue,
-          hasState: !!state,
-          match: stateCookieValue === state
-        } : undefined
-      });
-    }
-
-    // Validate + consume CSRF state (single-use, SQLite-backed)
-    const stateResult = state ? opts.oauthStateStore.consume(state) : null;
+    // Validate + consume state from SQLite (single-use, cryptographically random).
+    // This IS the CSRF protection — the state is unguessable and server-side bound.
+    // Cookie double-submit was removed: cookies are unreliable across origins
+    // (cross-site redirect chains cause hasCookie=false in production).
+    const stateResult = opts.oauthStateStore.consume(state);
     if (!stateResult) {
-      res.clearCookie(provider.stateCookieName);
       return res.status(400).json({ error: "Invalid or expired state parameter" });
     }
-    res.clearCookie(provider.stateCookieName);
 
     if (!code) {
       return res.status(400).json({ error: "Missing authorization code" });

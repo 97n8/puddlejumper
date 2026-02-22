@@ -105,9 +105,9 @@ describe("GET /api/auth/:provider/login", () => {
     const app = makeApp();
     const res = await request(app).get("/api/auth/testprov/login").redirects(0);
 
-    const setCookieHeader = res.headers["set-cookie"];
-    const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader ? [setCookieHeader] : [];
-    expect(cookies.some((c: string) => c.startsWith("oauth_state_test="))).toBe(true);
+    // Cookie is no longer set — CSRF protection is via server-side state store
+    expect(res.status).toBe(302);
+    expect(res.headers["location"]).toContain("state=");
   });
 
   it("appends extraAuthorizeParams when provided", async () => {
@@ -166,8 +166,7 @@ describe("GET /api/auth/:provider/callback", () => {
   it("returns 400 when state is invalid (not in store)", async () => {
     const app = makeApp();
     const res = await request(app)
-      .get("/api/auth/testprov/callback?code=abc123&state=bogus")
-      .set("Cookie", "oauth_state_test=bogus");
+      .get("/api/auth/testprov/callback?code=abc123&state=bogus");
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("state");
   });
@@ -176,8 +175,7 @@ describe("GET /api/auth/:provider/callback", () => {
     const app = makeApp();
     const validState = stateStore.create("testprov");
     const res = await request(app)
-      .get(`/api/auth/testprov/callback?state=${validState}`)
-      .set("Cookie", `oauth_state_test=${validState}`);
+      .get(`/api/auth/testprov/callback?state=${validState}`);
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("code");
   });
@@ -196,7 +194,6 @@ describe("GET /api/auth/:provider/callback", () => {
     try {
       const res = await request(app)
         .get(`/api/auth/testprov/callback?code=good-code&state=${validState}`)
-        .set("Cookie", `oauth_state_test=${validState}`)
         .redirects(0);
 
       expect(res.status).toBe(302);
@@ -226,14 +223,12 @@ describe("GET /api/auth/:provider/callback", () => {
       // First use — should succeed
       const res1 = await request(app)
         .get(`/api/auth/testprov/callback?code=code1&state=${validState}`)
-        .set("Cookie", `oauth_state_test=${validState}`)
         .redirects(0);
       expect(res1.status).toBe(302);
 
       // Second use same state — should fail
       const res2 = await request(app)
-        .get(`/api/auth/testprov/callback?code=code2&state=${validState}`)
-        .set("Cookie", `oauth_state_test=${validState}`);
+        .get(`/api/auth/testprov/callback?code=code2&state=${validState}`);
       expect(res2.status).toBe(400);
     } finally {
       globalThis.fetch = originalFetch;
@@ -253,7 +248,6 @@ describe("GET /api/auth/:provider/callback", () => {
     try {
       const res = await request(app)
         .get(`/api/auth/testprov/callback?code=bad-code&state=${validState}`)
-        .set("Cookie", `oauth_state_test=${validState}`)
         .redirects(0);
 
       expect(res.status).toBe(302);
@@ -281,7 +275,6 @@ describe("GET /api/auth/:provider/callback", () => {
     try {
       const res = await request(app)
         .get(`/api/auth/testprov/callback?code=code&state=${validState}`)
-        .set("Cookie", `oauth_state_test=${validState}`)
         .redirects(0);
 
       expect(res.status).toBe(302);
