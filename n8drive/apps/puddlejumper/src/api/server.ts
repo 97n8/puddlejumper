@@ -561,7 +561,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     // Extend the returned object to include workspaceId and workspaceName
     return { ...userInfo, role: row.role, tenantId: ws.id, userId: row.sub, workspaceId: ws.id, workspaceName: ws.name } as typeof userInfo & { role: string; tenantId: string; userId: string; workspaceId: string; workspaceName: string };
   };
-  const oauthRouteOpts = { nodeEnv, oauthStateStore, onUserAuthenticated, frontendUrl: "https://pj.publiclogic.org/pj/admin" };
+  const oauthRouteOpts = { nodeEnv, oauthStateStore, onUserAuthenticated, frontendUrl: (process.env.LOGIC_COMMONS_URL ?? "").trim() || "https://logicos-rho.vercel.app" };
   // Auto-connect GitHub connector when user signs in with GitHub (one-click auth)
   const githubOauthRouteOpts = {
     ...oauthRouteOpts,
