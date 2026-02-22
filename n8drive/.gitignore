@@ -34,4 +34,5 @@ coverage/
 
 # Temporary files
 web/.tmp_webhook_secret.txt
+_tmp_*
 *.log
