@@ -1,4 +1,5 @@
-# fly.toml — launch-ready: prevent autostop during cold starts and give health check more grace
+# fly.toml — launch-ready: aligned with Next standalone port
+
 app = "publiclogic-puddlejumper"
 primary_region = "ewr"
 
@@ -9,10 +10,11 @@ primary_region = "ewr"
   NEXTJS_URL = "http://localhost:3003"
 
 [http_service]
+  # 🔥 MUST match the port the Express gateway listens on
   internal_port = 3002
   force_https = true
 
-  # Prevent Fly from autostopping the machine during cold starts/launch
+  # Prevent Fly from autostopping during cold starts
   auto_stop_machines = "off"
   auto_start_machines = true
   min_machines_running = 1
@@ -22,7 +24,6 @@ primary_region = "ewr"
     type = "http"
     interval = "15s"
     timeout = "3s"
-    # Increased to allow Next.js standalone + native addons time to warm up
     grace_period = "60s"
     method = "get"
     path = "/health"
