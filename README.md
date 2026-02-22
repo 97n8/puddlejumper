@@ -9,13 +9,12 @@ PuddleJumper is a multi-tenant governance engine for municipal decision workflow
 | Directory | Description |
 |-----------|-------------|
 | `n8drive/` | Core PuddleJumper application (TypeScript, Express, pnpm monorepo) |
-| `chamber-connect/` | Chamber of Commerce case management prototype |
-| `live-edit-deploy-console/` | Municipal M365 tenant deployment engine |
 | `publiclogic-operating-system/` | PublicLogic OS playbooks (canonical source) |
-| `publiclogic-os-ui/` | PublicLogic OS frontend (static vanilla JS app) |
+| `publiclogic-os-ui/` | PublicLogic OS frontend (static vanilla JS app, canonical HMLP source) |
 | `publiclogic-site/` | Marketing/public site (includes HMLP, a mirror of OS UI) |
 | `scripts/` | Sync utilities and helper scripts |
 | `tests/` | E2E tests (Playwright) |
+| `_archived/` | Retired projects preserved for reference (see `_archived/README.md`) |
 
 ## Getting Started
 
