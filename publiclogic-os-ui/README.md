@@ -34,3 +34,19 @@ Follow:
 
 Most likely URL for you:
 - `https://www.publiclogic.org/HMLP/`
+
+## Relationship to publiclogic-site/HMLP/
+
+`publiclogic-os-ui/` is the **canonical source** for all HMLP app code.
+`publiclogic-site/HMLP/` is a **derived copy** embedded in the public marketing site deployment.
+
+**What stays in sync** (enforced by `scripts/sync-playbooks.sh` and CI):
+- `app.js`, `index.html`, `styles.css` — synced from `publiclogic-os-ui/` → `publiclogic-site/HMLP/`
+- `content/playbooks/*.md` — synced from `publiclogic-operating-system/` → both dirs
+- `content/playbooks/index.json` — synced from `publiclogic-os-ui/` → `publiclogic-site/HMLP/`
+
+**What differs intentionally**:
+- `config.js` / `config.example.js` — each deployment has its own API URLs and feature flags
+
+To sync after editing app code: `./scripts/sync-playbooks.sh`
+To check for drift: `./scripts/sync-playbooks.sh --check`

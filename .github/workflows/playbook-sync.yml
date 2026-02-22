@@ -4,8 +4,8 @@ on:
   pull_request:
     paths:
       - "publiclogic-operating-system/**"
-      - "publiclogic-os-ui/content/playbooks/**"
-      - "publiclogic-site/HMLP/content/playbooks/**"
+      - "publiclogic-os-ui/**"
+      - "publiclogic-site/HMLP/**"
 
 jobs:
   check-playbooks:
