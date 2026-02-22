@@ -48,45 +48,53 @@ n8drive/
 
 ### Getting Started
 ```bash
+# First-time setup (installs deps, builds, runs tests)
+bash scripts/bootstrap.sh
+
 # Backend development
 cd n8drive
 pnpm install
-pnpm run dev              # Start PuddleJumper server
+pnpm run dev              # Start PuddleJumper server (port 3002)
 
 # Frontend development
 cd n8drive/web
 npm ci                    # Use npm, NOT pnpm
 npm run dev              # Start Next.js dev server
-
-# Run tests
-cd n8drive
-pnpm run test            # Run all tests
-pnpm run test:pj         # Run PuddleJumper tests only
 ```
 
-### Build Commands
+### Build & Type-Check Commands
 ```bash
 cd n8drive
 pnpm run build           # Build all packages
 pnpm run build:pj        # Build PuddleJumper only
 pnpm run build:web       # Build Next.js frontend
-
-# Frontend TypeScript check
-cd n8drive/web
-npm ci
-./node_modules/.bin/tsc --noEmit
+pnpm run typecheck       # TypeScript check across all packages (tsc --build --noEmit)
+pnpm run ci              # Full CI pipeline: typecheck + contract check + test
 ```
 
 ### Testing Commands
 ```bash
 cd n8drive
-pnpm run test           # Run all tests
-pnpm run test:core      # Test core package
-pnpm run test:pj        # Test PuddleJumper
+pnpm run test            # Run all tests
+pnpm run test:core       # Test core package
+pnpm run test:pj         # Test PuddleJumper
 
-# Known test failures: 6 pre-existing failures in vaultContract, config-validation, oauthStateStore
-# Only fix test failures related to your changes
+# Run a single test file
+pnpm --filter @publiclogic/puddlejumper run test -- test/admin.test.ts
+
+# Known pre-existing failures (do not fix unless directly related to your change):
+#   vaultContract.test.ts, config-validation.test.ts, oauthStateStore.test.ts
 ```
+
+### Test Helper: setup-admin.ts
+Tests that need a live admin token must import the helper at `n8drive/apps/puddlejumper/test/setup-admin.ts`. It registers/logins an admin, normalizes token shapes, and falls back to local `signJwt`. Do **not** load it globally in Vitest — import per-suite only.
+
+```ts
+import { getAdminToken } from './setup-admin';
+const token = await getAdminToken();
+```
+
+Test logs are written to `.pj-test-logs/` (bootstrap.log, pj-tests.log).
 
 ## Coding Standards
 
@@ -166,20 +174,6 @@ pnpm run test:pj        # Test PuddleJumper
 - Styles: `public/styles/pj.css`, `pj-admin.css`, `pj-guide.css`, `pj-signin.css`
 - Scripts: `public/scripts/`
 
-## Testing Practices
-
-### Test Structure
-- 473 total tests across the monorepo
-- 6 known pre-existing failures (not your responsibility to fix)
-- Use Vitest for backend tests
-- Use supertest for API endpoint testing
-- Follow existing test patterns in the repository
-
-### Running Tests
-- Run tests before making changes to understand baseline
-- Run targeted tests during development
-- Only fix test failures related to your changes
-- Full test suite: `pnpm run test` from n8drive/ directory
 
 ## Security Requirements
 
@@ -238,25 +232,25 @@ pnpm run test:pj        # Test PuddleJumper
 - **Docker**: Standard container deployment
 
 ### Environment Variables
-- Required: JWT_SECRET, AUTH_ISSUER, AUTH_AUDIENCE
-- Database paths: PRR_DB_PATH, CONNECTOR_DB_PATH
-- URLs: PJ_PUBLIC_URL, BASE_URL
-- OAuth: Provider-specific client IDs and secrets
+- Required: `JWT_SECRET` (min 32 chars), `AUTH_ISSUER`, `AUTH_AUDIENCE`
+- Database: `PRR_DB_PATH`, `CONNECTOR_DB_PATH`, `IDEMPOTENCY_DB_PATH` (default: `./data/idempotency.db`)
+- URLs: `PJ_PUBLIC_URL`, `BASE_URL`
+- OAuth: provider-specific client IDs and secrets
+- `PJ_RUNTIME_CONTEXT_JSON`, `PJ_RUNTIME_TILES_JSON`, `PJ_RUNTIME_CAPABILITIES_JSON` — required in production; endpoints return 503 when unset
+- `PJ_ALLOWED_PARENT_ORIGINS` — trusted origins for iframe postMessage identity context
+- `ALLOW_ADMIN_LOGIN=true` — opts in to built-in `/api/login` (non-production only)
+- `ALLOW_PROD_ADMIN_LOGIN=true` — required additionally to enable built-in login in production
 
 ## Documentation
 
 ### Key Documents
 - `n8drive/README.md`: Main PuddleJumper documentation
+- `docs/DEVELOPER.md`: Bootstrap guide, test helper, and known pitfalls
+- `n8drive/ENV_REFERENCE.md`: Full environment variable reference
 - `n8drive/docs/`: Architecture and user guides
 - `n8drive/ops/ARCHITECTURE-NORTH-STAR.md`: Strategic roadmap
 - `n8drive/SECURITY.md`: Security model and policies
 - `n8drive/ops/DISASTER-RECOVERY.md`: DR procedures (RTO ≤30min, RPO ≤6h)
-- `n8drive/ops/OPERATIONAL-HANDOFF.md`: Operations documentation
-
-### Documentation Updates
-- Update docs when making significant changes
-- Keep README.md files current
-- Security changes require SECURITY.md updates
 
 ## Special Notes
 
@@ -276,30 +270,15 @@ PuddleJumper is a control plane for municipal governance:
 - See `n8drive/ops/MUNICIPAL-READINESS.md` for criteria
 - Monitoring via Prometheus/Grafana
 
-## Making Changes
+## Known Pitfalls
 
-### Minimal Changes Philosophy
-- Make the smallest possible changes to achieve the goal
-- Don't fix unrelated bugs or broken tests
-- Don't remove working code unless necessary
-- Preserve existing behavior unless specifically changing it
-
-### Before Committing
-1. Run linters if they exist
-2. Run relevant tests
-3. Check that builds succeed
-4. Verify changes work as expected
-5. Review security implications
-
-### Git Workflow
-- Work in feature branches
-- Write clear commit messages
-- Keep commits focused and atomic
-- Don't commit build artifacts (node_modules, dist, etc.)
+- **`better-sqlite3` native module mismatch**: If you see `NODE_MODULE_VERSION` errors, modules were built under a different Node version. Run `source ~/.nvm/nvm.sh && nvm use 20` then `bash scripts/bootstrap.sh` to rebuild.
+- **Staging `CANTOPEN`**: Means `/app/data` is not writable by the `node` user on Fly.io. Verify volume mount and DB path env vars, then check `/health` after redeploy.
+- **`pnpm` in `n8drive/web/`**: This directory uses npm (has its own `package-lock.json`). Running pnpm there will break the lockfile.
 
 ## Resources
 
 - Main Repo: https://github.com/97n8/puddlejumper
 - PublicLogic: https://publiclogic.org
-- Documentation: See n8drive/docs/ directory
-- Operations: See n8drive/ops/ directory
+- Env variable reference: `n8drive/ENV_REFERENCE.md`
+- Operations: `n8drive/ops/`
