@@ -17,8 +17,8 @@ Multi-tenant governance engine for decision workflows. Secure, scalable, and bui
 
 1. **Clone and install dependencies:**
    ```bash
-   git clone <repository-url>
-   cd puddle-jumper-deploy-remote
+   git clone https://github.com/97n8/puddlejumper.git
+   cd puddlejumper/n8drive
    pnpm install
    ```
 
@@ -149,13 +149,18 @@ Configure OAuth providers in your environment:
 ### Project Structure
 
 ```
-├── apps/puddlejumper/     # Main application
-│   ├── src/api/          # Express server & routes
-│   ├── public/           # Static web assets
-│   └── test/             # Application tests
-├── packages/core/        # Shared business logic
-├── packages/logic-commons/ # Auth & OAuth utilities
-└── docs/                 # Documentation
+├── apps/
+│   ├── puddlejumper/      # Main Express/TypeScript backend
+│   │   ├── src/api/       #   Server, routes, middleware
+│   │   ├── public/        #   Static web assets (HTML, CSS, JS)
+│   │   └── test/          #   Application tests (Vitest)
+│   └── logic-commons/     # OAuth & auth service
+├── packages/
+│   ├── core/              # Auth, JWT, middleware utilities
+│   └── vault/             # Policy/audit deployment service
+├── web/                   # Next.js frontend (uses npm, not pnpm)
+├── docs/                  # Architecture & deployment guides
+└── ops/                   # Monitoring, runbooks, disaster recovery
 ```
 
 ### Testing

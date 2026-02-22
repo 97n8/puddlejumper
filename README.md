@@ -4,24 +4,65 @@
 
 PuddleJumper is a multi-tenant governance engine for municipal decision workflows, part of the [PublicLogic](https://publiclogic.org) ecosystem.
 
-## Repository Structure
+## Prerequisites
 
-| Directory | Description |
-|-----------|-------------|
-| `n8drive/` | Core PuddleJumper application (TypeScript, Express, pnpm monorepo) |
-| `publiclogic-operating-system/` | PublicLogic OS playbooks (canonical source) |
-| `publiclogic-os-ui/` | PublicLogic OS frontend (static vanilla JS app, canonical HMLP source) |
-| `publiclogic-site/` | Marketing/public site (includes HMLP, a mirror of OS UI) |
-| `scripts/` | Sync utilities and helper scripts |
-| `tests/` | E2E tests (Playwright) |
-| `_archived/` | Retired projects preserved for reference (see `_archived/README.md`) |
+| Tool | Version | Install |
+|------|---------|---------|
+| Node.js | 20+ | `nvm install 20` or [nodejs.org](https://nodejs.org) |
+| pnpm | 8.15+ | `corepack enable` (ships with Node) |
+| npm | (any) | Comes with Node — used only for `n8drive/web/` |
+| Make | (any) | Pre-installed on macOS/Linux; `choco install make` on Windows |
 
-## Getting Started
+## Quick Start
 
 ```bash
-cd n8drive
-pnpm install
-pnpm run dev
+make setup     # install deps, build everything, run tests (first time)
+make dev       # start the backend on http://localhost:3002
+make dev-web   # start the Next.js frontend (separate terminal)
+```
+
+Run `make help` to see every available command:
+
+```
+  setup            First-time setup (install deps, build, run tests)
+  install          Install dependencies (pnpm)
+  dev              Start PuddleJumper backend (port 3002)
+  dev-web          Start Next.js frontend dev server
+  build            Build all packages
+  test             Run all tests
+  typecheck        TypeScript type-check across all packages
+  ci               Full CI pipeline (typecheck + contract check + tests)
+  lint             Lint the Next.js frontend
+  clean            Remove build artifacts and node_modules
+  smoke            Run local smoke test
+  ...              (and more — run `make help` for the full list)
+```
+
+## Repository Structure
+
+```
+puddlejumper/
+├── n8drive/                         # Core application (pnpm monorepo)
+│   ├── apps/
+│   │   ├── puddlejumper/            #   Express/TypeScript backend
+│   │   └── logic-commons/           #   OAuth & shared business logic
+│   ├── packages/
+│   │   ├── core/                    #   Auth, JWT, middleware utilities
+│   │   └── vault/                   #   Policy/audit deployment service
+│   ├── web/                         #   Next.js frontend (uses npm)
+│   ├── docs/                        #   Architecture & deployment guides
+│   └── ops/                         #   Monitoring, runbooks, DR
+│
+├── publiclogic-operating-system/    # Playbooks — canonical source
+├── publiclogic-os-ui/               # PublicLogic OS frontend (vanilla JS)
+├── publiclogic-site/                # Marketing / public site
+│
+├── scripts/                         # bootstrap.sh, sync-playbooks.sh
+├── tests/                           # E2E tests (Playwright)
+├── docs/                            # DEVELOPER.md, DNS.md
+├── _archived/                       # Retired projects (reference only)
+├── Makefile                         # ← start here
+└── smoke-test.sh                    # Quick local health check
 ```
 
 ## Playbook Sync
@@ -32,18 +73,21 @@ Three directories hold playbook content and must stay in sync:
 - `publiclogic-site/HMLP/content/playbooks/` — site copy
 
 ```bash
-./scripts/sync-playbooks.sh          # sync all copies from canonical source
-./scripts/sync-playbooks.sh --check  # check for drift (CI-friendly, exits 1 if out of sync)
+make sync         # sync all copies from canonical source
+make sync-check   # check for drift (CI-friendly, exits 1 if out of sync)
 ```
 
 ## Documentation
 
-- See `n8drive/README.md` for detailed PuddleJumper documentation
-- See `n8drive/docs/` for architecture and release docs
-- See `n8drive/ops/ARCHITECTURE-NORTH-STAR.md` for strategic roadmap
-- See `n8drive/SECURITY.md` for security policy
-- See `publiclogic-operating-system/README.md` for Logicville connection
+| Document | Location |
+|----------|----------|
+| Developer bootstrap guide | [`docs/DEVELOPER.md`](docs/DEVELOPER.md) |
+| PuddleJumper deep-dive | [`n8drive/README.md`](n8drive/README.md) |
+| Environment variables | [`n8drive/ENV_REFERENCE.md`](n8drive/ENV_REFERENCE.md) |
+| Security policy | [`n8drive/SECURITY.md`](n8drive/SECURITY.md) |
+| Architecture roadmap | [`n8drive/ops/ARCHITECTURE-NORTH-STAR.md`](n8drive/ops/ARCHITECTURE-NORTH-STAR.md) |
+| Disaster recovery | [`n8drive/ops/DISASTER-RECOVERY.md`](n8drive/ops/DISASTER-RECOVERY.md) |
 
 ## License
 
-See LICENSE file.
+See [LICENSE](LICENSE) file.

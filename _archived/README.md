@@ -18,3 +18,14 @@ The full source history is preserved in git. To browse the code:
 git log --all -- chamber-connect/
 git show f270d62 -- chamber-connect/server.js
 ```
+
+## portal-signin.html
+
+Standalone portal sign-in prototype. Superseded by the production version at
+`n8drive/apps/puddlejumper/public/portal-signin.html` (which follows CSP best
+practices with external stylesheets and scripts).
+
+## logo-background-removed.png
+
+PuddleJumper logo asset (previously at repo root with a space in the filename).
+Not referenced by any code or documentation.

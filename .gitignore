@@ -9,6 +9,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+!.env.sample
 
 # Database files
 *.db
@@ -30,9 +31,19 @@ build/
 .vercel
 .env*.local
 
+# Next.js
+.next/
+
 # Editor config
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # Temp files
 _tmp_*
 *.bak
+
+# OS files
+*.log
