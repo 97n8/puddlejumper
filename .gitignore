@@ -29,3 +29,10 @@ dist/
 build/
 .vercel
 .env*.local
+
+# Editor config
+.vscode/
+
+# Temp files
+_tmp_*
+*.bak

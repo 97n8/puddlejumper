@@ -35,3 +35,10 @@ coverage/
 # Temporary files
 web/.tmp_webhook_secret.txt
 *.log
+
+# Editor config
+.vscode/
+
+# Temp files
+_tmp_*
+*.bak
