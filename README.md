@@ -37,8 +37,13 @@ Three directories hold playbook content and must stay in sync:
 ./scripts/sync-playbooks.sh --check  # check for drift (CI-friendly, exits 1 if out of sync)
 ```
 
+## AI Dev Suite
+
+Drop `PROMPT.md` into any AI coding assistant (Cursor, Windsurf, Cline, Claude, ChatGPT) as system context. Cursor users get `.cursorrules` auto-loaded.
+
 ## Documentation
 
+- See `PROMPT.md` for the universal AI dev suite prompt
 - See `FEATURES.md` for best and novel features across the ecosystem
 - See `n8drive/README.md` for detailed PuddleJumper documentation
 - See `n8drive/docs/` for architecture and release docs

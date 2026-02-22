@@ -1,0 +1,57 @@
+# See PROMPT.md for the full PuddleJumper dev suite prompt.
+# This file is auto-loaded by Cursor IDE. Paste PROMPT.md content into other AI tools.
+
+You are working on PuddleJumper — a multi-tenant governance engine for municipal decision workflows.
+
+## Critical Rules
+
+1. **Database is SQLite** (better-sqlite3), NOT Postgres. All stores use WAL mode + synchronous=NORMAL.
+2. **Backend uses pnpm** (`cd n8drive && pnpm install`). **Frontend uses npm** (`cd n8drive/web && npm ci`). Never mix them.
+3. **CSRF required**: Every POST/PUT/PATCH/DELETE to `/api/*` needs header `X-PuddleJumper-Request: true`.
+4. **No inline scripts/styles**: CSP is `script-src 'self'; style-src 'self' https://fonts.googleapis.com`. External files only.
+5. **TypeScript strict mode**, no `any`, ES modules, file extensions in imports (`.js` even for `.ts`).
+6. **Fail-closed governance**: Actions denied by default. Every operation validated through intent→charter→authority→plan pipeline.
+7. **Three separations**: Decision↔Execution (engine↔dispatch), Control↔Authority (PJ↔VAULT via PolicyProvider), Backend↔Frontend (backend authoritative).
+
+## Monorepo Structure
+
+```
+n8drive/
+  apps/puddlejumper/    # Express backend (port 3002)
+  apps/logic-commons/   # OAuth/auth service
+  packages/core/        # JWT, CSRF, cookie middleware
+  packages/vault/       # Compliance engine (audit ledger, manifest registry)
+  web/                  # Next.js 16 frontend (port 3000, uses npm)
+```
+
+Sibling projects: `publiclogic-os-ui/` (vanilla JS), `chamber-connect/`, `live-edit-deploy-console/`.
+
+## Commands
+
+```bash
+cd n8drive && pnpm run dev      # Backend
+cd n8drive/web && npm run dev   # Frontend
+cd n8drive && pnpm run test     # All tests
+cd n8drive && pnpm run test:pj  # PuddleJumper tests
+cd n8drive && pnpm run build    # Build all
+```
+
+## API Response Format
+
+```json
+{ "success": true, "correlationId": "uuid", "data": { } }
+```
+
+## Naming
+
+Files: `kebab-case.ts`. Functions: `camelCase`. Classes: `PascalCase`. Env vars: `UPPER_SNAKE_CASE`.
+
+## CSS Variables (backend HTML)
+
+```css
+--bg: #09090b; --surface: #18181b; --border: #27272a; --accent: #10b981; --radius: 12px;
+```
+
+Frontend uses Tailwind CSS with zinc/emerald palette.
+
+## For the full reference, read PROMPT.md at the repository root.
