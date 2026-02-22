@@ -1,0 +1,19 @@
+{
+  "name": "puddlejumper-monorepo",
+  "private": true,
+  "description": "PuddleJumper monorepo — governance engine, OS UI, and supporting tools",
+  "workspaces": [
+    "n8drive"
+  ],
+  "scripts": {
+    "bootstrap": "cd n8drive && pnpm install",
+    "build": "cd n8drive && pnpm run build",
+    "test": "cd n8drive && pnpm run test",
+    "sync": "./scripts/sync-playbooks.sh",
+    "sync:check": "./scripts/sync-playbooks.sh --check",
+    "smoke": "./smoke-test.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
