@@ -39,6 +39,7 @@ Three directories hold playbook content and must stay in sync:
 
 ## Documentation
 
+- See `FEATURES.md` for best and novel features across the ecosystem
 - See `n8drive/README.md` for detailed PuddleJumper documentation
 - See `n8drive/docs/` for architecture and release docs
 - See `n8drive/ops/ARCHITECTURE-NORTH-STAR.md` for strategic roadmap
