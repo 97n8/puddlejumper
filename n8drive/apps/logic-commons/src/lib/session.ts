@@ -96,6 +96,10 @@ export type UserInfo = {
   name?: string;
   provider: string;
   role?: string;
+  /** Workspace/tenant ID — included in JWT so connectors can look up tokens. */
+  tenantId?: string;
+  /** Internal user ID — included in JWT for connector token keying. */
+  userId?: string;
 };
 
 /**
@@ -113,6 +117,8 @@ export async function createSessionAndSetCookies(
     name: userInfo.name,
     provider: userInfo.provider,
     role: userInfo.role ?? "user",
+    ...(userInfo.tenantId ? { tenantId: userInfo.tenantId } : {}),
+    ...(userInfo.userId ? { userId: userInfo.userId } : {}),
   };
 
   // Short-lived access token (1h)

@@ -559,10 +559,38 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     }
     
     // Extend the returned object to include workspaceId and workspaceName
-    return { ...userInfo, role: row.role, workspaceId: ws.id, workspaceName: ws.name } as typeof userInfo & { role: string; workspaceId: string; workspaceName: string };
+    return { ...userInfo, role: row.role, tenantId: ws.id, userId: row.sub, workspaceId: ws.id, workspaceName: ws.name } as typeof userInfo & { role: string; tenantId: string; userId: string; workspaceId: string; workspaceName: string };
   };
   const oauthRouteOpts = { nodeEnv, oauthStateStore, onUserAuthenticated, frontendUrl: "https://pj.publiclogic.org/pj/admin" };
-  app.use("/api", createOAuthRoutes(githubProvider, oauthRouteOpts));
+  // Auto-connect GitHub connector when user signs in with GitHub (one-click auth)
+  const githubOauthRouteOpts = {
+    ...oauthRouteOpts,
+    onTokenExchanged: async ({ provider, accessToken, userInfo }: { provider: string; accessToken: string; refreshToken: string | null; userInfo: any }) => {
+      if (provider !== "github") return;
+      const tenantId = userInfo.tenantId ?? "";
+      const userId = userInfo.userId ?? userInfo.sub ?? "";
+      if (!tenantId || !userId) return;
+      try {
+        const profileRes = await fetch("https://api.github.com/user", {
+          headers: { Authorization: `token ${accessToken}`, Accept: "application/vnd.github+json", "User-Agent": "puddle-jumper" },
+        });
+        const profile = profileRes.ok ? (await profileRes.json() as Record<string, unknown>) : {};
+        connectorStore.upsertToken({
+          provider: "github",
+          tenantId,
+          userId,
+          account: typeof profile.login === "string" ? profile.login : null,
+          scopes: ["read:user", "repo"],
+          accessToken,
+          refreshToken: null,
+          expiresAt: null,
+        });
+      } catch (err: any) {
+        console.warn("GitHub connector auto-connect failed:", err?.message);
+      }
+    },
+  };
+  app.use("/api", createOAuthRoutes(githubProvider, githubOauthRouteOpts));
   app.use("/api", createOAuthRoutes(googleProvider, oauthRouteOpts));
   app.use("/api", createOAuthRoutes(microsoftProvider, oauthRouteOpts));
   // Token exchange (SSO bridge — lets OS exchange an MSAL token for a PJ session)

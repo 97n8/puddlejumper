@@ -79,6 +79,17 @@ export interface OAuthRouteOptions {
    * When omitted, the raw provider profile is used with no role override.
    */
   onUserAuthenticated?: (userInfo: import('./session.js').UserInfo) => import('./session.js').UserInfo | Promise<import('./session.js').UserInfo>;
+  /**
+   * Optional hook called after a successful token exchange and session creation.
+   * Use this to auto-connect provider tokens to the connector store.
+   * Receives the resolved UserInfo (with tenantId/userId) and the raw access token.
+   */
+  onTokenExchanged?: (params: {
+    provider: string;
+    accessToken: string;
+    refreshToken: string | null;
+    userInfo: import('./session.js').UserInfo;
+  }) => void | Promise<void>;
 }
 
 // ── Factory ─────────────────────────────────────────────────────────────────
@@ -253,6 +264,20 @@ export function createOAuthRoutes(
         sessionUser,
         opts.nodeEnv,
       );
+
+      // Auto-connect: let the host app store the token (e.g. as a connector)
+      if (opts.onTokenExchanged) {
+        try {
+          await opts.onTokenExchanged({
+            provider: provider.name,
+            accessToken: tokenBody.access_token,
+            refreshToken: typeof tokenBody.refresh_token === "string" ? tokenBody.refresh_token : null,
+            userInfo: sessionUser,
+          });
+        } catch (hookErr: any) {
+          console.warn(`onTokenExchanged hook failed (non-fatal):`, hookErr?.message);
+        }
+      }
 
       authEvent(req, "login", {
         sub: sessionUser.sub,
