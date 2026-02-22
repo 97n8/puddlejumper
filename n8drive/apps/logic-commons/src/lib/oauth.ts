@@ -120,11 +120,15 @@ export function createOAuthRoutes(
     const cookieOpts: any = {
       httpOnly: true,
       secure: opts.nodeEnv === "production", // required for HTTPS
-      sameSite: "lax", // allow top-level navigation from Google
+      sameSite: "lax", // allow top-level navigation from GitHub/Google
       path: "/",
-      domain: process.env.COOKIE_DOMAIN || ".publiclogic.org",
       maxAge: 10 * 60 * 1000, // Match state TTL (10 minutes)
     };
+    // Only set domain when explicitly configured — omitting it scopes the
+    // cookie to the exact request host (correct for Fly.io, Vercel, etc.)
+    if (process.env.COOKIE_DOMAIN) {
+      cookieOpts.domain = process.env.COOKIE_DOMAIN;
+    }
     
     res.cookie(provider.stateCookieName, state, cookieOpts);
 
