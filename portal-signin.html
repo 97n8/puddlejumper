@@ -868,18 +868,47 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
     <script>
-      const form = document.getElementById("loginForm");
-      const email = document.getElementById("email");
-      const password = document.getElementById("password");
-      const togglePw = document.getElementById("togglePw");
-      const eyeIcon = document.getElementById("eyeIcon");
-      const togglePwText = document.getElementById("togglePwText");
-      const signinBtn = document.getElementById("signinBtn");
-      const ssoBtn = document.getElementById("ssoBtn");
-      const errorEl = document.getElementById("formError");
-      const toastEl = document.getElementById("toast");
+      // ── Config ─────────────────────────────────────────────────────────────
+      const CLIENT_ID  = "1b53d140-0779-4a64-943c-a11ba19ec0ce";
+      const TENANT_ID  = "12879da8-d927-419b-8a2e-fda32e1732be";
+      const PORTAL_URL = "https://www.publiclogic.org/HMLP/";
+      const SCOPES     = ["openid", "profile", "email", "User.Read", "Sites.Read.All"];
 
+      // ── DOM refs ───────────────────────────────────────────────────────────
+      const form         = document.getElementById("loginForm");
+      const emailEl      = document.getElementById("email");
+      const password     = document.getElementById("password");
+      const togglePw     = document.getElementById("togglePw");
+      const eyeIcon      = document.getElementById("eyeIcon");
+      const togglePwText = document.getElementById("togglePwText");
+      const signinBtn    = document.getElementById("signinBtn");
+      const ssoBtn       = document.getElementById("ssoBtn");
+      const errorEl      = document.getElementById("formError");
+      const toastEl      = document.getElementById("toast");
+      const rememberEl   = document.querySelector('[name="remember"]');
+
+      // ── MSAL ───────────────────────────────────────────────────────────────
+      // Read stored "remember me" preference; default to true (persist session).
+      const remembered = localStorage.getItem("pl_remember") !== "0";
+      if (rememberEl) rememberEl.checked = remembered;
+
+      const msalInstance = new msal.PublicClientApplication({
+        auth: {
+          clientId:                  CLIENT_ID,
+          authority:                 `https://login.microsoftonline.com/${TENANT_ID}`,
+          redirectUri:               PORTAL_URL,
+          postLogoutRedirectUri:     window.location.href,
+          navigateToLoginRequestUrl: false,
+        },
+        cache: {
+          cacheLocation:        remembered ? "localStorage" : "sessionStorage",
+          storeAuthStateInCookie: false,
+        },
+      });
+
+      // ── Helpers ────────────────────────────────────────────────────────────
       function setBusy(busy) {
         signinBtn.setAttribute("aria-busy", busy ? "true" : "false");
       }
@@ -898,11 +927,28 @@
         toastEl.textContent = message;
         toastEl.dataset.show = "1";
         clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => {
-          delete toastEl.dataset.show;
-        }, 2400);
+        toastTimer = setTimeout(() => delete toastEl.dataset.show, 2400);
       }
 
+      // ── Core sign-in ───────────────────────────────────────────────────────
+      async function signIn(loginHint) {
+        clearError();
+        setBusy(true);
+        localStorage.setItem("pl_remember", rememberEl?.checked === false ? "0" : "1");
+
+        try {
+          await msalInstance.loginRedirect({
+            scopes: SCOPES,
+            ...(loginHint ? { loginHint } : { prompt: "select_account" }),
+          });
+          // Navigation away — nothing below runs.
+        } catch (err) {
+          setBusy(false);
+          showError(err.message || "Sign-in failed. Please try again.");
+        }
+      }
+
+      // ── Password visibility toggle (unchanged) ─────────────────────────────
       togglePw.addEventListener("click", () => {
         const showing = password.type === "text";
         password.type = showing ? "password" : "text";
@@ -914,32 +960,43 @@
           : '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
       });
 
-      form.addEventListener("submit", (e) => {
+      // ── Form submit: use email as login_hint ────────────────────────────────
+      form.addEventListener("submit", async (e) => {
         e.preventDefault();
         clearError();
 
-        if (!email.value || !email.checkValidity()) {
-          showError("Enter a valid email address.");
-          email.focus();
+        if (!emailEl.value || !emailEl.checkValidity()) {
+          showError("Enter your Microsoft 365 email address to continue.");
+          emailEl.focus();
           return;
         }
 
-        if (!password.value || password.value.length < 8) {
-          showError("Your password must be at least 8 characters.");
-          password.focus();
-          return;
+        await signIn(emailEl.value.trim());
+      });
+
+      // ── SSO button: sign in without a hint ─────────────────────────────────
+      ssoBtn.addEventListener("click", () => signIn(null));
+
+      // ── "Forgot password": send to Microsoft account recovery ───────────────
+      document.querySelector('a[href="#"]')?.addEventListener("click", (e) => {
+        if (e.target.textContent.trim().startsWith("Forgot")) {
+          e.preventDefault();
+          window.open("https://account.microsoft.com/password/reset", "_blank", "noopener");
         }
-
-        setBusy(true);
-        setTimeout(() => {
-          setBusy(false);
-          toast("Signed in (demo). Wire this form to your auth provider.");
-        }, 900);
       });
 
-      ssoBtn.addEventListener("click", () => {
-        toast("Redirecting to your SSO provider (demo).");
-      });
+      // ── On load: check for existing session ────────────────────────────────
+      (async () => {
+        try {
+          const accounts = msalInstance.getAllAccounts();
+          if (accounts.length > 0) {
+            toast("Already signed in. Redirecting…");
+            setTimeout(() => window.location.replace(PORTAL_URL), 900);
+          }
+        } catch {
+          // Non-fatal — let the user sign in manually.
+        }
+      })();
     </script>
   </body>
 </html>
