@@ -210,7 +210,7 @@ function getMicrosoftAdapter(
   const clientSecret = (process.env.MS_CLIENT_SECRET ?? "").trim();
   const scope = (
     process.env.MS_SCOPE ??
-    "offline_access Files.Read Sites.Read.All Mail.Read Calendars.Read User.Read"
+    "offline_access Files.Read Files.ReadWrite Sites.Read.All Mail.Read Mail.Send Calendars.Read Calendars.ReadWrite User.Read"
   )
     .trim()
     .replace(/\s+/g, " ");
