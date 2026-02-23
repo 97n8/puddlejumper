@@ -6,6 +6,7 @@ import { FileSystemVaultStorage } from "./fileSystemStorage.js";
 import { AuditLedger } from "./auditLedger.js";
 import { ManifestRegistry } from "./manifestRegistry.js";
 import { VaultPolicyProvider } from "./policyProvider.js";
+import { createModuleBuilderRouter } from "./moduleBuilderRoutes.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -87,6 +88,10 @@ app.get("/health", (_req, res) => {
 
 // JWT authentication middleware for protected routes
 const authMiddleware = createJwtAuthenticationMiddleware();
+
+// ── Module Builder Routes ────────────────────────────────────────────────────
+
+app.use("/api/v1/vault/modules", authMiddleware, createModuleBuilderRouter(DB_DIR));
 
 // ── FormKey & Process Endpoints ─────────────────────────────────────────────
 
