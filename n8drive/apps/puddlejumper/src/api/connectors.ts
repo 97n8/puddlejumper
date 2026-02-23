@@ -737,6 +737,13 @@ export function createConnectorsRouter(options: CreateConnectorsRouterOptions): 
       res.status(400).send("Invalid provider");
       return;
     }
+    // Microsoft (and others) may return error instead of code on denial/consent issues
+    if (typeof req.query.error === "string") {
+      const desc = typeof req.query.error_description === "string" ? req.query.error_description : req.query.error;
+      const successBase = (process.env.LOGIC_COMMONS_URL ?? "").trim() || "/pj";
+      res.redirect(302, `${successBase}?oauth_error=${encodeURIComponent(desc)}`);
+      return;
+    }
     const parsedQuery = callbackQuerySchema.safeParse(req.query);
     if (!parsedQuery.success) {
       res.status(400).send("Missing code or state");
