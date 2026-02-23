@@ -39,16 +39,28 @@ export function createGoogleProxyRoutes(opts: GoogleProxyOptions): express.Route
       return;
     }
 
-    // Path is passed as-is so callers can hit any googleapis.com service:
-    // /drive/v3/files, /gmail/v1/users/me/messages, /calendar/v3/...
     const upstreamPath = req.path.startsWith("/") ? req.path.slice(1) : req.path;
     const rawQuery = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
-    const upstreamUrl = `https://www.googleapis.com/${upstreamPath}${rawQuery}`;
+
+    // Google multipart/resumable uploads use upload.googleapis.com
+    const isUpload = upstreamPath.startsWith("upload/");
+    const baseUrl = isUpload ? "https://upload.googleapis.com" : "https://www.googleapis.com";
+    const upstreamUrl = `${baseUrl}/${upstreamPath}${rawQuery}`;
 
     const isBodyless = ["GET", "HEAD"].includes(req.method.toUpperCase());
-    let body: string | undefined;
-    if (!isBodyless && req.body !== undefined && req.body !== null) {
-      body = JSON.stringify(req.body);
+    let body: BodyInit | undefined;
+    let contentTypeOverride: string | undefined;
+
+    if (!isBodyless) {
+      const rawContentType = req.headers["content-type"] ?? "";
+      if (rawContentType.startsWith("multipart/")) {
+        const raw = req.body instanceof Buffer ? req.body : Buffer.from(JSON.stringify(req.body ?? {}));
+        body = raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength) as ArrayBuffer;
+        contentTypeOverride = rawContentType;
+      } else if (req.body !== undefined && req.body !== null) {
+        body = JSON.stringify(req.body);
+        contentTypeOverride = "application/json";
+      }
     }
 
     try {
@@ -58,7 +70,7 @@ export function createGoogleProxyRoutes(opts: GoogleProxyOptions): express.Route
           Authorization: `Bearer ${tokenRecord.accessToken}`,
           Accept: req.headers.accept ?? "application/json",
           "User-Agent": "PublicLogic-PuddleJumper",
-          ...(body ? { "Content-Type": "application/json" } : {}),
+          ...(contentTypeOverride ? { "Content-Type": contentTypeOverride } : {}),
         },
         body,
       });

@@ -646,25 +646,6 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     res.redirect(302, "/pj/admin");
   });
 
-  // ── Next.js Proxy (MUST BE LAST) ─────────────────────────────────────────
-  // All frontend routes (/, /admin, /vault, etc.) are proxied to Next.js standalone server
-  // This must be mounted after all API routes so Express handles APIs directly
-  if (nodeEnv === "production") {
-    // Load proxy asynchronously and mount it
-    import("./nextProxy.js")
-      .then(({ createNextProxyMiddleware }) => {
-        app.use(createNextProxyMiddleware());
-        // eslint-disable-next-line no-console
-        console.log("[server] Next.js proxy middleware mounted");
-      })
-      .catch((err: Error) => {
-        // eslint-disable-next-line no-console
-        console.error("[server] Failed to load Next.js proxy:", err.message);
-        // eslint-disable-next-line no-console
-        console.error("[server] Frontend routes will return 404");
-      });
-  }
-
   // ── Global error handler ──────────────────────────────────────────────
   app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (error instanceof SyntaxError) { res.status(400).json({ error: "Invalid JSON body" }); return; }
