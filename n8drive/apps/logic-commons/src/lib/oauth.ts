@@ -286,7 +286,7 @@ export function createOAuthRoutes(
       });
 
       // Redirect to frontend (cookie carries the session — no token in URL)
-      return res.redirect(`${resolveFrontendUrl()}?auth=success`);
+      return res.redirect(`${resolveFrontendUrl()}?auth=success&connected=${encodeURIComponent(provider.name)}`);
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error(`${provider.name} OAuth callback error:`, err?.message);

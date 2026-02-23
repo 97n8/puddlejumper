@@ -566,37 +566,32 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     return { ...userInfo, role: row.role, tenantId: ws.id, userId: row.sub, workspaceId: ws.id, workspaceName: ws.name } as typeof userInfo & { role: string; tenantId: string; userId: string; workspaceId: string; workspaceName: string };
   };
   const oauthRouteOpts = { nodeEnv, oauthStateStore, onUserAuthenticated, frontendUrl: (process.env.LOGIC_COMMONS_URL ?? "").trim() || "https://logicos-rho.vercel.app" };
-  // Auto-connect GitHub connector when user signs in with GitHub (one-click auth)
-  const githubOauthRouteOpts = {
-    ...oauthRouteOpts,
-    onTokenExchanged: async ({ provider, accessToken, userInfo }: { provider: string; accessToken: string; refreshToken: string | null; userInfo: any }) => {
-      if (provider !== "github") return;
-      const tenantId = userInfo.tenantId ?? "";
-      const userId = userInfo.userId ?? userInfo.sub ?? "";
-      if (!tenantId || !userId) return;
-      try {
+  // Auto-connect connector store when user signs in with any provider
+  const onTokenExchanged = async ({ provider, accessToken, refreshToken, userInfo }: { provider: string; accessToken: string; refreshToken: string | null; userInfo: any }) => {
+    const tenantId = userInfo.tenantId ?? "";
+    const userId = userInfo.userId ?? userInfo.sub ?? "";
+    if (!tenantId || !userId) return;
+    const account = userInfo.email ?? userInfo.name ?? null;
+    try {
+      if (provider === "github") {
         const profileRes = await fetch("https://api.github.com/user", {
           headers: { Authorization: `token ${accessToken}`, Accept: "application/vnd.github+json", "User-Agent": "puddle-jumper" },
         });
         const profile = profileRes.ok ? (await profileRes.json() as Record<string, unknown>) : {};
-        connectorStore.upsertToken({
-          provider: "github",
-          tenantId,
-          userId,
-          account: typeof profile.login === "string" ? profile.login : null,
-          scopes: ["read:user", "repo"],
-          accessToken,
-          refreshToken: null,
-          expiresAt: null,
-        });
-      } catch (err: any) {
-        console.warn("GitHub connector auto-connect failed:", err?.message);
+        connectorStore.upsertToken({ provider: "github", tenantId, userId, account: typeof profile.login === "string" ? profile.login : account, scopes: ["read:user", "repo"], accessToken, refreshToken: null, expiresAt: null });
+      } else if (provider === "google") {
+        connectorStore.upsertToken({ provider: "google", tenantId, userId, account, scopes: ["openid", "email", "profile", "drive.file", "gmail.readonly", "calendar.readonly"], accessToken, refreshToken: refreshToken ?? null, expiresAt: null });
+      } else if (provider === "microsoft") {
+        connectorStore.upsertToken({ provider: "microsoft", tenantId, userId, account, scopes: ["openid", "email", "profile", "User.Read", "Files.ReadWrite", "Mail.Read", "Calendars.Read"], accessToken, refreshToken: refreshToken ?? null, expiresAt: null });
       }
-    },
+    } catch (err: any) {
+      console.warn(`${provider} connector auto-connect failed:`, err?.message);
+    }
   };
-  app.use("/api", createOAuthRoutes(githubProvider, githubOauthRouteOpts));
-  app.use("/api", createOAuthRoutes(googleProvider, oauthRouteOpts));
-  app.use("/api", createOAuthRoutes(microsoftProvider, oauthRouteOpts));
+  const allOauthRouteOpts = { ...oauthRouteOpts, onTokenExchanged };
+  app.use("/api", createOAuthRoutes(githubProvider, allOauthRouteOpts));
+  app.use("/api", createOAuthRoutes(googleProvider, allOauthRouteOpts));
+  app.use("/api", createOAuthRoutes(microsoftProvider, allOauthRouteOpts));
   // Token exchange (SSO bridge — lets OS exchange an MSAL token for a PJ session)
   app.use("/api/auth/token-exchange", oauthLoginRateLimit);
   app.use("/api", createTokenExchangeRoutes({

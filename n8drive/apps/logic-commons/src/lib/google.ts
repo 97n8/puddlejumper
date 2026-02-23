@@ -23,7 +23,7 @@ export const googleProvider: OAuthProvider = {
   name: "google",
   authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
   tokenUrl: "https://oauth2.googleapis.com/token",
-  scopes: "openid email profile",
+  scopes: "openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly",
   tokenContentType: "form",
   stateCookieName: "google_oauth_state",
   clientIdEnvVar: "GOOGLE_CLIENT_ID",
