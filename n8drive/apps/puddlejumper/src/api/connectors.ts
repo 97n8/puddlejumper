@@ -297,6 +297,21 @@ function getMicrosoftAdapter(
         throw new Error("Not connected");
       }
       const normalizedQuery = query.trim();
+      // ?type=sites → list SharePoint sites the user follows
+      if (normalizedQuery === "__sites__") {
+        const endpoint = "https://graph.microsoft.com/v1.0/me/followedSites?$top=25&$select=id,displayName,name,webUrl";
+        const payload = await getJsonWithBearer(fetchImpl, endpoint, token.accessToken);
+        const rawValues = Array.isArray(payload.value) ? payload.value : [];
+        return rawValues
+          .filter((entry): entry is Record<string, unknown> => Boolean(entry && typeof entry === "object"))
+          .map((entry) => ({
+            id: typeof entry.id === "string" ? entry.id : crypto.randomUUID(),
+            name: typeof entry.displayName === "string" ? entry.displayName : typeof entry.name === "string" ? entry.name : "Site",
+            type: "folder" as const,
+            url: typeof entry.webUrl === "string" ? entry.webUrl : null,
+            provider: "microsoft" as const
+          }));
+      }
       const endpoint =
         normalizedQuery.length > 0
           ? `https://graph.microsoft.com/v1.0/me/drive/root/search(q='${encodeURIComponent(
@@ -521,13 +536,17 @@ function getGitHubAdapter(
         throw new Error("Not connected");
       }
       const normalizedQuery = query.trim();
-      const searchQuery = normalizedQuery.length > 0 ? `${normalizedQuery} in:name,description` : "is:public";
-      const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(searchQuery)}&per_page=25`;
-      const payload = await getJsonWithBearer(fetchImpl, url, token.accessToken, {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "puddle-jumper-connectors"
-      });
-      const items = Array.isArray(payload.items) ? payload.items : [];
+      let items: Record<string, unknown>[];
+      if (normalizedQuery.length > 0) {
+        const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(`${normalizedQuery} in:name,description`)}&per_page=25`;
+        const payload = await getJsonWithBearer(fetchImpl, url, token.accessToken, { Accept: "application/vnd.github+json", "User-Agent": "puddle-jumper-connectors" });
+        items = Array.isArray(payload.items) ? payload.items : [];
+      } else {
+        // List user's own repos instead of searching public ones
+        const url = `https://api.github.com/user/repos?per_page=50&sort=updated&affiliation=owner,collaborator`;
+        const payload = await getJsonWithBearer(fetchImpl, url, token.accessToken, { Accept: "application/vnd.github+json", "User-Agent": "puddle-jumper-connectors" });
+        items = Array.isArray(payload) ? payload : [];
+      }
       return items
         .filter((entry): entry is Record<string, unknown> => Boolean(entry && typeof entry === "object"))
         .map((entry) => ({
