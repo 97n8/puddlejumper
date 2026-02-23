@@ -39,7 +39,7 @@ import type { CanonicalSourceOptions } from "./canonicalSource.js";
 import { PrrStore } from "./prrStore.js";
 import { ConnectorStore } from "./connectorStore.js";
 import { createPublicPrrRouter } from "./publicPrrRouter.js";
-import { createConnectorsRouter } from "./connectors.js";
+import { createConnectorsRouter, createConnectorCallbackMiddleware } from "./connectors.js";
 import { createGitHubProxyRoutes } from "./routes/githubProxy.js";
 import { createMicrosoftProxyRoutes } from "./routes/microsoftProxy.js";
 import { createGoogleProxyRoutes } from "./routes/googleProxy.js";
@@ -590,6 +590,12 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     }
   };
   const allOauthRouteOpts = { ...oauthRouteOpts, onTokenExchanged };
+  // Intercept /api/auth/github/callback before the login handler — if the `state`
+  // is a signed connector state (user connecting GitHub while logged in as another
+  // provider), store the token and redirect; otherwise fall through to login flow.
+  app.get("/api/auth/github/callback", createConnectorCallbackMiddleware({
+    stateHmacKey: connectorStateSecret, store: connectorStore,
+  }));
   app.use("/api", createOAuthRoutes(githubProvider, allOauthRouteOpts));
   app.use("/api", createOAuthRoutes(googleProvider, allOauthRouteOpts));
   app.use("/api", createOAuthRoutes(microsoftProvider, allOauthRouteOpts));

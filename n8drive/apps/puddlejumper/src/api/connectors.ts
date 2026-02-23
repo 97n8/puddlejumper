@@ -606,6 +606,44 @@ function requireAuthContext(req: express.Request, res: express.Response): AuthCo
   return auth;
 }
 
+/**
+ * Middleware that intercepts OAuth callbacks and handles them as connector token
+ * storage when the `state` param is a signed connector state. Falls through to
+ * `next()` when the state is not a connector state (e.g. normal login flow).
+ */
+export function createConnectorCallbackMiddleware(options: {
+  stateHmacKey: string;
+  store: ConnectorStore;
+  fetchImpl?: typeof fetch;
+}): express.RequestHandler {
+  const signer = createStateSigner(options.stateHmacKey);
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return async (req, res, next) => {
+    const stateParam = typeof req.query.state === "string" ? req.query.state : "";
+    const state = signer.verify(stateParam);
+    if (!state || state.exp < Date.now()) {
+      return next();
+    }
+    const code = typeof req.query.code === "string" ? req.query.code : "";
+    if (!code) {
+      return next();
+    }
+    // Use GITHUB_REDIRECT_URI env var so it matches what's registered in the OAuth App
+    const redirectUri = (process.env.GITHUB_REDIRECT_URI ?? "").trim() ||
+      `${req.protocol}://${req.get("host")}/api/auth/github/callback`;
+    const adapter = buildAdapter(state.provider, state.tenantId, state.userId, options.store, fetchImpl);
+    try {
+      await adapter.handleCallback(code, redirectUri);
+      const successBase = (process.env.LOGIC_COMMONS_URL ?? "").trim() || "/pj";
+      res.redirect(302, `${successBase}?connected=${encodeURIComponent(state.provider)}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "OAuth failed";
+      res.status(500).send(`Connector OAuth failed: ${message}`);
+    }
+  };
+}
+
 export function createConnectorsRouter(options: CreateConnectorsRouterOptions): express.Router {
   const router = express.Router();
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -671,7 +709,9 @@ export function createConnectorsRouter(options: CreateConnectorsRouterOptions): 
       nonce: crypto.randomUUID(),
       exp: Date.now() + 10 * 60_000
     });
-    const redirectUri = `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`;
+    const redirectUri = provider === "github"
+      ? (process.env.GITHUB_REDIRECT_URI ?? "").trim() || `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`
+      : `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`;
 
     try {
       const authUrl = adapter.getAuthUrl(signedState, redirectUri);
