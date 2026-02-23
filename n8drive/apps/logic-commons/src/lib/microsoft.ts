@@ -36,7 +36,7 @@ export const microsoftProvider: OAuthProvider = {
   clientSecretEnvVar: "MICROSOFT_CLIENT_SECRET",
   redirectUriEnvVar: "MICROSOFT_REDIRECT_URI",
   defaultRedirectUri: "http://localhost:3002/api/auth/microsoft/callback",
-  extraAuthorizeParams: { response_mode: "query" },
+  extraAuthorizeParams: { response_mode: "query", prompt: "select_account" },
   extraTokenParams: { scope: "openid email profile User.Read" },
   fetchUserInfo: fetchMicrosoftUserInfo,
 };
