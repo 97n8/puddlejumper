@@ -498,6 +498,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.path.startsWith("/microsoft/")) { next(); return; }
     if (req.path.startsWith("/google/")) { next(); return; }
     if (req.path.startsWith("/connectors/")) { next(); return; }
+    if (req.path.startsWith("/cloud-save")) { next(); return; }
     csrfProtection()(req, res, next);
   });
 
