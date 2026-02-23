@@ -629,8 +629,11 @@ export function createConnectorCallbackMiddleware(options: {
     if (!code) {
       return next();
     }
-    // Use GITHUB_REDIRECT_URI env var so it matches what's registered in the OAuth App
-    const redirectUri = (process.env.GITHUB_REDIRECT_URI ?? "").trim() ||
+    // Use the registered redirect URI for the provider so the token exchange matches
+    const registeredUri =
+      state.provider === "github" ? (process.env.GITHUB_REDIRECT_URI ?? "").trim() :
+      state.provider === "google" ? (process.env.GOOGLE_REDIRECT_URI ?? "").trim() : "";
+    const redirectUri = registeredUri ||
       `${req.protocol}://${req.get("host")}/api/auth/github/callback`;
     const adapter = buildAdapter(state.provider, state.tenantId, state.userId, options.store, fetchImpl);
     try {
@@ -711,6 +714,8 @@ export function createConnectorsRouter(options: CreateConnectorsRouterOptions): 
     });
     const redirectUri = provider === "github"
       ? (process.env.GITHUB_REDIRECT_URI ?? "").trim() || `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`
+      : provider === "google"
+      ? (process.env.GOOGLE_REDIRECT_URI ?? "").trim() || `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`
       : `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`;
 
     try {

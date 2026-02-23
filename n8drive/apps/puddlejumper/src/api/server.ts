@@ -596,6 +596,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.get("/api/auth/github/callback", createConnectorCallbackMiddleware({
     stateHmacKey: connectorStateSecret, store: connectorStore,
   }));
+  app.get("/api/auth/google/callback", createConnectorCallbackMiddleware({
+    stateHmacKey: connectorStateSecret, store: connectorStore,
+  }));
   app.use("/api", createOAuthRoutes(githubProvider, allOauthRouteOpts));
   app.use("/api", createOAuthRoutes(googleProvider, allOauthRouteOpts));
   app.use("/api", createOAuthRoutes(microsoftProvider, allOauthRouteOpts));
