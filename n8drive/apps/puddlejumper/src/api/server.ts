@@ -44,6 +44,7 @@ import { createGitHubProxyRoutes } from "./routes/githubProxy.js";
 import { createMicrosoftProxyRoutes } from "./routes/microsoftProxy.js";
 import { createGoogleProxyRoutes } from "./routes/googleProxy.js";
 import { createCloudSaveRoutes } from "./routes/cloudSave.js";
+import { createDocumentRoutes } from "./routes/documents.js";
 import {
   LOGIN_WINDOW_MS,
   LOGIN_MAX_ATTEMPTS,
@@ -499,6 +500,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.path.startsWith("/google/")) { next(); return; }
     if (req.path.startsWith("/connectors/")) { next(); return; }
     if (req.path.startsWith("/cloud-save")) { next(); return; }
+    if (req.path.startsWith("/documents")) { next(); return; }
+    if (req.path.startsWith("/vault-files")) { next(); return; }
     csrfProtection()(req, res, next);
   });
 
@@ -644,6 +647,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/microsoft", createMicrosoftProxyRoutes({ store: connectorStore }));
   app.use("/api/google", createGoogleProxyRoutes({ store: connectorStore }));
   app.use("/api/cloud-save", createCloudSaveRoutes({ store: connectorStore }));
+
+  const vaultDbPath = path.resolve(process.env.VAULT_DB_PATH ?? path.join(CONTROLLED_DATA_DIR, "vault.db"));
+  const documentRoutes = createDocumentRoutes({ dbPath: vaultDbPath });
+  app.use("/api", documentRoutes);
 
   // ── Redirects ────────────────────────────────────────────────────────────
   // Redirect /admin and /dashboard to the working backend admin interface at /pj/admin
