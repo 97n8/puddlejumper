@@ -43,6 +43,7 @@ import { createConnectorsRouter, createConnectorCallbackMiddleware } from "./con
 import { createGitHubProxyRoutes } from "./routes/githubProxy.js";
 import { createMicrosoftProxyRoutes } from "./routes/microsoftProxy.js";
 import { createGoogleProxyRoutes } from "./routes/googleProxy.js";
+import { createCloudSaveRoutes } from "./routes/cloudSave.js";
 import {
   LOGIN_WINDOW_MS,
   LOGIN_MAX_ATTEMPTS,
@@ -641,6 +642,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/github", createGitHubProxyRoutes({ store: connectorStore }));
   app.use("/api/microsoft", createMicrosoftProxyRoutes({ store: connectorStore }));
   app.use("/api/google", createGoogleProxyRoutes({ store: connectorStore }));
+  app.use("/api/cloud-save", createCloudSaveRoutes({ store: connectorStore }));
 
   // ── Redirects ────────────────────────────────────────────────────────────
   // Redirect /admin and /dashboard to the working backend admin interface at /pj/admin
