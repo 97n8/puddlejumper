@@ -28,6 +28,7 @@ const bodySchema = z.object({
   mimeType: z.string().optional(),
   // Google / OneDrive
   folderId: z.string().optional(),
+  driveId: z.string().optional(),   // OneDrive/SharePoint drive ID
   // GitHub-specific
   githubRepo: z.string().optional(),
   githubPath: z.string().optional(),
@@ -49,7 +50,7 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
       res.status(400).json({ error: "Invalid request", detail: parsed.error.flatten() });
       return;
     }
-    const { provider, filename, contentBase64, mimeType, folderId, githubRepo, githubPath, githubMessage } = parsed.data;
+    const { provider, filename, contentBase64, mimeType, folderId, driveId, githubRepo, githubPath, githubMessage } = parsed.data;
 
     const token = opts.store.getToken(provider, tenantId, auth.userId ?? auth.sub);
     if (!token) {
@@ -62,7 +63,7 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
         const result = await saveToGoogleDrive({ fetchImpl, accessToken: token.accessToken, filename, contentBase64, mimeType, folderId });
         res.json(result);
       } else if (provider === "microsoft") {
-        const result = await saveToOneDrive({ fetchImpl, accessToken: token.accessToken, filename, contentBase64, mimeType, folderId });
+        const result = await saveToOneDrive({ fetchImpl, accessToken: token.accessToken, filename, contentBase64, mimeType, folderId, driveId });
         res.json(result);
       } else {
         if (!githubRepo) { res.status(400).json({ error: "githubRepo is required for GitHub saves" }); return; }
@@ -152,15 +153,22 @@ async function saveToOneDrive(opts: {
   contentBase64: string;
   mimeType?: string;
   folderId?: string;
+  driveId?: string;
 }): Promise<{ fileId: string; url: string }> {
-  const { fetchImpl, accessToken, filename, contentBase64, folderId } = opts;
+  const { fetchImpl, accessToken, filename, contentBase64, folderId, driveId } = opts;
   const content = Buffer.from(contentBase64, "base64");
 
-  // Simple upload: PUT /me/drive/root:/{filename}:/content
-  // If folderId is set, use /me/drive/items/{folderId}:/{filename}:/content
-  const uploadUrl = folderId
-    ? `https://graph.microsoft.com/v1.0/me/drive/items/${folderId}:/${encodeURIComponent(filename)}:/content`
-    : `https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIComponent(filename)}:/content`;
+  // Use drive-specific URL when driveId is provided (e.g. SharePoint)
+  let uploadUrl: string;
+  if (driveId && folderId) {
+    uploadUrl = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${folderId}:/${encodeURIComponent(filename)}:/content`;
+  } else if (driveId) {
+    uploadUrl = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodeURIComponent(filename)}:/content`;
+  } else if (folderId) {
+    uploadUrl = `https://graph.microsoft.com/v1.0/me/drive/items/${folderId}:/${encodeURIComponent(filename)}:/content`;
+  } else {
+    uploadUrl = `https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIComponent(filename)}:/content`;
+  }
 
   const uploadRes = await fetchImpl(uploadUrl, {
     method: "PUT",
