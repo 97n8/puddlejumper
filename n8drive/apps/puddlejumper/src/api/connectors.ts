@@ -50,7 +50,7 @@ const callbackQuerySchema = z
     code: z.string().trim().min(1),
     state: z.string().trim().min(1)
   })
-  .strict();
+  .passthrough();
 const resourceQuerySchema = z
   .object({
     q: z.string().trim().max(256).optional()
