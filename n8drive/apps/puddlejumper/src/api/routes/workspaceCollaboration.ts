@@ -10,7 +10,6 @@ import express from "express";
 import { getAuthContext, requireAuthenticated } from "@publiclogic/core";
 import { getCorrelationId } from "../serverMiddleware.js";
 import { requireRole } from "../middleware/checkWorkspaceRole.js";
-import { enforceTierLimit } from "../middleware/enforceTierLimit.js";
 import {
   createInvitation,
   listPendingInvitations,
@@ -21,14 +20,16 @@ import {
   removeWorkspaceMember,
   updateMemberRole,
   getMemberRole,
+  getWorkspace,
 } from "../../engine/workspaceStore.js";
+import { sendInviteEmail } from "../email.js";
 
 export function createWorkspaceCollaborationRoutes(): express.Router {
   const router = express.Router();
   const dataDir = process.env.DATA_DIR || "./data";
 
   // POST /api/workspace/invite - Create invitation (owner/admin only)
-  router.post("/workspace/invite", requireAuthenticated(), requireRole("owner", "admin"), (req, res) => {
+  router.post("/workspace/invite", requireAuthenticated(), requireRole("owner", "admin"), async (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
     const { email, role } = req.body;
@@ -43,7 +44,20 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
       return;
     }
 
-    const invitation = createInvitation(dataDir, auth!.tenantId ?? auth!.workspaceId, email, role, auth!.sub);
+    const workspaceId = auth!.tenantId ?? auth!.workspaceId;
+    const invitation = createInvitation(dataDir, workspaceId, email, role, auth!.sub);
+
+    // Send invite email (fire-and-forget — don't fail the request if email fails)
+    const ws = getWorkspace(dataDir, workspaceId);
+    const loginUrl = `${process.env.LOGIC_COMMONS_URL || "https://os.publiclogic.org"}?invite=${invitation.token}`;
+    sendInviteEmail({
+      toEmail: email,
+      inviterName: auth!.name || auth!.email || "Your admin",
+      workspaceName: ws?.name || "PublicLogic",
+      role,
+      loginUrl,
+    }).catch((err: unknown) => console.error("[email] invite send failed:", err));
+
     res.json({ success: true, correlationId, data: invitation });
   });
 
