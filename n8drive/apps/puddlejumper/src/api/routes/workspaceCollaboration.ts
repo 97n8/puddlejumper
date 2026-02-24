@@ -21,6 +21,7 @@ import {
   updateMemberRole,
   getMemberRole,
   getWorkspace,
+  getDb,
 } from "../../engine/workspaceStore.js";
 import { sendInviteEmail } from "../email.js";
 
@@ -45,7 +46,8 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
     }
 
     const workspaceId = auth!.tenantId ?? auth!.workspaceId;
-    const invitation = createInvitation(dataDir, workspaceId, email, role, auth!.sub);
+    const { toolAccess } = req.body; // optional: string[] | null
+    const invitation = createInvitation(dataDir, workspaceId, email, role, auth!.sub, toolAccess ?? null);
 
     // Send invite email (fire-and-forget — don't fail the request if email fails)
     const ws = getWorkspace(dataDir, workspaceId);
@@ -152,6 +154,24 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
 
     removeWorkspaceMember(dataDir, auth!.tenantId ?? auth!.workspaceId, auth!.sub);
     res.json({ success: true, correlationId });
+  });
+
+  // GET /api/workspace/me - Current user's membership (role + tool_access)
+  router.get("/workspace/me", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    const correlationId = getCorrelationId(res);
+    const workspaceId = auth!.tenantId ?? auth!.workspaceId;
+    const db = getDb(dataDir);
+    const row = db.prepare(`SELECT role, tool_access FROM workspace_members WHERE workspace_id = ? AND user_id = ?`).get(workspaceId, auth!.sub) as { role: string; tool_access: string | null } | undefined;
+    res.json({
+      success: true,
+      correlationId,
+      data: {
+        workspaceId,
+        role: row?.role ?? null,
+        toolAccess: row?.tool_access ? JSON.parse(row.tool_access) : null,
+      },
+    });
   });
 
   return router;

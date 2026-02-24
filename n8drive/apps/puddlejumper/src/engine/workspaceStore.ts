@@ -64,6 +64,7 @@ export function getDb(dataDir: string): Database.Database {
         workspace_id TEXT NOT NULL REFERENCES workspaces(id),
         user_id TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'member' CHECK(role IN ('owner','admin','member','viewer')),
+        tool_access TEXT,
         invited_by TEXT,
         joined_at TEXT NOT NULL DEFAULT (datetime('now')),
         UNIQUE(workspace_id, user_id)
@@ -71,6 +72,12 @@ export function getDb(dataDir: string): Database.Database {
       CREATE INDEX idx_workspace_members_workspace ON workspace_members(workspace_id);
       CREATE INDEX idx_workspace_members_user ON workspace_members(user_id);
     `);
+  } else {
+    // Idempotent migration: add tool_access column if missing
+    const cols = db.pragma("table_info(workspace_members)") as Array<{ name: string }>;
+    if (!cols.some(c => c.name === "tool_access")) {
+      db.exec(`ALTER TABLE workspace_members ADD COLUMN tool_access TEXT`);
+    }
   }
 
   const hasInvitationsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_invitations'`).get();
@@ -81,6 +88,7 @@ export function getDb(dataDir: string): Database.Database {
         workspace_id TEXT NOT NULL REFERENCES workspaces(id),
         email TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'member',
+        tool_access TEXT,
         token TEXT NOT NULL UNIQUE,
         invited_by TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -90,6 +98,11 @@ export function getDb(dataDir: string): Database.Database {
       CREATE INDEX idx_workspace_invitations_token ON workspace_invitations(token);
       CREATE INDEX idx_workspace_invitations_workspace ON workspace_invitations(workspace_id);
     `);
+  } else {
+    const cols = db.pragma("table_info(workspace_invitations)") as Array<{ name: string }>;
+    if (!cols.some(c => c.name === "tool_access")) {
+      db.exec(`ALTER TABLE workspace_invitations ADD COLUMN tool_access TEXT`);
+    }
   }
 
   // Deployed processes table (FormKey deployments from Vault)
@@ -241,13 +254,15 @@ export function listWorkspaceMembers(dataDir: string, workspaceId: string) {
   return db.prepare(`SELECT * FROM workspace_members WHERE workspace_id = ? ORDER BY joined_at ASC`).all(workspaceId);
 }
 
-export function addWorkspaceMember(dataDir: string, workspaceId: string, userId: string, role: string, invitedBy: string) {
+export function addWorkspaceMember(dataDir: string, workspaceId: string, userId: string, role: string, invitedBy: string, toolAccess?: string[] | null) {
   const db = getDb(dataDir);
   const id = `wm-${userId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const toolAccessJson = toolAccess ? JSON.stringify(toolAccess) : null;
   db.prepare(`
-    INSERT INTO workspace_members (id, workspace_id, user_id, role, invited_by, joined_at)
-    VALUES (?, ?, ?, ?, ?, datetime('now'))
-  `).run(id, workspaceId, userId, role, invitedBy);
+    INSERT INTO workspace_members (id, workspace_id, user_id, role, tool_access, invited_by, joined_at)
+    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(workspace_id, user_id) DO UPDATE SET role = excluded.role, tool_access = excluded.tool_access
+  `).run(id, workspaceId, userId, role, toolAccessJson, invitedBy);
   incrementMemberCount(dataDir, workspaceId);
 }
 
@@ -264,16 +279,17 @@ export function updateMemberRole(dataDir: string, workspaceId: string, userId: s
 
 // ── Workspace Invitation Functions ────────────────────────────────
 
-export function createInvitation(dataDir: string, workspaceId: string, email: string, role: string, invitedBy: string) {
+export function createInvitation(dataDir: string, workspaceId: string, email: string, role: string, invitedBy: string, toolAccess?: string[] | null) {
   const db = getDb(dataDir);
   const id = `inv-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const toolAccessJson = toolAccess ? JSON.stringify(toolAccess) : null;
   
   db.prepare(`
-    INSERT INTO workspace_invitations (id, workspace_id, email, role, token, invited_by, created_at, expires_at)
-    VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?)
-  `).run(id, workspaceId, email, role, token, invitedBy, expiresAt);
+    INSERT INTO workspace_invitations (id, workspace_id, email, role, tool_access, token, invited_by, created_at, expires_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)
+  `).run(id, workspaceId, email, role, toolAccessJson, token, invitedBy, expiresAt);
   
   return { id, token, expiresAt };
 }
@@ -293,18 +309,16 @@ export function acceptInvitation(dataDir: string, token: string, userId: string)
   const invitation: any = getInvitationByToken(dataDir, token);
   if (!invitation) return null;
   
-  // Check expiry
   if (new Date(invitation.expires_at) < new Date()) {
     return { error: "expired" };
   }
   
-  // Mark accepted
   db.prepare(`UPDATE workspace_invitations SET accepted_at = datetime('now') WHERE token = ?`).run(token);
   
-  // Add member
-  addWorkspaceMember(dataDir, invitation.workspace_id, userId, invitation.role, invitation.invited_by);
+  const toolAccess = invitation.tool_access ? JSON.parse(invitation.tool_access) : null;
+  addWorkspaceMember(dataDir, invitation.workspace_id, userId, invitation.role, invitation.invited_by, toolAccess);
   
-  return { workspaceId: invitation.workspace_id, role: invitation.role };
+  return { workspaceId: invitation.workspace_id, role: invitation.role, toolAccess };
 }
 
 export function revokeInvitation(dataDir: string, invitationId: string) {
