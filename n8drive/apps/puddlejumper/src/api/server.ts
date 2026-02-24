@@ -544,6 +544,26 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/auth/microsoft/login", oauthLoginRateLimit);
   // Mount generic OAuth routes for all three providers (via logic-commons factory)
   const onUserAuthenticated = (userInfo: UserInfo): UserInfo => {
+    // ── Access allowlist ──────────────────────────────────────────────────────
+    // ALLOWED_EMAILS: comma-separated list of exact emails that may log in
+    // ALLOWED_DOMAINS: comma-separated list of email domains (e.g. publiclogic.org)
+    // If neither env var is set, ALL authenticated users are allowed (open mode).
+    const allowedEmails = (process.env.ALLOWED_EMAILS ?? '')
+      .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+    const allowedDomains = (process.env.ALLOWED_DOMAINS ?? '')
+      .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+
+    if (allowedEmails.length > 0 || allowedDomains.length > 0) {
+      const email = (userInfo.email ?? '').toLowerCase()
+      const domain = email.split('@')[1] ?? ''
+      const permitted = allowedEmails.includes(email) || allowedDomains.includes(domain)
+      if (!permitted) {
+        console.warn(`[auth] Blocked login attempt from: ${email} (not in allowlist)`)
+        throw Object.assign(new Error('Access denied — your account is not authorized for this workspace.'), { statusCode: 403 })
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const row = upsertUser(CONTROLLED_DATA_DIR, {
       sub: userInfo.sub,
       email: userInfo.email,
@@ -567,7 +587,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
         
         for (const invite of pendingInvites as any[]) {
           try {
-            acceptInvitation(CONTROLLED_DATA_DIR, invite.token, row.id);
+            acceptInvitation(CONTROLLED_DATA_DIR, invite.token, row.sub);
           } catch (err) {
             // Ignore errors (user might already be a member)
           }

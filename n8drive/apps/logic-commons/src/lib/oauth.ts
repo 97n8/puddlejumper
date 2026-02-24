@@ -295,7 +295,9 @@ export function createOAuthRoutes(
         method: "oauth_redirect",
         reason: err?.message ?? "unknown",
       });
-      return res.redirect(`${resolveFrontendUrl()}/#error=authentication_failed`);
+      const isAccessDenied = err?.statusCode === 403
+      const errorParam = isAccessDenied ? 'access_denied' : 'authentication_failed'
+      return res.redirect(`${resolveFrontendUrl()}/?oauth_error=${errorParam}`);
     }
   });
 
