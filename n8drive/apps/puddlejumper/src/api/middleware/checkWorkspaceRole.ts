@@ -19,15 +19,16 @@ export function requireRole(...allowedRoles: WorkspaceRole[]) {
     }
 
     const dataDir = process.env.DATA_DIR || "./data";
-    let role = getMemberRole(dataDir, auth.workspaceId, auth.sub);
+    const workspaceId = auth.workspaceId ?? auth.tenantId;
+    let role = getMemberRole(dataDir, workspaceId, auth.sub);
     
     // Fallback: if no workspace member record, check if user is the workspace owner
     if (!role) {
-      const ws = getWorkspace(dataDir, auth.workspaceId);
+      const ws = getWorkspace(dataDir, workspaceId);
       if (ws && ws.owner_id === auth.sub) {
         role = "owner";
       } else if (auth.role === "admin") {
-        role = "owner"; // legacy JWT role mapping
+        role = "owner";
       }
     }
     

@@ -43,7 +43,7 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
       return;
     }
 
-    const invitation = createInvitation(dataDir, auth!.workspaceId, email, role, auth!.sub);
+    const invitation = createInvitation(dataDir, auth!.tenantId ?? auth!.workspaceId, email, role, auth!.sub);
     res.json({ success: true, correlationId, data: invitation });
   });
 
@@ -51,7 +51,7 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
   router.get("/workspace/invitations", requireAuthenticated(), requireRole("owner", "admin"), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
-    const invitations = listPendingInvitations(dataDir, auth!.workspaceId);
+    const invitations = listPendingInvitations(dataDir, auth!.tenantId ?? auth!.workspaceId);
     res.json({ success: true, correlationId, data: invitations });
   });
 
@@ -86,7 +86,7 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
   router.get("/workspace/members", requireAuthenticated(), requireRole("owner", "admin", "member", "viewer"), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
-    const members = listWorkspaceMembers(dataDir, auth!.workspaceId);
+    const members = listWorkspaceMembers(dataDir, auth!.tenantId ?? auth!.workspaceId);
     res.json({ success: true, correlationId, data: members });
   });
 
@@ -101,7 +101,7 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
       return;
     }
 
-    updateMemberRole(dataDir, auth!.workspaceId, req.params.userId, role);
+    updateMemberRole(dataDir, auth!.tenantId ?? auth!.workspaceId, req.params.userId, role);
     res.json({ success: true, correlationId });
   });
 
@@ -115,13 +115,13 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
       return;
     }
 
-    const targetRole = getMemberRole(dataDir, auth!.workspaceId, req.params.userId);
+    const targetRole = getMemberRole(dataDir, auth!.tenantId ?? auth!.workspaceId, req.params.userId);
     if (targetRole === "owner") {
       res.status(403).json({ success: false, correlationId, error: "Cannot remove owner" });
       return;
     }
 
-    removeWorkspaceMember(dataDir, auth!.workspaceId, req.params.userId);
+    removeWorkspaceMember(dataDir, auth!.tenantId ?? auth!.workspaceId, req.params.userId);
     res.json({ success: true, correlationId });
   });
 
@@ -130,13 +130,13 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
 
-    const role = getMemberRole(dataDir, auth!.workspaceId, auth!.sub);
+    const role = getMemberRole(dataDir, auth!.tenantId ?? auth!.workspaceId, auth!.sub);
     if (role === "owner") {
       res.status(400).json({ success: false, correlationId, error: "Owner cannot leave. Transfer ownership first." });
       return;
     }
 
-    removeWorkspaceMember(dataDir, auth!.workspaceId, auth!.sub);
+    removeWorkspaceMember(dataDir, auth!.tenantId ?? auth!.workspaceId, auth!.sub);
     res.json({ success: true, correlationId });
   });
 

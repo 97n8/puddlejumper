@@ -492,6 +492,14 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.path.startsWith("/auth/microsoft/")) { next(); return; }
     authMiddleware(req, res, next);
   });
+  // Normalize auth context: copy tenantId → workspaceId so all route handlers
+  // can use auth.workspaceId regardless of which JWT claim carries it.
+  app.use("/api", (req: any, _res, next) => {
+    if (req.auth && !req.auth.workspaceId && req.auth.tenantId) {
+      req.auth.workspaceId = req.auth.tenantId;
+    }
+    next();
+  });
   // GitHub proxy is cross-origin (LogicOS on Vercel → PJ on Fly.io) — CSRF
   // protection is provided by CORS + SameSite=None cookie rather than CSRF token.
   app.use("/api", (req, res, next) => {
