@@ -144,40 +144,38 @@ export function listWorkspaces(dataDir: string): WorkspaceRow[] {
 
 export function ensurePersonalWorkspace(dataDir: string, userId: string, username: string): WorkspaceRow {
   let ws = getWorkspaceByOwner(dataDir, userId);
-  if (ws) return ws;
   
-  const id = `ws-${userId}`;
-  const name = `${username || userId}'s Workspace`;
-  
-  // Check if workspace with this ID already exists (edge case: stale data or race condition)
-  let existing = getWorkspace(dataDir, id);
-  if (existing) {
-    // If workspace exists with this ID but different owner, regenerate ID with timestamp
-    if (existing.owner_id !== userId) {
-      const newId = `ws-${userId}-${Date.now()}`;
-      createWorkspace(dataDir, newId, name, userId);
-      existing = getWorkspace(dataDir, newId)!;
+  if (!ws) {
+    const id = `ws-${userId}`;
+    const name = `${username || userId}'s Workspace`;
+    
+    let existing = getWorkspace(dataDir, id);
+    if (existing) {
+      if (existing.owner_id !== userId) {
+        const newId = `ws-${userId}-${Date.now()}`;
+        createWorkspace(dataDir, newId, name, userId);
+        existing = getWorkspace(dataDir, newId)!;
+      }
+    } else {
+      createWorkspace(dataDir, id, name, userId);
+      existing = getWorkspace(dataDir, id)!;
     }
-  } else {
-    // Safe to create with standard ID
-    createWorkspace(dataDir, id, name, userId);
-    existing = getWorkspace(dataDir, id)!;
+    ws = existing;
   }
-  
-  // Create owner member entry
+
+  // Always ensure owner has a member entry (backfills existing workspaces too)
   const db = getDb(dataDir);
   const memberId = `wm-${userId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   try {
     db.prepare(`
       INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at)
       VALUES (?, ?, ?, 'owner', datetime('now'))
-    `).run(memberId, existing.id, userId);
+    `).run(memberId, ws.id, userId);
   } catch (err: any) {
-    // Ignore duplicate entry errors (member already exists)
     if (err.code !== 'SQLITE_CONSTRAINT_UNIQUE') throw err;
   }
   
-  return existing;
+  return ws;
 }
 
 export function resetWorkspaceDb(): void {

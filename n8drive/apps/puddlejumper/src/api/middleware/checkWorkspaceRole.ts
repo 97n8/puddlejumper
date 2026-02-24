@@ -5,7 +5,7 @@
 //
 import type { Request, Response, NextFunction } from "express";
 import { getAuthContext } from "@publiclogic/core";
-import { getMemberRole, type WorkspaceRole } from "../../engine/workspaceStore.js";
+import { getMemberRole, getWorkspace, type WorkspaceRole } from "../../engine/workspaceStore.js";
 import { getCorrelationId } from "../serverMiddleware.js";
 
 export function requireRole(...allowedRoles: WorkspaceRole[]) {
@@ -21,11 +21,13 @@ export function requireRole(...allowedRoles: WorkspaceRole[]) {
     const dataDir = process.env.DATA_DIR || "./data";
     let role = getMemberRole(dataDir, auth.workspaceId, auth.sub);
     
-    // Fallback: if no workspace member record exists, check JWT role (for backward compatibility)
-    if (!role && auth.role) {
-      // Map JWT role to workspace role
-      if (auth.role === "admin") {
-        role = "owner"; // Treat legacy admin as owner
+    // Fallback: if no workspace member record, check if user is the workspace owner
+    if (!role) {
+      const ws = getWorkspace(dataDir, auth.workspaceId);
+      if (ws && ws.owner_id === auth.sub) {
+        role = "owner";
+      } else if (auth.role === "admin") {
+        role = "owner"; // legacy JWT role mapping
       }
     }
     
