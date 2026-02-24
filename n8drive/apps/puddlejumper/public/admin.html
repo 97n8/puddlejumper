@@ -190,9 +190,11 @@
   <!-- New PRR form -->
   <div class="form-panel" id="prr-form">
     <div class="form-title">New Public Records Request</div>
+    <div class="form-row"><label>Subject / What records are requested</label><input type="text" id="prr-subject" placeholder="e.g. All emails re: zoning 2024"></div>
     <div class="form-row"><label>Requester Name</label><input type="text" id="prr-name" placeholder="Jane Sullivan"></div>
-    <div class="form-row"><label>Description</label><textarea id="prr-desc" placeholder="Describe the records being requested…"></textarea></div>
-    <div class="form-row"><label>Due Date</label><input type="date" id="prr-due"></div>
+    <div class="form-row"><label>Requester Email</label><input type="email" id="prr-email" placeholder="jane@example.com"></div>
+    <div class="form-row"><label>Description (optional detail)</label><textarea id="prr-desc" placeholder="Additional detail about the request…"></textarea></div>
+    <div class="form-row"><label>Tenant ID (town slug)</label><input type="text" id="prr-tenant" placeholder="e.g. phillipston"></div>
     <div class="form-btns">
       <button class="btn btn-primary" onclick="submitPRRForm()">Create</button>
       <button class="btn btn-secondary" onclick="hidePRRForm()">Cancel</button>
@@ -786,25 +788,27 @@ async function loadDashboard(){
 function togglePRRForm(){
   const f=document.getElementById('prr-form');
   if(f.classList.contains('show')){hidePRRForm();return}
+  document.getElementById('prr-subject').value='';
   document.getElementById('prr-name').value='';
+  document.getElementById('prr-email').value='';
   document.getElementById('prr-desc').value='';
-  document.getElementById('prr-due').value='';
+  document.getElementById('prr-tenant').value='';
   f.classList.add('show');
 }
 function hidePRRForm(){document.getElementById('prr-form').classList.remove('show')}
 
 async function submitPRRForm(){
+  const subject=document.getElementById('prr-subject').value.trim();
   const name=document.getElementById('prr-name').value.trim();
+  const email=document.getElementById('prr-email').value.trim();
   const desc=document.getElementById('prr-desc').value.trim();
-  if(!name){toast('Requester name required','error');return}
-  if(!desc){toast('Description required','error');return}
+  const tenant=document.getElementById('prr-tenant').value.trim();
+  if(!subject){toast('Subject required','error');return}
   try{
-    const body={requesterName:name,description:desc};
-    const due=document.getElementById('prr-due').value;
-    if(due) body.dueDate=due;
-    const json=await api('/api/prr',{method:'POST',body:JSON.stringify(body)});
-    if(!json.success){toast(json.error||'Failed to create','error');return}
-    toast('Request created','success');hidePRRForm();loadPRRQueue();
+    const body={subject, requester_name:name||undefined, requester_email:email||undefined, description:desc||undefined, tenantId:tenant||undefined};
+    const json=await api('/api/prr/intake',{method:'POST',body:JSON.stringify(body)});
+    if(json.error){toast(json.error||'Failed to create','error');return}
+    toast('Request created — ID: '+(json.public_id||json.id),'success');hidePRRForm();loadPRRQueue();
   }catch(e){if(e.message!=='Unauthorized')toast('Failed to create','error')}
 }
 
@@ -847,28 +851,44 @@ function renderPRRDetail(prr){
   document.getElementById('prr-detail-body').innerHTML=`
     <div class="detail-section">
       <h4>Status</h4>
-      <select class="detail-select" onchange="updatePRRStatus('${prr.id}',this.value)">
-        ${['submitted','acknowledged','in_progress','closed'].map(s=>`<option value="${s}"${prr.status===s?' selected':''}>${s.replace('_',' ')}</option>`).join('')}
-      </select>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select class="detail-select" onchange="updatePRRStatus('${prr.id}',this.value)">
+          ${['submitted','acknowledged','in_progress','closed'].map(s=>`<option value="${s}"${prr.status===s?' selected':''}>${s.replace('_',' ')}</option>`).join('')}
+        </select>
+        <span class="badge prr-${(prr.status||'').replace('_','-')}">${prr.status||'—'}</span>
+      </div>
     </div>
     <div class="detail-section">
       <h4>Details</h4>
+      <div class="detail-row"><span class="dk">Public ID</span><span class="dv mono" style="font-size:10px">${esc(prr.public_id||prr.id?.slice(0,8)||'—')}</span></div>
       <div class="detail-row"><span class="dk">Submitter</span><span class="dv">${esc(prr.submitter_name||'Anonymous')}</span></div>
       <div class="detail-row"><span class="dk">Email</span><span class="dv mono">${esc(prr.submitter_email||'—')}</span></div>
-      <div class="detail-row"><span class="dk">Summary</span><span class="dv">${esc(prr.summary)}</span></div>
-      <div class="detail-row"><span class="dk">Created</span><span class="dv">${timeAgo(prr.created_at)}</span></div>
+      <div class="detail-row"><span class="dk">Subject</span><span class="dv">${esc(prr.summary)}</span></div>
+      <div class="detail-row"><span class="dk">Created</span><span class="dv">${new Date(prr.created_at).toLocaleString()}</span></div>
+      ${prr.due_at?`<div class="detail-row"><span class="dk">Due</span><span class="dv">${new Date(prr.due_at).toLocaleDateString()}</span></div>`:''}
     </div>
     ${prr.details?`<div class="detail-section"><h4>Description</h4><div style="font-size:12px;color:var(--text-dim);line-height:1.6">${esc(prr.details)}</div></div>`:''}
+    <div class="detail-section">
+      <h4>Assign To</h4>
+      <div style="display:flex;gap:8px">
+        <input id="prr-assign-input" type="text" placeholder="user@town.gov or user ID" value="${esc(prr.assigned_to||'')}"
+          style="flex:1;background:var(--bg-3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:6px 10px;font-size:12px">
+        <button class="btn btn-secondary" onclick="assignPRR('${prr.id}')">Save</button>
+      </div>
+    </div>
     <div class="detail-section">
       <h4>Comments (${comments.length})</h4>
       <div id="prr-comments">
         ${comments.map(c=>`<div style="margin-bottom:10px;padding:10px;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius)">
-          <div class="mono dim" style="font-size:10px;margin-bottom:5px">${timeAgo(c.created_at)} · ${c.user_id?'Admin':'System'}</div>
+          <div class="mono dim" style="font-size:10px;margin-bottom:5px">${timeAgo(c.created_at)} · ${esc(c.user_id||'System')}</div>
           <div style="font-size:12px">${esc(c.body)}</div>
         </div>`).join('')||'<div class="dim" style="font-size:12px;padding-bottom:8px">No comments yet</div>'}
       </div>
       <textarea id="prr-comment-input" placeholder="Add a comment…" style="width:100%;padding:8px 10px;margin-top:8px;background:var(--bg-3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-family:var(--font);font-size:12px;min-height:70px;resize:vertical"></textarea>
-      <button class="btn btn-primary" style="margin-top:6px" onclick="addPRRComment('${prr.id}')">Add Comment</button>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="btn btn-primary" onclick="addPRRComment('${prr.id}')">Add Comment</button>
+        <button class="btn btn-danger" onclick="deletePRR('${prr.id}')" style="margin-left:auto">Delete PRR</button>
+      </div>
     </div>`;
 }
 
@@ -886,6 +906,24 @@ async function addPRRComment(id){
     const json=await api(`/api/prr/${encodeURIComponent(id)}/comment`,{method:'POST',body:JSON.stringify({body})});
     if(json.success){toast('Comment added','success');inp.value='';openPRRDetail(id)}
   }catch(e){if(e.message!=='Unauthorized')toast('Failed to add comment','error')}
+}
+
+async function assignPRR(id){
+  const assigned_to=document.getElementById('prr-assign-input')?.value.trim()||null;
+  try{
+    const json=await api(`/api/prr/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({assigned_to})});
+    if(json.success){toast('Assigned','success');loadPRRQueue()}
+    else toast(json.error||'Failed','error');
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to assign','error')}
+}
+
+async function deletePRR(id){
+  if(!confirm('Delete this PRR permanently? This cannot be undone.')) return;
+  try{
+    const json=await api(`/api/prr/${encodeURIComponent(id)}`,{method:'DELETE'});
+    if(json.success){toast('PRR deleted','success');closePRRDetailPanel();loadPRRQueue()}
+    else toast(json.error||'Failed','error');
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to delete','error')}
 }
 
 function closePRRDetail(e){if(!e||e.target===document.getElementById('prr-detail-overlay'))closePRRDetailPanel()}
