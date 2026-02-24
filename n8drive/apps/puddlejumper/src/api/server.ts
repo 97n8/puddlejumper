@@ -520,6 +520,22 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.get("/api/me", (req, res) => {
     const auth = getAuthContext(req);
     if (!auth?.sub) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    // Allowlist check on every request — catches pre-existing sessions from before the allowlist was enabled
+    const allowedEmails = (process.env.ALLOWED_EMAILS ?? '')
+      .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+    const allowedDomains = (process.env.ALLOWED_DOMAINS ?? '')
+      .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+    if (allowedEmails.length > 0 || allowedDomains.length > 0) {
+      const email = (auth.email ?? '').toLowerCase()
+      const domain = email.split('@')[1] ?? ''
+      const permitted = allowedEmails.includes(email) || allowedDomains.includes(domain)
+      if (!permitted) {
+        console.warn(`[auth] /api/me blocked for session with email: ${email}`)
+        res.status(403).json({ error: "Access denied — your account is not authorized for this workspace." }); return;
+      }
+    }
+
     res.json({
       sub: auth.sub,
       email: auth.email ?? null,
