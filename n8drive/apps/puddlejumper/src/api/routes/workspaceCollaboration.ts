@@ -157,17 +157,24 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
   });
 
   // GET /api/workspace/me - Current user's membership (role + tool_access)
+  // Looks across all workspaces — prefers an invited membership over personal owner entry.
   router.get("/workspace/me", requireAuthenticated(), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
-    const workspaceId = auth!.tenantId ?? auth!.workspaceId;
     const db = getDb(dataDir);
-    const row = db.prepare(`SELECT role, tool_access FROM workspace_members WHERE workspace_id = ? AND user_id = ?`).get(workspaceId, auth!.sub) as { role: string; tool_access: string | null } | undefined;
+    // Get all memberships for this user, prefer non-owner roles (invited workspaces)
+    const rows = db.prepare(
+      `SELECT workspace_id, role, tool_access FROM workspace_members WHERE user_id = ?
+       ORDER BY CASE role WHEN 'owner' THEN 99 ELSE 0 END ASC`
+    ).all(auth!.sub) as Array<{ workspace_id: string; role: string; tool_access: string | null }>;
+
+    // Use first non-owner row if present, else fall back to owner (personal workspace)
+    const row = rows.find(r => r.role !== 'owner') ?? rows[0];
     res.json({
       success: true,
       correlationId,
       data: {
-        workspaceId,
+        workspaceId: row?.workspace_id ?? (auth!.tenantId ?? auth!.workspaceId),
         role: row?.role ?? null,
         toolAccess: row?.tool_access ? JSON.parse(row.tool_access) : null,
       },
