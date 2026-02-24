@@ -262,6 +262,72 @@ export function createModuleBuilderRouter(dbDir: string): Router {
     }
   });
 
+  // ── Environment RAO management ────────────────────────────────────────────────
+
+  const raoDir = path.join(process.env.VAULT_DATA_DIR ?? path.join(process.cwd(), '../data'), 'environments')
+
+  function raoFile(envId: string): string {
+    const dir = path.join(raoDir, envId)
+    fs.mkdirSync(dir, { recursive: true })
+    return path.join(dir, 'raos.json')
+  }
+
+  function readRaos(envId: string): unknown[] {
+    const file = raoFile(envId)
+    if (!fs.existsSync(file)) return []
+    try { return JSON.parse(fs.readFileSync(file, 'utf8')) } catch { return [] }
+  }
+
+  function writeRaos(envId: string, raos: unknown[]): void {
+    fs.writeFileSync(raoFile(envId), JSON.stringify(raos, null, 2))
+  }
+
+  /** GET /api/v1/vault/modules/environments/:envId/raos */
+  router.get('/environments/:envId/raos', (req, res) => {
+    const { envId } = req.params
+    res.json({ envId, raos: readRaos(envId) })
+  })
+
+  /** POST /api/v1/vault/modules/environments/:envId/raos */
+  router.post('/environments/:envId/raos', (req, res) => {
+    const { envId } = req.params
+    const rao = { id: crypto.randomUUID(), ...req.body, createdAt: new Date().toISOString() }
+    const raos = readRaos(envId)
+    raos.push(rao)
+    writeRaos(envId, raos)
+    res.status(201).json(rao)
+  })
+
+  /** PUT /api/v1/vault/modules/environments/:envId/raos/batch */
+  router.put('/environments/:envId/raos/batch', (req, res) => {
+    const { envId } = req.params
+    const { raos } = req.body as { raos: unknown[] }
+    if (!Array.isArray(raos)) { res.status(400).json({ error: 'raos must be array' }); return }
+    writeRaos(envId, raos)
+    res.json({ envId, count: raos.length })
+  })
+
+  /** PUT /api/v1/vault/modules/environments/:envId/raos/:raoId */
+  router.put('/environments/:envId/raos/:raoId', (req, res) => {
+    const { envId, raoId } = req.params
+    const raos = readRaos(envId) as Array<{ id: string }>
+    const idx = raos.findIndex(r => r.id === raoId)
+    if (idx === -1) { res.status(404).json({ error: 'RAO not found' }); return }
+    raos[idx] = { ...raos[idx], ...req.body, id: raoId, updatedAt: new Date().toISOString() }
+    writeRaos(envId, raos)
+    res.json(raos[idx])
+  })
+
+  /** DELETE /api/v1/vault/modules/environments/:envId/raos/:raoId */
+  router.delete('/environments/:envId/raos/:raoId', (req, res) => {
+    const { envId, raoId } = req.params
+    const raos = readRaos(envId) as Array<{ id: string }>
+    const filtered = raos.filter(r => r.id !== raoId)
+    if (filtered.length === raos.length) { res.status(404).json({ error: 'RAO not found' }); return }
+    writeRaos(envId, filtered)
+    res.json({ deleted: raoId })
+  })
+
   return router;
 }
 
