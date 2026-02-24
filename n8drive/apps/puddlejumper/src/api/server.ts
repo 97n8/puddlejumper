@@ -550,8 +550,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       name: userInfo.name,
       provider: userInfo.provider,
     });
-    // Ensure personal workspace exists
-    const ws = ensurePersonalWorkspace(CONTROLLED_DATA_DIR, row.id, row.name || row.sub);
+    // Ensure personal workspace exists — use row.sub (OAuth subject) as the
+    // stable user identifier so auth.sub always matches workspace.owner_id
+    const ws = ensurePersonalWorkspace(CONTROLLED_DATA_DIR, row.sub, row.name || row.sub);
     // Clone default template into new workspace if not present
     chainStore.cloneDefaultTemplateToWorkspace(ws.id);
     
