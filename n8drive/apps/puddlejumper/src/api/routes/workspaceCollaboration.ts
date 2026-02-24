@@ -28,7 +28,7 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
   const dataDir = process.env.DATA_DIR || "./data";
 
   // POST /api/workspace/invite - Create invitation (owner/admin only)
-  router.post("/workspace/invite", requireAuthenticated(), requireRole("owner", "admin"), enforceTierLimit("member"), (req, res) => {
+  router.post("/workspace/invite", requireAuthenticated(), requireRole("owner", "admin"), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
     const { email, role } = req.body;
