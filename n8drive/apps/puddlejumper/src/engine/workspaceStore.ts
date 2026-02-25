@@ -80,6 +80,26 @@ export function getDb(dataDir: string): Database.Database {
     }
   }
 
+  // Workspace member audit log (idempotent)
+  const hasAuditTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_member_audit'`).get();
+  if (!hasAuditTable) {
+    db.exec(`
+      CREATE TABLE workspace_member_audit (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        workspace_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        action TEXT NOT NULL CHECK(action IN ('added','removed','role_changed','tool_access_changed')),
+        old_value TEXT,
+        new_value TEXT,
+        actor_id TEXT,
+        timestamp TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX idx_wm_audit_workspace ON workspace_member_audit(workspace_id);
+      CREATE INDEX idx_wm_audit_user ON workspace_member_audit(user_id);
+      CREATE INDEX idx_wm_audit_timestamp ON workspace_member_audit(timestamp);
+    `);
+  }
+
   const hasInvitationsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_invitations'`).get();
   if (!hasInvitationsTable) {
     db.exec(`
@@ -254,8 +274,7 @@ export function listWorkspaceMembers(dataDir: string, workspaceId: string) {
   return db.prepare(`SELECT * FROM workspace_members WHERE workspace_id = ? ORDER BY joined_at ASC`).all(workspaceId);
 }
 
-export function addWorkspaceMember(dataDir: string, workspaceId: string, userId: string, role: string, invitedBy: string, toolAccess?: string[] | null) {
-  const db = getDb(dataDir);
+export function addWorkspaceMember(dataDir: string, workspaceId: string, userId: string, role: string, invitedBy: string, toolAccess?: string[] | null) {  const db = getDb(dataDir);
   const id = `wm-${userId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const toolAccessJson = toolAccess ? JSON.stringify(toolAccess) : null;
   db.prepare(`
@@ -264,23 +283,34 @@ export function addWorkspaceMember(dataDir: string, workspaceId: string, userId:
     ON CONFLICT(workspace_id, user_id) DO UPDATE SET role = excluded.role, tool_access = excluded.tool_access
   `).run(id, workspaceId, userId, role, toolAccessJson, invitedBy);
   incrementMemberCount(dataDir, workspaceId);
+  db.prepare(`INSERT INTO workspace_member_audit (workspace_id, user_id, action, new_value, actor_id) VALUES (?, ?, 'added', ?, ?)`)
+    .run(workspaceId, userId, JSON.stringify({ role, toolAccess }), invitedBy);
 }
 
-export function removeWorkspaceMember(dataDir: string, workspaceId: string, userId: string) {
+export function removeWorkspaceMember(dataDir: string, workspaceId: string, userId: string, actorId?: string) {
   const db = getDb(dataDir);
+  const existing: any = db.prepare(`SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`).get(workspaceId, userId);
   db.prepare(`DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?`).run(workspaceId, userId);
   decrementMemberCount(dataDir, workspaceId);
+  db.prepare(`INSERT INTO workspace_member_audit (workspace_id, user_id, action, old_value, actor_id) VALUES (?, ?, 'removed', ?, ?)`)
+    .run(workspaceId, userId, existing ? JSON.stringify({ role: existing.role }) : null, actorId ?? null);
 }
 
-export function updateMemberRole(dataDir: string, workspaceId: string, userId: string, role: string) {
+export function updateMemberRole(dataDir: string, workspaceId: string, userId: string, role: string, actorId?: string) {
   const db = getDb(dataDir);
+  const existing: any = db.prepare(`SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`).get(workspaceId, userId);
   db.prepare(`UPDATE workspace_members SET role = ? WHERE workspace_id = ? AND user_id = ?`).run(role, workspaceId, userId);
+  db.prepare(`INSERT INTO workspace_member_audit (workspace_id, user_id, action, old_value, new_value, actor_id) VALUES (?, ?, 'role_changed', ?, ?, ?)`)
+    .run(workspaceId, userId, existing?.role ?? null, role, actorId ?? null);
 }
 
-export function updateMemberToolAccess(dataDir: string, workspaceId: string, userId: string, toolAccess: string[] | null) {
+export function updateMemberToolAccess(dataDir: string, workspaceId: string, userId: string, toolAccess: string[] | null, actorId?: string) {
   const db = getDb(dataDir);
+  const existing: any = db.prepare(`SELECT tool_access FROM workspace_members WHERE workspace_id = ? AND user_id = ?`).get(workspaceId, userId);
   const json = toolAccess ? JSON.stringify(toolAccess) : null;
   db.prepare(`UPDATE workspace_members SET tool_access = ? WHERE workspace_id = ? AND user_id = ?`).run(json, workspaceId, userId);
+  db.prepare(`INSERT INTO workspace_member_audit (workspace_id, user_id, action, old_value, new_value, actor_id) VALUES (?, ?, 'tool_access_changed', ?, ?, ?)`)
+    .run(workspaceId, userId, existing?.tool_access ?? null, json, actorId ?? null);
 }
 
 // ── Workspace Invitation Functions ────────────────────────────────

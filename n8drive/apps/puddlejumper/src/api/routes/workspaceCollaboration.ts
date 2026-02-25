@@ -119,12 +119,12 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
         res.status(400).json({ success: false, correlationId, error: "Invalid role" });
         return;
       }
-      updateMemberRole(dataDir, workspaceId, req.params.userId, role);
+      updateMemberRole(dataDir, workspaceId, req.params.userId, role, auth!.sub);
     }
 
     if (toolAccess !== undefined) {
       // null = no access, array = specific tools
-      updateMemberToolAccess(dataDir, workspaceId, req.params.userId, toolAccess);
+      updateMemberToolAccess(dataDir, workspaceId, req.params.userId, toolAccess, auth!.sub);
     }
 
     res.json({ success: true, correlationId });
@@ -146,7 +146,7 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
       return;
     }
 
-    removeWorkspaceMember(dataDir, auth!.tenantId ?? auth!.workspaceId, req.params.userId);
+    removeWorkspaceMember(dataDir, auth!.tenantId ?? auth!.workspaceId, req.params.userId, auth!.sub);
     res.json({ success: true, correlationId });
   });
 
@@ -161,7 +161,7 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
       return;
     }
 
-    removeWorkspaceMember(dataDir, auth!.tenantId ?? auth!.workspaceId, auth!.sub);
+    removeWorkspaceMember(dataDir, auth!.tenantId ?? auth!.workspaceId, auth!.sub, auth!.sub);
     res.json({ success: true, correlationId });
   });
 

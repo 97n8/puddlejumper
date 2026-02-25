@@ -112,6 +112,10 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
       res.status(400).json({ success: false, correlationId, error: "status must be 'approved' or 'rejected'" });
       return;
     }
+    if (note !== undefined && note !== null && (typeof note !== "string" || note.length > 5000)) {
+      res.status(400).json({ success: false, correlationId, error: "note must be a string of 5000 characters or fewer" });
+      return;
+    }
 
     // Validate stepId type when present — must be a non-empty string.
     // Role matching (auth.role === step.requiredRole) is exact string equality;

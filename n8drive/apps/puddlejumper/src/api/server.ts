@@ -267,9 +267,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       return `tenant:${auth?.tenantId ?? "no-tenant"}:user:${auth?.userId ?? "anonymous"}:route:/api/pj/execute`;
     },
   });
-  const oauthLoginRateLimit = createRateLimit({
+  const prrRateLimit = createRateLimit({
     windowMs: 60_000, max: 10,
-    keyGenerator: (req) => `oauth-login:ip:${req.ip}`,
+    keyGenerator: (req) => `public-prr:ip:${req.ip}`,
   });
 
   // ── Express app ───────────────────────────────────────────────────────
@@ -356,14 +356,16 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     }
   });
   app.get("/metrics", (req, res) => {
-    // Optional bearer-token auth: set METRICS_TOKEN env to restrict scraping
+    // METRICS_TOKEN must be set; unauthenticated access is never allowed.
     const metricsToken = process.env.METRICS_TOKEN;
-    if (metricsToken) {
-      const authHeader = req.headers.authorization;
-      if (authHeader !== `Bearer ${metricsToken}`) {
-        res.status(401).json({ error: "Invalid or missing metrics token" });
-        return;
-      }
+    if (!metricsToken) {
+      res.status(503).json({ error: "Metrics not available: METRICS_TOKEN not configured" });
+      return;
+    }
+    const authHeader = req.headers.authorization;
+    if (authHeader !== `Bearer ${metricsToken}`) {
+      res.status(401).json({ error: "Invalid or missing metrics token" });
+      return;
     }
     res.type("text/plain; version=0.0.4; charset=utf-8").send(approvalMetrics.prometheus(METRIC_HELP));
   });
@@ -680,7 +682,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     dataDir: CONTROLLED_DATA_DIR, 
     vaultUrl: process.env.VAULT_URL 
   }));
-  app.use(createPublicPRRRoutes());
+  app.use("/public/prr", prrRateLimit);
+  app.use(createPublicPRRRoutes({ dataDir: CONTROLLED_DATA_DIR }));
   app.use("/api", createAdminPRRRoutes());
   app.use("/api", createWebhookActionRoutes({
     approvalStore, dispatcherRegistry, chainStore,
