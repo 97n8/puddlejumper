@@ -18,7 +18,6 @@ export interface MunicipalityConfig {
   routingConfig: {
     autoReleaseTypes: ActionType[];
     legalHoldTypes: ActionType[];
-    requireReviewForAiAssisted: boolean;
   };
   escalationConfig: {
     primaryContactId: string;
@@ -26,7 +25,6 @@ export interface MunicipalityConfig {
     promptThresholdPercent: number;
   };
   outputChannels: Record<string, { enabled: boolean; [key: string]: unknown }>;
-  aiAssistEnabled: boolean;
   activatedAt: string;
   activatedBy: string;
 }

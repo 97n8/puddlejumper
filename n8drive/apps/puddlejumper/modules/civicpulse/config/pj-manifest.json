@@ -18,19 +18,16 @@
     "VAULY_API_KEY":   { "description": "Vauly API authentication key",        "required": true  },
     "VAULY_ENDPOINT":  { "description": "Vauly API base URL",                   "required": true  },
     "PJ_CMS_TOKEN":    { "description": "Municipal CMS publish token",          "required": false },
-    "PJ_EMAIL_KEY":    { "description": "Email service API key for digests",    "required": false },
-    "AI_ASSIST_KEY":   { "description": "AI plain language provider key",       "required": false }
+    "PJ_EMAIL_KEY":    { "description": "Email service API key for digests",    "required": false }
   },
   "environmentVariables": {
     "CIVICPULSE_MUNICIPALITY_CONFIG_PATH": { "description": "Path to municipality config JSON", "required": true },
     "CIVICPULSE_RULE_SET_PATH":            { "description": "Path to active rule set JSON",     "required": true },
-    "CIVICPULSE_VAULT_BASE_URL":           { "description": "Base URL for VAULT record links",  "required": true },
-    "CIVICPULSE_AI_ASSIST_ENABLED":        { "description": "Enable AI plain language pass",    "required": false, "default": "false" }
+    "CIVICPULSE_VAULT_BASE_URL":           { "description": "Base URL for VAULT record links",  "required": true }
   },
   "constraints": [
     "NO_INDEPENDENT_DATASTORE: CivicPulse must not introduce its own persistent datastore. All data derived from VAULT and PJ audit logs.",
     "SEAL_NON_BYPASSABLE: SEAL validation cannot be skipped for any publication path.",
-    "AI_OPERATOR_CONTROLLED: AI-assisted summaries must always go to staff review queue. Auto-release of AI content is prohibited.",
     "VAULY_APPEND_ONLY: Publication log is append-only. No deletion operations permitted.",
     "LOGICOS_API_BOUNDARY: LogicOS components may only call PuddleJumper API. Direct writes to approval workflow or log store from frontend are prohibited."
   ],

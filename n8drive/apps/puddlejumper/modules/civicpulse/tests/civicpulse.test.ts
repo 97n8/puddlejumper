@@ -185,32 +185,7 @@ describe('summaryGenerator', () => {
     expect(summary.body).toContain('Selectboard');
     expect(summary.body).toContain('$84,000');
     expect(summary.approvalStatus).toBe('pending_review');
-    expect(summary.aiAssisted).toBe(false);
     expect(summary.version).toBe(1);
-  });
-
-  it('calls AI assist when enabled and fn provided', async () => {
-    const aiAssistFn = vi.fn().mockResolvedValue('AI improved text');
-    const summary = await generateSummary(BOARD_VOTE_RECORD, {
-      municipalityId: 'test-town',
-      municipalityName: 'Test Town',
-      useAiAssist: true,
-      aiAssistFn,
-    });
-    expect(aiAssistFn).toHaveBeenCalled();
-    expect(summary.body).toBe('AI improved text');
-    expect(summary.aiAssisted).toBe(true);
-  });
-
-  it('does not call AI assist when useAiAssist is false', async () => {
-    const aiAssistFn = vi.fn();
-    await generateSummary(BOARD_VOTE_RECORD, {
-      municipalityId: 'test-town',
-      municipalityName: 'Test Town',
-      useAiAssist: false,
-      aiAssistFn,
-    });
-    expect(aiAssistFn).not.toHaveBeenCalled();
   });
 });
 
@@ -285,21 +260,6 @@ describe('workflowRouter', () => {
     const config = { autoReleaseTypes: [ActionType.BOARD_VOTE] };
     const decision = routeSummary(summary, config, true);
     expect(decision.target).toBe('legal_hold');
-  });
-
-  it('routes AI-assisted summaries to staff_review even if auto-release configured', async () => {
-    const aiSummary = await generateSummary(BOARD_VOTE_RECORD, {
-      municipalityId: 'test-town',
-      municipalityName: 'Test Town',
-      useAiAssist: true,
-      aiAssistFn: async (t) => t,
-    });
-    const config = {
-      autoReleaseTypes: [ActionType.BOARD_VOTE],
-      requireReviewForAiAssisted: true,
-    };
-    const decision = routeSummary(aiSummary, config, false);
-    expect(decision.target).toBe('staff_review');
   });
 
   it('defaults to staff_review when not configured', () => {

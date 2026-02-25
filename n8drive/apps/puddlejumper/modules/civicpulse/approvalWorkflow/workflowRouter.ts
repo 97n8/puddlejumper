@@ -4,7 +4,6 @@ import { type ActionType } from '../core/actionTypes.js';
 export interface RoutingConfig {
   autoReleaseTypes?: ActionType[];
   legalHoldTypes?: ActionType[];
-  requireReviewForAiAssisted?: boolean;
 }
 
 export type RoutingTarget = 'auto_release' | 'staff_review' | 'legal_hold';
@@ -21,9 +20,6 @@ export function routeSummary(
 ): RoutingDecision {
   if (legalHoldRequired) {
     return { target: 'legal_hold', reason: 'Legal hold required for this action type' };
-  }
-  if (summary.aiAssisted && config.requireReviewForAiAssisted) {
-    return { target: 'staff_review', reason: 'AI-assisted summaries require staff review' };
   }
   if (config.autoReleaseTypes?.includes(summary.actionType)) {
     return { target: 'auto_release', reason: 'Action type configured for auto-release' };

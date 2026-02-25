@@ -7,20 +7,11 @@ import { type CivicSummary } from './summarySchema.js';
 export interface SummaryOptions {
   municipalityId: string;
   municipalityName: string;
-  useAiAssist?: boolean;
-  aiAssistFn?: (text: string) => Promise<string>;
 }
 
 export async function generateSummary(record: VaultRecord, options: SummaryOptions): Promise<CivicSummary> {
   const fields = mapVaultRecord(record);
-  const { headline, body: rawBody } = applyTemplate(record, fields);
-
-  let body = rawBody;
-  let aiAssisted = false;
-  if (options.useAiAssist && options.aiAssistFn) {
-    body = await options.aiAssistFn(rawBody);
-    aiAssisted = true;
-  }
+  const { headline, body } = applyTemplate(record, fields);
 
   return {
     summaryId:      crypto.randomUUID(),
@@ -29,7 +20,6 @@ export async function generateSummary(record: VaultRecord, options: SummaryOptio
     headline,
     body,
     approvalStatus: 'pending_review',
-    aiAssisted,
     version:        1,
     municipalityId: options.municipalityId,
     fundingSource:  record.fundingSource,

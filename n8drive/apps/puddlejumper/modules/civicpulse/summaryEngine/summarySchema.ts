@@ -15,7 +15,6 @@ export interface CivicSummary {
   headline: string;
   body: string;
   approvalStatus: ApprovalStatus;
-  aiAssisted: boolean;
   version: number;
   municipalityId: string;
   fundingSource?: string;
