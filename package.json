@@ -9,7 +9,7 @@
     "bootstrap": "cd n8drive && pnpm install",
     "build": "cd n8drive && pnpm run build",
     "test": "cd n8drive && pnpm --filter @publiclogic/puddlejumper run test && pnpm --filter @publiclogic/logic-commons run test",
-    "smoke": "./smoke-test.sh"
+    "smoke": "./scripts/smoke-test.sh"
   },
   "engines": {
     "node": ">=20"

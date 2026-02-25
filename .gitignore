@@ -24,6 +24,7 @@ coverage/
 
 # Build artifacts
 *.tsbuildinfo
+vitest.config.ts.timestamp-*
 node_modules/
 dist/
 build/
@@ -36,3 +37,6 @@ build/
 # Temp files
 _tmp_*
 *.bak
+
+# AI tool worktrees
+.claude/worktrees/

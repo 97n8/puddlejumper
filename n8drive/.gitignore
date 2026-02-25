@@ -17,6 +17,7 @@ dist/
 build/
 prod-test/
 *.tsbuildinfo
+vitest.config.ts.timestamp-*
 
 # SQLite database files - development data
 **/data/*.db
@@ -42,3 +43,6 @@ web/.tmp_webhook_secret.txt
 # Temp files
 _tmp_*
 *.bak
+
+# AI tool worktrees
+**/.claude/worktrees/
