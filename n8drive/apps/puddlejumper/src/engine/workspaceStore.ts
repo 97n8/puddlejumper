@@ -146,6 +146,37 @@ export function getDb(dataDir: string): Database.Database {
     `);
   }
   
+  // CaseSpaces table (idempotent)
+  const hasCasespacesTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='casespaces'`).get();
+  if (!hasCasespacesTable) {
+    db.exec(`
+      CREATE TABLE casespaces (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        owner_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        color TEXT,
+        icon TEXT,
+        type TEXT DEFAULT 'custom',
+        town TEXT,
+        vault_module_ids TEXT DEFAULT '[]',
+        visibility TEXT NOT NULL DEFAULT 'organization',
+        members TEXT NOT NULL DEFAULT '[]',
+        connection_ids TEXT NOT NULL DEFAULT '[]',
+        audit_enabled INTEGER NOT NULL DEFAULT 0,
+        retention_enabled INTEGER NOT NULL DEFAULT 0,
+        file_count INTEGER NOT NULL DEFAULT 0,
+        folder_count INTEGER NOT NULL DEFAULT 0,
+        template_count INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        last_accessed INTEGER
+      );
+      CREATE INDEX idx_casespaces_workspace ON casespaces(workspace_id);
+      CREATE INDEX idx_casespaces_owner ON casespaces(owner_id);
+    `);
+  }
+
   _dbs.set(dataDir, db);
   return db;
 }
@@ -362,3 +393,104 @@ export function revokeInvitation(dataDir: string, invitationId: string) {
   db.prepare(`DELETE FROM workspace_invitations WHERE id = ?`).run(invitationId);
 }
 
+
+// ── CaseSpace Store ─────────────────────────────────────────────────────
+
+export interface CaseSpaceRow {
+  id: string;
+  workspace_id: string;
+  owner_id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  type?: string;
+  town?: string;
+  vault_module_ids: string[];
+  visibility: string;
+  members: string[];
+  connection_ids: string[];
+  audit_enabled: boolean;
+  retention_enabled: boolean;
+  file_count: number;
+  folder_count: number;
+  template_count: number;
+  created_at: number;
+  last_accessed?: number;
+}
+
+function rowToCaseSpace(row: any): CaseSpaceRow {
+  return {
+    ...row,
+    vault_module_ids: row.vault_module_ids ? JSON.parse(row.vault_module_ids) : [],
+    members: row.members ? JSON.parse(row.members) : [],
+    connection_ids: row.connection_ids ? JSON.parse(row.connection_ids) : [],
+    audit_enabled: Boolean(row.audit_enabled),
+    retention_enabled: Boolean(row.retention_enabled),
+  };
+}
+
+export function listCaseSpaces(dataDir: string, workspaceId: string, userId: string): CaseSpaceRow[] {
+  const db = getDb(dataDir);
+  const rows = db.prepare(`SELECT * FROM casespaces WHERE workspace_id = ? ORDER BY created_at ASC`).all(workspaceId) as any[];
+  return rows
+    .map(rowToCaseSpace)
+    .filter(cs => {
+      if (cs.visibility === 'organization') return true;
+      if (cs.visibility === 'public') return true;
+      if (cs.owner_id === userId) return true;
+      return cs.members.includes(userId);
+    });
+}
+
+export function createCaseSpace(dataDir: string, cs: Omit<CaseSpaceRow, 'file_count' | 'folder_count' | 'template_count'>): CaseSpaceRow {
+  const db = getDb(dataDir);
+  db.prepare(`
+    INSERT INTO casespaces (id, workspace_id, owner_id, name, description, color, icon, type, town,
+      vault_module_ids, visibility, members, connection_ids, audit_enabled, retention_enabled,
+      file_count, folder_count, template_count, created_at, last_accessed)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?)
+  `).run(
+    cs.id, cs.workspace_id, cs.owner_id, cs.name, cs.description ?? null,
+    cs.color ?? null, cs.icon ?? null, cs.type ?? 'custom', cs.town ?? null,
+    JSON.stringify(cs.vault_module_ids ?? []), cs.visibility ?? 'organization',
+    JSON.stringify(cs.members ?? []), JSON.stringify(cs.connection_ids ?? []),
+    cs.audit_enabled ? 1 : 0, cs.retention_enabled ? 1 : 0,
+    cs.created_at, cs.last_accessed ?? null,
+  );
+  return getCaseSpace(dataDir, cs.id)!;
+}
+
+export function getCaseSpace(dataDir: string, id: string): CaseSpaceRow | null {
+  const db = getDb(dataDir);
+  const row = db.prepare(`SELECT * FROM casespaces WHERE id = ?`).get(id) as any;
+  return row ? rowToCaseSpace(row) : null;
+}
+
+export function updateCaseSpace(dataDir: string, id: string, updates: Partial<Omit<CaseSpaceRow, 'id' | 'workspace_id' | 'owner_id' | 'created_at'>>): CaseSpaceRow | null {
+  const db = getDb(dataDir);
+  const row = db.prepare(`SELECT * FROM casespaces WHERE id = ?`).get(id) as any;
+  if (!row) return null;
+  const merged = rowToCaseSpace(row);
+  const next = { ...merged, ...updates };
+  db.prepare(`
+    UPDATE casespaces SET name=?, description=?, color=?, icon=?, type=?, town=?,
+      vault_module_ids=?, visibility=?, members=?, connection_ids=?,
+      audit_enabled=?, retention_enabled=?, file_count=?, folder_count=?, template_count=?, last_accessed=?
+    WHERE id=?
+  `).run(
+    next.name, next.description ?? null, next.color ?? null, next.icon ?? null,
+    next.type ?? 'custom', next.town ?? null,
+    JSON.stringify(next.vault_module_ids ?? []), next.visibility ?? 'organization',
+    JSON.stringify(next.members ?? []), JSON.stringify(next.connection_ids ?? []),
+    next.audit_enabled ? 1 : 0, next.retention_enabled ? 1 : 0,
+    next.file_count ?? 0, next.folder_count ?? 0, next.template_count ?? 0,
+    next.last_accessed ?? null, id,
+  );
+  return getCaseSpace(dataDir, id);
+}
+
+export function deleteCaseSpace(dataDir: string, id: string): void {
+  const db = getDb(dataDir);
+  db.prepare(`DELETE FROM casespaces WHERE id = ?`).run(id);
+}
