@@ -29,7 +29,8 @@ export function createCaseSpacesRoutes(): express.Router {
   function resolveContext(req: express.Request) {
     const auth = getAuthContext(req);
     if (!auth) return null;
-    const workspaceId = auth.workspaceId ?? auth.tenantId;
+    const rawId = auth.workspaceId ?? auth.tenantId ?? auth.sub;
+    const workspaceId = rawId?.startsWith('ws-') ? rawId : `ws-${rawId}`;
     let role = getMemberRole(dataDir, workspaceId, auth.sub);
     if (!role) {
       const ws = getWorkspace(dataDir, workspaceId);
