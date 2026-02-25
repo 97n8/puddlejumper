@@ -1,0 +1,50 @@
+{
+  "municipalityId": "sutton-ma",
+  "municipalityName": "Town of Sutton",
+  "vaultBaseUrl": "https://vault.sutton.gov",
+  "ruleSetPath": "./ruleSets/sutton-ma-v1.0.0.json",
+  "ruleSet": {
+    "municipalityId": "sutton-ma",
+    "municipalityName": "Town of Sutton",
+    "version": "1.0.0",
+    "effectiveDate": "2026-02-01",
+    "approvedBy": "Jane Smith, Town Administrator",
+    "thresholds": {
+      "board_vote":            { "tier": "required",     "backstopWindowHours": 48,  "defaultLegalHold": false },
+      "contract_award":        { "tier": "required",     "backstopWindowHours": 120, "defaultLegalHold": false },
+      "procurement_action":    { "tier": "required",     "backstopWindowHours": 120, "defaultLegalHold": false },
+      "budget_transfer":       { "tier": "required",     "backstopWindowHours": 72,  "defaultLegalHold": false },
+      "free_cash_allocation":  { "tier": "required",     "backstopWindowHours": 72,  "defaultLegalHold": false },
+      "warrant_article":       { "tier": "required",     "backstopWindowHours": 48,  "defaultLegalHold": false },
+      "public_hearing":        { "tier": "required",     "backstopWindowHours": 24,  "defaultLegalHold": false },
+      "zba_filing":            { "tier": "recommended",  "backstopWindowHours": 168, "defaultLegalHold": false },
+      "capital_milestone":     { "tier": "recommended",  "backstopWindowHours": 168, "defaultLegalHold": false },
+      "debt_issuance":         { "tier": "required",     "backstopWindowHours": 48,  "defaultLegalHold": true  },
+      "emergency_declaration": { "tier": "required",     "backstopWindowHours": 4,   "defaultLegalHold": false },
+      "policy_adoption":       { "tier": "required",     "backstopWindowHours": 72,  "defaultLegalHold": false },
+      "policy_amendment":      { "tier": "recommended",  "backstopWindowHours": 72,  "defaultLegalHold": false }
+    },
+    "excludedActionTypes": []
+  },
+  "routingConfig": {
+    "autoReleaseTypes": ["public_hearing", "capital_milestone"],
+    "legalHoldTypes": ["debt_issuance"],
+    "requireReviewForAiAssisted": true
+  },
+  "escalationConfig": {
+    "primaryContactId": "operator-town-admin",
+    "escalationContactId": "operator-selectboard-chair",
+    "promptThresholdPercent": 75
+  },
+  "outputChannels": {
+    "websitePost":     { "enabled": true,  "cmsEndpoint": "https://cms.sutton.gov/api/posts" },
+    "activityFeed":    { "enabled": true },
+    "weeklyDigest":    { "enabled": true,  "recipientList": ["admin@sutton.gov"], "scheduleDay": "monday" },
+    "emailSummary":    { "enabled": true,  "recipientsByActionType": { "debt_issuance": ["selectboard@sutton.gov", "counsel@sutton.gov"] } },
+    "socialDraft":     { "enabled": false },
+    "quarterlyReport": { "enabled": true }
+  },
+  "aiAssistEnabled": false,
+  "activatedAt": "2026-02-01T09:00:00.000Z",
+  "activatedBy": "PublicLogic LLC — Nate Boudreau"
+}
