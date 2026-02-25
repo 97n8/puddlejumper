@@ -558,9 +558,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   // /session, /admin/audit) — provided by logic-commons
   app.use("/api", createSessionRoutes({ nodeEnv }));
   // Rate-limit OAuth login redirects (10 req/min per IP)
-  app.use("/api/auth/github/login", oauthLoginRateLimit);
-  app.use("/api/auth/google/login", oauthLoginRateLimit);
-  app.use("/api/auth/microsoft/login", oauthLoginRateLimit);
+  app.use("/api/auth/github/login", loginRateLimit);
+  app.use("/api/auth/google/login", loginRateLimit);
+  app.use("/api/auth/microsoft/login", loginRateLimit);
   // Mount generic OAuth routes for all three providers (via logic-commons factory)
   const onUserAuthenticated = (userInfo: UserInfo): UserInfo => {
     // ── Access allowlist ──────────────────────────────────────────────────────
@@ -656,7 +656,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createOAuthRoutes(googleProvider, allOauthRouteOpts));
   app.use("/api", createOAuthRoutes(microsoftProvider, allOauthRouteOpts));
   // Token exchange (SSO bridge — lets OS exchange an MSAL token for a PJ session)
-  app.use("/api/auth/token-exchange", oauthLoginRateLimit);
+  app.use("/api/auth/token-exchange", loginRateLimit);
   app.use("/api", createTokenExchangeRoutes({
     nodeEnv,
     providers: { microsoft: microsoftProvider, google: googleProvider, github: githubProvider },
