@@ -27,7 +27,7 @@ The 9 standard modules that this flow can produce (plus the Tailored piece as Pi
 |---|-----------|-------------|--------------|------------------------|
 | 1 | `VAULTPRR` | Public Records | Records & Compliance | M.G.L. c.66 §10 |
 | 2 | `VAULTCLERK` | Town Clerk Operations | Records & Compliance | M.G.L. c.41 §§ 14–17 |
-| 3 | `VAULTONBOARD` | Onboarding & HR | Onboarding & HR | M.G.L. c.41 §108A |
+| 3 | `VAULTONBOARD` | Onboarding & HR | Onboarding & HR | M.G.L. c.149 §52C |
 | 4 | `VAULTPERMIT` | Permitting | Permitting | M.G.L. c.143 §3 / 780 CMR |
 | 5 | `VAULTFISCAL` | Financial Operations | Financial Operations | M.G.L. c.44 §§ 53–56 |
 | 6 | `VAULTCODE` | Code Enforcement | Permitting | M.G.L. c.139 §§ 1–5 |
@@ -265,13 +265,13 @@ Each module ships with a default step sequence. The builder can add, remove, and
 
 | # | Type | Label | Required | M.G.L. |
 |---|------|-------|----------|--------|
-| 1 | Gate | Background check clearance | **Yes** | c.41 §108A |
-| 2 | Route | Route hire paperwork to HR | **Yes** | c.41 §108A |
+| 1 | Gate | Background check clearance | **Yes** | c.149 §52C |
+| 2 | Route | Route hire paperwork to HR | **Yes** | c.149 §52C |
 | 3 | Clock | Start probation period clock | No | — |
-| 4 | Generate | Generate offer letter (PDF-A) | **Yes** | c.41 §108A |
+| 4 | Generate | Generate offer letter (PDF-A) | **Yes** | c.149 §52C |
 | 5 | Notify | Send offer to candidate | **Yes** | — |
 | 6 | Gate | Acceptance confirmation | **Yes** | — |
-| 7 | File | File to personnel records | **Yes** | c.41 §108A |
+| 7 | File | File to personnel records | **Yes** | c.149 §52C |
 | 8 | Lock | Seal onboarding record | **Yes** | — |
 
 #### VAULTPERMIT — Permitting
@@ -525,7 +525,7 @@ The toggle ("Apply Tailored" vs "Use Core only") is shown prominently. Changing 
 ┌─────────────────────────────────────────────────────────┐
 │  Review — VAULTONBOARD / Concord, MA                     │
 │                                                          │
-│  ✅ Statutory basis: M.G.L. c.41 §108A                   │
+│  ✅ Statutory basis: M.G.L. c.149 §52C                   │
 │  ✅ 8 steps valid, no orphans                            │
 │  ✅ Approval chain: dept_head → legal (sequential)       │
 │  ✅ SLA: 14 days (Tailored override, signed by Counsel)  │
