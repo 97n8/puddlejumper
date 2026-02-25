@@ -19,6 +19,7 @@ import {
   listWorkspaceMembers,
   removeWorkspaceMember,
   updateMemberRole,
+  updateMemberToolAccess,
   getMemberRole,
   getWorkspace,
   getDb,
@@ -106,18 +107,26 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
     res.json({ success: true, correlationId, data: members });
   });
 
-  // PATCH /api/workspace/members/:userId - Update member role (owner only)
-  router.patch("/workspace/members/:userId", requireAuthenticated(), requireRole("owner"), (req, res) => {
+  // PATCH /api/workspace/members/:userId - Update member role and/or tool access (owner only)
+  router.patch("/workspace/members/:userId", requireAuthenticated(), requireRole("owner", "admin"), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
-    const { role } = req.body;
+    const workspaceId = auth!.tenantId ?? auth!.workspaceId;
+    const { role, toolAccess } = req.body;
 
-    if (!["owner", "admin", "member", "viewer"].includes(role)) {
-      res.status(400).json({ success: false, correlationId, error: "Invalid role" });
-      return;
+    if (role !== undefined) {
+      if (!["owner", "admin", "member", "viewer"].includes(role)) {
+        res.status(400).json({ success: false, correlationId, error: "Invalid role" });
+        return;
+      }
+      updateMemberRole(dataDir, workspaceId, req.params.userId, role);
     }
 
-    updateMemberRole(dataDir, auth!.tenantId ?? auth!.workspaceId, req.params.userId, role);
+    if (toolAccess !== undefined) {
+      // null = no access, array = specific tools
+      updateMemberToolAccess(dataDir, workspaceId, req.params.userId, toolAccess);
+    }
+
     res.json({ success: true, correlationId });
   });
 

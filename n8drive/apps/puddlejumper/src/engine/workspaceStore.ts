@@ -277,6 +277,12 @@ export function updateMemberRole(dataDir: string, workspaceId: string, userId: s
   db.prepare(`UPDATE workspace_members SET role = ? WHERE workspace_id = ? AND user_id = ?`).run(role, workspaceId, userId);
 }
 
+export function updateMemberToolAccess(dataDir: string, workspaceId: string, userId: string, toolAccess: string[] | null) {
+  const db = getDb(dataDir);
+  const json = toolAccess ? JSON.stringify(toolAccess) : null;
+  db.prepare(`UPDATE workspace_members SET tool_access = ? WHERE workspace_id = ? AND user_id = ?`).run(json, workspaceId, userId);
+}
+
 // ── Workspace Invitation Functions ────────────────────────────────
 
 export function createInvitation(dataDir: string, workspaceId: string, email: string, role: string, invitedBy: string, toolAccess?: string[] | null) {
