@@ -79,6 +79,35 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
     res.json({ success: true, correlationId });
   });
 
+  // GET /api/invitations/:token - Peek at invite details (no auth required, no side effects)
+  router.get("/invitations/:token", (req, res) => {
+    const correlationId = getCorrelationId(res);
+    const invitation: any = getInvitationByToken(dataDir, req.params.token);
+    if (!invitation) {
+      res.status(404).json({ success: false, correlationId, error: "Invitation not found" });
+      return;
+    }
+    if (invitation.accepted_at) {
+      res.status(410).json({ success: false, correlationId, error: "Invitation already accepted" });
+      return;
+    }
+    if (new Date(invitation.expires_at) < new Date()) {
+      res.status(410).json({ success: false, correlationId, error: "Invitation expired" });
+      return;
+    }
+    const ws = getWorkspace(dataDir, invitation.workspace_id);
+    res.json({
+      success: true,
+      correlationId,
+      data: {
+        email: invitation.email,
+        role: invitation.role,
+        workspaceName: ws?.name ?? "PublicLogic",
+        expiresAt: invitation.expires_at,
+      },
+    });
+  });
+
   // POST /api/invitations/:token/accept - Accept invitation
   router.post("/invitations/:token/accept", requireAuthenticated(), (req, res) => {
     const auth = getAuthContext(req);
