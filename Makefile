@@ -102,7 +102,7 @@ clean: ## Remove build artifacts and node_modules
 
 .PHONY: smoke
 smoke: ## Run local smoke test
-	bash smoke-test.sh
+	bash scripts/smoke-test.sh
 
 # ─── Help ─────────────────────────────────────────────────────────────
 .PHONY: help
