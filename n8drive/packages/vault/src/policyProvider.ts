@@ -21,7 +21,7 @@ export const AuthorizationQuerySchema = z.object({
 export const AuthorizationResponseSchema = z.object({
   authorized: z.boolean(),
   reason: z.string().optional(),
-  delegationEvaluation: z.record(z.any()).optional(),
+  delegationEvaluation: z.record(z.string(), z.any()).optional(),
 });
 
 export const ChainTemplateQuerySchema = z.object({
@@ -39,7 +39,7 @@ export const ChainTemplateResponseSchema = z.object({
       timeoutSeconds: z.number().optional(),
     })
   ),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export const ManifestInputSchema = z.object({
@@ -48,7 +48,7 @@ export const ManifestInputSchema = z.object({
   processVersion: z.string(),
   planHash: z.string(),
   operatorId: z.string(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export const ManifestResponseSchema = z.object({
@@ -85,7 +85,7 @@ export const DriftResponseSchema = z.object({
   driftDetected: z.boolean(),
   severity: z.enum(['none', 'minor', 'major', 'critical']),
   requiresReapproval: z.boolean(),
-  details: z.record(z.any()).optional(),
+  details: z.record(z.string(), z.any()).optional(),
 });
 
 export type AuthorizationQuery = z.infer<typeof AuthorizationQuerySchema>;

@@ -46,3 +46,4 @@ _tmp_*
 
 # AI tool worktrees
 **/.claude/worktrees/
+.vercel

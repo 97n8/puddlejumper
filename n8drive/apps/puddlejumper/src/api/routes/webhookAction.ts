@@ -23,15 +23,15 @@ import { approvalMetrics, emitApprovalEvent, METRIC } from "../../engine/approva
 
 // ── Request validation ──────────────────────────────────────────────────────
 
-const webhookActionSchema = z.object({
+const webhookActionSchema = z.strictObject({
   mode: z.enum(["governed", "launch", "dry-run"]).default("governed"),
-  action: z.object({
+  action: z.strictObject({
     type: z.literal("webhook"),
-    url: z.string().url().max(2048),
+    url: z.url().max(2048),
     method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]).optional(),
     headers: z.record(z.string(), z.string()).optional(),
     body: z.unknown().optional(),
-  }).strict(),
+  }),
 }).strict();
 
 // ── Route options ───────────────────────────────────────────────────────────

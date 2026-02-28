@@ -26,7 +26,7 @@ export const ManifestRecordSchema = z.object({
   authorizedAt: z.string().optional(),
   deployedAt: z.string().optional(),
   expiresAt: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export type ManifestRecord = z.infer<typeof ManifestRecordSchema>;

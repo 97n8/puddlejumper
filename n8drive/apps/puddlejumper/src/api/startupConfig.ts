@@ -31,7 +31,7 @@ export const startupConfigSchema = z.object({
   PRR_DB_PATH: z.string().optional(),
   CONNECTOR_DB_PATH: z.string().optional(),
   METRICS_TOKEN: z.string().optional(),
-  FRONTEND_URL: z.string().url().optional().or(z.literal("").transform(() => undefined)),
+  FRONTEND_URL: z.url().optional().or(z.literal("").transform(() => undefined)),
   LOGIC_COMMONS_DATA_DIR: z.string().optional(),
 });
 
@@ -63,8 +63,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 
 /** Typed error thrown by loadConfig() so callers can inspect issues programmatically. */
 export class StartupConfigError extends Error {
-  readonly issues: z.ZodIssue[];
-  constructor(message: string, issues: z.ZodIssue[]) {
+  readonly issues: z.core.$ZodIssue[];
+  constructor(message: string, issues: z.core.$ZodIssue[]) {
     super(message);
     this.name = "StartupConfigError";
     this.issues = issues;

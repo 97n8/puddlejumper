@@ -46,16 +46,13 @@ type SignedOAuthState = {
 
 const providerSchema = z.enum(["microsoft", "google", "github"]);
 const callbackQuerySchema = z
-  .object({
+  .looseObject({
     code: z.string().trim().min(1),
     state: z.string().trim().min(1)
-  })
-  .passthrough();
-const resourceQuerySchema = z
-  .object({
+  });
+const resourceQuerySchema = z.strictObject({
     q: z.string().trim().max(256).optional()
-  })
-  .strict();
+  });
 
 function splitScopes(value: string | undefined): string[] {
   if (!value) {
@@ -124,15 +121,13 @@ function createStateSigner(secret: string) {
       }
       try {
         const parsed = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as unknown;
-        const stateSchema = z
-          .object({
+        const stateSchema = z.strictObject({
             tenantId: z.string().trim().min(1).max(128),
             userId: z.string().trim().min(1).max(128),
             provider: providerSchema,
             nonce: z.string().trim().min(8).max(128),
             exp: z.number().int().positive()
-          })
-          .strict();
+          });
         const validated = stateSchema.safeParse(parsed);
         return validated.success ? validated.data : null;
       } catch {

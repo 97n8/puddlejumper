@@ -22,12 +22,12 @@ import fs from "node:fs";
 const CreateSessionSchema = z.object({
   town: z.string().min(1),
   selectedModuleIds: z.array(z.string()),
-  configs: z.record(z.unknown()).optional().default({}),
+  configs: z.record(z.string(), z.unknown()).optional().default({}),
 });
 
 const UpdateSessionSchema = z.object({
   selectedModuleIds: z.array(z.string()).optional(),
-  configs: z.record(z.unknown()).optional(),
+  configs: z.record(z.string(), z.unknown()).optional(),
   status: z.enum(["draft", "review", "activated"]).optional(),
 });
 

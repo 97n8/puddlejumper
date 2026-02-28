@@ -22,7 +22,7 @@ export const AuditEventSchema = z.object({
   workspaceId: z.string(),
   operatorId: z.string().optional(),
   timestamp: z.string().optional(), // ISO 8601, generated server-side
-  details: z.record(z.any()),
+  details: z.record(z.string(), z.any()),
 });
 
 export type AuditEvent = z.infer<typeof AuditEventSchema>;
