@@ -106,7 +106,25 @@ export function createMicrosoftProxyRoutes(opts: MicrosoftProxyOptions): express
       });
 
     try {
-      let upstream = await makeRequest(tokenRecord.accessToken);
+      // If accessToken is empty, skip the first attempt and go straight to refresh
+      let activeToken = tokenRecord.accessToken;
+      if (!activeToken && tokenRecord.refreshToken && clientId && clientSecret) {
+        const refreshed = await refreshMicrosoftToken(
+          opts.store, fetchImpl, tenantId, userId,
+          tokenRecord.refreshToken, clientId, clientSecret
+        );
+        if (refreshed) {
+          activeToken = refreshed;
+        } else {
+          res.status(401).json({ error: "Microsoft token empty and refresh failed — please reconnect", code: "MICROSOFT_TOKEN_EMPTY" });
+          return;
+        }
+      } else if (!activeToken) {
+        res.status(401).json({ error: "Microsoft token empty — please reconnect", code: "MICROSOFT_TOKEN_EMPTY" });
+        return;
+      }
+
+      let upstream = await makeRequest(activeToken);
 
       // Auto-refresh on 401 if we have a refresh token
       if (upstream.status === 401 && tokenRecord.refreshToken && clientId && clientSecret) {
