@@ -112,12 +112,17 @@ export function createSessionRoutes(opts: SessionRoutesOptions): express.Router 
       }
 
       const newRow = result.token;
+      // Preserve workspace/role claims across rotation — these are set at login
+      // (tenantId, userId, workspaceId, role, permissions, etc.) and must not
+      // be dropped or connector routes will return 400 "Tenant scope unavailable"
+      const JWT_META = new Set(["jti", "family", "token_type", "exp", "iat", "iss", "aud", "nbf"]);
+      const extraClaims: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(payload)) {
+        if (!JWT_META.has(k)) extraClaims[k] = v;
+      }
       const newRefreshJwt = await signJwt(
         {
-          sub: payload.sub,
-          email: payload.email,
-          name: payload.name,
-          provider: payload.provider,
+          ...extraClaims,
           jti: newRow.id,
           family: newRow.family,
           token_type: "refresh",
@@ -127,12 +132,7 @@ export function createSessionRoutes(opts: SessionRoutesOptions): express.Router 
       res.cookie("pj_refresh", newRefreshJwt, getRefreshCookieOpts(opts.nodeEnv));
 
       const newAccess = await signJwt(
-        {
-          sub: payload.sub,
-          email: payload.email,
-          name: payload.name,
-          provider: payload.provider,
-        },
+        { ...extraClaims },
         { expiresIn: "1h" },
       );
       res.cookie("jwt", newAccess, getAccessCookieOpts(opts.nodeEnv));
