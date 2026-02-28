@@ -15,6 +15,45 @@ type MicrosoftProxyOptions = {
   fetchImpl?: typeof fetch;
 };
 
+async function refreshMicrosoftToken(
+  store: ConnectorStore,
+  fetchImpl: typeof fetch,
+  tenantId: string,
+  userId: string,
+  refreshToken: string,
+  clientId: string,
+  clientSecret: string
+): Promise<string | null> {
+  try {
+    const tenantSegment = (process.env.MS_TENANT_ID ?? "common").trim() || "common";
+    const form = new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    });
+    const res = await fetchImpl(
+      `https://login.microsoftonline.com/${encodeURIComponent(tenantSegment)}/oauth2/v2.0/token`,
+      { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form.toString() }
+    );
+    if (!res.ok) return null;
+    const payload = await res.json() as Record<string, unknown>;
+    const accessToken = typeof payload.access_token === "string" ? payload.access_token : null;
+    if (!accessToken) return null;
+    const expiresIn = typeof payload.expires_in === "number" ? payload.expires_in : 3600;
+    const newRefreshToken = typeof payload.refresh_token === "string" ? payload.refresh_token : refreshToken;
+    store.upsertToken({
+      provider: "microsoft", tenantId, userId,
+      accessToken, refreshToken: newRefreshToken,
+      scopes: [], account: null,
+      expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
+    });
+    return accessToken;
+  } catch {
+    return null;
+  }
+}
+
 const FORWARDED_RESPONSE_HEADERS = [
   "content-type",
   "odata-version",
@@ -27,6 +66,8 @@ const FORWARDED_RESPONSE_HEADERS = [
 export function createMicrosoftProxyRoutes(opts: MicrosoftProxyOptions): express.Router {
   const router = express.Router();
   const fetchImpl = opts.fetchImpl ?? fetch;
+  const clientId = (process.env.MICROSOFT_CLIENT_ID ?? "").trim();
+  const clientSecret = (process.env.MICROSOFT_CLIENT_SECRET ?? "").trim();
 
   router.all("/*", async (req, res) => {
     const auth = getAuthContext(req);
@@ -35,7 +76,8 @@ export function createMicrosoftProxyRoutes(opts: MicrosoftProxyOptions): express
     const tenantId = auth.tenantId ?? "";
     if (!tenantId) { res.status(400).json({ error: "Tenant scope unavailable" }); return; }
 
-    const tokenRecord = opts.store.getToken("microsoft", tenantId, auth.userId ?? auth.sub);
+    const userId = auth.userId ?? auth.sub;
+    const tokenRecord = opts.store.getToken("microsoft", tenantId, userId);
     if (!tokenRecord) {
       res.status(401).json({ error: "Microsoft not connected", code: "MICROSOFT_NOT_CONNECTED" });
       return;
@@ -51,17 +93,31 @@ export function createMicrosoftProxyRoutes(opts: MicrosoftProxyOptions): express
       body = JSON.stringify(req.body);
     }
 
-    try {
-      const upstream = await fetchImpl(upstreamUrl, {
+    const makeRequest = (accessToken: string) =>
+      fetchImpl(upstreamUrl, {
         method: req.method,
         headers: {
-          Authorization: `Bearer ${tokenRecord.accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           Accept: req.headers.accept ?? "application/json",
           "User-Agent": "PublicLogic-PuddleJumper",
           ...(body ? { "Content-Type": "application/json" } : {}),
         },
         body,
       });
+
+    try {
+      let upstream = await makeRequest(tokenRecord.accessToken);
+
+      // Auto-refresh on 401 if we have a refresh token
+      if (upstream.status === 401 && tokenRecord.refreshToken && clientId && clientSecret) {
+        const newToken = await refreshMicrosoftToken(
+          opts.store, fetchImpl, tenantId, userId,
+          tokenRecord.refreshToken, clientId, clientSecret
+        );
+        if (newToken) {
+          upstream = await makeRequest(newToken);
+        }
+      }
 
       for (const header of FORWARDED_RESPONSE_HEADERS) {
         const value = upstream.headers.get(header);
