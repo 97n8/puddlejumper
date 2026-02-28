@@ -99,6 +99,7 @@ import { createWebhookActionRoutes } from "./routes/webhookAction.js";
 import { createWorkspaceUsageRoutes } from "./routes/workspaceUsage.js";
 import { createWorkspaceCollaborationRoutes } from "./routes/workspaceCollaboration.js";
 import { createCaseSpacesRoutes } from "./routes/casespaces.js";
+import { createAxisChatRoutes } from "./routes/axisChatRoutes.js";
 import { createPublicPRRRoutes } from "./routes/publicPrr.js";
 import { createAdminPRRRoutes } from "./routes/prrAdmin.js";
 import { createVaultRoutes } from "./vaultRoutes.js";
@@ -680,6 +681,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createWorkspaceUsageRoutes());
   app.use("/api", createWorkspaceCollaborationRoutes());
   app.use("/api", createCaseSpacesRoutes());
+  app.use("/api", createAxisChatRoutes());
   app.use("/api", createVaultRoutes({ 
     dataDir: CONTROLLED_DATA_DIR, 
     vaultUrl: process.env.VAULT_URL 
