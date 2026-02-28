@@ -5,7 +5,7 @@
 //
 import type { Request, Response, NextFunction } from "express";
 import { getAuthContext } from "@publiclogic/core";
-import { getMemberRole, getWorkspace, type WorkspaceRole } from "../../engine/workspaceStore.js";
+import { getMemberRole, getWorkspace, getWorkspaceForMember, type WorkspaceRole } from "../../engine/workspaceStore.js";
 import { getCorrelationId } from "../serverMiddleware.js";
 
 export function requireRole(...allowedRoles: WorkspaceRole[]) {
@@ -29,6 +29,10 @@ export function requireRole(...allowedRoles: WorkspaceRole[]) {
         role = "owner";
       } else if (auth.role === "admin") {
         role = "owner";
+      } else {
+        // JWT had no tenantId — look up membership table as fallback for invited members
+        const membership = getWorkspaceForMember(dataDir, auth.sub);
+        if (membership) role = membership.role;
       }
     }
     

@@ -19,23 +19,36 @@ import {
   deleteCaseSpace,
   getMemberRole,
   getWorkspace,
+  getWorkspaceForMember,
 } from "../../engine/workspaceStore.js";
 
 export function createCaseSpacesRoutes(): express.Router {
   const router = express.Router();
   const dataDir = process.env.DATA_DIR || "./data";
 
-  // Resolve workspaceId + role for the authenticated user
+  // Resolve workspaceId + role for the authenticated user.
+  // If JWT has no tenantId/workspaceId (common for invited members), fall back to
+  // looking up which workspace they were added to via the workspace_members table.
   function resolveContext(req: express.Request) {
     const auth = getAuthContext(req);
     if (!auth) return null;
     const rawId = auth.workspaceId ?? auth.tenantId ?? auth.sub;
-    const workspaceId = rawId?.startsWith('ws-') ? rawId : `ws-${rawId}`;
+    let workspaceId = rawId?.startsWith('ws-') ? rawId : `ws-${rawId}`;
     let role = getMemberRole(dataDir, workspaceId, auth.sub);
     if (!role) {
       const ws = getWorkspace(dataDir, workspaceId);
-      if (ws && ws.owner_id === auth.sub) role = "owner";
-      else if (auth.role === "admin") role = "owner";
+      if (ws && ws.owner_id === auth.sub) {
+        role = "owner";
+      } else if (auth.role === "admin") {
+        role = "owner";
+      } else {
+        // JWT had no tenantId — look up membership table as fallback
+        const membership = getWorkspaceForMember(dataDir, auth.sub);
+        if (membership) {
+          workspaceId = membership.workspaceId;
+          role = membership.role;
+        }
+      }
     }
     return { auth, workspaceId, role };
   }

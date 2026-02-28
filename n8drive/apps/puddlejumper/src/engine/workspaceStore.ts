@@ -300,6 +300,17 @@ export function getMemberRole(dataDir: string, workspaceId: string, userId: stri
   return row ? (row.role as WorkspaceRole) : null;
 }
 
+// Returns the first workspace where userId is a non-owner member (used as fallback when JWT has no tenantId)
+export function getWorkspaceForMember(dataDir: string, userId: string): { workspaceId: string; role: WorkspaceRole } | null {
+  const db = getDb(dataDir);
+  const row = db.prepare(`
+    SELECT workspace_id, role FROM workspace_members
+    WHERE user_id = ? AND role != 'owner'
+    ORDER BY joined_at ASC LIMIT 1
+  `).get(userId) as { workspace_id: string; role: string } | undefined;
+  return row ? { workspaceId: row.workspace_id, role: row.role as WorkspaceRole } : null;
+}
+
 export function listWorkspaceMembers(dataDir: string, workspaceId: string) {
   const db = getDb(dataDir);
   return db.prepare(`SELECT * FROM workspace_members WHERE workspace_id = ? ORDER BY joined_at ASC`).all(workspaceId);
