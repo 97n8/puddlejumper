@@ -99,7 +99,7 @@ export function createAdminRoutes(opts: AdminRouteOptions): express.Router {
     const actor_id = typeof req.query.actor_id === "string" ? req.query.actor_id : undefined;
     const after = typeof req.query.after === "string" ? req.query.after : undefined;
     const limitParam = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 500;
-    const limit = isNaN(limitParam) ? 500 : Math.min(limitParam, 10000);
+    const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 10000)) : 500;
 
     const events = queryAuditEvents({ event_type, actor_id, after, limit });
 

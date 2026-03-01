@@ -87,7 +87,7 @@ export function createVaultRoutes(opts: VaultRoutesOptions): Router {
     } catch (error) {
       console.error("[vault/deploy] Error:", error);
       return res.status(500).json({
-        error: error instanceof Error ? error.message : "Deployment failed",
+        error: "Deployment failed",
       });
     }
   });
@@ -113,7 +113,7 @@ export function createVaultRoutes(opts: VaultRoutesOptions): Router {
     } catch (error) {
       console.error("[vault/list] Error:", error);
       return res.status(500).json({
-        error: error instanceof Error ? error.message : "Failed to list deployments",
+        error: "Failed to list deployments",
       });
     }
   });
@@ -143,7 +143,7 @@ export function createVaultRoutes(opts: VaultRoutesOptions): Router {
     } catch (error) {
       console.error("[vault/get] Error:", error);
       return res.status(500).json({
-        error: error instanceof Error ? error.message : "Failed to fetch deployment",
+        error: "Failed to fetch deployment",
       });
     }
   });
@@ -173,7 +173,7 @@ export function createVaultRoutes(opts: VaultRoutesOptions): Router {
     } catch (error) {
       console.error("[vault/archive] Error:", error);
       return res.status(500).json({
-        error: error instanceof Error ? error.message : "Failed to archive deployment",
+        error: "Failed to archive deployment",
       });
     }
   });

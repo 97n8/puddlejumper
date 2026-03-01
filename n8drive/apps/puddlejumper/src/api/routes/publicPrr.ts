@@ -74,8 +74,8 @@ export function createPublicPRRRoutes(opts?: { dataDir?: string; workspaceId?: s
           created_at: prr.created_at
         }
       });
-    } catch (error: any) {
-      res.status(500).json({ success: false, correlationId, error: error.message || "Failed to create PRR" });
+    } catch (error: unknown) {
+      res.status(500).json({ success: false, correlationId, error: "Failed to create PRR" });
     }
   });
 
@@ -116,8 +116,8 @@ export function createPublicPRRRoutes(opts?: { dataDir?: string; workspaceId?: s
           comments
         }
       });
-    } catch (error: any) {
-      res.status(500).json({ success: false, correlationId, error: error.message || "Failed to retrieve PRR" });
+    } catch (error: unknown) {
+      res.status(500).json({ success: false, correlationId, error: "Failed to retrieve PRR" });
     }
   });
 

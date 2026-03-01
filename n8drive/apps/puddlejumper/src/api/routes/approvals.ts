@@ -39,8 +39,10 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
     if (!auth) { res.status(401).json({ success: false, correlationId, error: "Unauthorized" }); return; }
 
     const approvalStatus = typeof req.query.status === "string" ? req.query.status : undefined;
-    const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 50;
-    const offset = typeof req.query.offset === "string" ? parseInt(req.query.offset, 10) : 0;
+    const rawLimit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 50;
+    const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(rawLimit, 1000)) : 50;
+    const rawOffset = typeof req.query.offset === "string" ? parseInt(req.query.offset, 10) : 0;
+    const offset = Number.isFinite(rawOffset) ? Math.max(0, rawOffset) : 0;
 
     // Always scope to workspaceId from JWT
     const workspaceId = auth.workspaceId;
@@ -51,8 +53,8 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
       approvalStatus: approvalStatus as any,
       operatorId,
       workspaceId,
-      limit: isNaN(limit) ? 50 : limit,
-      offset: isNaN(offset) ? 0 : offset,
+      limit,
+      offset,
     });
 
     const pendingCount = approvalStore.countPending({ workspaceId });
