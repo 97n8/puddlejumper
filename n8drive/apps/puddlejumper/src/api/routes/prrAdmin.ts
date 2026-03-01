@@ -36,11 +36,13 @@ export function createAdminPRRRoutes(opts?: { dataDir?: string }): express.Route
     }
     
     // Parse filters from query
+    const rawPage = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
+    const rawPerPage = req.query.per_page ? parseInt(req.query.per_page as string, 10) : undefined;
     const filters: PRRFilters = {
       status: req.query.status as any,
       assigned_to: req.query.assigned_to as string,
-      page: req.query.page ? Math.max(1, parseInt(req.query.page as string) || 1) : undefined,
-      per_page: req.query.per_page ? Math.max(1, Math.min(parseInt(req.query.per_page as string) || 50, 100)) : undefined,
+      page: rawPage !== undefined && Number.isFinite(rawPage) ? Math.max(1, rawPage) : undefined,
+      per_page: rawPerPage !== undefined && Number.isFinite(rawPerPage) ? Math.max(1, Math.min(rawPerPage, 100)) : undefined,
     };
     
     try {
