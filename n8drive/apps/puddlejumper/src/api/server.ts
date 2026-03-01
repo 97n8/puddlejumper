@@ -106,6 +106,7 @@ import { createVaultRoutes } from "./routes/vault.js";
 import { initArchieve, createArchieveRouter, getArchieveQueueDepth } from "../archieve/index.js";
 import { initSeal, getSealHealth, createSealRouter } from "../seal/index.js";
 import { initSyncronate, createSyncronateRouter, getSyncronateHealth } from "../syncronate/index.js";
+import { initLogicBridge, createLogicBridgeRouter, getLogicBridgeHealth } from "../logicbridge/index.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
@@ -186,6 +187,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   initArchieve(approvalStore.db, CONTROLLED_DATA_DIR);
   initSeal(approvalStore.db);
   initSyncronate(approvalStore.db);
+  // ── LOGICBRIDGE connector registry + handler runner ───────────────────
+  initLogicBridge(approvalStore.db, connectorStore).catch(err => {
+    console.error('[logicbridge] init error:', (err as Error).message);
+  });
   
   // ── PolicyProvider: Local or Remote (Vault) ──────────────────────────
   // If VAULT_URL is set, use RemotePolicyProvider to call Vault HTTP service.
@@ -396,7 +401,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
         kms:              { status: "ok", latencyMs: 0, lastCheckedAt: new Date().toISOString() },
         axis:             { status: "ok", providersLive: 0, providersDegraded: 0 },
         synchron8:        { status: "ok" },
-        logicbridge:      { status: "ok", connectorsRegistered: 0 },
+        logicbridge:      getLogicBridgeHealth(),
         syncronate:       getSyncronateHealth(),
         casespaceFactory: { status: checks.connectors?.status === "ok" ? "ok" : "degraded" },
         formkey:          { status: "ok" },
@@ -755,6 +760,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/archieve", createArchieveRouter(approvalStore.db));
   app.use("/api/seal", createSealRouter(approvalStore.db));
   app.use("/api/syncronate", createSyncronateRouter(approvalStore.db));
+  app.use("/api/logicbridge", createLogicBridgeRouter());
   app.use("/public/prr", prrRateLimit);
   app.use(createPublicPRRRoutes({ dataDir: CONTROLLED_DATA_DIR }));
   app.use("/api", createAdminPRRRoutes());
