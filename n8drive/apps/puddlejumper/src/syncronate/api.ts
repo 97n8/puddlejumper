@@ -1,0 +1,449 @@
+import express from 'express';
+import type { Router, Request, Response } from 'express';
+import type Database from 'better-sqlite3';
+import { getAuthContext, createJwtAuthenticationMiddleware } from '@publiclogic/core';
+import { createFeed, getFeed, updateFeed, listFeeds, setFeedStatus } from './feed-store.js';
+import { createJob, getJob, listJobs, listJobsForTenant, countJobsToday } from './job-store.js';
+import { listRecords, getRecord, tombstoneRecord, countRecordsIngested } from './record-store.js';
+import { runSyncJob, scheduleFeed } from './sync-engine.js';
+import { verifyWebhookSignature, getWebhookSecretForFeed } from './connectors/polimorphic.js';
+import { log as archieveLog } from '../archieve/logger.js';
+import { ArchieveEventType } from '../archieve/event-catalog.js';
+import crypto from 'node:crypto';
+import type { FeedDef, ConnectorMetadata } from './types.js';
+
+const SYSTEM_ACTOR = { userId: 'system:syncronate', role: 'system', sessionId: 'api', ip: undefined };
+
+function safeLog(event: Parameters<typeof archieveLog>[0]): void {
+  try { archieveLog(event); } catch (err) { console.warn('[syncronate] archieve log failed:', (err as Error).message); }
+}
+
+function reqId() { return crypto.randomUUID(); }
+
+const AVAILABLE_CONNECTORS: ConnectorMetadata[] = [
+  {
+    type: 'monday',
+    displayName: 'Monday.com',
+    direction: 'source',
+    description: 'Sync items from a Monday.com board via GraphQL API',
+    configSchema: { boardId: { type: 'string', required: true } },
+  },
+  {
+    type: 'polimorphic',
+    displayName: 'Polimorphic',
+    direction: 'source',
+    description: 'Receive webhook events or poll from Polimorphic platform',
+    configSchema: { baseUrl: { type: 'string', required: true } },
+  },
+  {
+    type: 'salesforce',
+    displayName: 'Salesforce',
+    direction: 'source',
+    description: 'Sync Contacts/Accounts/Leads/Opportunities via SOQL',
+    configSchema: { objectType: { type: 'string', enum: ['Contact', 'Account', 'Lead', 'Opportunity'] } },
+  },
+  {
+    type: 'powerbi',
+    displayName: 'Power BI',
+    direction: 'sink',
+    description: 'Push rows to a Power BI push dataset (100-row batches, SEAL signed)',
+    configSchema: { datasetId: { type: 'string', required: true }, tableId: { type: 'string', required: true } },
+  },
+  {
+    type: 'kahana',
+    displayName: 'Kahana',
+    direction: 'sink',
+    description: 'Export ZIP bundles to Kahana enterprise endpoint',
+    configSchema: { endpoint: { type: 'string' } },
+  },
+];
+
+export function createSyncronateRouter(db: Database.Database): Router {
+  const router = express.Router();
+  const authMiddleware = createJwtAuthenticationMiddleware();
+
+  // ── Polimorphic webhook (no JWT — HMAC is auth) ──
+  router.post(
+    '/polimorphic/webhook',
+    express.raw({ type: 'application/json' }),
+    async (req: Request, res: Response) => {
+      const body = req.body as Buffer;
+      const signature = (req.headers['x-polimorphic-signature'] ?? req.headers['x-hub-signature-256'] ?? '') as string;
+
+      // Find feed by connector type (pick first active polimorphic feed for this webhook)
+      const rows = db.prepare(`SELECT feed_json FROM syncronate_feeds WHERE status = 'active'`).all() as { feed_json: string }[];
+      const feed = rows.map(r => JSON.parse(r.feed_json) as FeedDef).find(f => f.source.type === 'polimorphic');
+
+      if (!feed) {
+        res.status(404).json({ error: 'No active Polimorphic feed found' });
+        return;
+      }
+
+      const secret = getWebhookSecretForFeed(feed);
+      if (!secret || !verifyWebhookSignature(body, signature, secret)) {
+        safeLog({
+          requestId: reqId(), tenantId: feed.tenantId, module: 'SYNCRONATE',
+          eventType: ArchieveEventType.SYNCRONATE_WEBHOOK_SIGNATURE_INVALID,
+          actor: SYSTEM_ACTOR, severity: 'warn',
+          data: { feedId: feed.feedId, sourceConnectorId: feed.source.connectorId },
+        });
+        res.status(401).json({ error: 'Invalid webhook signature' });
+        return;
+      }
+
+      let event: Record<string, unknown>;
+      try {
+        event = JSON.parse(body.toString('utf-8'));
+      } catch {
+        res.status(400).json({ error: 'Invalid JSON body' });
+        return;
+      }
+
+      safeLog({
+        requestId: reqId(), tenantId: feed.tenantId, module: 'SYNCRONATE',
+        eventType: ArchieveEventType.SYNCRONATE_WEBHOOK_RECEIVED,
+        actor: SYSTEM_ACTOR, severity: 'info',
+        data: { feedId: feed.feedId, eventType: event.eventType ?? 'unknown' },
+      });
+
+      // Trigger async sync for this feed
+      runSyncJob(feed.feedId, 'webhook', db).catch(err =>
+        console.error('[syncronate] webhook-triggered sync failed:', err)
+      );
+
+      res.json({ status: 'accepted' });
+    }
+  );
+
+  // Polimorphic webhook health (no auth)
+  router.get('/polimorphic/webhook/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // ── All other routes require JWT ──
+  router.use(authMiddleware);
+
+  function getTenantId(req: Request): string | null {
+    const auth = getAuthContext(req);
+    if (!auth) return null;
+    if (auth.role === 'admin' || auth.role === 'platform-admin') {
+      return (req.query.tenantId as string) || req.body?.tenantId || auth.tenantId || null;
+    }
+    return auth.tenantId || null;
+  }
+
+  function actorFrom(req: Request) {
+    const auth = getAuthContext(req);
+    return {
+      userId: auth?.userId || auth?.sub || 'unknown',
+      role: auth?.role || 'unknown',
+      sessionId: auth?.sessionId || (req.headers['x-request-id'] as string) || 'none',
+      ip: req.ip,
+    };
+  }
+
+  // ── Dashboard ──
+  router.get('/dashboard', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+
+    try {
+      const activeFeeds = (db.prepare(`SELECT COUNT(*) as cnt FROM syncronate_feeds WHERE tenant_id = ? AND status = 'active'`).get(tenantId) as { cnt: number }).cnt;
+      const jobsToday = countJobsToday(db, tenantId);
+      const recordsIngested = countRecordsIngested(db, tenantId);
+      const dlpBlocks = (db.prepare(
+        `SELECT COUNT(*) as cnt FROM syncronate_jobs WHERE tenant_id = ? AND stats_json LIKE '%"blocked"%'`
+      ).get(tenantId) as { cnt: number }).cnt;
+      const recentJobs = listJobsForTenant(db, tenantId, 10);
+      res.json({ activeFeeds, jobsToday, recordsIngested, dlpBlocks, recentJobs });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // ── Connectors list ──
+  router.get('/connectors', (_req, res) => {
+    res.json({ connectors: AVAILABLE_CONNECTORS });
+  });
+
+  // ── Feed Management ──
+
+  // POST /api/syncronate/feeds — create FeedDef
+  router.post('/feeds', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+
+    try {
+      const body = req.body as Partial<FeedDef>;
+      if (!body.displayName || !body.source || !body.sinks || !body.fieldMap) {
+        res.status(400).json({ error: 'Missing required fields: displayName, source, sinks, fieldMap' });
+        return;
+      }
+      const feed = createFeed(db, {
+        tenantId,
+        displayName: body.displayName,
+        source: body.source,
+        sinks: body.sinks ?? [],
+        fieldMap: body.fieldMap ?? [],
+        syncConfig: body.syncConfig ?? {},
+      });
+      safeLog({
+        requestId: reqId(), tenantId, module: 'SYNCRONATE',
+        eventType: ArchieveEventType.SYNCRONATE_FEED_CREATED,
+        actor: actorFrom(req), severity: 'info',
+        data: { feedId: feed.feedId },
+      });
+      res.status(201).json(feed);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // GET /api/syncronate/feeds — list feeds
+  router.get('/feeds', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    try {
+      const feeds = listFeeds(db, tenantId);
+      res.json({ feeds });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // GET /api/syncronate/feeds/:feedId — get feed detail
+  router.get('/feeds/:feedId', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const feed = getFeed(db, req.params.feedId);
+    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    res.json(feed);
+  });
+
+  // PATCH /api/syncronate/feeds/:feedId — update draft FeedDef
+  router.patch('/feeds/:feedId', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const feed = getFeed(db, req.params.feedId);
+    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    if (feed.status !== 'draft') { res.status(409).json({ error: 'Can only update draft feeds' }); return; }
+    try {
+      const updated = updateFeed(db, req.params.feedId, req.body as Partial<FeedDef>);
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // POST /api/syncronate/feeds/:feedId/activate
+  router.post('/feeds/:feedId/activate', async (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const feed = getFeed(db, req.params.feedId);
+    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    try {
+      const updated = setFeedStatus(db, req.params.feedId, 'active');
+      safeLog({
+        requestId: reqId(), tenantId, module: 'SYNCRONATE',
+        eventType: ArchieveEventType.SYNCRONATE_FEED_ACTIVATED,
+        actor: actorFrom(req), severity: 'info',
+        data: { feedId: req.params.feedId, tenantId },
+      });
+      if (updated?.syncConfig.scheduleExpression) {
+        scheduleFeed(updated, db);
+      }
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // POST /api/syncronate/feeds/:feedId/pause
+  router.post('/feeds/:feedId/pause', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const feed = getFeed(db, req.params.feedId);
+    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    try {
+      const updated = setFeedStatus(db, req.params.feedId, 'paused');
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // POST /api/syncronate/feeds/:feedId/retire
+  router.post('/feeds/:feedId/retire', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const feed = getFeed(db, req.params.feedId);
+    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    try {
+      const updated = setFeedStatus(db, req.params.feedId, 'retired');
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // ── Sync Jobs ──
+
+  // POST /api/syncronate/feeds/:feedId/sync — manual trigger
+  router.post('/feeds/:feedId/sync', async (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const feed = getFeed(db, req.params.feedId);
+    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    if (feed.status !== 'active') { res.status(409).json({ error: 'Feed must be active to sync' }); return; }
+
+    // Create job immediately and respond; run async
+    const job = createJob(db, feed.feedId, tenantId, 'manual');
+    safeLog({
+      requestId: reqId(), tenantId, module: 'SYNCRONATE',
+      eventType: ArchieveEventType.SYNCRONATE_SYNC_STARTED,
+      actor: actorFrom(req), severity: 'info',
+      data: { feedId: feed.feedId },
+    });
+
+    runSyncJob(feed.feedId, 'manual', db).catch(err =>
+      console.error('[syncronate] manual sync failed:', err)
+    );
+
+    res.status(202).json({ jobId: job.jobId, status: 'queued' });
+  });
+
+  // GET /api/syncronate/feeds/:feedId/jobs — list jobs
+  router.get('/feeds/:feedId/jobs', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const feed = getFeed(db, req.params.feedId);
+    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    const status = req.query.status as string | undefined;
+    const jobs = listJobs(db, req.params.feedId, status ? { status } : undefined);
+    res.json({ jobs });
+  });
+
+  // GET /api/syncronate/feeds/:feedId/jobs/:jobId — job detail
+  router.get('/feeds/:feedId/jobs/:jobId', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const job = getJob(db, req.params.jobId);
+    if (!job || job.tenantId !== tenantId || job.feedId !== req.params.feedId) {
+      res.status(404).json({ error: 'Job not found' }); return;
+    }
+    res.json(job);
+  });
+
+  // POST /api/syncronate/feeds/:feedId/jobs/:jobId/retry-sinks
+  router.post('/feeds/:feedId/jobs/:jobId/retry-sinks', async (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const job = getJob(db, req.params.jobId);
+    if (!job || job.tenantId !== tenantId) { res.status(404).json({ error: 'Job not found' }); return; }
+
+    const newJob = createJob(db, job.feedId, tenantId, 'manual');
+    runSyncJob(job.feedId, 'manual', db).catch(err =>
+      console.error('[syncronate] retry-sinks failed:', err)
+    );
+    res.status(202).json({ jobId: newJob.jobId, status: 'queued' });
+  });
+
+  // POST /api/syncronate/feeds/:feedId/jobs/:jobId/cancel
+  router.post('/feeds/:feedId/jobs/:jobId/cancel', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const { updateJob } = require('./job-store.js');
+    const job = getJob(db, req.params.jobId);
+    if (!job || job.tenantId !== tenantId) { res.status(404).json({ error: 'Job not found' }); return; }
+    if (job.status === 'completed' || job.status === 'failed') {
+      res.status(409).json({ error: 'Job already finished' }); return;
+    }
+    const updated = updateJob(db, req.params.jobId, { status: 'failed', completedAt: new Date().toISOString(), error: { message: 'Cancelled by user' } });
+    res.json(updated);
+  });
+
+  // ── Federation Records ──
+
+  // GET /api/syncronate/feeds/:feedId/records — list records
+  router.get('/feeds/:feedId/records', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const feed = getFeed(db, req.params.feedId);
+    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    const limit = parseInt(req.query.limit as string ?? '100', 10);
+    const offset = parseInt(req.query.offset as string ?? '0', 10);
+    const records = listRecords(db, req.params.feedId, {}, { limit, offset });
+    res.json({ records });
+  });
+
+  // GET /api/syncronate/feeds/:feedId/records/:recordId — get record
+  router.get('/feeds/:feedId/records/:recordId', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const record = getRecord(db, req.params.recordId);
+    if (!record || record.tenantId !== tenantId || record.feedId !== req.params.feedId) {
+      res.status(404).json({ error: 'Record not found' }); return;
+    }
+    res.json(record);
+  });
+
+  // DELETE /api/syncronate/feeds/:feedId/records/:recordId — tombstone
+  router.delete('/feeds/:feedId/records/:recordId', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const record = getRecord(db, req.params.recordId);
+    if (!record || record.tenantId !== tenantId || record.feedId !== req.params.feedId) {
+      res.status(404).json({ error: 'Record not found' }); return;
+    }
+    const ok = tombstoneRecord(db, req.params.recordId);
+    if (!ok) { res.status(500).json({ error: 'Tombstone failed' }); return; }
+    res.json({ status: 'tombstoned', recordId: req.params.recordId });
+  });
+
+  // ── Audit ──
+
+  // GET /api/syncronate/feeds/:feedId/audit — ARCHIEVE stream for feed
+  router.get('/feeds/:feedId/audit', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const feed = getFeed(db, req.params.feedId);
+    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+
+    try {
+      const rows = db.prepare(
+        `SELECT event_json FROM archieve_delivered
+         WHERE tenant_id = ? AND event_json LIKE ?
+         ORDER BY chain_pos DESC LIMIT 100`
+      ).all(tenantId, `%"feedId":"${req.params.feedId}"%`) as { event_json: string }[];
+      const events = rows.map(r => JSON.parse(r.event_json));
+      res.json({ events });
+    } catch {
+      res.json({ events: [] });
+    }
+  });
+
+  // GET /api/syncronate/feeds/:feedId/dlp-report — DLP action summary
+  router.get('/feeds/:feedId/dlp-report', (req: Request, res: Response) => {
+    const tenantId = getTenantId(req);
+    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    const feed = getFeed(db, req.params.feedId);
+    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+
+    try {
+      const jobs = listJobs(db, req.params.feedId);
+      const totalBlocked = jobs.reduce((acc, j) => acc + (j.stats.blocked ?? 0), 0);
+      const totalIngested = jobs.reduce((acc, j) => acc + (j.stats.ingested ?? 0), 0);
+      res.json({
+        feedId: req.params.feedId,
+        totalBlocked,
+        totalIngested,
+        blockRate: totalIngested > 0 ? totalBlocked / totalIngested : 0,
+        jobs: jobs.length,
+      });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  return router;
+}
