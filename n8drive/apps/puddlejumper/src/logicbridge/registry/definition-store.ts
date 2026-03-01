@@ -73,7 +73,7 @@ export function createDefinition(
     allowedProfiles?: string[];
     metadata?: Record<string, unknown>;
     handlerSource?: string;
-    samplePayload?: Record<string, unknown>;
+    samplePayload?: Record<string, unknown> | string;
     residencyAttestation?: string;
   }
 ): ConnectorDefinition {
@@ -90,6 +90,12 @@ export function createDefinition(
     handlerHash = result.handlerHash;
   }
 
+  // samplePayload may be a JSON string from the frontend or an object
+  let samplePayloadStr: string | null = null;
+  if (input.samplePayload) {
+    samplePayloadStr = typeof input.samplePayload === 'string' ? input.samplePayload : JSON.stringify(input.samplePayload);
+  }
+
   db.prepare(`
     INSERT INTO logicbridge_definitions
     (id, tenant_id, name, version, status, handler_encrypted, handler_hash, seal_token,
@@ -102,7 +108,7 @@ export function createDefinition(
     JSON.stringify(input.capabilities ?? []),
     JSON.stringify(input.dataTypes ?? []),
     JSON.stringify(input.allowedProfiles ?? []),
-    input.samplePayload ? JSON.stringify(input.samplePayload) : null,
+    samplePayloadStr,
     null,
     input.residencyAttestation ?? null,
     JSON.stringify(input.metadata ?? {}),
@@ -136,6 +142,10 @@ export function updateDefinition(
   id: string,
   updates: Partial<Pick<ConnectorDefinition, 'status' | 'simResult' | 'sealToken' | 'handlerHash' | 'handlerEncrypted' | 'capabilities' | 'allowedProfiles' | 'supersededBy'>> & {
     handlerSource?: string;
+    name?: string;
+    dataTypes?: string[];
+    samplePayload?: string;
+    metadata?: Record<string, unknown>;
   }
 ): ConnectorDefinition | null {
   const db = getDb();
@@ -156,20 +166,35 @@ export function updateDefinition(
   }
   if (updates.handlerHash !== undefined) handlerHash = updates.handlerHash;
 
+  const name = updates.name ?? existing.name;
+  const capabilities = updates.capabilities ? JSON.stringify(updates.capabilities) : JSON.stringify(existing.capabilities);
+  const allowedProfiles = updates.allowedProfiles ? JSON.stringify(updates.allowedProfiles) : JSON.stringify(existing.allowedProfiles);
+  const dataTypes = updates.dataTypes ? JSON.stringify(updates.dataTypes) : JSON.stringify(existing.dataTypes);
+  const samplePayload = updates.samplePayload !== undefined
+    ? (updates.samplePayload ? updates.samplePayload : null)
+    : (existing.samplePayload ? JSON.stringify(existing.samplePayload) : null);
+  const metadata = updates.metadata !== undefined
+    ? JSON.stringify(updates.metadata)
+    : (existing.metadata ? JSON.stringify(existing.metadata) : JSON.stringify({}));
+
   db.prepare(`
     UPDATE logicbridge_definitions SET
-      status=?, handler_encrypted=?, handler_hash=?, seal_token=?,
-      sim_result=?, capabilities=?, allowed_profiles=?, superseded_by=?,
-      updated_at=?
+      name=?, status=?, handler_encrypted=?, handler_hash=?, seal_token=?,
+      sim_result=?, capabilities=?, data_types=?, allowed_profiles=?, sample_payload=?,
+      metadata=?, superseded_by=?, updated_at=?
     WHERE id=?
   `).run(
+    name,
     updates.status ?? existing.status,
     handlerEncrypted,
     handlerHash,
     updates.sealToken ? JSON.stringify(updates.sealToken) : existing.sealToken ? JSON.stringify(existing.sealToken) : null,
     updates.simResult ? JSON.stringify(updates.simResult) : existing.simResult ? JSON.stringify(existing.simResult) : null,
-    updates.capabilities ? JSON.stringify(updates.capabilities) : JSON.stringify(existing.capabilities),
-    updates.allowedProfiles ? JSON.stringify(updates.allowedProfiles) : JSON.stringify(existing.allowedProfiles),
+    capabilities,
+    dataTypes,
+    allowedProfiles,
+    samplePayload,
+    metadata,
     updates.supersededBy ?? existing.supersededBy,
     now,
     id

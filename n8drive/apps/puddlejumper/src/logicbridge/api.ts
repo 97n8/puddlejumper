@@ -35,21 +35,23 @@ export function createLogicBridgeRouter(): Router {
   router.post('/connectors', async (req: Request, res: Response) => {
     const tenantId = getTenantId(req);
     const userId = getUserId(req);
-    const { name, version, capabilities, dataTypes, allowedProfiles, metadata, handlerSource, samplePayload, residencyAttestation } = req.body;
+    // Accept handlerCode (frontend) or handlerSource (internal) — both are the handler JS source
+    const { name, version, capabilities, dataTypes, allowedProfiles, metadata, handlerSource, handlerCode, samplePayload, residencyAttestation, description, baseUrl } = req.body;
+    const effectiveHandler = handlerCode ?? handlerSource;
 
     if (!name) { res.status(400).json({ error: 'name is required' }); return; }
-    if (!handlerSource) { res.status(400).json({ error: 'handlerSource is required' }); return; }
 
     try {
+      const effectiveMeta = { ...(metadata ?? {}), ...(description ? { description } : {}), ...(baseUrl ? { baseUrl } : {}) };
       const def = createDefinition(tenantId, {
         name,
         version,
         capabilities,
         dataTypes,
         allowedProfiles,
-        metadata,
-        handlerSource,
-        samplePayload,
+        metadata: effectiveMeta,
+        handlerSource: effectiveHandler,
+        samplePayload: typeof samplePayload === 'string' ? samplePayload : (samplePayload ?? undefined),
         residencyAttestation,
       });
 
@@ -90,8 +92,25 @@ export function createLogicBridgeRouter(): Router {
     }
 
     try {
-      const { handlerSource, capabilities, allowedProfiles } = req.body;
-      const updated = updateDefinition(id, { handlerSource, capabilities, allowedProfiles });
+      // Accept handlerCode (frontend name) or handlerSource (internal name)
+      const { handlerSource, handlerCode, capabilities, allowedProfiles, name, description, baseUrl, samplePayload, dataTypes } = req.body;
+      const effectiveHandler = handlerCode ?? handlerSource;
+      // Merge description/baseUrl into existing metadata
+      const existingMeta = (existing.metadata as Record<string, unknown>) ?? {};
+      const newMeta = {
+        ...existingMeta,
+        ...(description !== undefined ? { description } : {}),
+        ...(baseUrl !== undefined ? { baseUrl } : {}),
+      };
+      const updated = updateDefinition(id, {
+        handlerSource: effectiveHandler,
+        capabilities,
+        allowedProfiles,
+        name,
+        dataTypes,
+        samplePayload,
+        metadata: newMeta,
+      });
       res.json({ connector: updated ? safeDefinition(updated) : null });
     } catch (err: unknown) {
       res.status(500).json({ error: (err as Error).message });
@@ -272,5 +291,13 @@ function safeDefinition(def: ReturnType<typeof getDefinitionById>) {
   if (!def) return null;
   // Never expose encrypted handler in list responses
   const { handlerEncrypted: _, ...safe } = def;
-  return safe;
+  const meta = (safe.metadata as Record<string, unknown>) ?? {};
+  return {
+    ...safe,
+    // Frontend expects connectorId as a slug-like field — use id as fallback
+    connectorId: safe.id,
+    // Hoist description/baseUrl from metadata for easy access
+    description: meta.description as string | undefined,
+    baseUrl: meta.baseUrl as string | undefined,
+  };
 }
