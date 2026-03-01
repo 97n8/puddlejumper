@@ -5,13 +5,13 @@
 import express from "express";
 import type { Router } from "express";
 import { getAuthContext, createJwtAuthenticationMiddleware } from "@publiclogic/core";
-import { getWorkspace } from "../engine/workspaceStore.js";
+import { getWorkspace } from "../../engine/workspaceStore.js";
 import {
   deployProcess,
   listDeployedProcesses,
   archiveDeployedProcess,
   getDeployedProcess,
-} from "../engine/deploymentService.js";
+} from "../../engine/deploymentService.js";
 
 type VaultRoutesOptions = {
   dataDir: string;

@@ -102,7 +102,7 @@ import { createCaseSpacesRoutes } from "./routes/casespaces.js";
 import { createAxisChatRoutes } from "./routes/axisChatRoutes.js";
 import { createPublicPRRRoutes } from "./routes/publicPrr.js";
 import { createAdminPRRRoutes } from "./routes/prrAdmin.js";
-import { createVaultRoutes } from "./vaultRoutes.js";
+import { createVaultRoutes } from "./routes/vault.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
