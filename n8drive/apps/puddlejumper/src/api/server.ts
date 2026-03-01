@@ -103,6 +103,7 @@ import { createAxisChatRoutes } from "./routes/axisChatRoutes.js";
 import { createPublicPRRRoutes } from "./routes/publicPrr.js";
 import { createAdminPRRRoutes } from "./routes/prrAdmin.js";
 import { createVaultRoutes } from "./routes/vault.js";
+import { initArchieve, createArchieveRouter, getArchieveQueueDepth } from "../archieve/index.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
@@ -178,6 +179,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   }
   const approvalStore = new ApprovalStore(approvalDbPath);
   const chainStore = new ChainStore(approvalStore.db);
+
+  // ── ARCHIEVE immutable audit log ──────────────────────────────────────
+  initArchieve(approvalStore.db, CONTROLLED_DATA_DIR);
   
   // ── PolicyProvider: Local or Remote (Vault) ──────────────────────────
   // If VAULT_URL is set, use RemotePolicyProvider to call Vault HTTP service.
@@ -383,7 +387,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       uptime_seconds: uptimeSeconds,
       subsystems: {
         vault:            { status: checks.prr?.status === "ok" ? "ok" : "degraded", reachable: checks.prr?.status === "ok" },
-        archieve:         { status: "ok", queueDepth: 0, oldestQueuedItemAgeSeconds: 0 },
+        archieve:         { status: "ok", queueDepth: getArchieveQueueDepth(), oldestQueuedItemAgeSeconds: 0 },
         seal:             { status: "ok", signingKeyStatus: "loaded" },
         kms:              { status: "ok", latencyMs: 0, lastCheckedAt: new Date().toISOString() },
         axis:             { status: "ok", providersLive: 0, providersDegraded: 0 },
@@ -744,6 +748,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     dataDir: CONTROLLED_DATA_DIR, 
     vaultUrl: process.env.VAULT_URL 
   }));
+  app.use("/api/archieve", createArchieveRouter(approvalStore.db));
   app.use("/public/prr", prrRateLimit);
   app.use(createPublicPRRRoutes({ dataDir: CONTROLLED_DATA_DIR }));
   app.use("/api", createAdminPRRRoutes());
