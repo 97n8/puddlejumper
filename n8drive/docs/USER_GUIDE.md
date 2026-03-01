@@ -1,343 +1,638 @@
-# PuddleJumper — User Guide
+# LogicOS — User Guide
 
-> PublicLogic governance control surface for public-sector data operations.
+> PublicLogic LLC · LogicSuite Platform · Municipal Governance Intelligence
 
 ---
 
 ## Table of Contents
 
-1. [Getting Started](#getting-started)
-2. [Authentication](#authentication)
-3. [Dashboard](#dashboard)
-4. [Governance Engine](#governance-engine)
-5. [Public Records Requests (PRR)](#public-records-requests)
-6. [Access Requests](#access-requests)
-7. [Connector Management](#connector-management)
-8. [Embedded Widget](#embedded-widget)
-9. [API Reference](#api-reference)
-10. [Security Model](#security-model)
+1. [System Overview](#system-overview)
+2. [Getting Started](#getting-started)
+3. [Tools Reference](#tools-reference)
+   - [LogicPen](#logicpen)
+   - [Vault](#vault)
+   - [Builder](#builder)
+   - [CaseSpaces](#casespaces)
+   - [LogicBackend](#logicbackend)
+   - [FormKey](#formkey)
+   - [Flows (SYNCHRON8)](#flows-synchron8)
+   - [CivicPulse](#civicpulse)
+   - [LogicSuite](#logicsuite)
+   - [AXIS](#axis)
+   - [Workspace](#workspace)
+   - [LogicCommons](#logiccommons)
+   - [Audit Trail](#audit-trail)
+   - [Settings](#settings)
+   - [Admin](#admin)
+4. [Roles and Permissions](#roles-and-permissions)
+5. [Backend Modules](#backend-modules)
+6. [PJ API Reference](#pj-api-reference)
+7. [Security Model](#security-model)
+8. [Environment Variables](#environment-variables)
+9. [Deployment](#deployment)
+
+---
+
+## System Overview
+
+LogicSuite is a public-sector governance platform consisting of two main surfaces:
+
+| Surface | URL | Purpose |
+|---|---|---|
+| **LogicOS** | `os.publiclogic.org` | The primary user interface — all tools live here |
+| **PuddleJumper (PJ)** | `pj.publiclogic.org` | The backend API engine and admin surface |
+
+### Architecture at a Glance
+
+```
+LogicOS (Cloudflare Pages)
+    └─ React SPA — all tools in one authenticated shell
+
+PuddleJumper (Fly.io — publiclogic-puddlejumper)
+    └─ Node.js/Express monorepo — in-process backend modules
+         ├─ ARCHIEVE    Tamper-evident audit event chain
+         ├─ VAULT       Governed document and record storage
+         ├─ SEAL        ECDSA-P256 cryptographic sealing
+         ├─ AXIS        AI provider credential management
+         ├─ Template Library  Output template rendering (stub)
+         ├─ FormKey     Intake forms, consent gate, printed output
+         ├─ LOGICBRIDGE Connector registry and API explorer
+         ├─ SYNCHRON8   Feed-based automation triggers
+         └─ CaseSpace Factory  Governance environment wiring
+```
+
+All data at rest is stored in SQLite (WAL mode) on a Fly.io persistent volume. All write operations to governed records produce a SEAL token and an ARCHIEVE event that cannot be modified after the fact.
 
 ---
 
 ## Getting Started
 
-PuddleJumper is a monorepo with three main surfaces:
+### Sign In
 
-| Surface | URL | Purpose |
-|---------|-----|---------|
-| **Web App** | `pj.publiclogic.org` | Dashboard, governance, login |
-| **PJ API** | `publiclogic-puddlejumper.fly.dev` | Governance engine, PRR, connectors |
-| **Logic Commons API** | Vercel (or `:3002` locally) | Authentication, token management |
-
-### Prerequisites
-
-- A **GitHub** or **Google** account for authentication.
-- A modern browser (Chrome, Firefox, Safari, Edge).
-
----
-
-## Authentication
-
-### Logging In
-
-1. Navigate to the web app home page.
-2. Select a provider (**GitHub** or **Google**).
-3. Complete the OAuth flow with your provider.
-4. On success, you receive a short-lived access token (1 hour) and a refresh cookie (7 days).
+1. Navigate to [os.publiclogic.org](https://os.publiclogic.org)
+2. Click **Sign in with GitHub** or **Sign in with Google**
+3. Complete the OAuth flow — you return to LogicOS logged in
+4. The Start Screen shows all tools your role has access to
 
 ### Session Lifecycle
 
 | Event | What Happens |
-|-------|-------------|
-| **Login** | Access token (1h) returned in JSON; refresh token set as `HttpOnly` cookie |
-| **Silent refresh** | The app automatically refreshes your token 60 seconds before it expires — no user action needed |
-| **Token replay** | If a previously used refresh token is replayed (possible theft), the entire token family is revoked and all sessions for that chain are invalidated |
-| **Logout** | Calls `POST /api/auth/logout` — revokes your refresh token server-side and clears the cookie |
-| **Session expiry** | If silent refresh fails (e.g., cookie expired or revoked), the UI clears your session and returns to the login screen |
+|---|---|
+| **Login** | Access token (1h) + refresh cookie (7 days, HttpOnly) |
+| **Silent refresh** | Token renewed 60 seconds before expiry — no user action |
+| **Replay attack** | Reusing a revoked refresh token revokes the entire token family |
+| **Logout** | Token revoked server-side; cookie cleared |
 
-### Roles
+### Start Screen
 
-| Role | Access Level |
-|------|-------------|
-| **Viewer** | Read-only access to dashboards and public data |
-| **Operator** | Can execute governed actions and view redacted system prompts |
-| **Admin** | Full access — can view system prompts, revoke other users' tokens, manage connectors |
+The Start Screen is the home for LogicOS. It shows:
+- All tools available to your role with one-click access
+- Recent CaseSpaces (governed environments) you've worked in
+- Quick links to open a new CaseSpace or start a new document
 
 ---
 
-## Dashboard
+## Tools Reference
 
-**Route:** `/dashboard`
+### LogicPen
 
-The dashboard provides a tabular view of Public Records Requests assigned to your tenant.
+**What it is:** A full HTML/CSS/JS document editor with live preview, designed for producing governed printed documents.
 
-### Features
+**Access:** All authenticated users
 
-- **PRR table** — columns: Public ID, Status (color-coded badge), Tenant, Received Date, Due Date
-- **Status badges** — `received` (blue), `acknowledged` (yellow), `in_progress` (orange), `extended` (purple), `closed` (green)
-- **Refresh** — reload the table from the server
-- **Auth-gated** — requires an active session; unauthenticated users see a login prompt
+**Features:**
+- **Multi-project** — create and switch between multiple documents; projects persist in localStorage and can be saved to Vault
+- **Split/Code/Write/Preview modes** — edit raw HTML/CSS/JS or write in a rich text view
+- **Page sizes** — Free, Letter (8.5×11), A4, Legal, Slide 16:9, Square — affects print output
+- **Templates** — built-in document templates (Blank, Business Memo, Staff Kickoff Email, Invoice, Proposal) plus your LogicCommons templates appear in a separate section
+- **Print** — prints the live preview at the configured page size
+- **Save to Vault** — sends the rendered HTML to Vault as a governed document with classification and status
 
----
-
-## Governance Engine
-
-**Route:** `/governance`
-
-The governance engine evaluates whether a proposed action (e.g., creating an environment, deploying a policy) is approved or rejected based on rules, roles, scope, and workspace charter.
-
-### What You Can Do
-
-- **View your permissions** — all capability flags are listed with ✓/✗ indicators:
-  - `corePrompt.read` / `corePrompt.edit`
-  - `evaluate.execute`
-  - `missionControl.tiles.read` / `missionControl.tiles.customize`
-  - `missionControl.capabilities.read`
-  - `popout.launch`
-- **View available actions** — if you have `evaluate.execute`, the page lists PJ actions you can perform:
-  - `environment.create` — Create Environment
-  - `environment.update` — Update Environment
-  - `environment.promote` — Promote Environment
-  - `environment.snapshot` — Snapshot Environment
-- **View system prompt** — admins see the full system prompt; operators see a redacted summary
-- **Execute governed actions** — actions are evaluated against workspace charter, tenant scope, operator role, and connector configuration before approval
-
-### Governance Decisions
-
-Every governed action returns:
-
-| Field | Description |
-|-------|-------------|
-| **Decision** | `approved` or `rejected` |
-| **Rationale** | Human-readable explanation |
-| **Evidence** | Statute, policy key, delegation chain, permission check, connector evidence |
-| **Plan hash** | SHA-256 hash of the execution plan for audit verification |
-| **LCD status** | Short status text |
-| **Toast** | Notification (info / warn / error / success) |
-
-### Injection Protection
-
-Payloads containing adversarial patterns (e.g., "ignore rules", "bypass governance", "auto-approve") are automatically blocked.
+**Template dialog:** Click the template icon in the toolbar (or "Browse templates" on the empty state) to open the dialog. Your LogicCommons marketplace templates appear below the built-in templates as a "From LogicCommons" section when any exist.
 
 ---
 
-## Public Records Requests
+### Vault
 
-### Submitting a PRR (Public — No Login Required)
+**What it is:** Governed document storage with classification, version history, and SEAL signing.
 
-Send a `POST /api/prr/intake` with your request details. You receive a **tracking ID** and URL.
+**Access:** All authenticated users
 
-### Tracking a PRR (Public)
-
-Visit `GET /api/public/prrs/:publicId` with your tracking ID to see:
-- Current status
-- Due date (5 business days from receipt)
-- Summary
-- Agency name
-
-### Managing PRRs (Authenticated)
-
-| Endpoint | Action |
-|----------|--------|
-| `GET /api/prr` | List PRRs for your tenant (filterable, paginated) |
-| `POST /api/prr/:id/status` | Transition status: `received → acknowledged → in_progress → extended / closed` |
-| `POST /api/prr/:id/close` | Close with disposition |
+**Features:**
+- **Document list** — browse all Vault documents for your tenant, filter by status and classification
+- **Create / Upload** — add new documents via the Vault interface or save from LogicPen
+- **Classification levels:** `public`, `internal`, `confidential`, `restricted`
+- **Status lifecycle:** `draft → review → approved → archived`
+- **SEAL signing** — sign any document with SEAL (ECDSA-P256). The SealToken is stored with the document and can be verified offline
+- **Version history** — every update creates a new version; previous versions are accessible
+- **VAULT Files** — binary file attachments (PDFs, images) stored on the Fly.io persistent volume
 
 ---
 
-## Access Requests
+### Builder
 
-### Submitting an Access Request (Public)
+**What it is:** A guided wizard for setting up a complete governance environment for a municipality.
 
-`POST /api/access/request` — provide requester info, requested role, target system, and justification. A notification is enqueued for the admin team.
+**Access:** Admin, owner
 
-### Managing Access Requests (Authenticated)
+**Workflow:**
 
-| Endpoint | Action |
-|----------|--------|
-| `POST /api/access/request/:id/status` | Transition: `received → under_review → approved → provisioned → revoked → closed` (or `denied`) |
-| `POST /api/access/request/:id/close` | Close with resolution |
+1. **Select a town** — choose from a list of Massachusetts municipalities (or enter custom)
+2. **Select modules** — pick which governance modules to enable:
+   - Public Records Requests (PRR)
+   - Board Compliance
+   - Fiscal Governance
+   - Budget Transparency
+   - Personnel Records
+   - Contracts & Procurement
+   - Infrastructure & Assets
+   - SEAL & Audit
+3. **Configure each module** — set field schemas, retention tiers, custom fields, connector destinations, and enforcement mode
+4. **Review** — see a summary of all configured modules
+5. **Activate** — creates the CaseSpace (governed environment) in PuddleJumper and provisions the configured modules
 
-Access request notifications are delivered via HMAC-signed webhooks with exponential backoff on failure.
-
----
-
-## Connector Management
-
-PuddleJumper integrates with external services through OAuth-authenticated connectors.
-
-### Supported Providers
-
-| Provider | Capabilities |
-|----------|-------------|
-| **Microsoft** | SharePoint uploads, Power Automate flow dispatch, Azure AD provisioning |
-| **Google** | Drive uploads, notifications |
-| **GitHub** | Branch-and-PR, direct commits, repo search |
-
-### Connector Workflow
-
-1. **Connect** — `POST /api/connectors/:provider/auth/start` initiates OAuth
-2. **Callback** — the provider redirects back; tokens are stored securely
-3. **Browse** — `GET /api/connectors/:provider/resources` searches repos, files, folders
-4. **Disconnect** — `POST /api/connectors/:provider/disconnect` removes stored tokens
-5. **Status** — `GET /api/connectors/` lists all connector statuses (connected, scopes, expiry)
+The Builder persists your session in localStorage so you can pause and return.
 
 ---
 
-## Embedded Widget
+### CaseSpaces
 
-PuddleJumper can run as an embedded widget inside a parent application using `<iframe>`.
+**What it is:** Governed environments — each CaseSpace is a configured, SEAL-tracked workspace for a specific governance domain (e.g., a town's permit management system).
 
-### Simple Governance Showcase
+**Access:** Authenticated users (access controlled per CaseSpace)
 
-The standalone HTML widget (`puddlejumper_simple_final.html`) provides:
+**CaseSpaces Panel (list view):**
+- Browse all CaseSpaces for your workspace
+- Create a new CaseSpace (name, description, type, tags)
+- See status and last-updated timestamps
+- Enter a CaseSpace to open its workspace
 
-- **Role-based demo** — Viewer, Clerk, Chair, Auditor, Legal roles control available actions
-- **Environment selector** — create and switch between environments
-- **Navigator panel** — mode switching (Connectors / Projects), connector filtering (GitHub, Drive, SharePoint, Bookmarks)
-- **Search** — search across items by name, project, or tags
-- **Detail card view** — inspect selected items
-
-### Master Environment Control
-
-The full operator control surface (`puddlejumper-master-environment-control.html`) provides:
-
-- Navigator with tree view and search
-- Tile deck with live tiles (customizable, merged with server config)
-- Action execution with payload preview and audit output
-- Health check and advanced configuration panels
-- Five color tone variants
-
-### PostMessage Integration
-
-When embedded, the widget communicates with its parent via `postMessage`:
-
-- **Origin validation** — only messages from trusted origins (configured via `<meta name="pj-trusted-parent-origins">`) are accepted
-- **Source check** — `event.source` must be `window.parent`
-- **Message types**: `PJ_IDENTITY_CONTEXT`, `IDENTITY_UPDATE`, `pj.identity`, `PJ_AUTH_TOKEN`, `PJ_CONTEXT_REQUEST`
-- **No wildcard `'*'` targetOrigin** — all outbound messages are sent to specific validated origins only
+**CaseSpace Workspace (inside a CaseSpace):**
+- **Overview** — governance metadata, status, configured modules
+- **LogicDocs** — document management within the environment *(coming soon)*
+- **DocDump** — bulk document processing *(coming soon)*
+- **Governed actions** — module-specific actions that route through approval chains
 
 ---
 
-## API Reference
+### LogicBackend
 
-### Authentication (Logic Commons)
+**What it is:** Two tools in one panel — the **LOGICBRIDGE Connector Builder** and the **API Explorer**.
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/login` | None | Login with `{ provider, providerToken }` |
-| `POST` | `/api/refresh` | Cookie | Rotate refresh token, get new access token |
-| `POST` | `/api/auth/logout` | Cookie | Revoke refresh token, clear cookie |
-| `POST` | `/api/auth/revoke` | Bearer | Revoke all tokens for user (admin can target others) |
-| `GET` | `/health` | None | Health check |
+**Access:** Admin, owner
 
-### Governance & Runtime (PuddleJumper API)
+#### LOGICBRIDGE Connector Builder
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/evaluate` | Bearer (`deploy` perm) | Evaluate a governance decision |
-| `POST` | `/api/pj/execute` | Bearer | Execute a governed action |
-| `GET` | `/api/pj/actions` | Bearer | List available PJ actions |
-| `GET` | `/api/capabilities/manifest` | Bearer | User's capability manifest |
-| `GET` | `/api/runtime/context` | Bearer | Workspace/municipality/operator context |
-| `GET` | `/api/config/tiles` | Bearer | Live tiles configuration |
-| `GET` | `/api/config/capabilities` | Bearer | Live capabilities (automations, quick actions) |
-| `GET` | `/api/prompt` | Bearer (admin) | Full system prompt |
-| `GET` | `/api/core-prompt` | Bearer | Full or redacted system prompt |
-| `GET` | `/api/identity` | Bearer | Authenticated user info |
+Build, test, and publish governed API connectors. Each connector:
+- Has a name, description, base URL, capabilities, and data types
+- Can have a JavaScript handler (runs in a sandboxed VM on PJ)
+- Goes through a publish pipeline: draft → simulate → publish (SEAL-signed on publish)
+- Published connectors are available to SYNCHRON8 and CaseSpace Factory
 
-### Public Records Requests
+**Connector states:**
+| State | Description |
+|---|---|
+| `draft` | Editable; not available to other modules |
+| `simulated` | Handler has run against sample payload; simulation result stored |
+| `published` | SEAL-signed and registered; available platform-wide |
+| `deprecated` | Retired; no new usage; existing integrations continue |
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/prr/intake` | None | Submit a PRR |
-| `GET` | `/api/prr` | Bearer | List PRRs for tenant |
-| `POST` | `/api/prr/:id/status` | Bearer | Transition PRR status |
-| `POST` | `/api/prr/:id/close` | Bearer | Close PRR |
-| `GET` | `/api/public/prrs/:publicId` | None | Public PRR tracking |
+#### API Explorer
 
-### Access Requests
+Test live API endpoints against connected providers (GitHub, Microsoft, Google, PuddleJumper).
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/access/request` | Optional | Submit access request |
-| `POST` | `/api/access/request/:id/status` | Bearer | Transition status |
-| `POST` | `/api/access/request/:id/close` | Bearer | Close request |
+- **Provider selector** — choose a provider; dot indicates connection status
+- **Category + endpoint** — browse available endpoints by category
+- **Breadcrumb navigation** — click the provider name to return to the welcome state
+- **URL bar** — see the exact endpoint URL before running
+- **Response viewer** — Raw JSON or Smart (formatted) display; Code tab shows a ready-to-use snippet; History tab shows past requests from this session
 
-### Connectors
+---
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/connectors/` | Bearer | List connector statuses |
-| `POST` | `/api/connectors/:provider/auth/start` | Bearer | Start OAuth flow |
-| `GET` | `/api/connectors/:provider/auth/callback` | — | OAuth callback |
-| `POST` | `/api/connectors/:provider/disconnect` | Bearer | Disconnect provider |
-| `GET` | `/api/connectors/:provider/resources` | Bearer | Search provider resources |
+### FormKey
+
+**What it is:** The intake and output engine. Every governed form submission starts here. Every governed printed document output starts here.
+
+**Access:** Admin, owner (form management); Public (form submission via `/v1/forms/:id/submit`)
+
+**Two execution paths:**
+
+#### Intake Path
+Citizens or systems submit data through a governed form. FormKey:
+1. Validates fields against the FormDefinition schema
+2. Checks that consent exists (for forms requiring it)
+3. Seals the submission with ECDSA-P256 (SEAL) over the JCS-canonical field values
+4. Writes a VAULT record with a pre-stamped governance envelope (purpose, legalBasis, retentionTier)
+5. Logs FORMKEY_INTAKE_SUBMITTED to ARCHIEVE
+
+#### Output Path
+A VAULT intake record is rendered as a governed printed form. FormKey:
+1. Verifies the intake SEAL before producing any output (a broken seal = no render)
+2. Resolves field bindings from the FormDefinition output config
+3. Returns JSON bindings or HTML (Template Library rendering in future)
+
+**FormKey Panel tabs:**
+
+**Forms tab** — list all FormDefinitions for your tenant
+- Status badges: `draft` (slate), `published` (emerald), `deprecated` (amber), `suspended_mismatch` (red)
+- Click **View** to expand a form and see its fields, consent config, and actions
+- **New Form** — create a draft with formId (slug), name, legalBasis, purpose, retentionTier
+- **Publish** — runs the 5-step publish pipeline (preflight → consent hash → SEAL sign → VAULT write → ARCHIEVE event)
+- **Deprecate** — retires a published form (existing records unaffected)
+
+**Submissions tab** — select a form to browse its intake records
+- Each row shows: record ID, submittedAt, formVersion, retentionTier, legalBasis
+- **Render** — call the output renderer and see the JSON binding result
+
+**Consent tab** — look up a submitter's consent status by submitterId + form
+
+**Legal basis guide:**
+| legalBasis | Consent required? | Example |
+|---|---|---|
+| `consent` | Yes — hard block if missing | Health data intake, optional survey |
+| `legal_obligation` | No | Building permit application |
+| `public_task` | No | Public records request |
+| `contract` | No | Vendor registration |
+
+---
+
+### Flows (SYNCHRON8)
+
+**What it is:** Automation flows — pre-built integrations that connect your Microsoft 365, Google Workspace, and GitHub accounts to produce governed outputs.
+
+**Access:** Authenticated users (Admin for governance pages)
+
+**Sidebar navigation:**
+
+| Section | Page | Status |
+|---|---|---|
+| Automations | **Flows** | ✅ Full — install, configure, enable/disable, run |
+| Automations | **Catalog** | ✅ Full — 100+ pre-built recipes by category |
+| Automations | **Run History** | ✅ Full — past flow runs with status and output |
+| Compliance | Attestations | Placeholder |
+| Compliance | Evidence | Placeholder |
+| Compliance | Profiles | Placeholder |
+| Governance | **Audit Log** | ✅ Opens AuditTrailPanel (ARCHIEVE event viewer) |
+| Governance | Legal Holds | Placeholder |
+
+**Installing a flow:**
+1. Go to **Catalog** and browse or search 100+ recipes
+2. Click **Install** — some flows open a config dialog for required fields (email addresses, repo names, etc.)
+3. The installed flow appears in **Flows** where you can enable/disable it or run it manually
+
+**Flow categories:** Email & Calendar, Files & Storage, GitHub, Civic & Government, Data & Utilities, AI & Summaries, Compliance, Connectors, VAULT Integration
+
+---
+
+### CivicPulse
+
+**What it is:** The automated civic transparency engine. CivicPulse monitors VAULT records and automatically generates plain-language civic summaries for public publication — board votes, contract awards, financial actions.
+
+**Access:** Admin, owner
+
+**Tabs:**
+- **Approval Queue** — summaries awaiting staff review before publication. For each item: read the headline/body, verify against the VAULT source record, then Approve or Reject with a reason. SEAL mismatch items cannot be approved.
+- **Compliance Backstop** — items that passed a publication deadline without entering the workflow. These require immediate attention.
+- **Publication Log** — history of all published summaries with channel, timestamp, and ARCHIEVE link
+- **Channel Config** — configure output channels (website post, activity feed, email digest) and approval behavior
+
+**Governance chain (automatic):**
+VAULT record created → ARCHIEVE evaluates → Summary generated → SEAL validates → Routing decision → Staff review (you) → Published + logged
+
+---
+
+### LogicSuite
+
+**What it is:** An aggregated hub view of your workspace — files, automations, GitHub activity, and CivicPulse entries in one dashboard. Also includes a cross-tool search and cloud sync status.
+
+**Access:** Authenticated users
+
+**Sections:**
+- **Overview** — snapshot of recent files, active automations, repo activity, and CivicPulse entries with quick-launch buttons into each tool
+- **Search** — search across local files, Vault documents, GitHub repos, automations, and CivicPulse entries simultaneously
+- **Cloud Sync** — status of GitHub, Microsoft 365, and Google Workspace connections; browse resources from each provider
+
+---
+
+### AXIS
+
+**What it is:** AI assistant with access to your connected providers (GitHub, Microsoft, Google).
+
+**Access:** Authenticated users
+
+**Capabilities:**
+- Ask questions answered by live data from your connected accounts
+- Draft documents, summarize content, generate code
+- AXIS routes requests to the appropriate provider credential and returns results through the governed API layer
+
+**Note:** AXIS requires live provider API keys configured as Fly.io secrets (`OPENAI_API_KEY` or `ANTHROPIC_API_KEY`). Until set, AXIS shows 0 live providers.
+
+---
+
+### Workspace
+
+**What it is:** A multi-provider file browser for GitHub, Microsoft 365, and Google Workspace.
+
+**Access:** Authenticated users (requires connected accounts)
+
+**Browsers:**
+- **GitHub File Browser** — browse repos, files, and folders; view file content
+- **Microsoft File Browser** — browse OneDrive and SharePoint; preview documents
+- **Google File Browser** — browse Drive files and folders
+
+Connect your accounts via **Connections** (toolbar button or Settings).
+
+---
+
+### LogicCommons
+
+**What it is:** A template marketplace for document and workflow templates. Templates you create or download here also appear in LogicPen's template dialog for direct use.
+
+**Access:** All authenticated users
+
+**Features:**
+- Browse 8+ seed templates: Project Kickoff Brief, Meeting Notes, React Component, Weekly Status Report, API Route Handler, Budget Spreadsheet, Decision Log, README Template
+- **Download** — saves the template as a file (`.md`, `.csv`, etc.)
+- **Publish** — add your own template to the commons (name, description, category, content)
+- Templates are stored in localStorage and shared with LogicPen's template picker
+
+---
+
+### Audit Trail
+
+**What it is:** A viewer for the ARCHIEVE tamper-evident audit event chain. Every significant action in LogicSuite produces an ARCHIEVE event with a cryptographic chain linking each event to the previous one.
+
+**Access:** Admin, owner (accessible from toolbar or from Flows → Audit Log)
+
+**Features:**
+- **Event stream** — paginated list of all ARCHIEVE events filterable by module, event type, tenant, and time range
+- **Event detail** — full JSON payload for any event
+- **Chain verification** — verify the integrity of the entire chain from head to tail; any gap or hash mismatch is flagged
+- **Notarizations** — TSA (RFC 3161) timestamp notarization records for long-term verifiability
+- **Export** — download events for a date range as CSV or JSON
+
+**Modules logged:** `seal`, `formkey`, `logicbridge`, `syncronate`, `archieve` (self-logging), and all other PJ modules
+
+---
+
+### Settings
+
+**What it is:** User preferences and account management.
+
+**Access:** All authenticated users
+
+**Sections:**
+- Profile information and display preferences
+- Notification settings
+- API token management (for integrating external tools with LogicOS)
+
+---
+
+### Admin
+
+**What it is:** Platform administration. Owner and admin roles only.
+
+**Access:** Owner, admin
+
+**Panels:**
+
+| Panel | What it does |
+|---|---|
+| **PJ Health** | Live status of all PuddleJumper backend modules (ARCHIEVE, VAULT, SEAL, AXIS, FormKey, LOGICBRIDGE, SYNCRONATE, etc.). Shows queue depths, registry counts, error rates. |
+| **Membership** | Invite users, set roles, manage tool access permissions per member |
+| **SEAL Keys** | View active ECDSA-P256 signing keys per tenant; rotate keys; view public key PEM for offline verification |
+| **Azure / M365 Setup** | Configure Microsoft 365 tenant integration and Azure AD app registration |
+
+---
+
+## Roles and Permissions
+
+| Role | Tools Available | Notes |
+|---|---|---|
+| **owner** | All tools including Admin | Full access; cannot be removed |
+| **admin** | All tools including Admin | Same as owner except cannot modify owner |
+| **editor** | All tools except Admin | Can create and modify content |
+| **member** | All tools except Admin (default) | Standard user |
+| **viewer** | Read-only where applicable | Restricted; no create/edit |
+
+**Tool-specific access** can be granted per member by an admin. Example: a member with `logicbackend` in their `toolAccess` list can access LOGICBRIDGE even if they don't have editor rights everywhere.
+
+**Admin-only tools:** Admin panel, Audit Trail, FormKey, SYNCRONATE, FormKey
+
+---
+
+## Backend Modules
+
+PuddleJumper loads modules in boot order. Each module's status is visible in the Admin → PJ Health panel.
+
+| # | Module | Status | Description |
+|---|---|---|---|
+| 1 | **KMS Client** | Live | Key management — signs and rotates SEAL keys |
+| 2 | **ARCHIEVE** | Live | Tamper-evident audit event chain (WAL-backed SQLite) |
+| 3 | **VAULT** | Live | Governed document and record storage |
+| 4 | **SEAL** | Live | ECDSA-P256 cryptographic signing and verification |
+| 5 | **Template Library** | Stub | Output template rendering (FormKey output uses JSON for now) |
+| 6 | **AXIS** | Live (no providers) | AI provider credential resolution |
+| 7 | **FormKey** | Live | Intake forms, consent gate, SEAL stamp, output rendering |
+| 8 | **LOGICBRIDGE** | Live | Connector registry, sandbox handler runner, API explorer |
+| 9 | **SYNCHRON8** | Stub | Feed-based automation triggers (health stub only) |
+| 10 | **CaseSpace Factory** | Stub | Governed environment provisioning |
+| 11 | **Module Maker** | Not built | Custom module builder |
+| 12 | **SYNCRONATE** | Live | Cross-system data sync orchestration |
+
+**Health endpoint:** `GET /v1/health` returns the status of every module.
+
+---
+
+## PJ API Reference
+
+All endpoints are at `pj.publiclogic.org` (production) or `localhost:3002` (local dev).
+
+### Authentication
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/auth/github/login` | public | GitHub OAuth redirect |
+| `GET` | `/api/auth/google/login` | public | Google OAuth redirect |
+| `GET` | `/api/auth/microsoft/login` | public | Microsoft OAuth redirect |
+| `POST` | `/api/refresh` | cookie | Rotate refresh token |
+| `POST` | `/api/auth/logout` | cookie | Revoke session |
+| `GET` | `/api/identity` | bearer | Current user info |
+
+### FormKey
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/formkey/forms` | bearer | List FormDefinitions |
+| `POST` | `/api/formkey/forms` | bearer | Create draft FormDefinition |
+| `GET` | `/api/formkey/forms/:id` | bearer | Get FormDefinition |
+| `PUT` | `/api/formkey/forms/:id` | bearer | Update draft (409 if published) |
+| `POST` | `/api/formkey/forms/:id/publish` | admin | Publish (5-step pipeline) |
+| `POST` | `/api/formkey/forms/:id/deprecate` | admin | Deprecate |
+| `POST` | `/v1/forms/:id/submit` | public (rate limited) | Submit intake |
+| `POST` | `/v1/forms/:id/consent` | public | Grant consent |
+| `DELETE` | `/v1/forms/:id/consent/:submitterId` | bearer | Withdraw consent |
+| `GET` | `/api/formkey/forms/:id/render/:recordId` | bearer | Render VAULT record as form output |
+| `GET` | `/api/formkey/forms/:id/submissions` | bearer | List intake records |
+| `GET` | `/api/formkey/forms/:id/submissions/:recordId` | bearer | Get intake record |
+
+### LOGICBRIDGE
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/logicbridge/connectors` | bearer | List connectors |
+| `POST` | `/api/logicbridge/connectors` | bearer | Create connector |
+| `GET` | `/api/logicbridge/connectors/:id` | bearer | Get connector |
+| `PATCH` | `/api/logicbridge/connectors/:id` | bearer | Update connector |
+| `DELETE` | `/api/logicbridge/connectors/:id` | bearer | Delete connector |
+| `POST` | `/api/logicbridge/connectors/:id/simulate` | bearer | Run simulation |
+| `POST` | `/api/logicbridge/connectors/:id/publish` | bearer | Publish (SEAL sign) |
+| `POST` | `/api/logicbridge/connectors/:id/deprecate` | bearer | Deprecate |
+| `POST` | `/api/logicbridge/explorer/request` | bearer | API Explorer live request |
+
+### SEAL
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/seal/verify` | bearer | Verify a SealToken against artifact |
+| `GET` | `/api/seal/public-key` | public | Get public key PEM (for offline verify) |
+| `GET` | `/api/seal/keys` | bearer | List ESK versions for tenant |
+| `POST` | `/api/seal/rotate` | admin | Rotate active signing key |
+| `POST` | `/api/seal/provision` | admin | Provision key for a new tenant |
+
+### ARCHIEVE
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/archieve/events` | bearer | Paginated event stream (filter by module, type, tenant, time) |
+| `GET` | `/api/archieve/events/:eventId` | bearer | Single event |
+| `GET` | `/api/archieve/chain` | bearer | Chain summary (head hash, length) |
+| `POST` | `/api/archieve/verify` | bearer | Run chain integrity verification |
+| `GET` | `/api/archieve/notarizations` | bearer | TSA notarization records |
+| `GET` | `/api/archieve/export` | bearer | Download events as CSV/JSON |
+
+### SYNCRONATE
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/syncronate/dashboard` | bearer | Dashboard stats |
+| `GET` | `/api/syncronate/feeds` | bearer | List feed definitions |
+| `POST` | `/api/syncronate/feeds` | bearer | Create feed |
+| `GET` | `/api/syncronate/jobs` | bearer | List sync jobs |
+| `POST` | `/api/syncronate/feeds/:feedId/trigger` | bearer | Manually trigger a feed sync |
+
+### Workspace / Connectors
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/connectors/` | bearer | List all connector statuses |
+| `POST` | `/api/connectors/:provider/auth/start` | bearer | Start OAuth flow |
+| `POST` | `/api/connectors/:provider/disconnect` | bearer | Disconnect provider |
+| `GET` | `/api/connectors/:provider/resources` | bearer | Browse provider resources |
+
+### Governance & PRR
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/prr/intake` | public | Submit a Public Records Request |
+| `GET` | `/api/prr` | bearer | List PRRs for tenant |
+| `POST` | `/api/prr/:id/status` | bearer | Transition PRR status |
+| `POST` | `/api/prr/:id/close` | bearer | Close PRR |
+| `GET` | `/api/public/prrs/:publicId` | public | Public PRR tracking |
+
+### Health
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/v1/health` | public | Full module health (all PJ modules) |
+| `GET` | `/health` | public | Basic health check |
+| `GET` | `/ready` | public | Readiness probe |
 
 ---
 
 ## Security Model
 
 ### CSRF Protection
+All mutating API calls require the `X-PuddleJumper-Request: true` header. The `pjFetch` wrapper in LogicOS adds this automatically.
 
-All mutating API calls (`POST`, `PUT`, `PATCH`, `DELETE`) require the `X-PuddleJumper-Request: true` header. The `pjFetch` wrapper adds this automatically.
+### Cryptographic Sealing (SEAL)
+Every governed artifact — form definitions, connector handlers, intake submissions, and civic summaries — is sealed with ECDSA-P256. The SealToken includes:
+- `artifactHash` — SHA-256 of the JCS-canonical artifact
+- `signature` — base64url DER ECDSA-P256 signature
+- `keyId` — references the tenant's active signing key
+- `signedAt` — ISO 8601 timestamp
+- `tsaToken` (optional) — RFC 3161 TSA timestamp for long-term verifiability
 
-### Content Security Policy
+**Offline verification:**
+```bash
+openssl dgst -sha256 -verify pubkey.pem -signature sig.bin canonical.json
+```
 
-- **Web app** — per-request nonce-based CSP via middleware; `script-src 'nonce-…' 'strict-dynamic'`; no `unsafe-inline` or `unsafe-eval`
-- **Embedded widgets** — SHA-256 hash-based CSP for inline scripts/styles; hash computed at startup from file contents
+### ARCHIEVE Chain Integrity
+Every event is chained: `hash = SHA-256(JCS(event) + prevHash + HMAC)`. Any gap or modification in the chain is detected by `POST /api/archieve/verify`.
 
 ### Token Security
 
 | Property | Value |
-|----------|-------|
+|---|---|
 | Cookie flags | `HttpOnly`, `Secure` (production), `SameSite=Lax` |
 | Access token lifetime | 1 hour |
 | Refresh token lifetime | 7 days |
-| Refresh storage | SQLite (WAL mode), family-based rotation chains |
 | Replay detection | Reuse of revoked token revokes entire family |
-| Correlation IDs | Every request receives an `x-request-id` header (generated or forwarded) |
-| Audit logging | All auth events (login, refresh, logout, revoke, replay) emit structured JSON logs |
 
-### Rate Limiting
+### FormKey Public Endpoint Security
+`POST /v1/forms/:id/submit` is the only unauthenticated endpoint. Rate limit: 10 requests/IP/minute/form. All submissions (including rejected) are logged to ARCHIEVE.
 
-Sensitive endpoints (`/api/login`, `/api/evaluate`, `/api/prompt`, `/api/pj/execute`) are rate-limited with in-memory buckets.
-
-### Input Validation
-
-All API inputs are validated with Zod schemas. Unknown fields are rejected. Governance payloads are scanned for injection patterns.
-
-### SSRF Protection
-
-Remote canonical source fetches block private IPs, enforce host allowlists, and limit response size (1 MB) and timeout (3 seconds).
+### Sandbox (LOGICBRIDGE)
+Handler code runs in `vm.runInNewContext` (Node.js sandbox fallback). Isolated-vm isolation is the target; currently falls back due to isolated-vm/Node 20 incompatibility.
 
 ---
 
 ## Environment Variables
 
-See [ENV_REFERENCE.md](ENV_REFERENCE.md) for the complete list. Key variables:
+Key variables for PuddleJumper on Fly.io:
 
-| Variable | Purpose |
-|----------|---------|
-| `JWT_SECRET` | Symmetric signing key for JWTs |
-| `AUTH_ISSUER` / `AUTH_AUDIENCE` | JWT `iss` / `aud` claims |
-| `PJ_CLIENT_ID` | Google OAuth client ID |
-| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth app credentials |
-| `CONTROLLED_DATA_DIR` | SQLite database directory (default: `./data`) |
-| `LOGIC_COMMONS_DATA_DIR` | Logic Commons SQLite directory |
-| `NEXT_PUBLIC_API_URL` | API base URL for the Next.js frontend |
-| `PJ_TRUSTED_PARENT_ORIGINS` | Comma-separated trusted origins for iframe embedding |
-| `DEV_MODE` | Enable dev-only endpoints (`true`/`false`) |
+| Variable | Required | Purpose |
+|---|---|---|
+| `JWT_SECRET` | Yes | JWT signing key (≥32 chars) |
+| `AUTH_ISSUER` / `AUTH_AUDIENCE` | Yes | JWT `iss` / `aud` claims |
+| `GITHUB_CLIENT_ID` / `_SECRET` | Yes | GitHub OAuth |
+| `GOOGLE_CLIENT_ID` / `_SECRET` | Yes | Google OAuth |
+| `MICROSOFT_CLIENT_ID` / `_SECRET` | Yes | Microsoft OAuth |
+| `LOGICBRIDGE_HANDLER_DEK` | Recommended | AES key for encrypting connector handler code at rest |
+| `SEAL_KMS_URL` | No | External KMS endpoint (defaults to local key store) |
+| `ARCHIEVE_WAL_PATH` | No | Path for ARCHIEVE WAL queue DB (default: `./data/archieve/queue.db`) |
+| `FORMKEY_CONSENT_CACHE_TTL_MS` | No | Consent cache TTL in ms (default: 60000; set 0 to disable) |
+| `FORMKEY_SUBMISSION_RATE_LIMIT` | No | Max submissions/IP/minute/form (default: 10) |
+| `FORMKEY_SEAL_VERIFY_ON_RENDER` | No | Verify SEAL before every render (default: true; never false in production) |
+| `OPENAI_API_KEY` | AXIS | OpenAI provider for AXIS AI chat |
+| `ANTHROPIC_API_KEY` | AXIS | Anthropic provider for AXIS AI chat |
 
 ---
 
 ## Deployment
 
-| Target | Method |
-|--------|--------|
-| **PJ API** | Fly.io — `fly deploy` (Dockerfile, multi-stage, node:20-slim) |
-| **Web App** | Vercel — automatic from `web/` workspace |
-| **Logic Commons** | Vercel — exported as `serverless-http` handler |
-| **Local dev** | `pnpm dev` from root; PJ API on `:3002`, web on `:3000` |
+| Target | Method | Notes |
+|---|---|---|
+| **LogicOS** | Cloudflare Pages | Auto-deploys on push to `97n8/LogicOS` main branch |
+| **PuddleJumper** | Fly.io | `flyctl deploy -a publiclogic-puddlejumper` from `/Users/n8/puddlejumper/n8drive` |
+| **Local PJ** | `npx tsx src/api/server.ts` | From `apps/puddlejumper/`; needs `JWT_SECRET`, `AUTH_ISSUER`, `AUTH_AUDIENCE` |
 
-See [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) for deployment steps.
+### PJ Deployment (quick reference)
+```bash
+cd /Users/n8/puddlejumper/n8drive
+flyctl deploy -a publiclogic-puddlejumper
+```
+
+### Set a Fly.io secret
+```bash
+flyctl secrets set LOGICBRIDGE_HANDLER_DEK=$(openssl rand -base64 32) \
+  -a publiclogic-puddlejumper
+```
+
+### Cold start behavior
+Fly.io machines sleep after inactivity. First request after sleep takes 5–10 seconds. LogicOS handles this gracefully — the PJ health check will retry automatically.
+
+---
+
+*LogicOS v1.0 · PuddleJumper · PublicLogic LLC · os.publiclogic.org*

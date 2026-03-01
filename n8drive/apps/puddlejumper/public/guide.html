@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PuddleJumper — Quick Start &amp; Systems Map</title>
+<title>LogicOS — Quick Start &amp; Systems Map</title>
 <link rel="stylesheet" href="/styles/pj-guide.css">
 </head>
 <body>
 
 <div class="header">
   <div class="header-title">
-    <h1>PuddleJumper</h1>
+    <h1>LogicOS</h1>
     <span class="subtitle">Quick Start &amp; Systems Map</span>
   </div>
   <div class="nav-links">
-    <a href="/pj/admin">Admin</a>
-    <a href="/pj">Workspace</a>
+    <a href="https://os.publiclogic.org">LogicOS</a>
+    <a href="/pj/admin">PJ Admin</a>
   </div>
 </div>
 
@@ -24,32 +24,32 @@
 <!-- ─────────────── QUICK START ─────────────── -->
 <h2>Quick Start</h2>
 
-<p>PuddleJumper is a <strong>governance control plane</strong> that sits between AI agents (or human operators) and production systems. Every action passes through an approval gate before being dispatched to its target connector.</p>
+<p>LogicSuite is a public-sector governance platform. <strong>LogicOS</strong> (<a href="https://os.publiclogic.org">os.publiclogic.org</a>) is the primary user interface. <strong>PuddleJumper (PJ)</strong> is the backend API and rules engine running on Fly.io.</p>
 
 <div class="qs-grid">
   <div class="qs-card">
-    <h4><span class="qs-num">1</span> Authenticate</h4>
-    <p>Sign in via GitHub, Google, or Microsoft OAuth at <code>/pj</code>. Tokens are JWT-based with role + tenant scoping.</p>
+    <h4><span class="qs-num">1</span> Sign In</h4>
+    <p>Open <a href="https://os.publiclogic.org">os.publiclogic.org</a> and sign in with GitHub or Google. OAuth tokens are session-cookie based. Refresh is automatic.</p>
   </div>
   <div class="qs-card">
-    <h4><span class="qs-num">2</span> Submit an action</h4>
-    <p>POST to <code>/api/pj/execute</code> with an intent, mode, and plan. The governance engine evaluates it and creates an approval request.</p>
+    <h4><span class="qs-num">2</span> Start Screen</h4>
+    <p>All tools available to your role appear as tiles. Click any tool to launch it. Recent CaseSpaces appear below for quick re-entry.</p>
   </div>
   <div class="qs-card">
-    <h4><span class="qs-num">3</span> Approval chain</h4>
-    <p>If a chain template is assigned, approval routes through sequential or parallel steps. Each step is decided independently. All steps at the same order must approve before the next order activates.</p>
+    <h4><span class="qs-num">3</span> Create Documents</h4>
+    <p>Open <strong>LogicPen</strong> to write and print governed documents. Use built-in templates or your LogicCommons templates. Save to Vault.</p>
   </div>
   <div class="qs-card">
-    <h4><span class="qs-num">4</span> Decide</h4>
-    <p>Approve or reject via the Admin UI or <code>POST /api/approvals/:id/decide</code>. Rejections are terminal — all subsequent steps are skipped.</p>
+    <h4><span class="qs-num">4</span> Build Connectors</h4>
+    <p>Open <strong>LogicBackend</strong> to register API connectors (LOGICBRIDGE) and test live API calls in the API Explorer.</p>
   </div>
   <div class="qs-card">
-    <h4><span class="qs-num">5</span> Dispatch</h4>
-    <p>Once fully approved, dispatch sends the action to a registered connector: GitHub, Slack, or a generic webhook. Retries use exponential backoff.</p>
+    <h4><span class="qs-num">5</span> Govern Intake</h4>
+    <p>Open <strong>FormKey</strong> to create governed intake forms. Forms require a legal basis, purpose, and retention tier before publishing.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">6</span> Monitor</h4>
-    <p>Use the <a href="/pj/admin">Admin Dashboard</a> for queue, chain, and dispatch visibility. Prometheus metrics at <code>/metrics</code> now include chain-step counters/latency and stuck-step alert signals.</p>
+    <p>Use <strong>Admin → PJ Health</strong> to see real-time status of all backend modules. Use <strong>Audit Trail</strong> to inspect the ARCHIEVE event chain.</p>
   </div>
 </div>
 
@@ -58,18 +58,18 @@
 pnpm install
 cd apps/puddlejumper
 
-# Set minimum env vars
+# Minimum env vars
 export JWT_SECRET=dev-secret
 export AUTH_ISSUER=puddle-jumper
 export AUTH_AUDIENCE=puddle-jumper-api
 
 # Start
 npx tsx src/api/server.ts
-# → http://localhost:3002/pj</code></pre>
+# → http://localhost:3002/v1/health</code></pre>
 
-<h3>Deploy (Fly.io)</h3>
+<h3>Deploy to Fly.io</h3>
 <pre><code># From monorepo root (/n8drive)
-fly deploy --app publiclogic-puddlejumper</code></pre>
+flyctl deploy -a publiclogic-puddlejumper</code></pre>
 
 <!-- ─────────────── SYSTEMS MAP ─────────────── -->
 <h2>Systems Map</h2>
@@ -79,78 +79,77 @@ fly deploy --app publiclogic-puddlejumper</code></pre>
   <div class="sys-layer">
     <div class="sys-layer-label clients">Clients</div>
     <div class="sys-nodes">
-      <div class="sys-node green">Next.js Frontend (Vercel)</div>
-      <div class="sys-node green">PJ Workspace UI</div>
-      <div class="sys-node green">Admin Panel</div>
-      <div class="sys-node green">AI Agent / CLI</div>
-      <div class="sys-node green">Webhook Consumer</div>
+      <div class="sys-node green">LogicOS (Cloudflare Pages)</div>
+      <div class="sys-node green">PJ Admin UI</div>
+      <div class="sys-node green">Public Form Endpoint</div>
+      <div class="sys-node green">Webhook / API Consumer</div>
     </div>
   </div>
 
-  <div class="sys-arrow">↕ HTTPS + JWT + CSRF</div>
+  <div class="sys-arrow">↕ HTTPS · Session Cookie · CSRF header</div>
 
   <div class="sys-layer">
-    <div class="sys-layer-label api">API Layer (Express on Fly.io)</div>
+    <div class="sys-layer-label api">PuddleJumper (Express on Fly.io)</div>
     <div class="sys-nodes">
       <div class="sys-node">Auth &amp; OAuth</div>
-      <div class="sys-node">Config &amp; Capabilities</div>
-      <div class="sys-node">Governance / Execute</div>
-      <div class="sys-node">Approvals</div>
-      <div class="sys-node">Chain Templates</div>
-      <div class="sys-node">PRR Intake</div>
-      <div class="sys-node">Access Requests</div>
-      <div class="sys-node">Webhook Actions</div>
-      <div class="sys-node">Admin Stats</div>
-      <div class="sys-node">Audit Export</div>
-      <div class="sys-node">Workspace Collaboration</div>
-      <div class="sys-node">Workspace Usage</div>
-      <div class="sys-node">Vault Routes</div>
-      <div class="sys-node">Connectors</div>
+      <div class="sys-node">FormKey API</div>
+      <div class="sys-node">LOGICBRIDGE API</div>
+      <div class="sys-node">SEAL API</div>
+      <div class="sys-node">ARCHIEVE API</div>
+      <div class="sys-node">SYNCRONATE API</div>
+      <div class="sys-node">VAULT Routes</div>
+      <div class="sys-node">CaseSpace Routes</div>
+      <div class="sys-node">Connector Routes</div>
+      <div class="sys-node">Admin Routes</div>
+      <div class="sys-node">PRR Routes</div>
+      <div class="sys-node">AXIS (AI) Routes</div>
     </div>
   </div>
 
-  <div class="sys-arrow">↕</div>
+  <div class="sys-arrow">↕ In-process module calls</div>
 
   <div class="sys-layer">
-    <div class="sys-layer-label engine">Engine &amp; Middleware</div>
+    <div class="sys-layer-label engine">Backend Modules (Boot Order)</div>
     <div class="sys-nodes">
-      <div class="sys-node purple">Governance Engine</div>
-      <div class="sys-node purple">Policy Provider</div>
-      <div class="sys-node purple">Approval Store</div>
-      <div class="sys-node purple">Chain Store</div>
-      <div class="sys-node purple">Workspace Store</div>
-      <div class="sys-node purple">Dispatcher Registry</div>
-      <div class="sys-node purple">Idempotency Store</div>
-      <div class="sys-node purple">Rate Limiter</div>
-      <div class="sys-node purple">Approval Metrics</div>
-      <div class="sys-node purple">Validation</div>
+      <div class="sys-node purple">1 · KMS Client</div>
+      <div class="sys-node purple">2 · ARCHIEVE</div>
+      <div class="sys-node purple">3 · VAULT</div>
+      <div class="sys-node purple">4 · SEAL</div>
+      <div class="sys-node purple">5 · Template Library</div>
+      <div class="sys-node purple">6 · AXIS</div>
+      <div class="sys-node purple">7 · FormKey</div>
+      <div class="sys-node purple">8 · LOGICBRIDGE</div>
+      <div class="sys-node purple">9 · SYNCHRON8</div>
+      <div class="sys-node purple">10 · CaseSpace Factory</div>
+      <div class="sys-node purple">11 · SYNCRONATE</div>
     </div>
   </div>
 
-  <div class="sys-arrow">↕</div>
+  <div class="sys-arrow">↕ SQLite WAL on Fly.io persistent volume</div>
 
   <div class="sys-layer">
-    <div class="sys-layer-label stores">Data Stores (SQLite WAL)</div>
+    <div class="sys-layer-label stores">Data Stores</div>
     <div class="sys-nodes">
-      <div class="sys-node orange">approvals.db</div>
-      <div class="sys-node orange">prr.db</div>
-      <div class="sys-node orange">connectors.db</div>
-      <div class="sys-node orange">idempotency.db</div>
-      <div class="sys-node orange">rate-limit.db</div>
-      <div class="sys-node orange">audit.db</div>
-      <div class="sys-node orange">oauth_state.db</div>
+      <div class="sys-node orange">formkey.db (intake records, consent, form definitions)</div>
+      <div class="sys-node orange">archieve.db + WAL queue (event chain)</div>
+      <div class="sys-node orange">logicbridge.db (connector registry, handler code)</div>
+      <div class="sys-node orange">vault.db (documents, versions, governance envelopes)</div>
+      <div class="sys-node orange">seal.db (key registry, ESK versions)</div>
+      <div class="sys-node orange">syncronate.db (feeds, jobs, run history)</div>
+      <div class="sys-node orange">prr.db · oauth_state.db · rate-limit.db</div>
     </div>
   </div>
 
-  <div class="sys-arrow">↕</div>
+  <div class="sys-arrow">↕ OAuth / API calls</div>
 
   <div class="sys-layer">
-    <div class="sys-layer-label dispatch">Dispatch Targets</div>
+    <div class="sys-layer-label dispatch">External Providers</div>
     <div class="sys-nodes">
-      <div class="sys-node yellow">GitHub (Issues/PRs)</div>
-      <div class="sys-node yellow">Slack (Messages)</div>
-      <div class="sys-node yellow">SharePoint (Documents)</div>
-      <div class="sys-node yellow">Webhook (HTTP POST)</div>
+      <div class="sys-node yellow">GitHub</div>
+      <div class="sys-node yellow">Microsoft 365</div>
+      <div class="sys-node yellow">Google Workspace</div>
+      <div class="sys-node yellow">OpenAI / Anthropic (AXIS)</div>
+      <div class="sys-node yellow">TSA (RFC 3161 notarization)</div>
     </div>
   </div>
 
@@ -158,34 +157,57 @@ fly deploy --app publiclogic-puddlejumper</code></pre>
 
 <h3>Monorepo structure</h3>
 <pre><code>n8drive/
-├── packages/core/          @publiclogic/core — JWT auth, middleware, CSRF, cookies
+├── packages/core/           @publiclogic/core — JWT auth, middleware, CSRF
 ├── packages/vault/          @publiclogic/vault — Vault policy provider
-├── apps/logic-commons/     @publiclogic/logic-commons — OAuth providers, session routes, audit store
-├── apps/puddlejumper/      The governance control plane application
-│   ├── public/             Static assets (admin.html, guide.html, workspace)
-│   ├── src/api/            Express server, routes, middleware
-│   │   ├── server.ts       App factory + route wiring + health/ready endpoints
-│   │   ├── routes/         auth, config, prr, access, governance,
-│   │   │                   approvals, chainTemplates, admin, webhookAction,
-│   │   │                   workspaceCollaboration, workspaceUsage
-│   │   ├── rateLimit.ts    SQLite-backed rate limiting
-│   │   └── vaultRoutes.ts  Vault integration endpoints
-│   ├── src/engine/         Business logic
-│   │   ├── approvalStore   Approval CRUD + status machine
-│   │   ├── chainStore      Chain templates, steps, parallel progression
-│   │   ├── workspaceStore  Workspace + member management
-│   │   ├── idempotencyStore Idempotent request handling
-│   │   ├── dispatch        DispatcherRegistry + dispatchers:
-│   │   │   dispatchers/      GitHub, Slack, SharePoint, Webhook
-│   │   ├── governanceEngine  Policy evaluation + approval gate
-│   │   └── approvalMetrics Prometheus-format counters &amp; histograms
-│   └── test/               500+ tests for auth, governance, chains, dispatch
-├── web/                    Next.js frontend (Vercel)
-│   └── src/app/            Pages: home, login, dashboard, governance,
-│                           approvals, admin, vault
-├── ops/                    Runbooks, DR plan, operational handoff
-├── Dockerfile              Multi-stage build (Fly.io)
-└── fly.toml                Deployment config (app: publiclogic-puddlejumper)</code></pre>
+├── apps/logic-commons/      @publiclogic/logic-commons — OAuth, session, audit
+└── apps/puddlejumper/
+    ├── public/              guide.html, admin.html, CSS, workspace
+    └── src/
+        ├── api/
+        │   ├── server.ts    Boot sequence + all route wiring
+        │   └── routes/      auth, vault, formkey, logicbridge, seal,
+        │                    archieve, syncronate, casespace, connectors,
+        │                    admin, prr, access, axis, governance
+        ├── formkey/         Intake · Consent · Output
+        ├── logicbridge/     Registry · Publisher · Sandbox runner
+        ├── seal/            ECDSA-P256 sign / verify
+        ├── archieve/        Event chain · Notarizations · Export
+        ├── syncronate/      Feed definitions · Job scheduler
+        ├── axis/            AI provider credential resolver
+        └── casespace/       Factory · Environment provisioning</code></pre>
+
+<!-- ─────────────── FORMKEY ─────────────── -->
+<h2>FormKey — Intake &amp; Output</h2>
+
+<p>Every governed form submission runs through FormKey. Two paths:</p>
+
+<table class="api-table">
+  <thead><tr><th>Path</th><th>Steps</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Intake</strong></td>
+      <td>Schema validate → Consent check → SEAL stamp → VAULT write → ARCHIEVE event</td>
+    </tr>
+    <tr>
+      <td><strong>Output / Render</strong></td>
+      <td>SEAL verify → Field binding resolution → JSON output (HTML template library in future)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>FormKey API</h3>
+<table class="api-table">
+  <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/formkey/forms</td><td><span class="auth-badge">bearer</span></td><td>List FormDefinitions</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/formkey/forms</td><td><span class="auth-badge">bearer</span></td><td>Create draft</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/formkey/forms/:id/publish</td><td><span class="auth-badge admin">admin</span></td><td>Publish (5-step pipeline)</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/v1/forms/:id/submit</td><td><span class="auth-badge public">public</span></td><td>Submit intake (rate limited)</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/v1/forms/:id/consent</td><td><span class="auth-badge public">public</span></td><td>Grant consent</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/formkey/forms/:id/render/:recordId</td><td><span class="auth-badge">bearer</span></td><td>Render VAULT record as form output</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/formkey/forms/:id/submissions</td><td><span class="auth-badge">bearer</span></td><td>List intake records</td></tr>
+  </tbody>
+</table>
 
 <!-- ─────────────── API REFERENCE ─────────────── -->
 <h2>API Reference</h2>
@@ -194,138 +216,84 @@ fly deploy --app publiclogic-puddlejumper</code></pre>
 <table class="api-table">
   <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
   <tbody>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/login</td><td><span class="auth-badge public">public</span></td><td>Built-in login (dev/test)</td></tr>
     <tr><td><span class="method get">GET</span></td><td class="path">/api/auth/github/login</td><td><span class="auth-badge public">public</span></td><td>GitHub OAuth redirect</td></tr>
     <tr><td><span class="method get">GET</span></td><td class="path">/api/auth/google/login</td><td><span class="auth-badge public">public</span></td><td>Google OAuth redirect</td></tr>
     <tr><td><span class="method get">GET</span></td><td class="path">/api/auth/microsoft/login</td><td><span class="auth-badge public">public</span></td><td>Microsoft OAuth redirect</td></tr>
     <tr><td><span class="method get">GET</span></td><td class="path">/api/auth/status</td><td><span class="auth-badge public">public</span></td><td>Current auth state</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/session</td><td><span class="auth-badge public">public</span></td><td>Session info</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/refresh</td><td><span class="auth-badge public">public</span></td><td>Refresh JWT</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/identity</td><td><span class="auth-badge">user</span></td><td>Current identity</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/auth/logout</td><td><span class="auth-badge public">public</span></td><td>Logout + revoke</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/refresh</td><td><span class="auth-badge public">cookie</span></td><td>Rotate refresh token</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/identity</td><td><span class="auth-badge">bearer</span></td><td>Current user identity</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/auth/logout</td><td><span class="auth-badge public">cookie</span></td><td>Revoke session</td></tr>
   </tbody>
 </table>
 
-<h3>Governance</h3>
+<h3>SEAL</h3>
 <table class="api-table">
   <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
   <tbody>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/pj/execute</td><td><span class="auth-badge">user</span></td><td>Submit action for governance evaluation</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/prompt</td><td><span class="auth-badge admin">admin</span></td><td>System prompt</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/core-prompt</td><td><span class="auth-badge">user</span></td><td>Core prompt</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/evaluate</td><td><span class="auth-badge">deploy</span></td><td>Evaluate action against policies</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/pj/identity-token</td><td><span class="auth-badge public">optional</span></td><td>MS Graph identity exchange</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/seal/verify</td><td><span class="auth-badge">bearer</span></td><td>Verify SealToken against artifact</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/seal/public-key</td><td><span class="auth-badge public">public</span></td><td>Tenant public key PEM</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/seal/keys</td><td><span class="auth-badge">bearer</span></td><td>List ESK versions</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/seal/rotate</td><td><span class="auth-badge admin">admin</span></td><td>Rotate signing key</td></tr>
   </tbody>
 </table>
 
-<h3>Approvals</h3>
+<h3>ARCHIEVE</h3>
 <table class="api-table">
   <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
   <tbody>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/approvals</td><td><span class="auth-badge">user</span></td><td>List approvals (filter by status)</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/approvals/:id</td><td><span class="auth-badge">user</span></td><td>Get approval detail</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/approvals/:id/decide</td><td><span class="auth-badge">user</span></td><td>Approve or reject (chain-aware)</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/approvals/:id/dispatch</td><td><span class="auth-badge">user</span></td><td>Dispatch approved action to connector</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/approvals/:id/chain</td><td><span class="auth-badge">user</span></td><td>Chain progress for approval</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/approvals/count/pending</td><td><span class="auth-badge">user</span></td><td>Count of pending approvals</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/archieve/events</td><td><span class="auth-badge">bearer</span></td><td>Paginated event stream</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/archieve/events/:id</td><td><span class="auth-badge">bearer</span></td><td>Single event</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/archieve/verify</td><td><span class="auth-badge">bearer</span></td><td>Chain integrity verification</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/archieve/export</td><td><span class="auth-badge">bearer</span></td><td>Download events (CSV/JSON)</td></tr>
   </tbody>
 </table>
 
-<h3>Chain Templates</h3>
+<h3>LOGICBRIDGE</h3>
 <table class="api-table">
   <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
   <tbody>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/chain-templates</td><td><span class="auth-badge admin">admin</span></td><td>List all templates</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/chain-templates/:id</td><td><span class="auth-badge admin">admin</span></td><td>Get single template</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/chain-templates</td><td><span class="auth-badge admin">admin</span></td><td>Create template (supports parallel steps)</td></tr>
-    <tr><td><span class="method put">PUT</span></td><td class="path">/api/chain-templates/:id</td><td><span class="auth-badge admin">admin</span></td><td>Update template</td></tr>
-    <tr><td><span class="method delete">DELETE</span></td><td class="path">/api/chain-templates/:id</td><td><span class="auth-badge admin">admin</span></td><td>Delete template</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/logicbridge/connectors</td><td><span class="auth-badge">bearer</span></td><td>List connectors</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/logicbridge/connectors</td><td><span class="auth-badge">bearer</span></td><td>Create connector</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/logicbridge/connectors/:id/publish</td><td><span class="auth-badge">bearer</span></td><td>Publish (SEAL sign)</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/logicbridge/explorer/request</td><td><span class="auth-badge">bearer</span></td><td>API Explorer live request</td></tr>
   </tbody>
 </table>
 
-<h3>Config &amp; Operational</h3>
+<h3>Health &amp; Operations</h3>
 <table class="api-table">
   <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
   <tbody>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/runtime/context</td><td><span class="auth-badge">user</span></td><td>Runtime context</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/config/tiles</td><td><span class="auth-badge">user</span></td><td>UI tiles config</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/config/capabilities</td><td><span class="auth-badge">user</span></td><td>Capabilities list</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/capabilities/manifest</td><td><span class="auth-badge">user</span></td><td>Full capability manifest</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/pj/actions</td><td><span class="auth-badge">user</span></td><td>Available actions</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/admin/stats</td><td><span class="auth-badge admin">admin</span></td><td>Operational dashboard stats</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/admin/audit</td><td><span class="auth-badge admin">admin</span></td><td>Auth audit log</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/admin/audit/export</td><td><span class="auth-badge admin">admin</span></td><td>Audit export (CSV/JSON)</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/workspace/usage</td><td><span class="auth-badge">user</span></td><td>Workspace usage &amp; limits</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/health</td><td><span class="auth-badge public">public</span></td><td>Health check (db + volume + secrets)</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/ready</td><td><span class="auth-badge public">public</span></td><td>Readiness probe (db ping)</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/metrics</td><td><span class="auth-badge public">token</span></td><td>Prometheus metrics</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/v1/health</td><td><span class="auth-badge public">public</span></td><td>Full module health (all PJ modules)</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/health</td><td><span class="auth-badge public">public</span></td><td>Basic health check</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/ready</td><td><span class="auth-badge public">public</span></td><td>Readiness probe</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/admin/stats</td><td><span class="auth-badge admin">admin</span></td><td>Admin dashboard stats</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/admin/audit/export</td><td><span class="auth-badge admin">admin</span></td><td>Auth audit export</td></tr>
   </tbody>
 </table>
-
-<p>Operational observability includes approval queue metrics, chain-step throughput/latency, and the <code>ChainStepStuck24h</code> alert runbook path for triage.</p>
-
-<h3>PRR &amp; Access</h3>
-<table class="api-table">
-  <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
-  <tbody>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/prr/intake</td><td><span class="auth-badge public">optional</span></td><td>Submit PRR</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/prr</td><td><span class="auth-badge">user</span></td><td>List PRRs</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/prr/:id/status</td><td><span class="auth-badge">user</span></td><td>Update PRR status</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/prr/:id/close</td><td><span class="auth-badge">user</span></td><td>Close PRR</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/access/request</td><td><span class="auth-badge public">optional</span></td><td>Submit access request</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/access/request/:id/status</td><td><span class="auth-badge">user</span></td><td>Update access request status</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/access/request/:id/close</td><td><span class="auth-badge">user</span></td><td>Close access request</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/pj/actions/webhook</td><td><span class="auth-badge">user</span></td><td>Fire webhook action</td></tr>
-  </tbody>
-</table>
-
-<!-- ─────────────── PARALLEL APPROVAL ─────────────── -->
-<h2>Parallel Approval Chains</h2>
-
-<p>Chain templates support both <strong>sequential</strong> and <strong>parallel</strong> step routing. Steps sharing the same <code>order</code> value run in parallel.</p>
-
-<h3>How it works</h3>
-<ul>
-  <li>Steps at order <code>N</code> all activate simultaneously when order <code>N</code> is reached</li>
-  <li>Each step is decided independently (different approvers can act concurrently)</li>
-  <li>All steps at order <code>N</code> must be <strong>approved</strong> before order <code>N+1</code> activates</li>
-  <li>A <strong>rejection</strong> at any step is terminal — active siblings and all subsequent steps are skipped</li>
-</ul>
-
-<h3>Example template</h3>
-<pre><code>{
-  "name": "Dual-review then release",
-  "steps": [
-    { "label": "Security Review", "approverRole": "security", "order": 0 },
-    { "label": "Legal Review",    "approverRole": "legal",    "order": 0 },
-    { "label": "Release Manager", "approverRole": "release",  "order": 1 }
-  ]
-}
-// Step 0: Security + Legal run in parallel
-// Step 1: Release Manager runs only after both order-0 steps approve</code></pre>
 
 <!-- ─────────────── ENV VARS ─────────────── -->
 <h2>Key Environment Variables</h2>
 
 <div class="env-grid">
-  <div class="ek">JWT_SECRET</div><div class="ev">Secret for signing JWTs (≥32 chars, required)</div>
-  <div class="ek">AUTH_ISSUER</div><div class="ev">JWT issuer claim</div>
-  <div class="ek">AUTH_AUDIENCE</div><div class="ev">JWT audience claim</div>
+  <div class="ek">JWT_SECRET</div><div class="ev">JWT signing key (≥32 chars, required)</div>
+  <div class="ek">AUTH_ISSUER / AUTH_AUDIENCE</div><div class="ev">JWT iss / aud claims</div>
   <div class="ek">GITHUB_CLIENT_ID / _SECRET</div><div class="ev">GitHub OAuth app credentials</div>
   <div class="ek">GOOGLE_CLIENT_ID / _SECRET</div><div class="ev">Google OAuth credentials</div>
   <div class="ek">MICROSOFT_CLIENT_ID / _SECRET</div><div class="ev">Microsoft OAuth credentials</div>
-  <div class="ek">CONNECTOR_STATE_SECRET</div><div class="ev">HMAC key for connector state integrity</div>
-  <div class="ek">METRICS_TOKEN</div><div class="ev">Bearer token for /metrics scraping (optional)</div>
-  <div class="ek">PRR_DB_PATH</div><div class="ev">Path to PRR database (required in production)</div>
-  <div class="ek">IDEMPOTENCY_DB_PATH</div><div class="ev">Path to idempotency database (required in production)</div>
-  <div class="ek">RATE_LIMIT_DB_PATH</div><div class="ev">Path to rate limit database (required in production)</div>
-  <div class="ek">FRONTEND_URL</div><div class="ev">Frontend URL for CORS (required in production)</div>
+  <div class="ek">LOGICBRIDGE_HANDLER_DEK</div><div class="ev">AES key for connector handler encryption at rest</div>
+  <div class="ek">FORMKEY_SUBMISSION_RATE_LIMIT</div><div class="ev">Max intake submissions per IP/minute/form (default: 10)</div>
+  <div class="ek">FORMKEY_CONSENT_CACHE_TTL_MS</div><div class="ev">Consent verification cache TTL ms (default: 60000)</div>
+  <div class="ek">OPENAI_API_KEY</div><div class="ev">OpenAI provider for AXIS AI chat</div>
+  <div class="ek">ANTHROPIC_API_KEY</div><div class="ev">Anthropic provider for AXIS AI chat</div>
+  <div class="ek">FRONTEND_URL</div><div class="ev">LogicOS URL for CORS (required in production)</div>
   <div class="ek">PORT</div><div class="ev">Server port (default: 3002)</div>
   <div class="ek">NODE_ENV</div><div class="ev">production | development | test</div>
 </div>
 
 <p class="footer-note">
-  PuddleJumper Control Plane · Workspace isolation, RBAC, tier enforcement, chain-step observability, and audit export · Backend on <a href="https://fly.io">Fly.io</a> · Frontend on <a href="https://vercel.com">Vercel</a>
+  LogicOS · PuddleJumper Control Plane · PublicLogic LLC ·
+  <a href="https://os.publiclogic.org">os.publiclogic.org</a> on Cloudflare Pages ·
+  Backend on <a href="https://fly.io">Fly.io</a> (publiclogic-puddlejumper)
 </p>
 
 </div>
