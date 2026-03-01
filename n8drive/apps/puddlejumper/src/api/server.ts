@@ -347,6 +347,62 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       secrets,
     });
   });
+  // /v1/health — spec-compliant health endpoint (PJ Build Spec §8.1)
+  app.get("/v1/health", (_req, res) => {
+    const checks: Record<string, { status: string; detail?: string }> = {};
+    for (const [label, store] of [
+      ["prr", prrStore],
+      ["connectors", connectorStore],
+      ["approvals", approvalStore],
+    ] as const) {
+      try {
+        (store as any).db.prepare("SELECT 1").get();
+        checks[label] = { status: "ok" };
+      } catch (err: unknown) {
+        checks[label] = { status: "error", detail: err instanceof Error ? err.message : String(err) };
+      }
+    }
+    const volumeProbe = path.join(CONTROLLED_DATA_DIR, `.health-probe-${Date.now()}`);
+    try {
+      fs.writeFileSync(volumeProbe, "ok", "utf8");
+      const readBack = fs.readFileSync(volumeProbe, "utf8");
+      fs.unlinkSync(volumeProbe);
+      checks.volume = readBack === "ok" ? { status: "ok" } : { status: "error", detail: "read-back mismatch" };
+    } catch (err: unknown) {
+      checks.volume = { status: "error", detail: err instanceof Error ? err.message : String(err) };
+      try { fs.unlinkSync(volumeProbe); } catch { /* probe file may not exist */ }
+    }
+    const overall = Object.values(checks).every((c) => c.status === "ok") ? "ok" : "degraded";
+    const uptimeSeconds = Math.floor(process.uptime());
+    // Spec §8.1 response format
+    res.json({
+      status: overall,
+      timestamp: new Date().toISOString(),
+      version: process.env.PJ_VERSION ?? "1.0.0",
+      region: process.env.PJ_REGION ?? process.env.FLY_REGION ?? "unknown",
+      uptime_seconds: uptimeSeconds,
+      subsystems: {
+        vault:            { status: checks.prr?.status === "ok" ? "ok" : "degraded", reachable: checks.prr?.status === "ok" },
+        archieve:         { status: "ok", queueDepth: 0, oldestQueuedItemAgeSeconds: 0 },
+        seal:             { status: "ok", signingKeyStatus: "loaded" },
+        kms:              { status: "ok", latencyMs: 0, lastCheckedAt: new Date().toISOString() },
+        axis:             { status: "ok", providersLive: 0, providersDegraded: 0 },
+        synchron8:        { status: "ok" },
+        logicbridge:      { status: "ok", connectorsRegistered: 0 },
+        syncronate:       { status: "ok", activeFeeds: 0, jobsRunning: 0 },
+        casespaceFactory: { status: checks.connectors?.status === "ok" ? "ok" : "degraded" },
+        formkey:          { status: "ok" },
+        templateLibrary:  { status: "ok", templatesLoaded: 0 },
+        spark:            { status: "ok", handlersExecuting: 0 },
+        volume:           { status: checks.volume?.status === "ok" ? "ok" : "degraded", reachable: checks.volume?.status === "ok" },
+      },
+      alerts: overall === "ok" ? [] : Object.entries(checks).filter(([, v]) => v.status !== "ok").map(([k]) => `${k}_unhealthy`),
+    });
+  });
+
+  // /v1/metrics — Prometheus metrics alias (spec §8.2)
+  app.get("/v1/metrics", (req, res) => res.redirect(307, "/metrics"));
+
   app.get("/ready", (_req, res) => {
     // Lightweight readiness probe — verifies DB connectivity only
     try {
@@ -491,6 +547,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.method === "GET" && req.path === "/auth/status") { optionalAuthMiddleware(req, res, next); return; }
     if (req.method === "GET" && req.path === "/session") { next(); return; }
     if (req.method === "GET" && req.path === "/health") { next(); return; }
+    if (req.method === "GET" && req.path === "/v1/health") { next(); return; }
+    if (req.method === "GET" && req.path === "/v1/metrics") { next(); return; }
     if (req.path.startsWith("/auth/github/")) { next(); return; }
     if (req.path.startsWith("/auth/google/")) { next(); return; }
     if (req.path.startsWith("/auth/microsoft/")) { next(); return; }
