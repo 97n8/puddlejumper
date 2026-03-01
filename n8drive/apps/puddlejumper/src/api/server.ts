@@ -107,6 +107,7 @@ import { initArchieve, createArchieveRouter, getArchieveQueueDepth } from "../ar
 import { initSeal, getSealHealth, createSealRouter } from "../seal/index.js";
 import { initSyncronate, createSyncronateRouter, getSyncronateHealth } from "../syncronate/index.js";
 import { initLogicBridge, createLogicBridgeRouter, getLogicBridgeHealth } from "../logicbridge/index.js";
+import { initFormKey, createFormKeyRouter, getFormKeyHealth } from "../formkey/index.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
@@ -190,6 +191,11 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   // ── LOGICBRIDGE connector registry + handler runner ───────────────────
   initLogicBridge(approvalStore.db, connectorStore).catch(err => {
     console.error('[logicbridge] init error:', (err as Error).message);
+  });
+
+  // ── FORMKEY intake + output module ────────────────────────────────────
+  initFormKey(approvalStore.db).catch(err => {
+    console.error('[formkey] init error:', (err as Error).message);
   });
   
   // ── PolicyProvider: Local or Remote (Vault) ──────────────────────────
@@ -404,7 +410,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
         logicbridge:      getLogicBridgeHealth(),
         syncronate:       getSyncronateHealth(),
         casespaceFactory: { status: checks.connectors?.status === "ok" ? "ok" : "degraded" },
-        formkey:          { status: "ok" },
+        formkey:          getFormKeyHealth(),
         templateLibrary:  { status: "ok", templatesLoaded: 0 },
         spark:            { status: "ok", handlersExecuting: 0 },
         volume:           { status: checks.volume?.status === "ok" ? "ok" : "degraded", reachable: checks.volume?.status === "ok" },
@@ -761,6 +767,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/seal", createSealRouter(approvalStore.db));
   app.use("/api/syncronate", createSyncronateRouter(approvalStore.db));
   app.use("/api/logicbridge", createLogicBridgeRouter());
+  app.use("/api/formkey", createFormKeyRouter(approvalStore.db));
+  app.use("/v1/forms", createFormKeyRouter(approvalStore.db));
   app.use("/public/prr", prrRateLimit);
   app.use(createPublicPRRRoutes({ dataDir: CONTROLLED_DATA_DIR }));
   app.use("/api", createAdminPRRRoutes());
