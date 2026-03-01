@@ -96,6 +96,18 @@ export const ArchieveEventType = {
   KMS_KEY_ROTATED: 'KMS_KEY_ROTATED',
   PJ_STARTUP: 'PJ_STARTUP',
   PJ_STARTUP_FAILED: 'PJ_STARTUP_FAILED',
+
+  // SEAL
+  SEAL_SIGNING_COMPLETED: 'SEAL_SIGNING_COMPLETED',
+  SEAL_SIGNING_FAILED: 'SEAL_SIGNING_FAILED',
+  SEAL_VERIFICATION_PASSED: 'SEAL_VERIFICATION_PASSED',
+  SEAL_VERIFICATION_FAILED: 'SEAL_VERIFICATION_FAILED',
+  SEAL_MISMATCH_VIOLATION: 'SEAL_MISMATCH_VIOLATION',
+  SEAL_KEY_ROTATED: 'SEAL_KEY_ROTATED',
+  SEAL_KEY_REVOKED: 'SEAL_KEY_REVOKED',
+  SEAL_KEY_NOT_FOUND: 'SEAL_KEY_NOT_FOUND',
+  SEAL_TSA_TIMEOUT: 'SEAL_TSA_TIMEOUT',
+  SEAL_MANIFEST_SIGNED: 'SEAL_MANIFEST_SIGNED',
 } as const;
 
 export type ArchieveEventTypeValue = typeof ArchieveEventType[keyof typeof ArchieveEventType];
@@ -155,6 +167,13 @@ const REQUIRED_DATA_FIELDS: Partial<Record<string, string[]>> = {
   USER_ROLE_CHANGED: ['targetUserId', 'newRole'],
   USER_DEACTIVATED: ['targetUserId'],
   KMS_KEY_ROTATED: ['keyId'],
+  SEAL_SIGNING_COMPLETED: ['artifactHash', 'keyId'],
+  SEAL_SIGNING_FAILED: ['failureReason'],
+  SEAL_VERIFICATION_FAILED: ['reason'],
+  SEAL_MISMATCH_VIOLATION: ['connectorId', 'expectedHash', 'foundHash'],
+  SEAL_KEY_ROTATED: ['previousKeyId', 'newKeyId'],
+  SEAL_KEY_NOT_FOUND: ['keyId'],
+  SEAL_MANIFEST_SIGNED: ['manifestHash', 'keyId'],
 };
 
 export function isKnownEventType(eventType: string): boolean {

@@ -104,6 +104,7 @@ import { createPublicPRRRoutes } from "./routes/publicPrr.js";
 import { createAdminPRRRoutes } from "./routes/prrAdmin.js";
 import { createVaultRoutes } from "./routes/vault.js";
 import { initArchieve, createArchieveRouter, getArchieveQueueDepth } from "../archieve/index.js";
+import { initSeal, getSealHealth, createSealRouter } from "../seal/index.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
@@ -182,6 +183,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   // ── ARCHIEVE immutable audit log ──────────────────────────────────────
   initArchieve(approvalStore.db, CONTROLLED_DATA_DIR);
+  initSeal(approvalStore.db);
   
   // ── PolicyProvider: Local or Remote (Vault) ──────────────────────────
   // If VAULT_URL is set, use RemotePolicyProvider to call Vault HTTP service.
@@ -388,7 +390,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       subsystems: {
         vault:            { status: checks.prr?.status === "ok" ? "ok" : "degraded", reachable: checks.prr?.status === "ok" },
         archieve:         { status: "ok", queueDepth: getArchieveQueueDepth(), oldestQueuedItemAgeSeconds: 0 },
-        seal:             { status: "ok", signingKeyStatus: "loaded" },
+        seal:             getSealHealth(),
         kms:              { status: "ok", latencyMs: 0, lastCheckedAt: new Date().toISOString() },
         axis:             { status: "ok", providersLive: 0, providersDegraded: 0 },
         synchron8:        { status: "ok" },
@@ -749,6 +751,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     vaultUrl: process.env.VAULT_URL 
   }));
   app.use("/api/archieve", createArchieveRouter(approvalStore.db));
+  app.use("/api/seal", createSealRouter(approvalStore.db));
   app.use("/public/prr", prrRateLimit);
   app.use(createPublicPRRRoutes({ dataDir: CONTROLLED_DATA_DIR }));
   app.use("/api", createAdminPRRRoutes());
