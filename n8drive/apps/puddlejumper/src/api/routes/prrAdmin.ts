@@ -39,8 +39,8 @@ export function createAdminPRRRoutes(opts?: { dataDir?: string }): express.Route
     const filters: PRRFilters = {
       status: req.query.status as any,
       assigned_to: req.query.assigned_to as string,
-      page: req.query.page ? parseInt(req.query.page as string) : undefined,
-      per_page: req.query.per_page ? parseInt(req.query.per_page as string) : undefined,
+      page: req.query.page ? Math.max(1, parseInt(req.query.page as string) || 1) : undefined,
+      per_page: req.query.per_page ? Math.max(1, Math.min(parseInt(req.query.per_page as string) || 50, 100)) : undefined,
     };
     
     try {
@@ -56,11 +56,11 @@ export function createAdminPRRRoutes(opts?: { dataDir?: string }): express.Route
           per_page: filters.per_page || 50
         }
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({
         success: false,
         correlationId,
-        error: error.message || "Failed to list PRRs"
+        error: "Failed to list PRRs"
       });
     }
   });
@@ -102,11 +102,11 @@ export function createAdminPRRRoutes(opts?: { dataDir?: string }): express.Route
           comments
         }
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({
         success: false,
         correlationId,
-        error: error.message || "Failed to retrieve PRR"
+        error: "Failed to retrieve PRR"
       });
     }
   });
@@ -151,11 +151,11 @@ export function createAdminPRRRoutes(opts?: { dataDir?: string }): express.Route
       const comment = addPRRComment(dataDir, id, auth.userId, body);
       
       res.json({ success: true, correlationId, data: comment });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({
         success: false,
         correlationId,
-        error: error.message || "Failed to add comment"
+        error: "Failed to add comment"
       });
     }
   });
@@ -195,11 +195,11 @@ export function createAdminPRRRoutes(opts?: { dataDir?: string }): express.Route
       const updated = updatePRR(dataDir, id, { status, assigned_to });
       
       res.json({ success: true, correlationId, data: updated });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({
         success: false,
         correlationId,
-        error: error.message || "Failed to update PRR"
+        error: "Failed to update PRR"
       });
     }
   });
@@ -242,11 +242,11 @@ export function createAdminPRRRoutes(opts?: { dataDir?: string }): express.Route
       } else {
         res.status(500).json({ success: false, correlationId, error: "Delete failed" });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({
         success: false,
         correlationId,
-        error: error.message || "Failed to delete PRR"
+        error: "Failed to delete PRR"
       });
     }
   });

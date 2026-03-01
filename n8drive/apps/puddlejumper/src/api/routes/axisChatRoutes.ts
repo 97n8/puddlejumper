@@ -27,6 +27,9 @@ const ChatSchema = z.strictObject({
 });
 
 function keysPath(dataDir: string, workspaceId: string) {
+  if (/[\/\\]|\.\./.test(workspaceId)) {
+    throw new Error("Invalid workspace ID");
+  }
   const dir = path.join(dataDir, "axis");
   fs.mkdirSync(dir, { recursive: true });
   return path.join(dir, `${workspaceId}.json`);
@@ -144,8 +147,8 @@ export function createAxisChatRoutes(): express.Router {
         const data = await upstream.json() as any;
         res.json({ success: true, correlationId, content: data.content[0].text });
       }
-    } catch (e: any) {
-      res.status(502).json({ success: false, correlationId, error: e?.message ?? "Upstream error" });
+    } catch (e: unknown) {
+      res.status(502).json({ success: false, correlationId, error: "Upstream error" });
     }
   });
 
