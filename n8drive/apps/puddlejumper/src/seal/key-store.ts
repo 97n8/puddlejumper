@@ -50,7 +50,7 @@ export function initKeyStore(db: Database.Database): void {
   const tenants = tenantsRaw.split(',').map(t => t.trim()).filter(Boolean);
 
   for (const tenantId of tenants) {
-    const envKey = `SEAL_ESK_${tenantId.toUpperCase()}`;
+    const envKey = `SEAL_ESK_${tenantId.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
     const privateKeyPem = process.env[envKey];
 
     if (!privateKeyPem?.trim()) {
@@ -178,7 +178,7 @@ export function rotateKey(tenantId: string, db: Database.Database): { newKeyId: 
   _lastRotation = now;
 
   console.warn(`[seal] Key rotated for tenant '${tenantId}'. New keyId: ${newKeyId}`);
-  console.warn(`[seal] IMPORTANT: Store the new private key in SEAL_ESK_${tenantId.toUpperCase()} env var. It will not be saved to disk.`);
+  console.warn(`[seal] IMPORTANT: Store the new private key in SEAL_ESK_${tenantId.toUpperCase().replace(/[^A-Z0-9]/g, '_')} env var. It will not be saved to disk.`);
 
   return { newKeyId, publicKeyPem, privateKeyPem };
 }
