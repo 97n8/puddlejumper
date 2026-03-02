@@ -2,9 +2,10 @@
 //
 // Stores AI provider API keys per workspace and proxies chat completions.
 //
-//   PUT  /api/v1/axis/keys      - save OpenAI / Anthropic keys for this workspace
+//   PUT  /api/v1/axis/keys      - save OpenAI / Anthropic / Tavily keys for this workspace
 //   GET  /api/v1/axis/keys      - get key status (masked, not the raw values)
 //   POST /api/v1/axis/chat      - stream/complete a chat message via stored key
+//   POST /api/v1/axis/search    - web search via Tavily
 //
 import express from "express";
 import fs from "node:fs";
@@ -16,6 +17,7 @@ import { z } from "zod";
 const KeysSchema = z.strictObject({
   openai: z.string().max(200).optional(),
   anthropic: z.string().max(200).optional(),
+  tavily: z.string().max(200).optional(),
 });
 
 const ChatSchema = z.strictObject({
@@ -35,21 +37,23 @@ function keysPath(dataDir: string, workspaceId: string) {
   return path.join(dir, `${workspaceId}.json`);
 }
 
-function loadKeys(dataDir: string, workspaceId: string): { openai?: string; anthropic?: string } {
+function loadKeys(dataDir: string, workspaceId: string): { openai?: string; anthropic?: string; tavily?: string } {
   try {
     return JSON.parse(fs.readFileSync(keysPath(dataDir, workspaceId), "utf8"));
   } catch { return {}; }
 }
 
-function saveKeys(dataDir: string, workspaceId: string, keys: { openai?: string; anthropic?: string }) {
+function saveKeys(dataDir: string, workspaceId: string, keys: { openai?: string; anthropic?: string; tavily?: string }) {
   const existing = loadKeys(dataDir, workspaceId);
   const merged = {
     ...(keys.openai !== undefined ? { openai: keys.openai || undefined } : { openai: existing.openai }),
     ...(keys.anthropic !== undefined ? { anthropic: keys.anthropic || undefined } : { anthropic: existing.anthropic }),
+    ...(keys.tavily !== undefined ? { tavily: keys.tavily || undefined } : { tavily: existing.tavily }),
   };
   // Remove undefined keys
   if (!merged.openai) delete merged.openai;
   if (!merged.anthropic) delete merged.anthropic;
+  if (!merged.tavily) delete merged.tavily;
   fs.writeFileSync(keysPath(dataDir, workspaceId), JSON.stringify(merged));
 }
 
@@ -80,6 +84,7 @@ export function createAxisChatRoutes(): express.Router {
       status: {
         openai: { connected: !!keys.openai, masked: mask(keys.openai) },
         anthropic: { connected: !!keys.anthropic, masked: mask(keys.anthropic) },
+        tavily: { connected: !!keys.tavily, masked: mask(keys.tavily) },
       }
     });
   });
@@ -149,6 +154,54 @@ export function createAxisChatRoutes(): express.Router {
       }
     } catch (e: unknown) {
       res.status(502).json({ success: false, correlationId, error: "Upstream error" });
+    }
+  });
+
+  // POST /api/v1/axis/search — proxy to Tavily web search
+  router.post("/v1/axis/search", requireAuthenticated(), async (req, res) => {
+    const correlationId = getCorrelationId(res);
+    const workspaceId = resolveWorkspace(req);
+    if (!workspaceId) { res.status(401).json({ success: false, correlationId, error: "Unauthorized" }); return; }
+
+    const query = req.body?.query;
+    if (!query || typeof query !== "string" || query.trim().length === 0) {
+      res.status(400).json({ success: false, correlationId, error: "query is required" }); return;
+    }
+
+    const keys = loadKeys(dataDir, workspaceId);
+    if (!keys.tavily) { res.status(402).json({ success: false, correlationId, error: "Tavily key not configured" }); return; }
+
+    try {
+      const upstream = await fetch("https://api.tavily.com/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: keys.tavily,
+          query: query.trim().slice(0, 400),
+          search_depth: "basic",
+          include_answer: true,
+          max_results: 5,
+        }),
+      });
+      if (!upstream.ok) {
+        const err = await upstream.text();
+        res.status(upstream.status).json({ success: false, correlationId, error: `Tavily error: ${err.slice(0, 200)}` });
+        return;
+      }
+      const data = await upstream.json() as any;
+      res.json({
+        success: true,
+        correlationId,
+        answer: data.answer ?? null,
+        results: (data.results ?? []).map((r: any) => ({
+          title: r.title,
+          url: r.url,
+          content: r.content?.slice(0, 500) ?? "",
+          score: r.score,
+        })),
+      });
+    } catch (e: unknown) {
+      res.status(502).json({ success: false, correlationId, error: "Tavily upstream error" });
     }
   });
 
