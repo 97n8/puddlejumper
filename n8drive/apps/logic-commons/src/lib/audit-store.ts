@@ -33,6 +33,7 @@ export type InsertAuditEvent = {
 export type AuditQueryOptions = {
   event_type?: string;
   actor_id?: string;
+  tool_id?: string;
   limit?: number;
   after?: string; // ISO date string
 };
@@ -131,6 +132,11 @@ export function queryAuditEvents(opts: AuditQueryOptions = {}): AuditEventRow[] 
     conditions.push("actor_id = ?");
     params.push(opts.actor_id);
   }
+  if (opts.tool_id) {
+    // tool_id is stored in the metadata JSON as { tool: "..." }
+    conditions.push("json_extract(metadata, '$.tool') = ?");
+    params.push(opts.tool_id);
+  }
   if (opts.after) {
     conditions.push("timestamp > ?");
     params.push(opts.after);
@@ -142,4 +148,32 @@ export function queryAuditEvents(opts: AuditQueryOptions = {}): AuditEventRow[] 
   return db
     .prepare(`SELECT * FROM audit_events ${where} ORDER BY id DESC LIMIT ?`)
     .all(...params, limit) as AuditEventRow[];
+}
+
+// ── Per-Tool Audit Helper ────────────────────────────────────────────────────
+
+export type ToolAuditEvent = {
+  tool: string;         // e.g. "vault", "automations", "logiccommons"
+  action: string;       // e.g. "file_uploaded", "automation_executed", "repo_cloned"
+  actorId: string;
+  resourceId?: string;  // ID of the affected resource
+  meta?: Record<string, unknown>;
+  ipAddress?: string;
+  requestId?: string;
+};
+
+/**
+ * Log a tool-specific event into the shared audit store.
+ * Stored as event_type = "tool:{tool}:{action}" with tool in metadata.
+ * Query via: queryAuditEvents({ tool_id: "vault" })
+ */
+export function logToolEvent(event: ToolAuditEvent): AuditEventRow {
+  return insertAuditEvent({
+    event_type: `tool:${event.tool}:${event.action}`,
+    actor_id: event.actorId,
+    target_id: event.resourceId ?? null,
+    ip_address: event.ipAddress ?? null,
+    request_id: event.requestId ?? null,
+    metadata: { tool: event.tool, action: event.action, ...event.meta },
+  });
 }

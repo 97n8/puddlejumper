@@ -19,6 +19,12 @@ import {
 import { loginRequestSchema } from "../schemas.js";
 import type { LoginUser } from "../types.js";
 import { initials } from "../serverMiddleware.js";
+import {
+  validateLocalUserPassword,
+  updateLocalUserPassword,
+  findLocalUserById,
+} from "../localUsersStore.js";
+import { getMemberRole, getWorkspaceForMember } from "../../engine/workspaceStore.js";
 
 function secureEqual(left: string, right: string): boolean {
   const leftBuffer = Buffer.from(left, "utf8");
@@ -27,7 +33,7 @@ function secureEqual(left: string, right: string): boolean {
   return crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-async function findUserAndValidate(
+async function findEnvUserAndValidate(
   users: LoginUser[],
   requestBody: Partial<{ username: string; password: string }> | null | undefined,
 ): Promise<LoginUser | null> {
@@ -46,6 +52,7 @@ type AuthRoutesOptions = {
   loginRateLimit: express.RequestHandler;
   nodeEnv: string;
   trustedParentOrigins: string[];
+  dataDir: string;
 };
 
 export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
@@ -53,7 +60,6 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
 
   router.post("/login", opts.loginRateLimit, async (req, res) => {
     if (!opts.builtInLoginEnabled) { res.status(404).json({ error: "Not Found" }); return; }
-    if (opts.loginUsers.length === 0) { res.status(503).json({ error: "Login unavailable" }); return; }
 
     const parsedLogin = loginRequestSchema.safeParse(req.body);
     if (!parsedLogin.success) {
@@ -61,16 +67,95 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
         issues: parsedLogin.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) });
       return;
     }
-    const user = await findUserAndValidate(opts.loginUsers, parsedLogin.data);
-    if (!user) { res.status(401).json({ error: "Invalid credentials" }); return; }
+
+    const { username, password } = parsedLogin.data as { username: string; password: string };
+
+    // 1. Try env-var (super-admin) users first
+    const envUser = await findEnvUserAndValidate(opts.loginUsers, { username, password });
+    if (envUser) {
+      const token = await signJwt(
+        { sub: envUser.id, name: envUser.name, role: envUser.role, permissions: envUser.permissions,
+          tenants: envUser.tenants, tenantId: envUser.tenantId ?? undefined, delegations: [] },
+        { expiresIn: "8h" },
+      );
+      setJwtCookieOnResponse(res, token, { maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000), sameSite: opts.nodeEnv === "production" ? "none" : "lax" });
+      res.status(200).json({ ok: true, user: { id: envUser.id, name: envUser.name, role: envUser.role } });
+      return;
+    }
+
+    // 2. Try DB-backed local users
+    const localUser = await validateLocalUserPassword(opts.dataDir, username, password);
+    if (!localUser) {
+      // Burn a bcrypt compare to prevent timing-based username enumeration
+      if (opts.loginUsers.length === 0) await bcrypt.compare("noop", "$2a$12$invalidhashpadding000000000000000000000000000000000000");
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
+    }
+
+    // Resolve workspace + role for this local user
+    const membership = getWorkspaceForMember(opts.dataDir, localUser.id);
+    let workspaceId = membership?.workspaceId;
+    let role = membership?.role ?? "member";
+
+    // If no invited membership, try direct workspace owner lookup (shouldn't happen for local users but guard it)
+    if (!workspaceId) {
+      workspaceId = `ws-${localUser.id}`;
+    }
+
+    const mustChangePassword = localUser.must_change_password === 1;
 
     const token = await signJwt(
-      { sub: user.id, name: user.name, role: user.role, permissions: user.permissions,
-        tenants: user.tenants, tenantId: user.tenantId ?? undefined, delegations: [] },
+      {
+        sub: localUser.id,
+        name: localUser.name,
+        role,
+        permissions: [],
+        tenants: [{ id: workspaceId, name: "Workspace", sha: "", connections: [] }],
+        tenantId: workspaceId,
+        delegations: [],
+        // Custom claim — LogicOS reads this to show the change-password gate
+        mustChangePassword,
+      } as any,
       { expiresIn: "8h" },
     );
     setJwtCookieOnResponse(res, token, { maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000), sameSite: opts.nodeEnv === "production" ? "none" : "lax" });
-    res.status(200).json({ ok: true, user: { id: user.id, name: user.name, role: user.role } });
+    res.status(200).json({
+      ok: true,
+      user: { id: localUser.id, name: localUser.name, role, mustChangePassword },
+    });
+  });
+
+  // ── POST /api/auth/change-password ─────────────────────────────────────
+  // Authenticated local user changes their own password.
+  // If must_change_password was set, this clears it.
+  // Body: { currentPassword, newPassword }
+  router.post("/auth/change-password", requireAuthenticated(), async (req, res) => {
+    const auth = getAuthContext(req);
+    const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ error: "currentPassword and newPassword are required" }); return;
+    }
+    if (newPassword.length < 8) {
+      res.status(400).json({ error: "newPassword must be at least 8 characters" }); return;
+    }
+
+    // Only local users can change password via this endpoint
+    const localUser = findLocalUserById(opts.dataDir, auth!.sub);
+    if (!localUser) {
+      res.status(403).json({ error: "Password change is only available for local accounts. OAuth users manage their password through their provider." });
+      return;
+    }
+
+    const valid = await validateLocalUserPassword(opts.dataDir, localUser.username, currentPassword);
+    if (!valid) {
+      res.status(401).json({ error: "Current password is incorrect" }); return;
+    }
+
+    // Update password and clear must_change_password
+    await updateLocalUserPassword(opts.dataDir, localUser.id, newPassword, false);
+
+    res.json({ ok: true, message: "Password updated successfully" });
   });
 
   router.post("/logout", requireAuthenticated(), (_req, res) => {
@@ -88,6 +173,7 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
       role: auth.role,
       tenants: auth.tenants,
       trustedParentOrigins: opts.trustedParentOrigins,
+      mustChangePassword: (auth as any).mustChangePassword ?? false,
     });
   });
 

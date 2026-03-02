@@ -95,6 +95,7 @@ import { createGovernanceRoutes } from "./routes/governance.js";
 import { createApprovalRoutes } from "./routes/approvals.js";
 import { createChainTemplateRoutes } from "./routes/chainTemplates.js";
 import { createAdminRoutes } from "./routes/admin.js";
+import { createAdminMembersRoutes } from "./routes/adminMembers.js";
 import { createWebhookActionRoutes } from "./routes/webhookAction.js";
 import { createWorkspaceUsageRoutes } from "./routes/workspaceUsage.js";
 import { createWorkspaceCollaborationRoutes } from "./routes/workspaceCollaboration.js";
@@ -627,12 +628,14 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       provider: auth.provider ?? null,
       workspaceId: auth.workspaceId ?? "system",
       workspaceName: auth.workspaceName ?? null,
+      mustChangePassword: (auth as any).mustChangePassword ?? false,
     });
   });
 
   // ── Mount route modules ───────────────────────────────────────────────
   app.use("/api", createAuthRoutes({
     builtInLoginEnabled, loginUsers, loginRateLimit, nodeEnv, trustedParentOrigins,
+    dataDir: CONTROLLED_DATA_DIR,
   }));
   // Session lifecycle routes (refresh, /auth/logout, /auth/revoke, /auth/status,
   // /session, /admin/audit) — provided by logic-commons
@@ -757,6 +760,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   }));
   app.use("/api", createChainTemplateRoutes({ chainStore }));
   app.use("/api", createAdminRoutes({ approvalStore, chainStore }));
+  app.use("/api", createAdminMembersRoutes());
   app.use("/api", createWorkspaceUsageRoutes());
   app.use("/api", createWorkspaceCollaborationRoutes());
   // Tool access enforcement — server-side mirror of canUseTool() in LogicOS

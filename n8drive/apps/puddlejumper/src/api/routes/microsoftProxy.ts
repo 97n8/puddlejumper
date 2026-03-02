@@ -83,6 +83,12 @@ export function createMicrosoftProxyRoutes(opts: MicrosoftProxyOptions): express
       return;
     }
 
+    const callingTool = req.headers["x-pj-tool"] as string | undefined;
+    if (callingTool && !opts.store.hasToolConsent("microsoft", userId, callingTool)) {
+      res.status(403).json({ error: "Microsoft access not consented for this tool", code: "MICROSOFT_CONSENT_DENIED", tool: callingTool });
+      return;
+    }
+
     const upstreamPath = req.path.startsWith("/") ? req.path.slice(1) : req.path;
     const rawQuery = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
     const upstreamUrl = `https://graph.microsoft.com/v1.0/${upstreamPath}${rawQuery}`;

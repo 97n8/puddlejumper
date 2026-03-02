@@ -42,11 +42,13 @@ export {
 export {
   insertAuditEvent,
   queryAuditEvents,
+  logToolEvent,
   resetAuditDb,
   configureAuditStore,
   type AuditEventRow,
   type InsertAuditEvent,
   type AuditQueryOptions,
+  type ToolAuditEvent,
 } from "./lib/audit-store.js";
 
 // Session lifecycle routes

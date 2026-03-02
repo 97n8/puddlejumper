@@ -823,5 +823,43 @@ export function createConnectorsRouter(options: CreateConnectorsRouterOptions): 
     }
   });
 
+  // ── Per-Tool Connector Consent ──────────────────────────────────────────
+  // Users control which tools can use each connected provider account.
+  // These endpoints are called from the LogicOS "My Connections" settings tab.
+
+  // GET /api/connectors/consent
+  // Returns the user's consent settings for all providers.
+  router.get("/consent", (req, res) => {
+    const auth = getAuthContext(req);
+    if (!auth) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const consents = options.store.listConsents(auth.userId ?? auth.sub);
+    res.json({ consents });
+  });
+
+  // GET /api/connectors/consent/:provider
+  router.get("/consent/:provider", (req, res) => {
+    const auth = getAuthContext(req);
+    if (!auth) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const provider = req.params.provider as ConnectorProvider;
+    const consent = options.store.getConsent(provider, auth.userId ?? auth.sub);
+    res.json({ consent: consent ?? { provider, userId: auth.userId ?? auth.sub, allowedTools: null } });
+  });
+
+  // PUT /api/connectors/consent/:provider
+  // Body: { allowedTools: string[] | null }
+  // null = unrestricted (user grants all tools access to this provider)
+  router.put("/consent/:provider", (req, res) => {
+    const auth = getAuthContext(req);
+    if (!auth) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const provider = req.params.provider as ConnectorProvider;
+    const { allowedTools } = req.body as { allowedTools: string[] | null };
+    if (allowedTools !== null && !Array.isArray(allowedTools)) {
+      res.status(400).json({ error: "allowedTools must be an array of tool IDs or null" });
+      return;
+    }
+    options.store.setConsent(provider, auth.userId ?? auth.sub, allowedTools);
+    res.json({ success: true, provider, allowedTools });
+  });
+
   return router;
 }

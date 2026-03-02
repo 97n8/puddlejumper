@@ -13,7 +13,7 @@ import { getCorrelationId } from "../serverMiddleware.js";
 import type { ApprovalStore } from "../../engine/approvalStore.js";
 import type { ChainStore } from "../../engine/chainStore.js";
 import { updateWorkspacePlan } from "../../engine/workspaceStore.js";
-import { queryAuditEvents } from "@publiclogic/logic-commons";
+import { queryAuditEvents, logToolEvent } from "@publiclogic/logic-commons";
 
 export type AdminRouteOptions = {
   approvalStore: ApprovalStore;
@@ -127,6 +127,51 @@ export function createAdminRoutes(opts: AdminRouteOptions): express.Router {
 
     // Default: JSON
     res.json({ success: true, correlationId, data: { events, count: events.length } });
+  });
+
+  // GET /api/audit/tool/:toolId?after=...&limit=...
+  // Query audit events for a specific tool. Requires admin or owner role.
+  router.get("/audit/tool/:toolId", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    const correlationId = getCorrelationId(res);
+
+    if (!auth || (auth.role !== "admin" && auth.role !== "owner")) {
+      res.status(403).json({ success: false, correlationId, error: "Admin access required" });
+      return;
+    }
+
+    const { toolId } = req.params;
+    const after = typeof req.query.after === "string" ? req.query.after : undefined;
+    const limitParam = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 200;
+    const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 1000)) : 200;
+
+    const events = queryAuditEvents({ tool_id: toolId, after, limit });
+    res.json({ success: true, correlationId, data: { toolId, events, count: events.length } });
+  });
+
+  // POST /api/audit/tool — emit a tool event (called by tool backends, not client)
+  // Body: { tool, action, actorId, resourceId?, meta? }
+  router.post("/audit/tool", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    const correlationId = getCorrelationId(res);
+    const { tool, action, actorId, resourceId, meta } = req.body ?? {};
+
+    if (!tool || !action || !actorId) {
+      res.status(400).json({ success: false, correlationId, error: "tool, action, and actorId are required" });
+      return;
+    }
+
+    const event = logToolEvent({
+      tool,
+      action,
+      actorId,
+      resourceId,
+      meta,
+      ipAddress: req.ip ?? undefined,
+      requestId: res.getHeader("x-correlation-id") as string | undefined,
+    });
+
+    res.json({ success: true, correlationId, data: { id: event.id } });
   });
 
   return router;
