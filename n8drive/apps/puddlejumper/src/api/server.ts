@@ -526,6 +526,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   // ── Quick Start / Systems Map ─────────────────────────────────────────
   const GUIDE_HTML_FILE = path.join(PUBLIC_DIR, "guide.html");
+  app.get("/guide", (_req, res) => res.redirect(301, "/pj/guide"));
   app.get("/pj/guide", (_req, res) => {
     try {
       res.setHeader("Cache-Control", "no-store, max-age=0");
