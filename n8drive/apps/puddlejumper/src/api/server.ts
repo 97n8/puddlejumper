@@ -767,7 +767,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/seal", createSealRouter(approvalStore.db));
   app.use("/api/syncronate", createSyncronateRouter(approvalStore.db));
   app.use("/api/logicbridge", createLogicBridgeRouter());
-  app.use("/api/formkey", createFormKeyRouter(approvalStore.db));
+  app.use("/api/formkey/forms", createFormKeyRouter(approvalStore.db));
   app.use("/v1/forms", createFormKeyRouter(approvalStore.db));
   app.use("/public/prr", prrRateLimit);
   app.use(createPublicPRRRoutes({ dataDir: CONTROLLED_DATA_DIR }));
