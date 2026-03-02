@@ -34,6 +34,17 @@ export function createCaseSpacesRoutes(): express.Router {
     if (!auth) return null;
     const rawId = auth.workspaceId ?? auth.tenantId ?? auth.sub;
     let workspaceId = rawId?.startsWith('ws-') ? rawId : `ws-${rawId}`;
+
+    // If the JWT workspace is the user's personal workspace (ws-{sub}),
+    // prefer an explicit team membership so invited members see the shared workspace.
+    const personalWsId = `ws-${auth.sub}`;
+    if (workspaceId === personalWsId) {
+      const membership = getWorkspaceForMember(dataDir, auth.sub);
+      if (membership) {
+        return { auth, workspaceId: membership.workspaceId, role: membership.role };
+      }
+    }
+
     let role = getMemberRole(dataDir, workspaceId, auth.sub);
     if (!role) {
       const ws = getWorkspace(dataDir, workspaceId);
