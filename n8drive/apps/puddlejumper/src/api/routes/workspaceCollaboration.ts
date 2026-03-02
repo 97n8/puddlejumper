@@ -23,6 +23,9 @@ import {
   getMemberRole,
   getWorkspace,
   getDb,
+  getToolPermissions,
+  setToolPermissions,
+  listToolPermissionsForMember,
 } from "../../engine/workspaceStore.js";
 import { sendInviteEmail } from "../email.js";
 
@@ -217,6 +220,73 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
         toolAccess: row?.tool_access ? JSON.parse(row.tool_access) : null,
       },
     });
+  });
+
+  // ── Per-Tool Internal Permissions ──────────────────────────────────────
+  // These endpoints let each tool manage its own internal role model.
+  // LogicOS admin UI only assigns which tools a user can access;
+  // each tool self-manages internal permissions via these endpoints.
+
+  // GET /api/workspace/members/:userId/tool-permissions/:toolId
+  // Returns the permissions array a tool has stored for this member.
+  // Callable by the tool backend (admin or owner) or the user themselves.
+  router.get("/workspace/members/:userId/tool-permissions/:toolId", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    const correlationId = getCorrelationId(res);
+    const workspaceId = auth!.tenantId ?? auth!.workspaceId;
+    const { userId, toolId } = req.params;
+
+    // User can read their own; admin/owner can read anyone's
+    const callerRole = getMemberRole(dataDir, workspaceId, auth!.sub);
+    if (auth!.sub !== userId && callerRole !== "owner" && callerRole !== "admin" && auth!.role !== "admin") {
+      res.status(403).json({ success: false, correlationId, error: "Insufficient permissions" });
+      return;
+    }
+
+    const permissions = getToolPermissions(dataDir, workspaceId, userId, toolId);
+    res.json({ success: true, correlationId, data: { userId, toolId, permissions } });
+  });
+
+  // GET /api/workspace/members/:userId/tool-permissions
+  // Returns all per-tool permissions for a member (admin/owner only).
+  router.get("/workspace/members/:userId/tool-permissions", requireRole("owner", "admin"), (req, res) => {
+    const auth = getAuthContext(req);
+    const correlationId = getCorrelationId(res);
+    const workspaceId = auth!.tenantId ?? auth!.workspaceId;
+    const { userId } = req.params;
+
+    const toolPermissions = listToolPermissionsForMember(dataDir, workspaceId, userId);
+    res.json({ success: true, correlationId, data: { userId, toolPermissions } });
+  });
+
+  // PATCH /api/workspace/members/:userId/tool-permissions/:toolId
+  // Set internal permissions for a member in a specific tool.
+  // Intended to be called by the tool's own admin UI — not the LogicOS admin panel.
+  // Requires workspace admin/owner or a tool-level admin passing x-tool-admin: true.
+  router.patch("/workspace/members/:userId/tool-permissions/:toolId", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    const correlationId = getCorrelationId(res);
+    const workspaceId = auth!.tenantId ?? auth!.workspaceId;
+    const { userId, toolId } = req.params;
+    const { permissions } = req.body as { permissions: string[] };
+
+    if (!Array.isArray(permissions) || permissions.some(p => typeof p !== "string")) {
+      res.status(400).json({ success: false, correlationId, error: "permissions must be an array of strings" });
+      return;
+    }
+
+    const callerRole = getMemberRole(dataDir, workspaceId, auth!.sub);
+    const isWorkspaceAdmin = callerRole === "owner" || callerRole === "admin" || auth!.role === "admin";
+    // Tools may pass x-tool-admin header to indicate the caller has tool-level admin rights
+    const isToolAdmin = req.headers["x-tool-admin"] === "true";
+
+    if (!isWorkspaceAdmin && !isToolAdmin) {
+      res.status(403).json({ success: false, correlationId, error: "Insufficient permissions" });
+      return;
+    }
+
+    setToolPermissions(dataDir, workspaceId, userId, toolId, permissions, auth!.sub);
+    res.json({ success: true, correlationId, data: { userId, toolId, permissions } });
   });
 
   return router;

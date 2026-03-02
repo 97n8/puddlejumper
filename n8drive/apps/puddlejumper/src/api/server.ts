@@ -120,6 +120,7 @@ import { SharePointDispatcher } from "../engine/dispatchers/sharepoint.js";
 import { approvalMetrics, METRIC, METRIC_HELP } from "../engine/approvalMetrics.js";
 import { loadConfig, StartupConfigError } from "./startupConfig.js";
 import { ensurePersonalWorkspace, getDb, acceptInvitation } from "../engine/workspaceStore.js";
+import { requireToolAccess } from "./middleware/checkWorkspaceRole.js";
 
 // ── Directory layout ────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -758,18 +759,21 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createAdminRoutes({ approvalStore, chainStore }));
   app.use("/api", createWorkspaceUsageRoutes());
   app.use("/api", createWorkspaceCollaborationRoutes());
+  // Tool access enforcement — server-side mirror of canUseTool() in LogicOS
+  app.use("/api/v1/casespaces", requireToolAccess("casespaces"));
   app.use("/api", createCaseSpacesRoutes());
   app.use("/api", createAxisChatRoutes());
+  app.use("/api/vault", requireToolAccess("vault"));
   app.use("/api", createVaultRoutes({ 
     dataDir: CONTROLLED_DATA_DIR, 
     vaultUrl: process.env.VAULT_URL 
   }));
-  app.use("/api/archieve", createArchieveRouter(approvalStore.db));
-  app.use("/api/seal", createSealRouter(approvalStore.db));
-  app.use("/api/syncronate", createSyncronateRouter(approvalStore.db));
-  app.use("/api/logicbridge", createLogicBridgeRouter());
-  app.use("/api/formkey/forms", createFormKeyRouter(approvalStore.db));
-  app.use("/v1/forms", createFormKeyRouter(approvalStore.db));
+  app.use("/api/archieve", requireToolAccess("admin"), createArchieveRouter(approvalStore.db));
+  app.use("/api/seal", requireToolAccess("admin"), createSealRouter(approvalStore.db));
+  app.use("/api/syncronate", requireToolAccess("admin"), createSyncronateRouter(approvalStore.db));
+  app.use("/api/logicbridge", requireToolAccess("logicbackend"), createLogicBridgeRouter());
+  app.use("/api/formkey/forms", requireToolAccess("formkey"), createFormKeyRouter(approvalStore.db));
+  app.use("/v1/forms", createFormKeyRouter(approvalStore.db)); // public form submissions — no tool gate
   app.use("/public/prr", prrRateLimit);
   app.use(createPublicPRRRoutes({ dataDir: CONTROLLED_DATA_DIR }));
   app.use("/api", createAdminPRRRoutes());

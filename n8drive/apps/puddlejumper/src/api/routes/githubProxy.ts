@@ -56,6 +56,13 @@ export function createGitHubProxyRoutes(opts: GitHubProxyOptions): express.Route
       return;
     }
 
+    // Check per-tool connector consent. Tools send x-pj-tool header.
+    const callingTool = req.headers["x-pj-tool"] as string | undefined;
+    if (callingTool && !opts.store.hasToolConsent("github", auth.userId, callingTool)) {
+      res.status(403).json({ error: "GitHub access not consented for this tool", code: "GITHUB_CONSENT_DENIED", tool: callingTool });
+      return;
+    }
+
     // Build upstream URL: strip leading slash, preserve query string
     const upstreamPath = req.path.startsWith("/") ? req.path.slice(1) : req.path;
     const rawQuery = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";

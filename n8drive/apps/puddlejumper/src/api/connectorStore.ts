@@ -4,6 +4,15 @@ import Database from "better-sqlite3";
 
 export type ConnectorProvider = "microsoft" | "google" | "github";
 
+/** Which tools a user has consented to use a specific provider connection.
+ *  null = all tools (pre-consent / unrestricted). */
+export type ConnectorConsent = {
+  provider: ConnectorProvider;
+  userId: string;
+  allowedTools: string[] | null; // null = unrestricted
+  updatedAt: string;
+};
+
 export type ConnectorTokenRecord = {
   provider: ConnectorProvider;
   tenantId: string;
@@ -92,6 +101,14 @@ export class ConnectorStore {
 
       CREATE INDEX IF NOT EXISTS ix_connector_tokens_tenant_user
       ON connector_tokens (tenant_id, user_id);
+
+      CREATE TABLE IF NOT EXISTS connector_tool_consent (
+        provider     TEXT NOT NULL CHECK(provider IN ('microsoft', 'google', 'github')),
+        user_id      TEXT NOT NULL,
+        allowed_tools TEXT,
+        updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (provider, user_id)
+      );
     `);
   }
 
@@ -180,6 +197,57 @@ export class ConnectorStore {
     this.db
       .prepare("DELETE FROM connector_tokens WHERE provider = ? AND tenant_id = ? AND user_id = ?")
       .run(provider, tenantId, userId);
+  }
+
+  // ── Per-Tool Connector Consent ──────────────────────────────────────────
+  // Users self-manage which tools can use each connected provider account.
+  // null = unrestricted (legacy / user hasn't scoped yet).
+
+  /** Returns the consent record for a user+provider, or null if not set. */
+  getConsent(provider: ConnectorProvider, userId: string): ConnectorConsent | null {
+    const row = this.db
+      .prepare("SELECT provider, user_id, allowed_tools, updated_at FROM connector_tool_consent WHERE provider = ? AND user_id = ?")
+      .get(provider, userId) as { provider: ConnectorProvider; user_id: string; allowed_tools: string | null; updated_at: string } | undefined;
+    if (!row) return null;
+    return {
+      provider: row.provider,
+      userId: row.user_id,
+      allowedTools: row.allowed_tools ? JSON.parse(row.allowed_tools) : null,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  /** Returns true if the user has consented for the given tool to use this provider.
+   *  If no consent record exists (null = unrestricted), returns true. */
+  hasToolConsent(provider: ConnectorProvider, userId: string, toolId: string): boolean {
+    const consent = this.getConsent(provider, userId);
+    if (!consent) return true; // no record = unrestricted (legacy)
+    if (consent.allowedTools === null) return true; // explicitly unrestricted
+    return consent.allowedTools.includes(toolId);
+  }
+
+  /** Set which tools can use a provider connection for this user. */
+  setConsent(provider: ConnectorProvider, userId: string, allowedTools: string[] | null): void {
+    this.db.prepare(`
+      INSERT INTO connector_tool_consent (provider, user_id, allowed_tools, updated_at)
+      VALUES (?, ?, ?, datetime('now'))
+      ON CONFLICT(provider, user_id) DO UPDATE SET
+        allowed_tools = excluded.allowed_tools,
+        updated_at    = excluded.updated_at
+    `).run(provider, userId, allowedTools ? JSON.stringify(allowedTools) : null);
+  }
+
+  /** List all consent records for a user across all providers. */
+  listConsents(userId: string): ConnectorConsent[] {
+    const rows = this.db
+      .prepare("SELECT provider, user_id, allowed_tools, updated_at FROM connector_tool_consent WHERE user_id = ?")
+      .all(userId) as Array<{ provider: ConnectorProvider; user_id: string; allowed_tools: string | null; updated_at: string }>;
+    return rows.map(r => ({
+      provider: r.provider,
+      userId: r.user_id,
+      allowedTools: r.allowed_tools ? JSON.parse(r.allowed_tools) : null,
+      updatedAt: r.updated_at,
+    }));
   }
 }
 

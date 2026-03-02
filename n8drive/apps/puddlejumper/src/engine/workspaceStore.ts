@@ -177,6 +177,26 @@ export function getDb(dataDir: string): Database.Database {
     `);
   }
 
+  // Per-tool internal permissions (idempotent)
+  // Lets tools store their own role model outside the LogicOS admin UI.
+  // Each tool reads/writes its own row; LogicOS never renders these.
+  const hasToolPermsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_member_tool_permissions'`).get();
+  if (!hasToolPermsTable) {
+    db.exec(`
+      CREATE TABLE workspace_member_tool_permissions (
+        workspace_id TEXT NOT NULL,
+        user_id      TEXT NOT NULL,
+        tool_id      TEXT NOT NULL,
+        permissions  TEXT NOT NULL DEFAULT '[]',
+        updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_by   TEXT,
+        PRIMARY KEY (workspace_id, user_id, tool_id)
+      );
+      CREATE INDEX idx_tool_perms_workspace ON workspace_member_tool_permissions(workspace_id);
+      CREATE INDEX idx_tool_perms_user ON workspace_member_tool_permissions(user_id);
+    `);
+  }
+
   _dbs.set(dataDir, db);
   return db;
 }
@@ -353,6 +373,46 @@ export function updateMemberToolAccess(dataDir: string, workspaceId: string, use
   db.prepare(`UPDATE workspace_members SET tool_access = ? WHERE workspace_id = ? AND user_id = ?`).run(json, workspaceId, userId);
   db.prepare(`INSERT INTO workspace_member_audit (workspace_id, user_id, action, old_value, new_value, actor_id) VALUES (?, ?, 'tool_access_changed', ?, ?, ?)`)
     .run(workspaceId, userId, existing?.tool_access ?? null, json, actorId ?? null);
+}
+
+/** Returns the tool_access list for a member, or null (meaning "all tools"). */
+export function getMemberToolAccess(dataDir: string, workspaceId: string, userId: string): string[] | null {
+  const db = getDb(dataDir);
+  const row = db.prepare(`SELECT tool_access FROM workspace_members WHERE workspace_id = ? AND user_id = ?`)
+    .get(workspaceId, userId) as { tool_access: string | null } | undefined;
+  if (!row) return null;
+  return row.tool_access ? JSON.parse(row.tool_access) : null;
+}
+
+// ── Per-Tool Internal Permissions ─────────────────────────────────
+// Tools own their internal role model. LogicOS admin only assigns which
+// tools a user can access; each tool manages its own internal permissions
+// via these endpoints — outside the LogicOS UI.
+
+export function getToolPermissions(dataDir: string, workspaceId: string, userId: string, toolId: string): string[] {
+  const db = getDb(dataDir);
+  const row = db.prepare(`SELECT permissions FROM workspace_member_tool_permissions WHERE workspace_id = ? AND user_id = ? AND tool_id = ?`)
+    .get(workspaceId, userId, toolId) as { permissions: string } | undefined;
+  return row ? JSON.parse(row.permissions) : [];
+}
+
+export function setToolPermissions(dataDir: string, workspaceId: string, userId: string, toolId: string, permissions: string[], actorId?: string): void {
+  const db = getDb(dataDir);
+  db.prepare(`
+    INSERT INTO workspace_member_tool_permissions (workspace_id, user_id, tool_id, permissions, updated_at, updated_by)
+    VALUES (?, ?, ?, ?, datetime('now'), ?)
+    ON CONFLICT(workspace_id, user_id, tool_id) DO UPDATE SET
+      permissions = excluded.permissions,
+      updated_at  = excluded.updated_at,
+      updated_by  = excluded.updated_by
+  `).run(workspaceId, userId, toolId, JSON.stringify(permissions), actorId ?? null);
+}
+
+export function listToolPermissionsForMember(dataDir: string, workspaceId: string, userId: string): Array<{ toolId: string; permissions: string[] }> {
+  const db = getDb(dataDir);
+  const rows = db.prepare(`SELECT tool_id, permissions FROM workspace_member_tool_permissions WHERE workspace_id = ? AND user_id = ?`)
+    .all(workspaceId, userId) as Array<{ tool_id: string; permissions: string }>;
+  return rows.map(r => ({ toolId: r.tool_id, permissions: JSON.parse(r.permissions) }));
 }
 
 // ── Workspace Invitation Functions ────────────────────────────────

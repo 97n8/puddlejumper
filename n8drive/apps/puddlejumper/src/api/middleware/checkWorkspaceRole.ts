@@ -5,7 +5,7 @@
 //
 import type { Request, Response, NextFunction } from "express";
 import { getAuthContext } from "@publiclogic/core";
-import { getMemberRole, getWorkspace, getWorkspaceForMember, type WorkspaceRole } from "../../engine/workspaceStore.js";
+import { getMemberRole, getMemberToolAccess, getWorkspace, getWorkspaceForMember, type WorkspaceRole } from "../../engine/workspaceStore.js";
 import { getCorrelationId } from "../serverMiddleware.js";
 
 export function requireRole(...allowedRoles: WorkspaceRole[]) {
@@ -49,6 +49,53 @@ export function requireRole(...allowedRoles: WorkspaceRole[]) {
 
     // Attach role to request for downstream use
     (req as any).workspaceRole = role;
+    next();
+  };
+}
+
+/**
+ * requireToolAccess(toolKey)
+ *
+ * Ensures the authenticated user has been granted access to the named tool
+ * within their workspace. Owner and admin always pass through.
+ * Members with no explicit tool_access list pass through (open by default).
+ * Viewers and members with an explicit list must be included in it.
+ */
+export function requireToolAccess(toolKey: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const auth = getAuthContext(req);
+    const correlationId = getCorrelationId(res);
+
+    if (!auth) {
+      res.status(401).json({ success: false, correlationId, error: "Unauthorized" });
+      return;
+    }
+
+    const dataDir = process.env.DATA_DIR || "./data";
+    const workspaceId = auth.workspaceId ?? auth.tenantId;
+
+    // System admins and workspace owners/admins always have access
+    if (auth.role === "admin") { next(); return; }
+
+    const role = getMemberRole(dataDir, workspaceId, auth.sub);
+    if (role === "owner" || role === "admin") { next(); return; }
+
+    const toolAccess = getMemberToolAccess(dataDir, workspaceId, auth.sub);
+
+    // member with no explicit tool_access list → full non-admin access
+    if (role === "member" && toolAccess === null) { next(); return; }
+
+    if (!toolAccess || !toolAccess.includes(toolKey)) {
+      res.status(403).json({
+        success: false,
+        correlationId,
+        error: "Tool access denied",
+        tool: toolKey,
+        your_role: role ?? "none",
+      });
+      return;
+    }
+
     next();
   };
 }
