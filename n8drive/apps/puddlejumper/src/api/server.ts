@@ -110,6 +110,7 @@ import { initSyncronate, createSyncronateRouter, getSyncronateHealth } from "../
 import { initLogicBridge, createLogicBridgeRouter, getLogicBridgeHealth } from "../logicbridge/index.js";
 import { initFormKey, createFormKeyRouter, getFormKeyHealth } from "../formkey/index.js";
 import { initFiscalDb, createFiscalRoutes } from "../fiscalintel/index.js";
+import { createMyHealthRoutes } from "./routes/myHealth.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
@@ -796,6 +797,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/google", createGoogleProxyRoutes({ store: connectorStore }));
   app.use("/api/cloud-save", createCloudSaveRoutes({ store: connectorStore }));
   app.use("/api/fiscal", createFiscalRoutes(approvalStore.db));
+  app.use("/api", createMyHealthRoutes(approvalStore.db));
 
   const vaultDbPath = path.resolve(process.env.VAULT_DB_PATH ?? path.join(CONTROLLED_DATA_DIR, "vault.db"));
   const documentRoutes = createDocumentRoutes({ dbPath: vaultDbPath });
