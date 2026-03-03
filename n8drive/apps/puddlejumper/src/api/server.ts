@@ -575,6 +575,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.method === "GET" && req.path === "/session") { next(); return; }
     if (req.method === "GET" && req.path === "/health") { next(); return; }
     if (req.method === "GET" && req.path === "/v1/health") { next(); return; }
+    if (req.method === "GET" && req.path === "/seal/health") { next(); return; }
+    if (req.method === "GET" && req.path === "/archieve/health") { next(); return; }
     if (req.method === "GET" && req.path === "/v1/metrics") { next(); return; }
     if (req.path.startsWith("/auth/github/")) { next(); return; }
     if (req.path.startsWith("/auth/google/")) { next(); return; }
@@ -604,6 +606,29 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   // /api/health — unauthenticated alias for /health (bypassed in auth gate above)
   app.get("/api/health", (_req, res) => { res.json({ status: "ok" }); });
+
+  // /seal/health — SEAL module health (unauthenticated, used by LogicOS diagnostics)
+  app.get("/seal/health", (_req, res) => {
+    try {
+      const health = getSealHealth();
+      const status = health.signingKeyStatus === "loaded" ? "ok"
+        : health.signingKeyStatus === "partially_loaded" ? "degraded"
+        : "unavailable";
+      res.json({ status, ...health });
+    } catch {
+      res.status(500).json({ status: "error", detail: "SEAL health check failed" });
+    }
+  });
+
+  // /archieve/health — ARCHIEVE module health (unauthenticated, used by LogicOS diagnostics)
+  app.get("/archieve/health", (_req, res) => {
+    try {
+      const queueDepth = getArchieveQueueDepth();
+      res.json({ status: "ok", queueDepth });
+    } catch {
+      res.status(500).json({ status: "error", detail: "ARCHIEVE health check failed" });
+    }
+  });
 
   // GET /api/me — returns current user's profile + role from JWT
   app.get("/api/me", (req, res) => {
