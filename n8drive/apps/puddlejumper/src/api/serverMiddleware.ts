@@ -142,6 +142,8 @@ export function createSecurityHeadersMiddleware(nodeEnv: string, pjWorkspaceFile
 
   return (req: express.Request, res: express.Response, next: express.NextFunction): void => {
     res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
     if (nodeEnv === "production") {
       res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
     }
