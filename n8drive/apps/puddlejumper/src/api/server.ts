@@ -87,7 +87,7 @@ import {
 
 // Route modules
 import { createAuthRoutes } from "./routes/auth.js";
-import { upsertUser, setUserRole } from "./userStore.js";
+import { upsertUser, setUserRole, linkEmailToUser, resolveLinkedUser } from "./userStore.js";
 import { createConfigRoutes } from "./routes/config.js";
 import { createPrrRoutes } from "./routes/prr.js";
 import { createAccessRoutes } from "./routes/access.js";
@@ -136,6 +136,11 @@ const ROOT_DIR = path.resolve(__dirname, "../../");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const INTERNAL_SRC_DIR = path.join(ROOT_DIR, "src", "internal-remote");
 const CONTROLLED_DATA_DIR = path.join(ROOT_DIR, "data");
+
+// ── Seed email links from env on startup ────────────────────────────────────
+// Format: LINKED_EMAILS=alt@email.com:primary@email.com,other@email.com:primary@email.com
+// The primary email must already exist (or will be resolved after first login).
+// This is processed lazily inside onUserAuthenticated so DB is ready.
 const PJ_WORKSPACE_FILE = path.join(PUBLIC_DIR, "puddlejumper-master-environment-control.html");
 const DEFAULT_PRR_DB_PATH = path.join(CONTROLLED_DATA_DIR, "prr.db");
 const DEFAULT_CONNECTOR_DB_PATH = path.join(CONTROLLED_DATA_DIR, "connectors.db");
@@ -696,12 +701,37 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     }
     // ─────────────────────────────────────────────────────────────────────────
 
-    const row = upsertUser(CONTROLLED_DATA_DIR, {
-      sub: userInfo.sub,
-      email: userInfo.email,
-      name: userInfo.name,
-      provider: userInfo.provider,
-    });
+    // ── Seed env-defined email links (LINKED_EMAILS=alt:primary,alt2:primary) ──
+    const linkedEmailsEnv = (process.env.LINKED_EMAILS ?? '').trim();
+    if (linkedEmailsEnv) {
+      for (const pair of linkedEmailsEnv.split(',')) {
+        const [alt, primaryEmail] = pair.split(':').map(s => s.trim().toLowerCase());
+        if (!alt || !primaryEmail) continue;
+        // Find the primary user by email
+        const primaryRow = (getDb(CONTROLLED_DATA_DIR)
+          .prepare("SELECT sub, provider FROM users WHERE LOWER(email) = ? LIMIT 1")
+          .get(primaryEmail) as { sub: string; primary_provider: string } | undefined) as any;
+        if (primaryRow) linkEmailToUser(CONTROLLED_DATA_DIR, alt, primaryRow.sub, primaryRow.provider);
+      }
+    }
+
+    // ── Account linking: if this email is linked to a primary account, use that ──
+    // This lets one user sign in with multiple emails (e.g. personal + work) and
+    // always land on the same workspace, role, and data.
+    let row: ReturnType<typeof upsertUser>;
+    const linkedPrimary = userInfo.email ? resolveLinkedUser(CONTROLLED_DATA_DIR, userInfo.email) : null;
+    if (linkedPrimary) {
+      // Use the primary account record — sub/workspaceId will match the primary
+      row = linkedPrimary;
+    } else {
+      row = upsertUser(CONTROLLED_DATA_DIR, {
+        sub: userInfo.sub,
+        email: userInfo.email,
+        name: userInfo.name,
+        provider: userInfo.provider,
+      });
+    }
+
 
     // Auto-promote to admin if the user's email is in the ADMIN_EMAILS allowlist
     const adminEmails = (process.env.ADMIN_EMAILS ?? '')

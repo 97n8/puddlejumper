@@ -8,6 +8,11 @@
 //   viewer — read-only access to GET endpoints (default for new users)
 //   admin  — full access (manually assigned)
 //
+// Account linking:
+//   A user may have multiple email addresses (e.g. personal + work). Use
+//   linkEmailToUser / resolveLinkedUser to map alternate emails to a primary
+//   user record so all logins share the same account, workspace, and role.
+//
 import path from "node:path";
 import fs from "node:fs";
 import Database from "better-sqlite3";
@@ -44,6 +49,14 @@ function getDb(dataDir: string): Database.Database {
       UNIQUE(sub, provider)
     );
     CREATE INDEX IF NOT EXISTS idx_users_sub_provider ON users(sub, provider);
+
+    CREATE TABLE IF NOT EXISTS user_email_links (
+      email TEXT PRIMARY KEY,
+      primary_sub TEXT NOT NULL,
+      primary_provider TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_email_links_primary ON user_email_links(primary_sub, primary_provider);
   `);
   return _db;
 }
@@ -54,6 +67,45 @@ export function resetUserDb(): void {
     _db.close();
     _db = null;
   }
+}
+
+/**
+ * Link an alternate email to a primary user account. When someone signs in
+ * with the alternate email they will be resolved to the primary user's record,
+ * sharing the same sub, workspace, and role.
+ */
+export function linkEmailToUser(
+  dataDir: string,
+  email: string,
+  primarySub: string,
+  primaryProvider: string,
+): void {
+  const db = getDb(dataDir);
+  db.prepare(
+    `INSERT INTO user_email_links (email, primary_sub, primary_provider, created_at)
+     VALUES (?, ?, ?, datetime('now'))
+     ON CONFLICT(email) DO UPDATE SET primary_sub = excluded.primary_sub, primary_provider = excluded.primary_provider`,
+  ).run(email.toLowerCase(), primarySub, primaryProvider);
+}
+
+/**
+ * Given a login email, return the primary UserRow if that email is linked to
+ * another account, or null if no link exists (normal login flow).
+ */
+export function resolveLinkedUser(
+  dataDir: string,
+  email: string,
+): UserRow | null {
+  const db = getDb(dataDir);
+  const link = db
+    .prepare("SELECT primary_sub, primary_provider FROM user_email_links WHERE email = ?")
+    .get(email.toLowerCase()) as { primary_sub: string; primary_provider: string } | undefined;
+  if (!link) return null;
+  return (
+    (db
+      .prepare("SELECT * FROM users WHERE sub = ? AND provider = ?")
+      .get(link.primary_sub, link.primary_provider) as UserRow | undefined) ?? null
+  );
 }
 
 /**
@@ -133,3 +185,4 @@ export function setUserRole(
     .run(role, new Date().toISOString(), sub, provider);
   return result.changes > 0;
 }
+
