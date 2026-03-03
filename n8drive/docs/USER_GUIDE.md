@@ -603,7 +603,9 @@ Key variables for PuddleJumper on Fly.io:
 | `SEAL_KMS_URL` | No | External KMS endpoint (defaults to local key store) |
 | `ARCHIEVE_WAL_PATH` | No | Path for ARCHIEVE WAL queue DB (default: `./data/archieve/queue.db`) |
 | `FORMKEY_CONSENT_CACHE_TTL_MS` | No | Consent cache TTL in ms (default: 60000; set 0 to disable) |
-| `FORMKEY_SUBMISSION_RATE_LIMIT` | No | Max submissions/IP/minute/form (default: 10) |
+| `FORMKEY_RATE_LIMIT_MAX` | No | Max form submissions per rate-limit window per IP (default: 10) |
+| `FORMKEY_RATE_LIMIT_WINDOW_MS` | No | Rate limit window duration in milliseconds (default: 60000) |
+| `FORMKEY_SUBMISSION_RATE_LIMIT` | No | **Deprecated** — legacy alias for `FORMKEY_RATE_LIMIT_MAX`; still functional but prefer the new name |
 | `FORMKEY_SEAL_VERIFY_ON_RENDER` | No | Verify SEAL before every render (default: true; never false in production) |
 | `OPENAI_API_KEY` | AXIS | OpenAI provider for AXIS AI chat |
 | `ANTHROPIC_API_KEY` | AXIS | Anthropic provider for AXIS AI chat |
