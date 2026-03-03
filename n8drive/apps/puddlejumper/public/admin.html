@@ -36,7 +36,7 @@
   <button class="tab active" data-tab="queue" onclick="switchTab('queue')">Approval Queue</button>
   <button class="tab" data-tab="chains" onclick="switchTab('chains')">Chain Templates</button>
   <button class="tab" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
-  <button class="tab" data-tab="prr" onclick="switchTab('prr')">PRR</button>
+  <button class="tab" data-tab="prr" onclick="switchTab('prr')">Records</button>
   <button class="tab" data-tab="members" onclick="switchTab('members')">Members</button>
 </div>
 
@@ -174,7 +174,7 @@
 <!-- ── PRR TAB ───────────────────────────────────────────── -->
 <div class="main" id="tab-prr" style="display:none">
   <div class="tbl-header">
-    <h2>Public Records Requests</h2>
+    <h2>Records Requests</h2>
     <div class="tbl-actions">
       <select class="filter-select" id="prr-status-filter" onchange="loadPRRQueue()">
         <option value="">All Status</option>
@@ -189,7 +189,7 @@
 
   <!-- New PRR form -->
   <div class="form-panel" id="prr-form">
-    <div class="form-title">New Public Records Request</div>
+    <div class="form-title">New Records Request</div>
     <div class="form-row"><label>Subject / What records are requested</label><input type="text" id="prr-subject" placeholder="e.g. All emails re: zoning 2024"></div>
     <div class="form-row"><label>Requester Name</label><input type="text" id="prr-name" placeholder="Jane Sullivan"></div>
     <div class="form-row"><label>Requester Email</label><input type="email" id="prr-email" placeholder="jane@example.com"></div>
@@ -207,7 +207,7 @@
       <tbody id="prr-body"><tr class="loading-row"><td colspan="7">Loading…</td></tr></tbody>
     </table>
   </div>
-  <div id="prr-empty" class="empty" style="display:none">No public records requests match this filter</div>
+  <div id="prr-empty" class="empty" style="display:none">No records requests match this filter</div>
 </div>
 
 <!-- ── MEMBERS TAB ──────────────────────────────────────── -->
@@ -283,7 +283,7 @@
 <div class="overlay" id="prr-detail-overlay" onclick="closePRRDetail(event)">
   <div class="panel">
     <div class="panel-head">
-      <h3 class="mono">PRR Detail</h3>
+      <h3 class="mono">Request Detail</h3>
       <button class="panel-close" onclick="closePRRDetailPanel()">✕</button>
     </div>
     <div class="panel-body" id="prr-detail-body">Loading…</div>
@@ -818,7 +818,7 @@ async function loadPRRQueue(){
   try{
     const json=await api(`/api/prr?${params}`);
     if(json.success) renderPRRQueue(json.data.requests);
-  }catch(e){if(e.message!=='Unauthorized')toast('Failed to load PRRs','error')}
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to load requests','error')}
 }
 
 function renderPRRQueue(reqs){
@@ -887,7 +887,7 @@ function renderPRRDetail(prr){
       <textarea id="prr-comment-input" placeholder="Add a comment…" style="width:100%;padding:8px 10px;margin-top:8px;background:var(--bg-3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-family:var(--font);font-size:12px;min-height:70px;resize:vertical"></textarea>
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn btn-primary" onclick="addPRRComment('${prr.id}')">Add Comment</button>
-        <button class="btn btn-danger" onclick="deletePRR('${prr.id}')" style="margin-left:auto">Delete PRR</button>
+        <button class="btn btn-danger" onclick="deletePRR('${prr.id}')" style="margin-left:auto">Delete Request</button>
       </div>
     </div>`;
 }
@@ -918,10 +918,10 @@ async function assignPRR(id){
 }
 
 async function deletePRR(id){
-  if(!confirm('Delete this PRR permanently? This cannot be undone.')) return;
+  if(!confirm('Delete this request permanently? This cannot be undone.')) return;
   try{
     const json=await api(`/api/prr/${encodeURIComponent(id)}`,{method:'DELETE'});
-    if(json.success){toast('PRR deleted','success');closePRRDetailPanel();loadPRRQueue()}
+    if(json.success){toast('Request deleted','success');closePRRDetailPanel();loadPRRQueue()}
     else toast(json.error||'Failed','error');
   }catch(e){if(e.message!=='Unauthorized')toast('Failed to delete','error')}
 }

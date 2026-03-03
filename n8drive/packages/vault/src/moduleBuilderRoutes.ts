@@ -17,6 +17,18 @@ import { z } from "zod";
 import path from "node:path";
 import fs from "node:fs";
 
+const MODULE_CATALOG = [
+  { id: "VAULTPRR", name: "Public Records", dataset: "public-records-requests" },
+  { id: "VAULTCLERK", name: "Clerk", dataset: "agenda-minutes-filings" },
+  { id: "VAULTONBOARD", name: "Onboarding", dataset: "hr-onboarding-workflows" },
+  { id: "VAULTPERMIT", name: "Permits", dataset: "permit-applications" },
+  { id: "VAULTFISCAL", name: "Fiscal", dataset: "ap-ar-fiscal-ops" },
+  { id: "VAULTPROCURE", name: "Procurement", dataset: "procurement-events" },
+  { id: "VAULTINSPECT", name: "Inspections", dataset: "inspection-cases" },
+  { id: "VAULTMEETING", name: "Meetings", dataset: "meeting-lifecycle" },
+  { id: "VAULTER", name: "Emergency", dataset: "incident-response" },
+] as const;
+
 // ── Schema ────────────────────────────────────────────────────────────────────
 
 const CreateSessionSchema = z.object({
@@ -142,6 +154,11 @@ function rowToJson(row: SessionRow) {
 export function createModuleBuilderRouter(dbDir: string): Router {
   const store = new ModuleBuilderStore(path.join(dbDir, "module-builder.db"));
   const router = Router();
+
+  /** GET /api/v1/vault/modules/catalog */
+  router.get("/catalog", (_req, res) => {
+    res.json({ modules: MODULE_CATALOG, count: MODULE_CATALOG.length });
+  });
 
   /** POST /api/v1/vault/modules/sessions */
   router.post("/sessions", (req, res) => {
