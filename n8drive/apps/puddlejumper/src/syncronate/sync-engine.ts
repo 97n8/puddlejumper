@@ -86,6 +86,7 @@ export async function runSyncJob(
   log(ArchieveEventType.SYNCRONATE_SYNC_JOB_STARTED, 'info', { feedId, syncJobId: jobId });
 
   const stats = { ingested: 0, updated: 0, skipped: 0, blocked: 0, transformErrors: 0, delivered: 0, deliveryFailed: 0 };
+  let step = 'fetching';
 
   try {
     // Fetch source records
@@ -96,6 +97,7 @@ export async function runSyncJob(
     const { records, nextCursor: nc } = await fetchSourceRecords(feed, cursor);
     nextCursor = nc;
 
+    step = 'transforming';
     updateJob(db, jobId, { status: 'transforming' });
 
     const readyToWrite: FederationRecord[] = [];
@@ -181,6 +183,7 @@ export async function runSyncJob(
     }
 
     // Deliver to sinks
+    step = 'delivering';
     updateJob(db, jobId, { status: 'delivering', stats });
 
     const rowsForDelivery = readyToWrite.map(r => {
@@ -217,7 +220,7 @@ export async function runSyncJob(
           stats.delivered += documents.length;
           log(ArchieveEventType.SYNCRONATE_PAYLOAD_DELIVERED, 'info', { feedId, syncJobId: jobId, sinkConnectorId: sink.connectorId });
         }
-      } catch (err) {
+      } catch (err: unknown) {
         stats.deliveryFailed++;
         console.error(`[syncronate] sink delivery failed (${sink.connectorId}):`, (err as Error).message);
       }
@@ -234,18 +237,39 @@ export async function runSyncJob(
     const completedEvent = finalStatus === 'partial'
       ? ArchieveEventType.SYNCRONATE_SYNC_JOB_PARTIAL
       : ArchieveEventType.SYNCRONATE_SYNC_JOB_COMPLETED;
-    log(completedEvent, 'info', { feedId, syncJobId: jobId });
+    log(
+      completedEvent,
+      finalStatus === 'partial' ? 'warn' : 'info',
+      {
+        feedId,
+        jobId,
+        syncJobId: jobId,
+        step,
+        reason: finalStatus === 'partial' ? `${stats.deliveryFailed} sink(s) failed delivery` : undefined,
+        recordsDelivered: stats.delivered,
+        recordsFailed: stats.deliveryFailed,
+      },
+    );
 
     return finalJob!;
-  } catch (err) {
-    const errorMsg = (err as Error).message;
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
     const failedJob = updateJob(db, jobId, {
       status: 'failed',
       completedAt: new Date().toISOString(),
       stats,
       error: { message: errorMsg },
     });
-    log(ArchieveEventType.SYNCRONATE_SYNC_JOB_FAILED, 'error', { feedId, syncJobId: jobId, errorMessage: errorMsg });
+    log(ArchieveEventType.SYNCRONATE_SYNC_JOB_FAILED, 'error', {
+      feedId,
+      jobId,
+      syncJobId: jobId,
+      step,
+      reason: errorMsg,
+      errorMessage: errorMsg,
+      recordsDelivered: stats.delivered,
+      recordsFailed: stats.deliveryFailed,
+    });
     return failedJob ?? job;
   }
 }
