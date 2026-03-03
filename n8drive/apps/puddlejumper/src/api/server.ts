@@ -109,6 +109,7 @@ import { initSeal, getSealHealth, createSealRouter } from "../seal/index.js";
 import { initSyncronate, createSyncronateRouter, getSyncronateHealth } from "../syncronate/index.js";
 import { initLogicBridge, createLogicBridgeRouter, getLogicBridgeHealth } from "../logicbridge/index.js";
 import { initFormKey, createFormKeyRouter, getFormKeyHealth } from "../formkey/index.js";
+import { initFiscalDb, createFiscalRoutes } from "../fiscalintel/index.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
@@ -199,6 +200,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   initFormKey(approvalStore.db).catch(err => {
     console.error('[formkey] init error:', (err as Error).message);
   });
+
+  // ── FiscalIntel — MA DLS municipal data connector ─────────────────────
+  initFiscalDb(approvalStore.db);
   
   // ── PolicyProvider: Local or Remote (Vault) ──────────────────────────
   // If VAULT_URL is set, use RemotePolicyProvider to call Vault HTTP service.
@@ -791,6 +795,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/microsoft", createMicrosoftProxyRoutes({ store: connectorStore }));
   app.use("/api/google", createGoogleProxyRoutes({ store: connectorStore }));
   app.use("/api/cloud-save", createCloudSaveRoutes({ store: connectorStore }));
+  app.use("/api/fiscal", createFiscalRoutes(approvalStore.db));
 
   const vaultDbPath = path.resolve(process.env.VAULT_DB_PATH ?? path.join(CONTROLLED_DATA_DIR, "vault.db"));
   const documentRoutes = createDocumentRoutes({ dbPath: vaultDbPath });
