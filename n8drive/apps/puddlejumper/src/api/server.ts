@@ -104,6 +104,7 @@ import { createAxisChatRoutes } from "./routes/axisChatRoutes.js";
 import { createPublicPRRRoutes } from "./routes/publicPrr.js";
 import { createAdminPRRRoutes } from "./routes/prrAdmin.js";
 import { createVaultRoutes } from "./routes/vault.js";
+import { createModuleBuilderRouter } from "./routes/vaultModules.js";
 import { initArchieve, createArchieveRouter, getArchieveQueueDepth } from "../archieve/index.js";
 import { initSeal, getSealHealth, createSealRouter } from "../seal/index.js";
 import { initSyncronate, createSyncronateRouter, getSyncronateHealth } from "../syncronate/index.js";
@@ -842,6 +843,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     dataDir: CONTROLLED_DATA_DIR, 
     vaultUrl: process.env.VAULT_URL 
   }));
+  app.use("/api/v1/vault/modules", createModuleBuilderRouter(CONTROLLED_DATA_DIR));
   app.use("/api/archieve", requireToolAccess("admin"), createArchieveRouter(approvalStore.db));
   app.use("/api/seal", requireToolAccess("admin"), createSealRouter(approvalStore.db));
   app.use("/api/syncronate", requireToolAccess("admin"), createSyncronateRouter(approvalStore.db));
