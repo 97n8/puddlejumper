@@ -32,13 +32,8 @@ export async function initLogicBridge(db: Database.Database, connectorStore?: Co
     // Non-fatal — continue with empty registry
   }
 
-  // Step 4: Init sandbox pool (async, isolated-vm or fallback)
-  try {
-    await initSandboxPool();
-  } catch (err) {
-    console.error('[logicbridge] Sandbox pool init failed:', (err as Error).message);
-    // Non-fatal — will use Node vm fallback
-  }
+  // Step 4: Init sandbox pool (isolated-vm required — throws on failure)
+  await initSandboxPool();
 
   // Step 5: Init explorer
   if (connectorStore) {

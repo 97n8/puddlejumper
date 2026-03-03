@@ -20,6 +20,8 @@ COPY packages/core/package.json packages/core/
 ENV CI=true
 RUN pnpm install --frozen-lockfile
 
+# Verify isolated-vm native addon compiled and is loadable
+RUN cd apps/puddlejumper && node -e "require('isolated-vm'); console.log('isolated-vm OK')"
 # Now copy source (changes here won't bust the install cache)
 COPY . .
 

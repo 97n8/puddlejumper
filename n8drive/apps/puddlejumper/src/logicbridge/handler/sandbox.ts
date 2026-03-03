@@ -10,17 +10,12 @@ let ivmModule: any = null;
 let ivmAvailable = false;
 
 async function tryLoadIvm(): Promise<void> {
-  try {
-    // Use variable to prevent TypeScript from resolving the optional module at compile time
-    const modName = 'isolated-vm';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ivmModule = await (import(/* @vite-ignore */ modName) as Promise<any>);
-    ivmAvailable = true;
-    console.log('[logicbridge/sandbox] isolated-vm loaded successfully');
-  } catch {
-    console.warn('[logicbridge/sandbox] isolated-vm not available — falling back to Node vm.runInNewContext (dev mode)');
-    ivmAvailable = false;
-  }
+  // Use variable to prevent TypeScript from resolving the optional module at compile time
+  const modName = 'isolated-vm';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ivmModule = await (import(/* @vite-ignore */ modName) as Promise<any>);
+  ivmAvailable = true;
+  console.log('[logicbridge/sandbox] isolated-vm loaded successfully');
 }
 
 interface PooledIsolate {
@@ -33,11 +28,6 @@ const pool: PooledIsolate[] = [];
 
 export async function initSandboxPool(): Promise<void> {
   await tryLoadIvm();
-
-  if (!ivmAvailable || !ivmModule) {
-    console.warn('[logicbridge/sandbox] Running without isolated-vm — sandbox isolation is NOT enforced');
-    return;
-  }
 
   const ivm = ivmModule;
   for (let i = 0; i < POOL_SIZE; i++) {
@@ -89,10 +79,7 @@ export async function runInSandbox(opts: SandboxRunOptions): Promise<SandboxRunR
   const { handlerSource, payload, sparkContext, timeoutMs = 30_000 } = opts;
   const start = Date.now();
 
-  if (ivmAvailable && ivmModule && pool.length > 0) {
-    return runInIvm(handlerSource, payload, sparkContext, timeoutMs, start);
-  }
-  return runInNodeVm(handlerSource, payload, sparkContext, timeoutMs, start);
+  return runInIvm(handlerSource, payload, sparkContext, timeoutMs, start);
 }
 
 async function runInIvm(
