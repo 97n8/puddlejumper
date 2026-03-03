@@ -87,7 +87,7 @@ import {
 
 // Route modules
 import { createAuthRoutes } from "./routes/auth.js";
-import { upsertUser } from "./userStore.js";
+import { upsertUser, setUserRole } from "./userStore.js";
 import { createConfigRoutes } from "./routes/config.js";
 import { createPrrRoutes } from "./routes/prr.js";
 import { createAccessRoutes } from "./routes/access.js";
@@ -702,6 +702,16 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       name: userInfo.name,
       provider: userInfo.provider,
     });
+
+    // Auto-promote to admin if the user's email is in the ADMIN_EMAILS allowlist
+    const adminEmails = (process.env.ADMIN_EMAILS ?? '')
+      .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    if (adminEmails.length > 0 && userInfo.email && adminEmails.includes(userInfo.email.toLowerCase())) {
+      if (row.role !== 'admin') {
+        setUserRole(CONTROLLED_DATA_DIR, row.sub, row.provider, 'admin');
+        row.role = 'admin';
+      }
+    }
     // Ensure personal workspace exists — use row.sub (OAuth subject) as the
     // stable user identifier so auth.sub always matches workspace.owner_id
     const ws = ensurePersonalWorkspace(CONTROLLED_DATA_DIR, row.sub, row.name || row.sub);
