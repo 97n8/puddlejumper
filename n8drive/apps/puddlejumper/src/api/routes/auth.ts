@@ -177,5 +177,21 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
     });
   });
 
+  // GET /api/v1/auth/whoami — auth smoke test: returns decoded token claims
+  router.get("/v1/auth/whoami", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    if (!auth) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const claims = auth as typeof auth & { exp?: number; userId?: string; workspaceId?: string; permissions?: string[] };
+    const tokenExpiresAt = claims.exp ? new Date(claims.exp * 1000).toISOString() : null;
+    res.json({
+      userId: auth.sub ?? claims.userId ?? null,
+      tenantId: auth.tenantId ?? null,
+      workspaceId: claims.workspaceId ?? auth.tenantId ?? null,
+      role: auth.role ?? null,
+      permissions: claims.permissions ?? [],
+      tokenExpiresAt,
+    });
+  });
+
   return router;
 }
