@@ -37,13 +37,17 @@ function getUserId(req: Request): string {
 // Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
 
+// FormKey submit rate limit: 10 requests per 60000ms per IP (defaults)
+// Rationale: prevents form spam; increase via FORMKEY_RATE_LIMIT_MAX env var if needed
+// Window duration is configurable via FORMKEY_RATE_LIMIT_WINDOW_MS env var
 function checkRateLimit(ip: string, formId: string): boolean {
-  const limit = parseInt(process.env.FORMKEY_SUBMISSION_RATE_LIMIT ?? '10', 10);
+  const limit = parseInt(process.env.FORMKEY_RATE_LIMIT_MAX ?? process.env.FORMKEY_SUBMISSION_RATE_LIMIT ?? '10', 10);
+  const windowMs = parseInt(process.env.FORMKEY_RATE_LIMIT_WINDOW_MS ?? '60000', 10);
   const key = `${ip}:${formId}`;
   const now = Date.now();
   const entry = rateLimitMap.get(key);
 
-  if (!entry || now - entry.windowStart > 60000) {
+  if (!entry || now - entry.windowStart > windowMs) {
     rateLimitMap.set(key, { count: 1, windowStart: now });
     return true;
   }

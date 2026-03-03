@@ -237,8 +237,8 @@ export async function runSyncJob(
     log(completedEvent, 'info', { feedId, syncJobId: jobId });
 
     return finalJob!;
-  } catch (err) {
-    const errorMsg = (err as Error).message;
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
     const failedJob = updateJob(db, jobId, {
       status: 'failed',
       completedAt: new Date().toISOString(),

@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import { initDefinitionStore } from './registry/definition-store.js';
 import { loadRegistryFromDb, countRegistered, countSuspended } from './registry/registry-publisher.js';
-import { initSandboxPool, getSandboxPoolInfo } from './handler/sandbox.js';
+import { initSandboxPool, getSandboxPoolInfo, isIvmAvailable } from './handler/sandbox.js';
 import { initSparkKv } from './spark/kv.js';
 import { startReconciler } from './registry/reconciler.js';
 import type { LogicBridgeHealth } from './types.js';
@@ -57,9 +57,10 @@ export function getLogicBridgeHealth(): LogicBridgeHealth {
     const { poolSize, available } = getSandboxPoolInfo();
     const connectorsRegistered = countRegistered();
     const suspendedConnectors = countSuspended();
+    const isolatedVm = isIvmAvailable();
 
     const status: LogicBridgeHealth['status'] =
-      connectorsRegistered >= 0 ? 'ok' : 'degraded';
+      !isolatedVm ? 'degraded' : connectorsRegistered >= 0 ? 'ok' : 'degraded';
 
     return {
       status,
@@ -67,6 +68,7 @@ export function getLogicBridgeHealth(): LogicBridgeHealth {
       suspendedConnectors,
       sandboxPoolSize: poolSize,
       sandboxAvailable: available,
+      isolatedVm,
     };
   } catch {
     return {
@@ -75,6 +77,7 @@ export function getLogicBridgeHealth(): LogicBridgeHealth {
       suspendedConnectors: 0,
       sandboxPoolSize: 0,
       sandboxAvailable: 0,
+      isolatedVm: false,
     };
   }
 }

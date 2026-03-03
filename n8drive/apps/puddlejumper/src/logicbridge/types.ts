@@ -86,6 +86,7 @@ export interface LogicBridgeHealth {
   suspendedConnectors: number;
   sandboxPoolSize: number;
   sandboxAvailable: number;
+  isolatedVm: boolean;
 }
 
 export interface ExecuteRequest {

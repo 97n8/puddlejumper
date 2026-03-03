@@ -156,6 +156,17 @@ export async function runInterceptor(
 
   if (sandboxResult.error && !sandboxResult.output) {
     recordFailure(connectorId);
+    try {
+      archieveLog({
+        requestId,
+        tenantId,
+        module: 'LOGICBRIDGE',
+        eventType: 'LOGICBRIDGE_RUN_ERROR',
+        actor: { userId: req.userId ?? 'system', sessionId: 'system', role: 'system' },
+        severity: 'error',
+        data: { connectorId, gate: 'sandbox', reason: sandboxResult.error },
+      });
+    } catch { /* never throw */ }
     return { success: false, output: null, durationMs: Date.now() - start, error: sandboxResult.error };
   }
 

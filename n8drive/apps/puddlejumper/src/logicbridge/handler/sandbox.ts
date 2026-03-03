@@ -17,10 +17,19 @@ async function tryLoadIvm(): Promise<void> {
     ivmModule = await (import(/* @vite-ignore */ modName) as Promise<any>);
     ivmAvailable = true;
     console.log('[logicbridge/sandbox] isolated-vm loaded successfully');
-  } catch {
+  } catch (err: unknown) {
+    if (process.env.NODE_ENV === 'production') {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[logicbridge/sandbox] CRITICAL: isolated-vm failed to load in production — sandboxing is required. ${msg}`);
+      throw new Error(`isolated-vm is required in production but failed to load: ${msg}`);
+    }
     console.warn('[logicbridge/sandbox] isolated-vm not available — falling back to Node vm.runInNewContext (dev mode)');
     ivmAvailable = false;
   }
+}
+
+export function isIvmAvailable(): boolean {
+  return ivmAvailable;
 }
 
 interface PooledIsolate {
@@ -183,6 +192,10 @@ function buildSerializableSparkContext(sparkContext: Record<string, unknown>): R
   return safe;
 }
 
+// DEVELOPMENT ONLY — NOT SAFE FOR PRODUCTION
+// This fallback uses Node's built-in vm module which provides NO memory isolation,
+// NO CPU limits, and NO protection against prototype pollution or host object access.
+// In production, isolated-vm must be available or startup will fail.
 async function runInNodeVm(
   handlerSource: string,
   payload: Record<string, unknown>,
