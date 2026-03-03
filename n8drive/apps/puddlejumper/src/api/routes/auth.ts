@@ -182,15 +182,15 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
   router.get("/v1/auth/whoami", requireAuthenticated(), (req, res) => {
     const auth = getAuthContext(req);
     if (!auth) { res.status(401).json({ error: "Unauthorized" }); return; }
-    const tokenExpiresAt = (auth as any).exp
-      ? new Date((auth as any).exp * 1000).toISOString()
-      : null;
+    // Cast once to access optional JWT claims not in the base AuthContext type
+    const claims = auth as typeof auth & { exp?: number; userId?: string; workspaceId?: string; permissions?: string[] };
+    const tokenExpiresAt = claims.exp ? new Date(claims.exp * 1000).toISOString() : null;
     res.json({
-      userId: auth.sub ?? (auth as any).userId ?? null,
+      userId: auth.sub ?? claims.userId ?? null,
       tenantId: auth.tenantId ?? null,
-      workspaceId: (auth as any).workspaceId ?? auth.tenantId ?? null,
+      workspaceId: claims.workspaceId ?? auth.tenantId ?? null,
       role: auth.role ?? null,
-      permissions: (auth as any).permissions ?? [],
+      permissions: claims.permissions ?? [],
       tokenExpiresAt,
     });
   });
