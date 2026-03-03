@@ -74,8 +74,8 @@ async function req(
     headers: {
       "Content-Type": "application/json",
       Cookie: cookieHeader(),
-      // CSRF bypass: PJ checks X-Requested-With for same-origin API calls
-      "X-Requested-With": "XMLHttpRequest",
+      // CSRF header required by PuddleJumper for mutating requests (POST/PUT/PATCH/DELETE)
+      "x-puddlejumper-request": "true",
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
     redirect: "manual",
