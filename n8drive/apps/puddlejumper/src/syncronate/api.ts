@@ -5,7 +5,7 @@ import { getAuthContext, createJwtAuthenticationMiddleware } from '@publiclogic/
 import { createFeed, getFeed, updateFeed, listFeeds, setFeedStatus } from './feed-store.js';
 import { createJob, getJob, listJobs, listJobsForTenant, countJobsToday } from './job-store.js';
 import { listRecords, getRecord, tombstoneRecord, countRecordsIngested } from './record-store.js';
-import { runSyncJob, scheduleFeed } from './sync-engine.js';
+import { runSyncJob, scheduleFeed, getSyncronateHealth } from './sync-engine.js';
 import { verifyWebhookSignature, getWebhookSecretForFeed } from './connectors/polimorphic.js';
 import { log as archieveLog } from '../archieve/logger.js';
 import { ArchieveEventType } from '../archieve/event-catalog.js';
@@ -19,6 +19,16 @@ function safeLog(event: Parameters<typeof archieveLog>[0]): void {
 }
 
 function reqId() { return crypto.randomUUID(); }
+
+/** Send a successful response with a consistent envelope. */
+function sendOk(res: Response, data: unknown, correlationId: string, status = 200): void {
+  res.status(status).json({ success: true, correlationId, data });
+}
+
+/** Send an error response with a consistent envelope and a friendly user-facing message. */
+function sendErr(res: Response, status: number, message: string, correlationId: string, code?: string): void {
+  res.status(status).json({ success: false, correlationId, error: { message, ...(code ? { code } : {}) } });
+}
 
 const AVAILABLE_CONNECTORS: ConnectorMetadata[] = [
   {
@@ -62,11 +72,27 @@ export function createSyncronateRouter(db: Database.Database): Router {
   const router = express.Router();
   const authMiddleware = createJwtAuthenticationMiddleware();
 
+  // ── System health (no JWT required — safe to expose under requireToolAccess) ──
+  router.get('/health', (_req, res) => {
+    const cid = reqId();
+    const health = getSyncronateHealth(db);
+    sendOk(res, {
+      status: health.status,
+      message: health.status === 'ok'
+        ? 'Syncron8 is running normally.'
+        : 'Syncron8 is running but some things need attention. Check active feeds and running jobs.',
+      activeFeeds: health.activeFeeds,
+      jobsRunning: health.jobsRunning,
+      timestamp: new Date().toISOString(),
+    }, cid);
+  });
+
   // ── Polimorphic webhook (no JWT — HMAC is auth) ──
   router.post(
     '/polimorphic/webhook',
     express.raw({ type: 'application/json' }),
     async (req: Request, res: Response) => {
+      const cid = reqId();
       const body = req.body as Buffer;
       const signature = (req.headers['x-polimorphic-signature'] ?? req.headers['x-hub-signature-256'] ?? '') as string;
 
@@ -75,19 +101,19 @@ export function createSyncronateRouter(db: Database.Database): Router {
       const feed = rows.map(r => JSON.parse(r.feed_json) as FeedDef).find(f => f.source.type === 'polimorphic');
 
       if (!feed) {
-        res.status(404).json({ error: 'No active Polimorphic feed found' });
+        sendErr(res, 404, 'No active data feed is set up to receive webhook events right now.', cid, 'FEED_NOT_FOUND');
         return;
       }
 
       const secret = getWebhookSecretForFeed(feed);
       if (!secret || !verifyWebhookSignature(body, signature, secret)) {
         safeLog({
-          requestId: reqId(), tenantId: feed.tenantId, module: 'SYNCRONATE',
+          requestId: cid, tenantId: feed.tenantId, module: 'SYNCRONATE',
           eventType: ArchieveEventType.SYNCRONATE_WEBHOOK_SIGNATURE_INVALID,
           actor: SYSTEM_ACTOR, severity: 'warn',
           data: { feedId: feed.feedId, sourceConnectorId: feed.source.connectorId },
         });
-        res.status(401).json({ error: 'Invalid webhook signature' });
+        sendErr(res, 401, 'The webhook signature could not be verified. Please check your secret configuration.', cid, 'SIGNATURE_INVALID');
         return;
       }
 
@@ -95,12 +121,12 @@ export function createSyncronateRouter(db: Database.Database): Router {
       try {
         event = JSON.parse(body.toString('utf-8'));
       } catch {
-        res.status(400).json({ error: 'Invalid JSON body' });
+        sendErr(res, 400, 'The request body could not be read. Please send valid JSON.', cid, 'INVALID_BODY');
         return;
       }
 
       safeLog({
-        requestId: reqId(), tenantId: feed.tenantId, module: 'SYNCRONATE',
+        requestId: cid, tenantId: feed.tenantId, module: 'SYNCRONATE',
         eventType: ArchieveEventType.SYNCRONATE_WEBHOOK_RECEIVED,
         actor: SYSTEM_ACTOR, severity: 'info',
         data: { feedId: feed.feedId, eventType: event.eventType ?? 'unknown' },
@@ -111,13 +137,14 @@ export function createSyncronateRouter(db: Database.Database): Router {
         console.error('[syncronate] webhook-triggered sync failed:', err)
       );
 
-      res.json({ status: 'accepted' });
+      sendOk(res, { status: 'accepted', message: 'Webhook received. A sync has been queued.' }, cid);
     }
   );
 
   // Polimorphic webhook health (no auth)
   router.get('/polimorphic/webhook/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    const cid = reqId();
+    sendOk(res, { status: 'ok', timestamp: new Date().toISOString() }, cid);
   });
 
   // ── All other routes require JWT ──
@@ -144,8 +171,9 @@ export function createSyncronateRouter(db: Database.Database): Router {
 
   // ── Dashboard ──
   router.get('/dashboard', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
 
     try {
       const activeFeeds = (db.prepare(`SELECT COUNT(*) as cnt FROM syncronate_feeds WHERE tenant_id = ? AND status = 'active'`).get(tenantId) as { cnt: number }).cnt;
@@ -155,28 +183,31 @@ export function createSyncronateRouter(db: Database.Database): Router {
         `SELECT COUNT(*) as cnt FROM syncronate_jobs WHERE tenant_id = ? AND stats_json LIKE '%"blocked"%'`
       ).get(tenantId) as { cnt: number }).cnt;
       const recentJobs = listJobsForTenant(db, tenantId, 10);
-      res.json({ activeFeeds, jobsToday, recordsIngested, dlpBlocks, recentJobs });
+      sendOk(res, { activeFeeds, jobsToday, recordsIngested, dlpBlocks, recentJobs }, cid);
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      console.error('[syncronate] dashboard error:', (err as Error).message);
+      sendErr(res, 500, 'Could not load dashboard data. Please try again in a moment.', cid, 'DASHBOARD_ERROR');
     }
   });
 
   // ── Connectors list ──
   router.get('/connectors', (_req, res) => {
-    res.json({ connectors: AVAILABLE_CONNECTORS });
+    const cid = reqId();
+    sendOk(res, { connectors: AVAILABLE_CONNECTORS }, cid);
   });
 
   // ── Feed Management ──
 
   // POST /api/syncronate/feeds — create FeedDef
   router.post('/feeds', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
 
     try {
       const body = req.body as Partial<FeedDef>;
       if (!body.displayName || !body.source || !body.sinks || !body.fieldMap) {
-        res.status(400).json({ error: 'Missing required fields: displayName, source, sinks, fieldMap' });
+        sendErr(res, 400, 'Please provide all required fields: displayName, source, sinks, and fieldMap.', cid, 'MISSING_FIELDS');
         return;
       }
       const feed = createFeed(db, {
@@ -188,63 +219,70 @@ export function createSyncronateRouter(db: Database.Database): Router {
         syncConfig: body.syncConfig ?? {},
       });
       safeLog({
-        requestId: reqId(), tenantId, module: 'SYNCRONATE',
+        requestId: cid, tenantId, module: 'SYNCRONATE',
         eventType: ArchieveEventType.SYNCRONATE_FEED_CREATED,
         actor: actorFrom(req), severity: 'info',
         data: { feedId: feed.feedId },
       });
-      res.status(201).json(feed);
+      sendOk(res, feed, cid, 201);
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      console.error('[syncronate] create feed error:', (err as Error).message);
+      sendErr(res, 500, 'The feed could not be created. Please try again or contact support.', cid, 'CREATE_FEED_ERROR');
     }
   });
 
   // GET /api/syncronate/feeds — list feeds
   router.get('/feeds', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     try {
       const feeds = listFeeds(db, tenantId);
-      res.json({ feeds });
+      sendOk(res, { feeds }, cid);
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      console.error('[syncronate] list feeds error:', (err as Error).message);
+      sendErr(res, 500, 'Could not retrieve feeds. Please try again in a moment.', cid, 'LIST_FEEDS_ERROR');
     }
   });
 
   // GET /api/syncronate/feeds/:feedId — get feed detail
   router.get('/feeds/:feedId', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const feed = getFeed(db, req.params.feedId);
-    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
-    res.json(feed);
+    if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found. It may have been removed or the ID is incorrect.', cid, 'FEED_NOT_FOUND'); return; }
+    sendOk(res, feed, cid);
   });
 
   // PATCH /api/syncronate/feeds/:feedId — update draft FeedDef
   router.patch('/feeds/:feedId', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const feed = getFeed(db, req.params.feedId);
-    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
-    if (feed.status !== 'draft') { res.status(409).json({ error: 'Can only update draft feeds' }); return; }
+    if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found. It may have been removed or the ID is incorrect.', cid, 'FEED_NOT_FOUND'); return; }
+    if (feed.status !== 'draft') { sendErr(res, 409, 'Only feeds in "draft" status can be edited. Pause the feed first if you need to make changes.', cid, 'FEED_NOT_DRAFT'); return; }
     try {
       const updated = updateFeed(db, req.params.feedId, req.body as Partial<FeedDef>);
-      res.json(updated);
+      sendOk(res, updated, cid);
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      console.error('[syncronate] update feed error:', (err as Error).message);
+      sendErr(res, 500, 'The feed could not be updated. Please try again or contact support.', cid, 'UPDATE_FEED_ERROR');
     }
   });
 
   // POST /api/syncronate/feeds/:feedId/activate
   router.post('/feeds/:feedId/activate', async (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const feed = getFeed(db, req.params.feedId);
-    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found. It may have been removed or the ID is incorrect.', cid, 'FEED_NOT_FOUND'); return; }
     try {
       const updated = setFeedStatus(db, req.params.feedId, 'active');
       safeLog({
-        requestId: reqId(), tenantId, module: 'SYNCRONATE',
+        requestId: cid, tenantId, module: 'SYNCRONATE',
         eventType: ArchieveEventType.SYNCRONATE_FEED_ACTIVATED,
         actor: actorFrom(req), severity: 'info',
         data: { feedId: req.params.feedId, tenantId },
@@ -252,37 +290,74 @@ export function createSyncronateRouter(db: Database.Database): Router {
       if (updated?.syncConfig.scheduleExpression) {
         scheduleFeed(updated, db);
       }
-      res.json(updated);
+      sendOk(res, updated, cid);
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      console.error('[syncronate] activate feed error:', (err as Error).message);
+      sendErr(res, 500, 'The feed could not be activated. Please try again or contact support.', cid, 'ACTIVATE_FEED_ERROR');
     }
   });
 
   // POST /api/syncronate/feeds/:feedId/pause
   router.post('/feeds/:feedId/pause', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const feed = getFeed(db, req.params.feedId);
-    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found. It may have been removed or the ID is incorrect.', cid, 'FEED_NOT_FOUND'); return; }
     try {
       const updated = setFeedStatus(db, req.params.feedId, 'paused');
-      res.json(updated);
+      sendOk(res, updated, cid);
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      console.error('[syncronate] pause feed error:', (err as Error).message);
+      sendErr(res, 500, 'The feed could not be paused. Please try again or contact support.', cid, 'PAUSE_FEED_ERROR');
     }
   });
 
   // POST /api/syncronate/feeds/:feedId/retire
   router.post('/feeds/:feedId/retire', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const feed = getFeed(db, req.params.feedId);
-    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found. It may have been removed or the ID is incorrect.', cid, 'FEED_NOT_FOUND'); return; }
     try {
       const updated = setFeedStatus(db, req.params.feedId, 'retired');
-      res.json(updated);
+      sendOk(res, updated, cid);
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      console.error('[syncronate] retire feed error:', (err as Error).message);
+      sendErr(res, 500, 'The feed could not be retired. Please try again or contact support.', cid, 'RETIRE_FEED_ERROR');
+    }
+  });
+
+  // ── Feed Status ──
+
+  // GET /api/syncronate/feeds/:feedId/status — human-friendly feed status summary
+  router.get('/feeds/:feedId/status', (req: Request, res: Response) => {
+    const cid = reqId();
+    const tenantId = getTenantId(req);
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
+    const feed = getFeed(db, req.params.feedId);
+    if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found. It may have been removed or the ID is incorrect.', cid, 'FEED_NOT_FOUND'); return; }
+
+    try {
+      const jobs = listJobs(db, req.params.feedId);
+      const lastJob = jobs[0] ?? null;
+      const runningStatuses = new Set(['queued', 'running', 'transforming', 'writing', 'delivering']);
+      const syncRunning = lastJob ? runningStatuses.has(lastJob.status) : false;
+
+      sendOk(res, {
+        feedId: feed.feedId,
+        displayName: feed.displayName,
+        status: feed.status,
+        lastSyncAt: feed.lastSyncAt ?? null,
+        syncRunning,
+        lastJobResult: lastJob
+          ? { jobId: lastJob.jobId, status: lastJob.status, completedAt: lastJob.completedAt ?? null, stats: lastJob.stats }
+          : null,
+      }, cid);
+    } catch (err) {
+      console.error('[syncronate] feed status error:', (err as Error).message);
+      sendErr(res, 500, 'Could not retrieve feed status. Please try again in a moment.', cid, 'FEED_STATUS_ERROR');
     }
   });
 
@@ -290,16 +365,17 @@ export function createSyncronateRouter(db: Database.Database): Router {
 
   // POST /api/syncronate/feeds/:feedId/sync — manual trigger
   router.post('/feeds/:feedId/sync', async (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const feed = getFeed(db, req.params.feedId);
-    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
-    if (feed.status !== 'active') { res.status(409).json({ error: 'Feed must be active to sync' }); return; }
+    if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found. It may have been removed or the ID is incorrect.', cid, 'FEED_NOT_FOUND'); return; }
+    if (feed.status !== 'active') { sendErr(res, 409, 'This feed is not active. Please activate it before starting a sync.', cid, 'FEED_NOT_ACTIVE'); return; }
 
     // Create job immediately and respond; run async
     const job = createJob(db, feed.feedId, tenantId, 'manual');
     safeLog({
-      requestId: reqId(), tenantId, module: 'SYNCRONATE',
+      requestId: cid, tenantId, module: 'SYNCRONATE',
       eventType: ArchieveEventType.SYNCRONATE_SYNC_STARTED,
       actor: actorFrom(req), severity: 'info',
       data: { feedId: feed.feedId },
@@ -309,105 +385,113 @@ export function createSyncronateRouter(db: Database.Database): Router {
       console.error('[syncronate] manual sync failed:', err)
     );
 
-    res.status(202).json({ jobId: job.jobId, status: 'queued' });
+    sendOk(res, { jobId: job.jobId, status: 'queued', message: 'Sync started. You can track progress via the job status endpoint.' }, cid, 202);
   });
 
   // GET /api/syncronate/feeds/:feedId/jobs — list jobs
   router.get('/feeds/:feedId/jobs', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const feed = getFeed(db, req.params.feedId);
-    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found. It may have been removed or the ID is incorrect.', cid, 'FEED_NOT_FOUND'); return; }
     const status = req.query.status as string | undefined;
     const jobs = listJobs(db, req.params.feedId, status ? { status } : undefined);
-    res.json({ jobs });
+    sendOk(res, { jobs }, cid);
   });
 
   // GET /api/syncronate/feeds/:feedId/jobs/:jobId — job detail
   router.get('/feeds/:feedId/jobs/:jobId', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const job = getJob(db, req.params.jobId);
     if (!job || job.tenantId !== tenantId || job.feedId !== req.params.feedId) {
-      res.status(404).json({ error: 'Job not found' }); return;
+      sendErr(res, 404, 'Sync job not found. It may have been removed or the ID is incorrect.', cid, 'JOB_NOT_FOUND'); return;
     }
-    res.json(job);
+    sendOk(res, job, cid);
   });
 
   // POST /api/syncronate/feeds/:feedId/jobs/:jobId/retry-sinks
   router.post('/feeds/:feedId/jobs/:jobId/retry-sinks', async (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const job = getJob(db, req.params.jobId);
-    if (!job || job.tenantId !== tenantId) { res.status(404).json({ error: 'Job not found' }); return; }
+    if (!job || job.tenantId !== tenantId) { sendErr(res, 404, 'Sync job not found. It may have been removed or the ID is incorrect.', cid, 'JOB_NOT_FOUND'); return; }
 
     const newJob = createJob(db, job.feedId, tenantId, 'manual');
     runSyncJob(job.feedId, 'manual', db).catch(err =>
       console.error('[syncronate] retry-sinks failed:', err)
     );
-    res.status(202).json({ jobId: newJob.jobId, status: 'queued' });
+    sendOk(res, { jobId: newJob.jobId, status: 'queued', message: 'Retry started. Delivery to destinations will be reattempted.' }, cid, 202);
   });
 
   // POST /api/syncronate/feeds/:feedId/jobs/:jobId/cancel
   router.post('/feeds/:feedId/jobs/:jobId/cancel', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const { updateJob } = require('./job-store.js');
     const job = getJob(db, req.params.jobId);
-    if (!job || job.tenantId !== tenantId) { res.status(404).json({ error: 'Job not found' }); return; }
+    if (!job || job.tenantId !== tenantId) { sendErr(res, 404, 'Sync job not found. It may have been removed or the ID is incorrect.', cid, 'JOB_NOT_FOUND'); return; }
     if (job.status === 'completed' || job.status === 'failed') {
-      res.status(409).json({ error: 'Job already finished' }); return;
+      sendErr(res, 409, 'This job has already finished and cannot be cancelled.', cid, 'JOB_ALREADY_FINISHED'); return;
     }
     const updated = updateJob(db, req.params.jobId, { status: 'failed', completedAt: new Date().toISOString(), error: { message: 'Cancelled by user' } });
-    res.json(updated);
+    sendOk(res, updated, cid);
   });
 
   // ── Federation Records ──
 
   // GET /api/syncronate/feeds/:feedId/records — list records
   router.get('/feeds/:feedId/records', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const feed = getFeed(db, req.params.feedId);
-    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found. It may have been removed or the ID is incorrect.', cid, 'FEED_NOT_FOUND'); return; }
     const limit = parseInt(req.query.limit as string ?? '100', 10);
     const offset = parseInt(req.query.offset as string ?? '0', 10);
     const records = listRecords(db, req.params.feedId, {}, { limit, offset });
-    res.json({ records });
+    sendOk(res, { records }, cid);
   });
 
   // GET /api/syncronate/feeds/:feedId/records/:recordId — get record
   router.get('/feeds/:feedId/records/:recordId', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const record = getRecord(db, req.params.recordId);
     if (!record || record.tenantId !== tenantId || record.feedId !== req.params.feedId) {
-      res.status(404).json({ error: 'Record not found' }); return;
+      sendErr(res, 404, 'Record not found. It may have been removed or the ID is incorrect.', cid, 'RECORD_NOT_FOUND'); return;
     }
-    res.json(record);
+    sendOk(res, record, cid);
   });
 
   // DELETE /api/syncronate/feeds/:feedId/records/:recordId — tombstone
   router.delete('/feeds/:feedId/records/:recordId', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const record = getRecord(db, req.params.recordId);
     if (!record || record.tenantId !== tenantId || record.feedId !== req.params.feedId) {
-      res.status(404).json({ error: 'Record not found' }); return;
+      sendErr(res, 404, 'Record not found. It may have been removed or the ID is incorrect.', cid, 'RECORD_NOT_FOUND'); return;
     }
-    const ok = tombstoneRecord(db, req.params.recordId);
-    if (!ok) { res.status(500).json({ error: 'Tombstone failed' }); return; }
-    res.json({ status: 'tombstoned', recordId: req.params.recordId });
+    const removed = tombstoneRecord(db, req.params.recordId);
+    if (!removed) { sendErr(res, 500, 'The record could not be removed at this time. Please try again.', cid, 'TOMBSTONE_ERROR'); return; }
+    sendOk(res, { status: 'tombstoned', recordId: req.params.recordId }, cid);
   });
 
   // ── Audit ──
 
-  // GET /api/syncronate/feeds/:feedId/audit — ARCHIEVE stream for feed
+  // GET /api/syncronate/feeds/:feedId/audit — activity log for this feed
   router.get('/feeds/:feedId/audit', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const feed = getFeed(db, req.params.feedId);
-    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found. It may have been removed or the ID is incorrect.', cid, 'FEED_NOT_FOUND'); return; }
 
     try {
       const rows = db.prepare(
@@ -416,32 +500,34 @@ export function createSyncronateRouter(db: Database.Database): Router {
          ORDER BY chain_pos DESC LIMIT 100`
       ).all(tenantId, `%"feedId":"${req.params.feedId}"%`) as { event_json: string }[];
       const events = rows.map(r => JSON.parse(r.event_json));
-      res.json({ events });
+      sendOk(res, { events }, cid);
     } catch {
-      res.json({ events: [] });
+      sendOk(res, { events: [] }, cid);
     }
   });
 
-  // GET /api/syncronate/feeds/:feedId/dlp-report — DLP action summary
+  // GET /api/syncronate/feeds/:feedId/dlp-report — data protection summary
   router.get('/feeds/:feedId/dlp-report', (req: Request, res: Response) => {
+    const cid = reqId();
     const tenantId = getTenantId(req);
-    if (!tenantId) { res.status(403).json({ error: 'Tenant not resolvable' }); return; }
+    if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const feed = getFeed(db, req.params.feedId);
-    if (!feed || feed.tenantId !== tenantId) { res.status(404).json({ error: 'Feed not found' }); return; }
+    if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found. It may have been removed or the ID is incorrect.', cid, 'FEED_NOT_FOUND'); return; }
 
     try {
       const jobs = listJobs(db, req.params.feedId);
       const totalBlocked = jobs.reduce((acc, j) => acc + (j.stats.blocked ?? 0), 0);
       const totalIngested = jobs.reduce((acc, j) => acc + (j.stats.ingested ?? 0), 0);
-      res.json({
+      sendOk(res, {
         feedId: req.params.feedId,
         totalBlocked,
         totalIngested,
         blockRate: totalIngested > 0 ? totalBlocked / totalIngested : 0,
         jobs: jobs.length,
-      });
+      }, cid);
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      console.error('[syncronate] dlp-report error:', (err as Error).message);
+      sendErr(res, 500, 'Could not retrieve the data protection report. Please try again in a moment.', cid, 'DLP_REPORT_ERROR');
     }
   });
 
