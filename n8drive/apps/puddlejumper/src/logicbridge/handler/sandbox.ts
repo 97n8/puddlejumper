@@ -41,10 +41,10 @@ export async function initSandboxPool(): Promise<void> {
   console.log(`[logicbridge/sandbox] pool initialized: ${pool.length}/${POOL_SIZE} isolates`);
 }
 
-export function getSandboxPoolInfo(): { poolSize: number; available: number } {
-  if (!ivmAvailable) return { poolSize: 0, available: 0 };
+export function getSandboxPoolInfo(): { poolSize: number; available: number; isolatedVmActive: boolean } {
+  if (!ivmAvailable) return { poolSize: 0, available: 0, isolatedVmActive: false };
   const available = pool.filter(p => !p.inUse).length;
-  return { poolSize: pool.length, available };
+  return { poolSize: pool.length, available, isolatedVmActive: true };
 }
 
 function acquireIsolate(): PooledIsolate | null {

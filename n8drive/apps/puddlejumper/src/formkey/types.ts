@@ -156,6 +156,7 @@ export interface FormKeyHealth {
   formsRegistered: number;
   suspendedForms: number;
   intakeRecords?: number;
+  submissionRateLimitPerMinute: number;
 }
 
 // Error classes

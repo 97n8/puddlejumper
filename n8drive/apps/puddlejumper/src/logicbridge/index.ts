@@ -49,7 +49,7 @@ export async function initLogicBridge(db: Database.Database, connectorStore?: Co
 
 export function getLogicBridgeHealth(): LogicBridgeHealth {
   try {
-    const { poolSize, available } = getSandboxPoolInfo();
+    const { poolSize, available, isolatedVmActive } = getSandboxPoolInfo();
     const connectorsRegistered = countRegistered();
     const suspendedConnectors = countSuspended();
 
@@ -58,6 +58,7 @@ export function getLogicBridgeHealth(): LogicBridgeHealth {
 
     return {
       status,
+      isolatedVm: isolatedVmActive,
       connectorsRegistered,
       suspendedConnectors,
       sandboxPoolSize: poolSize,
@@ -66,6 +67,7 @@ export function getLogicBridgeHealth(): LogicBridgeHealth {
   } catch {
     return {
       status: 'error',
+      isolatedVm: false,
       connectorsRegistered: 0,
       suspendedConnectors: 0,
       sandboxPoolSize: 0,

@@ -111,6 +111,7 @@ export function getFormKeyHealth(): FormKeyHealth {
     status: _suspendedForms > 0 ? 'degraded' : 'ok',
     formsRegistered: _formsRegistered,
     suspendedForms: _suspendedForms,
+    submissionRateLimitPerMinute: parseInt(process.env.FORMKEY_SUBMISSION_RATE_LIMIT ?? '10', 10),
   };
 }
 

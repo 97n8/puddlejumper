@@ -82,6 +82,7 @@ export interface CircuitBreakerState {
 
 export interface LogicBridgeHealth {
   status: 'ok' | 'degraded' | 'error';
+  isolatedVm: boolean;
   connectorsRegistered: number;
   suspendedConnectors: number;
   sandboxPoolSize: number;
