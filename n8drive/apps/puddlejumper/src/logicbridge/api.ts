@@ -12,6 +12,7 @@ import { runInterceptor } from './handler/interceptor.js';
 import { createExplorerRouter } from './explorer/router.js';
 import { log as archieveLog } from '../archieve/logger.js';
 import { encryptHandler } from './handler/encryptor.js';
+import { createSparkKv } from './spark/kv.js';
 
 export function createLogicBridgeRouter(): Router {
   const router = Router();
@@ -271,6 +272,65 @@ export function createLogicBridgeRouter(): Router {
       }
     }
     res.json({ entries, total: entries.length });
+  });
+
+  // ── Connector KV store — credential management ────────────────────────
+  // Credentials are stored per-connector in the Spark KV store (SQLite).
+  // Values are write-only from the UI perspective: GET returns key names only.
+
+  // GET /api/logicbridge/connectors/:id/kv — list credential keys (no values)
+  router.get('/connectors/:id/kv', (req: Request, res: Response) => {
+    const { id } = req.params;
+    const tenantId = getTenantId(req);
+    const def = getDefinitionById(id);
+    if (!def) { res.status(404).json({ error: 'Connector not found' }); return; }
+    try {
+      const kv = createSparkKv(tenantId, id);
+      kv.list().then(keys => res.json({ keys })).catch((err: unknown) => res.status(500).json({ error: (err as Error).message }));
+    } catch (err: unknown) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // PUT /api/logicbridge/connectors/:id/kv/:key — set a credential value
+  router.put('/connectors/:id/kv/:key', async (req: Request, res: Response) => {
+    const { id, key } = req.params;
+    const tenantId = getTenantId(req);
+    const userId = getUserId(req);
+    const def = getDefinitionById(id);
+    if (!def) { res.status(404).json({ error: 'Connector not found' }); return; }
+    const { value } = req.body;
+    if (value === undefined) { res.status(400).json({ error: 'value is required' }); return; }
+    try {
+      const kv = createSparkKv(tenantId, id);
+      await kv.set(key, value);
+      try {
+        archieveLog({
+          requestId: crypto.randomUUID(), tenantId, module: 'LOGICBRIDGE',
+          eventType: 'LOGICBRIDGE_CREDENTIAL_SET',
+          actor: { userId, sessionId: 'system', role: 'user' },
+          severity: 'info', data: { connectorId: id, key },
+        });
+      } catch { /* never throw */ }
+      res.json({ ok: true });
+    } catch (err: unknown) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // DELETE /api/logicbridge/connectors/:id/kv/:key — delete a credential
+  router.delete('/connectors/:id/kv/:key', async (req: Request, res: Response) => {
+    const { id, key } = req.params;
+    const tenantId = getTenantId(req);
+    const def = getDefinitionById(id);
+    if (!def) { res.status(404).json({ error: 'Connector not found' }); return; }
+    try {
+      const kv = createSparkKv(tenantId, id);
+      await kv.delete(key);
+      res.json({ ok: true });
+    } catch (err: unknown) {
+      res.status(500).json({ error: (err as Error).message });
+    }
   });
 
   // API Explorer
