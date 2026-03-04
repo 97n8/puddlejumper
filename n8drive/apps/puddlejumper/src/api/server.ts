@@ -847,7 +847,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/archieve", requireToolAccess("admin"), createArchieveRouter(approvalStore.db));
   app.use("/api/seal", requireToolAccess("admin"), createSealRouter(approvalStore.db));
   app.use("/api/syncronate", requireToolAccess("admin"), createSyncronateRouter(approvalStore.db));
-  app.use("/api/logicbridge", requireToolAccess("logicbackend"), createLogicBridgeRouter());
+  app.use("/api/logicbridge", requireToolAccess("logicbridge"), createLogicBridgeRouter());
   app.use("/api/formkey/forms", requireToolAccess("formkey"), createFormKeyRouter(approvalStore.db));
   app.use("/v1/forms", createFormKeyRouter(approvalStore.db)); // public form submissions — no tool gate
   app.use("/public/prr", prrRateLimit);
