@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable
-RUN corepack prepare pnpm@8.15.8 --activate
+RUN corepack prepare pnpm@9 --activate
 
 # Copy package manifests first for better layer caching
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
