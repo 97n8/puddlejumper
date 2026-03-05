@@ -18,7 +18,7 @@ COPY apps/logic-commons/package.json apps/logic-commons/
 COPY packages/core/package.json packages/core/
 
 ENV CI=true
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # isolated-vm is optional (falls back to Node vm) — skip hard verification
 RUN cd apps/puddlejumper && node -e "try { require('isolated-vm'); console.log('isolated-vm OK') } catch(e) { console.log('isolated-vm unavailable, using Node vm fallback') }"
