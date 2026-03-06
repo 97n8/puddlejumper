@@ -37,6 +37,7 @@ import authCallback from "./authCallback.js";
 import { createRateLimit } from "./rateLimit.js";
 import type { CanonicalSourceOptions } from "./canonicalSource.js";
 import { PrrStore } from "./prrStore.js";
+import { DogStore } from "./dogStore.js";
 import { ConnectorStore } from "./connectorStore.js";
 import { createPublicPrrRouter } from "./publicPrrRouter.js";
 import { createConnectorsRouter, createConnectorCallbackMiddleware } from "./connectors.js";
@@ -90,6 +91,7 @@ import { createAuthRoutes } from "./routes/auth.js";
 import { upsertUser, setUserRole, linkEmailToUser, resolveLinkedUser } from "./userStore.js";
 import { createConfigRoutes } from "./routes/config.js";
 import { createPrrRoutes } from "./routes/prr.js";
+import { createDogRoutes } from "./routes/dog.js";
 import { createAccessRoutes } from "./routes/access.js";
 import { createGovernanceRoutes } from "./routes/governance.js";
 import { createApprovalRoutes } from "./routes/approvals.js";
@@ -184,6 +186,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   }
   if (!connectorStateSecret) throw new Error("CONNECTOR_STATE_SECRET is required");
   const prrStore = new PrrStore(prrDbPath);
+  const dogStore = new DogStore(path.join(CONTROLLED_DATA_DIR, "dog.db"));
   const connectorStore = new ConnectorStore(connectorDbPath);
   const oauthStateDbPath = path.join(CONTROLLED_DATA_DIR, "oauth_state.db");
   const oauthStateStore = new OAuthStateStore(oauthStateDbPath);
@@ -818,6 +821,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   }));
   app.use("/api", createConfigRoutes({ runtimeContext, runtimeTiles, runtimeCapabilities }));
   app.use("/api", createPrrRoutes({ prrStore }));
+  app.use("/api", createDogRoutes({ dogStore }));
   app.use("/api", createAccessRoutes({ prrStore }));
   app.use("/api", createGovernanceRoutes({
     runtimeContext, runtimeTiles, runtimeCapabilities,
