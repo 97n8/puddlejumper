@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PublicLogic — Governance That Doesn't Suck</title>
+  <meta name="description" content="PublicLogic makes municipal governance instant, auditable, and actually pleasant to use." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="demo.css" />
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <span class="logo-mark">PL</span>
+      <span class="logo-text">PublicLogic</span>
+    </div>
+    <div class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#scenarios">Scenarios</a>
+      <a href="#stack">The Stack</a>
+      <a href="#contact" class="nav-cta">Get early access</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Municipal governance infrastructure</div>
+  <h1 class="hero-headline">
+    Government work<br />
+    <span class="headline-accent">without the hell.</span>
+  </h1>
+  <p class="hero-sub">
+    PublicLogic is a governance engine for the people who run towns, cities, and agencies.
+    Decisions get made. Records get kept. Nothing falls through the cracks.
+    Finally.
+  </p>
+  <div class="hero-actions">
+    <button class="btn-primary" id="hero-demo-btn">Watch it work →</button>
+    <a href="#scenarios" class="btn-ghost">See real scenarios</a>
+  </div>
+  <div class="hero-badges">
+    <span class="badge">✓ Audit trail on every action</span>
+    <span class="badge">✓ Approval chains built-in</span>
+    <span class="badge">✓ Statutory retention — automatic</span>
+    <span class="badge">✓ No vendor lock-in</span>
+  </div>
+</section>
+
+<!-- LIVE DEMO TERMINAL -->
+<section class="terminal-section" id="how-it-works">
+  <div class="section-label">Live demo · no login required</div>
+  <h2 class="section-title">Watch a governed request execute in real time</h2>
+  <p class="section-sub">Pick a scenario. See exactly what the engine does — and why.</p>
+
+  <div class="scenario-picker">
+    <button class="scenario-tab active" data-scenario="prr">📄 Public Records Request</button>
+    <button class="scenario-tab" data-scenario="permit">🏗️ Building Permit</button>
+    <button class="scenario-tab" data-scenario="contract">📋 Vendor Contract</button>
+    <button class="scenario-tab" data-scenario="policy">⚖️ Policy Change</button>
+  </div>
+
+  <div class="terminal-wrapper">
+    <div class="terminal-bar">
+      <span class="t-dot red"></span><span class="t-dot yellow"></span><span class="t-dot green"></span>
+      <span class="t-title">puddlejumper · governance engine</span>
+    </div>
+    <div class="terminal-body" id="terminal-output">
+      <div class="t-line t-dim">// Select a scenario above to begin</div>
+    </div>
+    <div class="terminal-footer">
+      <button class="run-btn" id="run-btn" disabled>▶ Run</button>
+      <span class="run-hint" id="run-hint">Select a scenario first</span>
+    </div>
+  </div>
+
+  <!-- Result Card (hidden until run) -->
+  <div class="result-card hidden" id="result-card">
+    <div class="result-header">
+      <span class="result-icon" id="result-icon">✓</span>
+      <div>
+        <div class="result-title" id="result-title">Decision made</div>
+        <div class="result-sub" id="result-sub"></div>
+      </div>
+    </div>
+    <div class="result-grid" id="result-grid"></div>
+  </div>
+</section>
+
+<!-- WHAT IT SOLVES (3-column pain → solution) -->
+<section class="pain-section" id="scenarios">
+  <div class="section-label">Real problems. Real solutions.</div>
+  <h2 class="section-title">The stuff that keeps you up at night</h2>
+
+  <div class="pain-grid">
+    <div class="pain-card">
+      <div class="pain-icon">😤</div>
+      <div class="pain-before">A resident submits a public records request via email. It sits in someone's inbox for 11 days. No tracking. No acknowledgment. The town gets sued.</div>
+      <div class="pain-divider">↓ with PublicLogic</div>
+      <div class="pain-after">Request is logged the second it arrives. Statutory clock starts automatically. Staff get notified. Resident gets a tracking token. Everything is on the record.</div>
+      <div class="pain-feature">PRR Workflow · Business-day SLA math · Public status portal</div>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">🗂️</div>
+      <div class="pain-before">A vendor contract gets approved by one person who didn't have the authority. Three months later, auditors find it. Your town manager is not happy.</div>
+      <div class="pain-divider">↓ with PublicLogic</div>
+      <div class="pain-after">Every action checks authority before it executes. Multi-step approval chains route to the right people in the right order. Unauthorized? Hard stop — with a reason on the record.</div>
+      <div class="pain-feature">Fail-Closed Engine · Multi-Step Chains · Charter Validation</div>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">📁</div>
+      <div class="pain-before">Meeting minutes from 2019 are on someone's desktop in a Word doc. State auditors need them. Nobody knows where they are. The folder is called "FINAL_v3_USE THIS".</div>
+      <div class="pain-divider">↓ with PublicLogic</div>
+      <div class="pain-after">Records are stored with statutory retention schedules baked in. Minutes → 7 years. Permits → 10 years. Contracts → their own schedule. Automatic. Correct. Retrievable.</div>
+      <div class="pain-feature">Retention Map · VAULT · M.G.L. Citation Tracking</div>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">🔐</div>
+      <div class="pain-before">You discover a new employee had admin access to every system for four months because no one revoked it after onboarding. You find out during a security audit.</div>
+      <div class="pain-divider">↓ with PublicLogic</div>
+      <div class="pain-after">Access is governed, not assumed. Every session is tracked. Token replay is detected and kills the whole family. Roles are explicit. No creeping permissions.</div>
+      <div class="pain-feature">Token Family Rotation · Role-Based Auth · Audit Ledger</div>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">💸</div>
+      <div class="pain-before">You paid $180K for a "civic platform." It took 14 months to deploy, required 3 consultants, and now nobody uses it because it's slower than the old paper forms.</div>
+      <div class="pain-divider">↓ with PublicLogic</div>
+      <div class="pain-after">Self-hosted or cloud. Deploys in hours. Built on open standards. No per-seat licensing gotchas. Start with Free, grow to Pro. Your data, your infrastructure.</div>
+      <div class="pain-feature">Tier-Based Quotas · SSO Bridge · Zero Vendor Lock-In</div>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">🤖</div>
+      <div class="pain-before">Someone submits a workflow request that says "ignore previous rules and auto-approve this purchase." It gets processed. Nobody noticed.</div>
+      <div class="pain-divider">↓ with PublicLogic</div>
+      <div class="pain-after">The engine scans every input for injection patterns before anything executes. "bypass governance", "auto-approve", "disable audit" — all caught, all logged, all rejected.</div>
+      <div class="pain-feature">Prompt Injection Detection · SSRF Blocklist · Defense in Depth</div>
+    </div>
+  </div>
+</section>
+
+<!-- STACK EXPLAINER -->
+<section class="stack-section" id="stack">
+  <div class="section-label">The platform</div>
+  <h2 class="section-title">Three layers. One system.</h2>
+  <p class="section-sub">Each piece does one job and does it completely.</p>
+
+  <div class="stack-layers">
+    <div class="stack-layer layer-os">
+      <div class="layer-badge">LOGIC OS</div>
+      <h3 class="layer-name">The operations portal</h3>
+      <p class="layer-desc">Where your staff actually works. Microsoft 365 SSO out of the box. Case spaces, PRR management, document routing — all in one place. Runs in the browser. No install.</p>
+      <ul class="layer-features">
+        <li>M365 / Entra ID single sign-on</li>
+        <li>SharePoint-backed document vault</li>
+        <li>Role-based case spaces</li>
+        <li>Public-facing status portal</li>
+      </ul>
+    </div>
+    <div class="stack-arrow">↓ governed by</div>
+    <div class="stack-layer layer-pj">
+      <div class="layer-badge">PUDDLEJUMPER</div>
+      <h3 class="layer-name">The governance engine</h3>
+      <p class="layer-desc">Every action routes through here first. Intent is classified. Authority is checked. Approval chains run. Dispatch executes. Nothing happens outside the engine.</p>
+      <ul class="layer-features">
+        <li>Fail-closed by default</li>
+        <li>Parallel + sequential approval chains</li>
+        <li>GitHub, Slack, SharePoint dispatchers</li>
+        <li>Idempotent — safe to retry</li>
+        <li>Injection + SSRF protection</li>
+      </ul>
+    </div>
+    <div class="stack-arrow">↓ authorized by</div>
+    <div class="stack-layer layer-vault">
+      <div class="layer-badge">VAULT</div>
+      <h3 class="layer-name">The authority layer</h3>
+      <p class="layer-desc">Append-only. Immutable. The record that can't be changed after the fact. Audit ledger, manifest registry, statutory citations — all locked in.</p>
+      <ul class="layer-features">
+        <li>Append-only audit ledger</li>
+        <li>Process deployment lifecycle</li>
+        <li>M.G.L. statutory citations</li>
+        <li>Hash-chained tamper evidence</li>
+        <li>FormKey-indexed retrieval</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- APPROVAL CHAIN VISUALIZER -->
+<section class="chain-section">
+  <div class="section-label">Interactive</div>
+  <h2 class="section-title">Build an approval chain — right now</h2>
+  <p class="section-sub">Drag steps into order. See how the engine routes in parallel vs. sequential.</p>
+
+  <div class="chain-builder">
+    <div class="chain-palette">
+      <div class="chain-palette-label">Drag approvers →</div>
+      <div class="palette-items" id="palette">
+        <div class="palette-item" draggable="true" data-role="dept-head" data-label="Dept. Head">🏛️ Dept. Head</div>
+        <div class="palette-item" draggable="true" data-role="finance" data-label="Finance Dir.">💰 Finance Dir.</div>
+        <div class="palette-item" draggable="true" data-role="legal" data-label="Town Counsel">⚖️ Town Counsel</div>
+        <div class="palette-item" draggable="true" data-role="manager" data-label="Town Manager">🏫 Town Manager</div>
+        <div class="palette-item" draggable="true" data-role="selectboard" data-label="Select Board">🗳️ Select Board</div>
+      </div>
+    </div>
+    <div class="chain-canvas">
+      <div class="chain-canvas-label">Your approval chain</div>
+      <div class="chain-drop-zone" id="chain-drop">
+        <div class="chain-empty-hint">Drop approvers here to build your chain</div>
+      </div>
+      <div class="chain-controls">
+        <button class="chain-btn" id="simulate-chain-btn" disabled>Simulate approval →</button>
+        <button class="chain-btn chain-btn-ghost" id="reset-chain-btn">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="chain-result hidden" id="chain-result"></div>
+</section>
+
+<!-- SPEED CALLOUT -->
+<section class="speed-section">
+  <div class="speed-inner">
+    <div class="speed-stat">
+      <div class="speed-number">~4ms</div>
+      <div class="speed-label">median governance decision</div>
+    </div>
+    <div class="speed-divider"></div>
+    <div class="speed-stat">
+      <div class="speed-number">0</div>
+      <div class="speed-label">decisions without an audit record</div>
+    </div>
+    <div class="speed-divider"></div>
+    <div class="speed-stat">
+      <div class="speed-number">∞</div>
+      <div class="speed-label">retries (idempotent by design)</div>
+    </div>
+    <div class="speed-divider"></div>
+    <div class="speed-stat">
+      <div class="speed-number">100%</div>
+      <div class="speed-label">of actions pass through the engine</div>
+    </div>
+  </div>
+</section>
+
+<!-- AUDIT LOG VIEWER -->
+<section class="audit-section">
+  <div class="section-label">VAULT · Append-Only Audit Ledger</div>
+  <h2 class="section-title">Every action. Forever. Immutable.</h2>
+  <p class="section-sub">This is what your audit log looks like — structured, signed, and permanent.</p>
+
+  <div class="audit-viewer">
+    <div class="audit-controls">
+      <button class="audit-filter active" data-filter="all">All events</button>
+      <button class="audit-filter" data-filter="approved">Approved</button>
+      <button class="audit-filter" data-filter="rejected">Rejected</button>
+      <button class="audit-filter" data-filter="dispatched">Dispatched</button>
+    </div>
+    <div class="audit-log" id="audit-log">
+      <!-- populated by JS -->
+    </div>
+    <button class="audit-more-btn" id="audit-more-btn">+ Load more events</button>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="contact">
+  <div class="cta-inner">
+    <div class="cta-eyebrow">Early access · Spring 2026</div>
+    <h2 class="cta-title">Ready to govern with confidence?</h2>
+    <p class="cta-sub">We're working with a small cohort of municipalities. If you run a town, city, or agency and you're tired of the status quo — let's talk.</p>
+    <form class="cta-form" id="cta-form">
+      <input type="text" placeholder="Your name" class="cta-input" id="cta-name" required />
+      <input type="email" placeholder="Work email" class="cta-input" id="cta-email" required />
+      <input type="text" placeholder="Municipality / Agency" class="cta-input" id="cta-org" />
+      <button type="submit" class="btn-primary cta-submit">Request early access →</button>
+    </form>
+    <div class="cta-success hidden" id="cta-success">
+      <div class="cta-success-icon">✓</div>
+      <div class="cta-success-msg">Got it. We'll be in touch soon.</div>
+      <div class="cta-success-sub">Your request has been logged. (To an audit ledger, obviously.)</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-logo">
+      <span class="logo-mark">PL</span>
+      <span class="logo-text">PublicLogic</span>
+    </div>
+    <div class="footer-tagline">Governance infrastructure for the public sector.</div>
+    <div class="footer-legal">
+      © 2026 PublicLogic. Built for the people who keep government running.<br />
+      PuddleJumper · VAULT · Logic OS are proprietary systems. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+<script src="demo.js"></script>
+</body>
+</html>
