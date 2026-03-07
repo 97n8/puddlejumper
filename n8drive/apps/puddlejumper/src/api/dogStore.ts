@@ -209,13 +209,17 @@ export class DogStore {
     );
     const addCol = (col: string, def: string) => {
       if (!existingCols.has(col)) {
-        this.db.exec(`ALTER TABLE dog_license ADD COLUMN ${col} ${def}`);
+        try {
+          this.db.exec(`ALTER TABLE dog_license ADD COLUMN ${col} ${def}`);
+        } catch {
+          // Column may already exist (race) or SQLite version doesn't support this def — non-fatal
+        }
       }
     };
     addCol("tag_number", "TEXT");
     addCol("renewal_of", "TEXT");
     addCol("renewal_notice_sent_at", "TEXT");
-    addCol("fee_waived", "INTEGER NOT NULL DEFAULT 0");
+    addCol("fee_waived", "INTEGER DEFAULT 0");   // NULL allowed in ALTER TABLE for max compat
   }
 
   // ── Tag numbering ──────────────────────────────────────────────────────────
