@@ -202,6 +202,20 @@ export class DogStore {
         PRIMARY KEY (tenant_id, license_year)
       );
     `);
+
+    // ── Migrations for existing tables (add new columns safely) ────────────
+    const existingCols = new Set(
+      (this.db.prepare("PRAGMA table_info(dog_license)").all() as { name: string }[]).map(r => r.name)
+    );
+    const addCol = (col: string, def: string) => {
+      if (!existingCols.has(col)) {
+        this.db.exec(`ALTER TABLE dog_license ADD COLUMN ${col} ${def}`);
+      }
+    };
+    addCol("tag_number", "TEXT");
+    addCol("renewal_of", "TEXT");
+    addCol("renewal_notice_sent_at", "TEXT");
+    addCol("fee_waived", "INTEGER NOT NULL DEFAULT 0");
   }
 
   // ── Tag numbering ──────────────────────────────────────────────────────────
