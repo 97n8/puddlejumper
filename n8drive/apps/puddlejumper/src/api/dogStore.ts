@@ -101,6 +101,7 @@ export class DogStore {
     this.db = new Database(resolved);
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("foreign_keys = ON");
+    // Step 1: create tables (without indexes that reference columns that may not exist yet)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS dog_license (
         id                     TEXT PRIMARY KEY,
@@ -136,7 +137,6 @@ export class DogStore {
       CREATE INDEX IF NOT EXISTS ix_dog_tenant_created  ON dog_license(tenant_id, created_at);
       CREATE INDEX IF NOT EXISTS ix_dog_tenant_status   ON dog_license(tenant_id, status);
       CREATE INDEX IF NOT EXISTS ix_dog_tenant_expires  ON dog_license(tenant_id, expires_at);
-      CREATE INDEX IF NOT EXISTS ix_dog_tag             ON dog_license(tenant_id, license_year, tag_number);
 
       CREATE TABLE IF NOT EXISTS dog_license_audit (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -203,7 +203,7 @@ export class DogStore {
       );
     `);
 
-    // ── Migrations for existing tables (add new columns safely) ────────────
+    // Step 2: migrate existing tables (add columns that may be missing on old dbs)
     const existingCols = new Set(
       (this.db.prepare("PRAGMA table_info(dog_license)").all() as { name: string }[]).map(r => r.name)
     );
@@ -212,14 +212,19 @@ export class DogStore {
         try {
           this.db.exec(`ALTER TABLE dog_license ADD COLUMN ${col} ${def}`);
         } catch {
-          // Column may already exist (race) or SQLite version doesn't support this def — non-fatal
+          // non-fatal: column may already exist or SQLite version limitation
         }
       }
     };
     addCol("tag_number", "TEXT");
     addCol("renewal_of", "TEXT");
     addCol("renewal_notice_sent_at", "TEXT");
-    addCol("fee_waived", "INTEGER DEFAULT 0");   // NULL allowed in ALTER TABLE for max compat
+    addCol("fee_waived", "INTEGER DEFAULT 0");
+
+    // Step 3: create indexes that reference columns added in migrations
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS ix_dog_tag ON dog_license(tenant_id, license_year, tag_number);
+    `);
   }
 
   // ── Tag numbering ──────────────────────────────────────────────────────────
