@@ -15,7 +15,7 @@ jobs:
     concurrency: deploy-group    # optional: ensure only one action runs at a time
     steps:
       - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: flyctl deploy --remote-only
         working-directory: n8drive
         env:
