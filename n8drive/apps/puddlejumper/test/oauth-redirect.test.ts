@@ -59,6 +59,13 @@ async function createTestApp() {
   return app;
 }
 
+function expectSuccessRedirect(location: string, provider: "github" | "google" | "microsoft") {
+  const redirectUrl = new URL(location);
+  expect(redirectUrl.origin + redirectUrl.pathname).toBe("http://localhost:3000/");
+  expect(redirectUrl.searchParams.get("auth")).toBe("success");
+  expect(redirectUrl.searchParams.get("connected")).toBe(provider);
+}
+
 beforeEach(() => {
   resetDb();
   resetAuditDb();
@@ -131,7 +138,7 @@ describe("GitHub OAuth redirect flow", () => {
       .get(`/api/auth/github/callback?code=test-auth-code&state=${stateValue}`);
 
     expect(callbackRes.status).toBe(302);
-    expect(callbackRes.headers.location).toBe("http://localhost:3000");
+    expectSuccessRedirect(callbackRes.headers.location, "github");
 
     // Should set both jwt and pj_refresh cookies
     const responseCookies = callbackRes.headers["set-cookie"] as unknown as string[];
@@ -160,7 +167,7 @@ describe("GitHub OAuth redirect flow", () => {
     const first = await request(app)
       .get(`/api/auth/github/callback?code=code1&state=${stateValue}`);
     expect(first.status).toBe(302);
-    expect(first.headers.location).toBe("http://localhost:3000");
+    expectSuccessRedirect(first.headers.location, "github");
 
     // Replay rejected
     const replay = await request(app)
@@ -203,7 +210,7 @@ describe("Google OAuth redirect flow", () => {
       .get(`/api/auth/google/callback?code=test-code&state=${stateValue}`);
 
     expect(callbackRes.status).toBe(302);
-    expect(callbackRes.headers.location).toBe("http://localhost:3000");
+    expectSuccessRedirect(callbackRes.headers.location, "google");
 
     const responseCookies = callbackRes.headers["set-cookie"] as unknown as string[];
     expect(responseCookies.find((c: string) => c.startsWith("jwt="))).toBeDefined();
@@ -245,7 +252,7 @@ describe("Microsoft OAuth redirect flow", () => {
       .get(`/api/auth/microsoft/callback?code=test-code&state=${stateValue}`);
 
     expect(callbackRes.status).toBe(302);
-    expect(callbackRes.headers.location).toBe("http://localhost:3000");
+    expectSuccessRedirect(callbackRes.headers.location, "microsoft");
 
     const responseCookies = callbackRes.headers["set-cookie"] as unknown as string[];
     expect(responseCookies.find((c: string) => c.startsWith("jwt="))).toBeDefined();

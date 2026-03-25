@@ -10,6 +10,7 @@ import express from "express";
 import { getAuthContext, requireAuthenticated } from "@publiclogic/core";
 import { getCorrelationId } from "../serverMiddleware.js";
 import { requireRole } from "../middleware/checkWorkspaceRole.js";
+import { enforceTierLimit } from "../middleware/enforceTierLimit.js";
 import {
   createInvitation,
   listPendingInvitations,
@@ -32,9 +33,11 @@ import { sendInviteEmail } from "../email.js";
 export function createWorkspaceCollaborationRoutes(): express.Router {
   const router = express.Router();
   const dataDir = process.env.DATA_DIR || "./data";
+  const resolveWorkspaceId = (auth: NonNullable<ReturnType<typeof getAuthContext>>) =>
+    auth.workspaceId ?? auth.tenantId;
 
   // POST /api/workspace/invite - Create invitation (owner/admin only)
-  router.post("/workspace/invite", requireAuthenticated(), requireRole("owner", "admin"), async (req, res) => {
+  router.post("/workspace/invite", requireAuthenticated(), requireRole("owner", "admin"), enforceTierLimit("member"), async (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
     const { email, role } = req.body;
@@ -49,7 +52,7 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
       return;
     }
 
-    const workspaceId = auth!.tenantId ?? auth!.workspaceId;
+    const workspaceId = resolveWorkspaceId(auth!);
     const { toolAccess } = req.body; // optional: string[] | null
     const invitation = createInvitation(dataDir, workspaceId, email, role, auth!.sub, toolAccess ?? null);
 
@@ -71,7 +74,7 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
   router.get("/workspace/invitations", requireAuthenticated(), requireRole("owner", "admin"), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
-    const invitations = listPendingInvitations(dataDir, auth!.tenantId ?? auth!.workspaceId);
+    const invitations = listPendingInvitations(dataDir, resolveWorkspaceId(auth!));
     res.json({ success: true, correlationId, data: invitations });
   });
 
@@ -127,6 +130,11 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
       res.status(410).json({ success: false, correlationId, error: "Invitation expired" });
       return;
     }
+
+    if (result.error === "already_member") {
+      res.status(409).json({ success: false, correlationId, error: "User is already a workspace member" });
+      return;
+    }
     
     res.json({ success: true, correlationId, data: result });
   });
@@ -135,15 +143,15 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
   router.get("/workspace/members", requireAuthenticated(), requireRole("owner", "admin", "member", "viewer"), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
-    const members = listWorkspaceMembers(dataDir, auth!.tenantId ?? auth!.workspaceId);
+    const members = listWorkspaceMembers(dataDir, resolveWorkspaceId(auth!));
     res.json({ success: true, correlationId, data: members });
   });
 
   // PATCH /api/workspace/members/:userId - Update member role and/or tool access (owner only)
-  router.patch("/workspace/members/:userId", requireAuthenticated(), requireRole("owner", "admin"), (req, res) => {
+  router.patch("/workspace/members/:userId", requireAuthenticated(), requireRole("owner"), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
-    const workspaceId = auth!.tenantId ?? auth!.workspaceId;
+    const workspaceId = resolveWorkspaceId(auth!);
     const { role, toolAccess } = req.body;
 
     if (role !== undefined) {
@@ -172,13 +180,14 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
       return;
     }
 
-    const targetRole = getMemberRole(dataDir, auth!.tenantId ?? auth!.workspaceId, req.params.userId);
+    const workspaceId = resolveWorkspaceId(auth!);
+    const targetRole = getMemberRole(dataDir, workspaceId, req.params.userId);
     if (targetRole === "owner") {
       res.status(403).json({ success: false, correlationId, error: "Cannot remove owner" });
       return;
     }
 
-    removeWorkspaceMember(dataDir, auth!.tenantId ?? auth!.workspaceId, req.params.userId, auth!.sub);
+    removeWorkspaceMember(dataDir, workspaceId, req.params.userId, auth!.sub);
     res.json({ success: true, correlationId });
   });
 
@@ -187,13 +196,14 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
 
-    const role = getMemberRole(dataDir, auth!.tenantId ?? auth!.workspaceId, auth!.sub);
+    const workspaceId = resolveWorkspaceId(auth!);
+    const role = getMemberRole(dataDir, workspaceId, auth!.sub);
     if (role === "owner") {
       res.status(400).json({ success: false, correlationId, error: "Owner cannot leave. Transfer ownership first." });
       return;
     }
 
-    removeWorkspaceMember(dataDir, auth!.tenantId ?? auth!.workspaceId, auth!.sub, auth!.sub);
+    removeWorkspaceMember(dataDir, workspaceId, auth!.sub, auth!.sub);
     res.json({ success: true, correlationId });
   });
 
@@ -215,7 +225,7 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
       success: true,
       correlationId,
       data: {
-        workspaceId: row?.workspace_id ?? (auth!.tenantId ?? auth!.workspaceId),
+        workspaceId: row?.workspace_id ?? resolveWorkspaceId(auth!),
         role: row?.role ?? null,
         toolAccess: row?.tool_access ? JSON.parse(row.tool_access) : null,
       },

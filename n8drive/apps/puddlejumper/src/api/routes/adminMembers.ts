@@ -16,6 +16,7 @@ import express from "express";
 import { getAuthContext, requireAuthenticated } from "@publiclogic/core";
 import { getCorrelationId } from "../serverMiddleware.js";
 import { requireRole } from "../middleware/checkWorkspaceRole.js";
+import { enforceTierLimit } from "../middleware/enforceTierLimit.js";
 import {
   listWorkspaceMembers,
   addWorkspaceMember,
@@ -48,7 +49,7 @@ export function createAdminMembersRoutes(): express.Router {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
     const dataDir = DATA_DIR();
-    const workspaceId = auth!.tenantId ?? auth!.workspaceId;
+    const workspaceId = auth!.workspaceId ?? auth!.tenantId;
 
     const members = listWorkspaceMembers(dataDir, workspaceId) as Array<{
       id: string; workspace_id: string; user_id: string; role: string;
@@ -91,11 +92,11 @@ export function createAdminMembersRoutes(): express.Router {
   // ── POST /api/admin/members ─────────────────────────────────────────────
   // Create a local user account and immediately add them to the workspace.
   // Body: { username, name, email?, temporaryPassword, role, toolAccess? }
-  router.post("/admin/members", requireAuthenticated(), requireRole("owner", "admin"), async (req, res) => {
+  router.post("/admin/members", requireAuthenticated(), requireRole("owner", "admin"), enforceTierLimit("member"), async (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
     const dataDir = DATA_DIR();
-    const workspaceId = auth!.tenantId ?? auth!.workspaceId;
+    const workspaceId = auth!.workspaceId ?? auth!.tenantId;
 
     const { username, name, email, temporaryPassword, role, toolAccess } = req.body as {
       username?: string; name?: string; email?: string | null;

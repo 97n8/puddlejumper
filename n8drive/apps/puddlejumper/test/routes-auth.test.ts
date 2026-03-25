@@ -1,16 +1,20 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import cookieParser from 'cookie-parser';
 import bcrypt from 'bcryptjs';
-import { signJwt, cookieParserMiddleware, csrfProtection, validateJwt } from '@publiclogic/core';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { signJwt, cookieParserMiddleware, csrfProtection } from '@publiclogic/core';
 import { createAuthRoutes } from '../src/api/routes/auth.js';
 import { createSessionRoutes } from '@publiclogic/logic-commons';
+import { resetLocalUserDb } from '../src/api/localUsersStore.js';
 
 // ── Test helpers ────────────────────────────────────────────────────────────
 
 const TEST_PASSWORD = 'test-p@ssw0rd';
 const HASH = bcrypt.hashSync(TEST_PASSWORD, 4);
+const TEST_DATA_DIR = path.join(os.tmpdir(), `routes-auth-test-${Date.now()}`);
 
 const TEST_USER = {
   id: 'u1',
@@ -24,6 +28,7 @@ const TEST_USER = {
 };
 
 function buildApp(overrides: Record<string, any> = {}) {
+  fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   const app = express();
   app.use(cookieParserMiddleware());
   app.use(express.json());
@@ -54,6 +59,7 @@ function buildApp(overrides: Record<string, any> = {}) {
     loginRateLimit: (_req: any, _res: any, next: any) => next(), // no-op rate limiter
     nodeEnv: 'test',
     trustedParentOrigins: ['http://localhost:3000'],
+    dataDir: TEST_DATA_DIR,
     ...overrides,
   });
   app.use('/api', router);
@@ -61,6 +67,11 @@ function buildApp(overrides: Record<string, any> = {}) {
   app.use('/api', createSessionRoutes({ nodeEnv: 'test' }));
   return app;
 }
+
+afterEach(() => {
+  resetLocalUserDb();
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+});
 
 async function getAuthToken() {
   return signJwt(

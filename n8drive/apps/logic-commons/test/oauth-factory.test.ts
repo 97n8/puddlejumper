@@ -58,6 +58,19 @@ function makeTestProvider(overrides?: Partial<OAuthProvider>): OAuthProvider {
 
 let stateStore: InstanceType<typeof OAuthStateStore>;
 
+function expectSuccessRedirect(location: string, provider: string) {
+  const redirectUrl = new URL(location);
+  expect(redirectUrl.origin + redirectUrl.pathname).toBe("http://localhost:3000/");
+  expect(redirectUrl.searchParams.get("auth")).toBe("success");
+  expect(redirectUrl.searchParams.get("connected")).toBe(provider);
+}
+
+function expectErrorRedirect(location: string, error: string) {
+  const redirectUrl = new URL(location);
+  expect(redirectUrl.origin + redirectUrl.pathname).toBe("http://localhost:3000/");
+  expect(redirectUrl.searchParams.get("oauth_error")).toBe(error);
+}
+
 function makeApp(provider?: OAuthProvider) {
   const p = provider ?? makeTestProvider();
   stateStore = new OAuthStateStore(path.join(tmpDir, `oauth_state_${Date.now()}.db`));
@@ -180,7 +193,7 @@ describe("GET /api/auth/:provider/callback", () => {
     expect(res.body.error).toContain("code");
   });
 
-  it("exchanges code for token and redirects to frontend on success", async () => {
+  it("exchanges code for token and redirects to frontend with success params", async () => {
     const app = makeApp();
     const validState = stateStore.create("testprov");
 
@@ -197,7 +210,7 @@ describe("GET /api/auth/:provider/callback", () => {
         .redirects(0);
 
       expect(res.status).toBe(302);
-      expect(res.headers.location).toBe("http://localhost:3000");
+      expectSuccessRedirect(res.headers.location, "testprov");
 
       // Should set jwt and pj_refresh cookies
       const setCookieHeader = res.headers["set-cookie"];
@@ -235,7 +248,7 @@ describe("GET /api/auth/:provider/callback", () => {
     }
   });
 
-  it("redirects to frontend with error hash when token exchange fails", async () => {
+  it("redirects to frontend with oauth_error when token exchange fails", async () => {
     const app = makeApp();
     const validState = stateStore.create("testprov");
 
@@ -251,13 +264,13 @@ describe("GET /api/auth/:provider/callback", () => {
         .redirects(0);
 
       expect(res.status).toBe(302);
-      expect(res.headers.location).toContain("#error=authentication_failed");
+      expectErrorRedirect(res.headers.location, "authentication_failed");
     } finally {
       globalThis.fetch = originalFetch;
     }
   });
 
-  it("redirects to frontend with error hash when fetchUserInfo throws", async () => {
+  it("redirects to frontend with oauth_error when fetchUserInfo throws", async () => {
     const provider = makeTestProvider({
       fetchUserInfo: async () => {
         throw new Error("User API down");
@@ -278,7 +291,7 @@ describe("GET /api/auth/:provider/callback", () => {
         .redirects(0);
 
       expect(res.status).toBe(302);
-      expect(res.headers.location).toContain("#error=authentication_failed");
+      expectErrorRedirect(res.headers.location, "authentication_failed");
     } finally {
       globalThis.fetch = originalFetch;
     }

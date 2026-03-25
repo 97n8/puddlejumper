@@ -336,13 +336,19 @@ export function listWorkspaceMembers(dataDir: string, workspaceId: string) {
   return db.prepare(`SELECT * FROM workspace_members WHERE workspace_id = ? ORDER BY joined_at ASC`).all(workspaceId);
 }
 
-export function addWorkspaceMember(dataDir: string, workspaceId: string, userId: string, role: string, invitedBy: string, toolAccess?: string[] | null) {  const db = getDb(dataDir);
+export function addWorkspaceMember(dataDir: string, workspaceId: string, userId: string, role: string, invitedBy: string, toolAccess?: string[] | null) {
+  const db = getDb(dataDir);
+  const existing = db.prepare(
+    `SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`
+  ).get(workspaceId, userId) as { role: string } | undefined;
+  if (existing) {
+    throw new Error("Workspace member already exists");
+  }
   const id = `wm-${userId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const toolAccessJson = toolAccess ? JSON.stringify(toolAccess) : null;
   db.prepare(`
     INSERT INTO workspace_members (id, workspace_id, user_id, role, tool_access, invited_by, joined_at)
     VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-    ON CONFLICT(workspace_id, user_id) DO UPDATE SET role = excluded.role, tool_access = excluded.tool_access
   `).run(id, workspaceId, userId, role, toolAccessJson, invitedBy);
   incrementMemberCount(dataDir, workspaceId);
   db.prepare(`INSERT INTO workspace_member_audit (workspace_id, user_id, action, new_value, actor_id) VALUES (?, ?, 'added', ?, ?)`)
@@ -454,7 +460,14 @@ export function acceptInvitation(dataDir: string, token: string, userId: string)
   db.prepare(`UPDATE workspace_invitations SET accepted_at = datetime('now') WHERE token = ?`).run(token);
   
   const toolAccess = invitation.tool_access ? JSON.parse(invitation.tool_access) : null;
-  addWorkspaceMember(dataDir, invitation.workspace_id, userId, invitation.role, invitation.invited_by, toolAccess);
+  try {
+    addWorkspaceMember(dataDir, invitation.workspace_id, userId, invitation.role, invitation.invited_by, toolAccess);
+  } catch (err: any) {
+    if (err instanceof Error && err.message === "Workspace member already exists") {
+      return { error: "already_member" as const };
+    }
+    throw err;
+  }
   
   return { workspaceId: invitation.workspace_id, role: invitation.role, toolAccess };
 }

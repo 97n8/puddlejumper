@@ -111,7 +111,7 @@ describe("/pj workspace HTML", () => {
 // ── /metrics token enforcement ──────────────────────────────────────────────
 
 describe("/metrics endpoint", () => {
-  it("returns 200 when METRICS_TOKEN is not set", async () => {
+  it("returns 503 when METRICS_TOKEN is not set", async () => {
     delete process.env.METRICS_TOKEN;
     const dataDir = path.resolve(__dirname, "../data");
     fs.mkdirSync(dataDir, { recursive: true });
@@ -119,8 +119,8 @@ describe("/metrics endpoint", () => {
     const app = createApp("test");
 
     const res = await request(app).get("/metrics");
-    expect(res.status).toBe(200);
-    expect(res.headers["content-type"]).toContain("text/plain");
+    expect(res.status).toBe(503);
+    expect(res.body.error).toContain("METRICS_TOKEN not configured");
   });
 
   it("returns 401 without token when METRICS_TOKEN is set", async () => {

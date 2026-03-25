@@ -23,8 +23,11 @@ import {
   validateLocalUserPassword,
   updateLocalUserPassword,
   findLocalUserById,
+  listLocalUsers,
 } from "../localUsersStore.js";
 import { getMemberRole, getWorkspaceForMember } from "../../engine/workspaceStore.js";
+
+const DUMMY_BCRYPT_HASH = "$2b$12$9xw2FQch7hT2fV3BrqOZL.B8O7M8j0lW0m0VJzK1lT3VQ8x0vP6n2";
 
 function secureEqual(left: string, right: string): boolean {
   const leftBuffer = Buffer.from(left, "utf8");
@@ -70,6 +73,11 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
 
     const { username, password } = parsedLogin.data as { username: string; password: string };
 
+    if (opts.loginUsers.length === 0 && listLocalUsers(opts.dataDir).length === 0) {
+      res.status(503).json({ error: "No login users configured" });
+      return;
+    }
+
     // 1. Try env-var (super-admin) users first
     const envUser = await findEnvUserAndValidate(opts.loginUsers, { username, password });
     if (envUser) {
@@ -87,7 +95,7 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
     const localUser = await validateLocalUserPassword(opts.dataDir, username, password);
     if (!localUser) {
       // Burn a bcrypt compare to prevent timing-based username enumeration
-      if (opts.loginUsers.length === 0) await bcrypt.compare("noop", "$2a$12$invalidhashpadding000000000000000000000000000000000000");
+      await bcrypt.compare("noop", DUMMY_BCRYPT_HASH);
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
