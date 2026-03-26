@@ -125,6 +125,7 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
     const token = await signJwt(
       {
         sub: localUser.id,
+        email: localUser.email ?? undefined,
         name: localUser.name,
         role,
         permissions: [],

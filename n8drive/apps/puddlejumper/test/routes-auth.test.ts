@@ -9,6 +9,7 @@ import { signJwt, cookieParserMiddleware, csrfProtection } from '@publiclogic/co
 import { createAuthRoutes } from '../src/api/routes/auth.js';
 import { createSessionRoutes } from '@publiclogic/logic-commons';
 import { createLocalUser, resetLocalUserDb } from '../src/api/localUsersStore.js';
+import { verifyJwt } from '@publiclogic/core';
 
 // ── Test helpers ────────────────────────────────────────────────────────────
 
@@ -157,6 +158,13 @@ describe('Auth routes', () => {
       expect(res.body.ok).toBe(true);
       expect(res.body.user.name).toBe('Sutton Town Manager');
       expect(res.body.user.mustChangePassword).toBe(true);
+      const cookies = res.headers['set-cookie'];
+      const jwtCookie = (Array.isArray(cookies) ? cookies : [cookies]).find((c: string) => c.startsWith('jwt='));
+      expect(jwtCookie).toBeDefined();
+      const token = jwtCookie!.match(/^jwt=([^;]+)/)?.[1];
+      expect(token).toBeDefined();
+      const claims = await verifyJwt(token!);
+      expect(claims.email).toBe('a.cyganiewicz@town.sutton.ma.us');
     });
 
     it('returns mustChangePassword=false when a local user is provisioned without a forced reset', async () => {
