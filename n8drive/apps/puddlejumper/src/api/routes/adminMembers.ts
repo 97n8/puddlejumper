@@ -32,15 +32,23 @@ import {
   adminResetPassword,
   listLocalUsers,
   findLocalUserById,
+  findLocalUserByUsername,
   deleteLocalUser,
   updateLocalUser,
 } from "../localUsersStore.js";
 import { logToolEvent } from "@publiclogic/logic-commons";
+import { resolveDemoMemberTemplates } from "../demoMemberTemplates.js";
 
 const DATA_DIR = () => process.env.DATA_DIR || "./data";
 
 export function createAdminMembersRoutes(): express.Router {
   const router = express.Router();
+  const demoMemberTemplates = resolveDemoMemberTemplates();
+
+  router.get("/admin/member-templates", requireAuthenticated(), requireRole("owner", "admin"), (_req, res) => {
+    const correlationId = getCorrelationId(res);
+    res.json({ success: true, correlationId, data: demoMemberTemplates });
+  });
 
   // ── GET /api/admin/members ──────────────────────────────────────────────
   // Returns all workspace members with their role, tool_access, and account type.
@@ -98,9 +106,9 @@ export function createAdminMembersRoutes(): express.Router {
     const dataDir = DATA_DIR();
     const workspaceId = auth!.workspaceId ?? auth!.tenantId;
 
-    const { username, name, email, temporaryPassword, role, toolAccess } = req.body as {
+    const { username, name, email, temporaryPassword, role, toolAccess, mustChangePassword } = req.body as {
       username?: string; name?: string; email?: string | null;
-      temporaryPassword?: string; role?: string; toolAccess?: string[] | null;
+      temporaryPassword?: string; role?: string; toolAccess?: string[] | null; mustChangePassword?: boolean;
     };
 
     if (!username?.trim()) {
@@ -119,7 +127,7 @@ export function createAdminMembersRoutes(): express.Router {
 
     try {
       const localUser = await createLocalUser(dataDir, {
-        username, name, email: email ?? null, temporaryPassword, createdBy: auth!.sub,
+        username, name, email: email ?? null, temporaryPassword, mustChangePassword, createdBy: auth!.sub,
       });
 
       // Add to workspace
@@ -132,7 +140,7 @@ export function createAdminMembersRoutes(): express.Router {
         success: true, correlationId,
         data: {
           userId: localUser.id, username: localUser.username, name: localUser.name,
-          email: localUser.email, role, toolAccess: toolAccess ?? null, mustChangePassword: true,
+          email: localUser.email, role, toolAccess: toolAccess ?? null, mustChangePassword: localUser.must_change_password === 1,
           accountType: "local",
         },
       });
@@ -142,6 +150,92 @@ export function createAdminMembersRoutes(): express.Router {
       }
       console.error("[admin/members] create error:", err);
       res.status(500).json({ success: false, correlationId, error: "Failed to create member" });
+    }
+  });
+
+  router.post("/admin/member-templates/:templateId/provision", requireAuthenticated(), requireRole("owner", "admin"), enforceTierLimit("member"), async (req, res) => {
+    const auth = getAuthContext(req);
+    const correlationId = getCorrelationId(res);
+    const dataDir = DATA_DIR();
+    const workspaceId = auth!.workspaceId ?? auth!.tenantId;
+    const { templateId } = req.params;
+    const { password, requirePasswordChange } = req.body as {
+      password?: string;
+      requirePasswordChange?: boolean;
+    };
+
+    if (!password || password.length < 8) {
+      res.status(400).json({ success: false, correlationId, error: "password must be at least 8 characters" });
+      return;
+    }
+
+    const template = demoMemberTemplates.find((entry) => entry.id === templateId);
+    if (!template) {
+      res.status(404).json({ success: false, correlationId, error: "Demo member template not found" });
+      return;
+    }
+
+    const mustChangePassword = requirePasswordChange ?? template.mustChangePassword;
+
+    try {
+      let localUser = findLocalUserByUsername(dataDir, template.username);
+      let created = false;
+
+      if (localUser) {
+        updateLocalUser(dataDir, localUser.id, { name: template.name, email: template.email });
+        await adminResetPassword(dataDir, localUser.id, password, mustChangePassword);
+        localUser = findLocalUserById(dataDir, localUser.id);
+      } else {
+        localUser = await createLocalUser(dataDir, {
+          username: template.username,
+          name: template.name,
+          email: template.email,
+          temporaryPassword: password,
+          mustChangePassword,
+          createdBy: auth!.sub,
+        });
+        created = true;
+      }
+
+      if (!localUser) {
+        res.status(500).json({ success: false, correlationId, error: "Failed to provision demo member" });
+        return;
+      }
+
+      const membershipRole = getMemberRole(dataDir, workspaceId, localUser.id);
+      if (!membershipRole) {
+        addWorkspaceMember(dataDir, workspaceId, localUser.id, template.role, auth!.sub, template.toolAccess);
+      } else {
+        updateMemberRole(dataDir, workspaceId, localUser.id, template.role, auth!.sub);
+        updateMemberToolAccess(dataDir, workspaceId, localUser.id, template.toolAccess, auth!.sub);
+      }
+
+      logToolEvent({
+        tool: "admin",
+        action: created ? "demo_member_created" : "demo_member_updated",
+        actorId: auth!.sub,
+        resourceId: localUser.id,
+        meta: { templateId: template.id, workspaceId, role: template.role },
+      });
+
+      res.json({
+        success: true,
+        correlationId,
+        data: {
+          created,
+          userId: localUser.id,
+          username: localUser.username,
+          name: localUser.name,
+          email: localUser.email,
+          role: template.role,
+          toolAccess: template.toolAccess,
+          mustChangePassword,
+          templateId: template.id,
+        },
+      });
+    } catch (err) {
+      console.error("[admin/member-templates] provision error:", err);
+      res.status(500).json({ success: false, correlationId, error: "Failed to provision demo member" });
     }
   });
 
@@ -197,7 +291,7 @@ export function createAdminMembersRoutes(): express.Router {
     const correlationId = getCorrelationId(res);
     const dataDir = DATA_DIR();
     const { userId } = req.params;
-    const { temporaryPassword } = req.body as { temporaryPassword?: string };
+    const { temporaryPassword, requirePasswordChange } = req.body as { temporaryPassword?: string; requirePasswordChange?: boolean };
 
     if (!temporaryPassword || temporaryPassword.length < 8) {
       res.status(400).json({ success: false, correlationId, error: "temporaryPassword must be at least 8 characters" }); return;
@@ -208,9 +302,10 @@ export function createAdminMembersRoutes(): express.Router {
       res.status(404).json({ success: false, correlationId, error: "User not found or is not a local account" }); return;
     }
 
-    await adminResetPassword(dataDir, userId, temporaryPassword);
+    const mustChangePassword = requirePasswordChange !== false;
+    await adminResetPassword(dataDir, userId, temporaryPassword, mustChangePassword);
     logToolEvent({ tool: "admin", action: "member_password_reset", actorId: auth!.sub, resourceId: userId });
-    res.json({ success: true, correlationId, data: { userId, mustChangePassword: true } });
+    res.json({ success: true, correlationId, data: { userId, mustChangePassword } });
   });
 
   // ── PATCH /api/admin/members/:userId/profile ───────────────────────────

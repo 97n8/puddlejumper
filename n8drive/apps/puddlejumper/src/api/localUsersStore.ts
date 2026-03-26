@@ -61,6 +61,7 @@ export type CreateLocalUserInput = {
   name: string;
   /** Plain-text temporary password — will be hashed here. */
   temporaryPassword: string;
+  mustChangePassword?: boolean;
   createdBy?: string | null;
 };
 
@@ -73,11 +74,12 @@ export async function createLocalUser(
   const id = `lu-${crypto.randomBytes(8).toString("hex")}`;
   const passwordHash = await bcrypt.hash(input.temporaryPassword, 12);
   const now = new Date().toISOString();
+  const mustChangePassword = input.mustChangePassword !== false ? 1 : 0;
 
   db.prepare(`
     INSERT INTO local_users (id, username, email, name, password_hash, must_change_password, created_by, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
-  `).run(id, input.username.trim(), input.email ?? null, input.name.trim(), passwordHash, input.createdBy ?? null, now, now);
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, input.username.trim(), input.email ?? null, input.name.trim(), passwordHash, mustChangePassword, input.createdBy ?? null, now, now);
 
   return db.prepare("SELECT * FROM local_users WHERE id = ?").get(id) as LocalUserRow;
 }
@@ -133,8 +135,9 @@ export async function adminResetPassword(
   dataDir: string,
   userId: string,
   newTemporaryPassword: string,
+  requirePasswordChange = true,
 ): Promise<boolean> {
-  return updateLocalUserPassword(dataDir, userId, newTemporaryPassword, true);
+  return updateLocalUserPassword(dataDir, userId, newTemporaryPassword, requirePasswordChange);
 }
 
 /** Update a local user's profile fields. */

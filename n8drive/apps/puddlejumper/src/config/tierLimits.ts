@@ -6,15 +6,15 @@
 
 export const TIER_LIMITS = {
   free: {
-    templates: 3,
-    approvals: 50,
-    members: 1,
-    apiKey: false,
+    templates: -1,
+    approvals: -1,
+    members: -1,
+    apiKey: true,
   },
   pro: {
-    templates: 25,
-    approvals: Infinity,
-    members: 10,
+    templates: -1,
+    approvals: -1,
+    members: -1,
     apiKey: true,
   },
 } as const;

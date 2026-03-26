@@ -161,7 +161,7 @@ export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.R
           const limits = getTierLimits(workspace.plan);
           const currentCount = workspace.approval_count || 0;
           
-          if (currentCount >= limits.approvals) {
+          if (limits.approvals >= 0 && currentCount >= limits.approvals) {
             res.status(403).json({
               success: false,
               correlationId,

@@ -142,7 +142,7 @@ describe('Auth routes', () => {
     it('allows DB-backed local users when env login is disabled', async () => {
       await createLocalUser(TEST_DATA_DIR, {
         username: 'ac3',
-        name: 'Austin Cyganiewicz',
+        name: 'Sutton Town Manager',
         email: 'a.cyganiewicz@town.sutton.ma.us',
         temporaryPassword: TEST_PASSWORD,
       });
@@ -155,8 +155,28 @@ describe('Auth routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
-      expect(res.body.user.name).toBe('Austin Cyganiewicz');
+      expect(res.body.user.name).toBe('Sutton Town Manager');
       expect(res.body.user.mustChangePassword).toBe(true);
+    });
+
+    it('returns mustChangePassword=false when a local user is provisioned without a forced reset', async () => {
+      await createLocalUser(TEST_DATA_DIR, {
+        username: 'n8',
+        name: 'N8',
+        email: 'nboudreauma@gmail.com',
+        temporaryPassword: TEST_PASSWORD,
+        mustChangePassword: false,
+      });
+
+      const app = buildApp({ builtInLoginEnabled: false, loginUsers: [] });
+      const res = await request(app)
+        .post('/api/login')
+        .set('X-PuddleJumper-Request', 'true')
+        .send({ username: 'n8', password: TEST_PASSWORD });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(res.body.user.mustChangePassword).toBe(false);
     });
 
     it('returns 503 when no users configured', async () => {

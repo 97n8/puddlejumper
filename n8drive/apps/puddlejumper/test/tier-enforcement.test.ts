@@ -100,18 +100,18 @@ describe("Tier Enforcement", () => {
   });
 
   describe("Tier Limits Configuration", () => {
-    it("should have correct free tier limits", () => {
+    it("should disable free tier limits", () => {
       const limits = getTierLimits("free");
-      expect(limits.templates).toBe(3);
-      expect(limits.approvals).toBe(50);
-      expect(limits.members).toBe(1);
+      expect(limits.templates).toBe(-1);
+      expect(limits.approvals).toBe(-1);
+      expect(limits.members).toBe(-1);
     });
 
-    it("should have correct pro tier limits", () => {
+    it("should disable pro tier limits", () => {
       const limits = getTierLimits("pro");
-      expect(limits.templates).toBe(25);
-      expect(limits.approvals).toBe(Infinity);
-      expect(limits.members).toBe(10);
+      expect(limits.templates).toBe(-1);
+      expect(limits.approvals).toBe(-1);
+      expect(limits.members).toBe(-1);
     });
 
     it("should default to free tier for unknown plans", () => {
@@ -139,8 +139,7 @@ describe("Tier Enforcement", () => {
       expect(workspace?.template_count).toBe(1);
     });
 
-    it("should block template creation at free tier limit", async () => {
-      // Create 3 templates to hit the limit
+    it("should continue allowing template creation even when usage is high", async () => {
       for (let i = 0; i < 3; i++) {
         incrementTemplateCount(TEST_DATA_DIR, "ws-free");
       }
@@ -155,11 +154,8 @@ describe("Tier Enforcement", () => {
           steps: [{ order: 0, requiredRole: "admin", label: "Admin Review" }],
         });
 
-      expect(response.status).toBe(403);
-      expect(response.body.error).toBe("tier_limit");
-      expect(response.body.plan).toBe("free");
-      expect(response.body.limit).toBe(3);
-      expect(response.body.current).toBe(3);
+      expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
     });
 
     it("should allow pro tier to exceed free limits", async () => {
@@ -259,19 +255,18 @@ describe("Tier Enforcement", () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.plan).toBe("free");
-      expect(response.body.data.limits.templates).toBe(3);
-      expect(response.body.data.limits.approvals).toBe(50);
-      expect(response.body.data.limits.members).toBe(1);
+      expect(response.body.data.limits.templates).toBe(-1);
+      expect(response.body.data.limits.approvals).toBe(-1);
+      expect(response.body.data.limits.members).toBe(-1);
       expect(response.body.data.usage).toEqual({
         templates: 1,
         approvals: 1,
         members: 1,
       });
-      expect(response.body.data.at_limit).toBe(true); // At member limit (1/1)
+      expect(response.body.data.at_limit).toBe(false);
     });
 
-    it("should indicate when at limit", async () => {
-      // Hit template limit
+    it("should report not at limit when caps are disabled", async () => {
       for (let i = 0; i < 3; i++) {
         incrementTemplateCount(TEST_DATA_DIR, "ws-free");
       }
@@ -281,7 +276,7 @@ describe("Tier Enforcement", () => {
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.data.at_limit).toBe(true);
+      expect(response.body.data.at_limit).toBe(false);
     });
 
     it("should require authentication", async () => {
@@ -338,37 +333,17 @@ describe("Tier Enforcement", () => {
   });
 
   describe("Integration: Plan Upgrade Enables More Resources", () => {
-    it("should allow creation after upgrade from free to pro", async () => {
-      // Hit free tier limit
+    it("should allow creation without requiring a plan upgrade", async () => {
       for (let i = 0; i < 3; i++) {
         incrementTemplateCount(TEST_DATA_DIR, "ws-free");
       }
 
-      // Try to create — should fail
-      let response = await request
+      const response = await request
         .post("/api/chain-templates")
         .set("Authorization", `Bearer ${adminToken}`)
         .set("X-PuddleJumper-Request", "true")
         .send({
           name: "Should Fail",
-          steps: [{ order: 0, requiredRole: "admin", label: "Review" }],
-        });
-      expect(response.status).toBe(403);
-
-      // Upgrade plan
-      await request
-        .patch("/api/admin/workspace/ws-free/plan")
-        .set("Authorization", `Bearer ${adminToken}`)
-        .set("X-PuddleJumper-Request", "true")
-        .send({ plan: "pro" });
-
-      // Try again — should succeed
-      response = await request
-        .post("/api/chain-templates")
-        .set("Authorization", `Bearer ${adminToken}`)
-        .set("X-PuddleJumper-Request", "true")
-        .send({
-          name: "Should Succeed",
           steps: [{ order: 0, requiredRole: "admin", label: "Review" }],
         });
       expect(response.status).toBe(201);

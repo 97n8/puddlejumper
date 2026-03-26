@@ -27,14 +27,15 @@ export function createWorkspaceUsageRoutes(): express.Router {
       members: workspace.member_count,
     };
     
-    const atLimit = usage.templates >= limits.templates || 
-                   usage.approvals >= limits.approvals || 
-                   usage.members >= limits.members;
+    const enforcedAtLimit =
+      (limits.templates >= 0 && usage.templates >= limits.templates) ||
+      (limits.approvals >= 0 && usage.approvals >= limits.approvals) ||
+      (limits.members >= 0 && usage.members >= limits.members);
     
     res.json({
       success: true,
       correlationId,
-      data: { plan: workspace.plan, limits, usage, at_limit: atLimit },
+      data: { plan: workspace.plan, limits, usage, at_limit: enforcedAtLimit },
     });
   });
   

@@ -35,7 +35,7 @@ export function enforceTierLimit(resource: TierResource) {
     const currentCount = getCurrentCount(workspace, resource);
     const limit = getLimit(limits, resource);
 
-    if (currentCount >= limit) {
+    if (limit >= 0 && currentCount >= limit) {
       res.status(403).json({
         success: false,
         correlationId,

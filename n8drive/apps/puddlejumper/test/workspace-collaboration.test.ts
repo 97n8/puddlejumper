@@ -158,9 +158,8 @@ describe("Workspace Collaboration", () => {
       expect(res.body.error).toBe("Invalid role");
     });
 
-    it("free tier blocks invite when at member limit", async () => {
+    it("allows invite creation without tier blocking", async () => {
       const ws = ensurePersonalWorkspace(TEST_DATA_DIR, "user1", "Alice");
-      // Free tier limit is 1 member (owner)
       const token = await makeToken({ sub: "user1", userId: "user1", username: "user1", email: "user1@test.com", tenantId: "test", workspaceId: ws.id, role: "admin"  });
 
       const res = await request(app)
@@ -168,10 +167,8 @@ describe("Workspace Collaboration", () => {
         .set("Authorization", `Bearer ${token}`)
         .send({ email: "test@example.com", role: "member" });
 
-      expect(res.status).toBe(403);
-      expect(res.body.error).toBe("tier_limit");
-      expect(res.body.plan).toBe("free");
-      expect(res.body.limit).toBe(1);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
     });
 
     it("pro tier allows up to 10 members", async () => {
