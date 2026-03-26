@@ -15,7 +15,7 @@ jobs:
       contents: read
     steps:
       - name: Setup Fly CLI
-        uses: superfly/flyctl-actions/setup-flyctl@v1
+        uses: superfly/flyctl-actions/setup-flyctl@fc53c09e1bc3be6f54706524e3b82c4f462f77be
 
       - name: Run SQLite backup on Fly machine
         env:
@@ -53,7 +53,7 @@ jobs:
           ls -lh ./backups/
 
       - name: Upload backup artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: db-backup-${{ github.run_id }}
           path: ./backups/
