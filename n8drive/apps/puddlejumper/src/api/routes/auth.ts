@@ -62,7 +62,15 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
   const router = express.Router();
 
   router.post("/login", opts.loginRateLimit, async (req, res) => {
-    if (!opts.builtInLoginEnabled) { res.status(404).json({ error: "Not Found" }); return; }
+    const localUsersConfigured = listLocalUsers(opts.dataDir).length > 0;
+    const envUsersConfigured = opts.loginUsers.length > 0;
+
+    // Keep env-var "admin" users explicitly disabled unless the production
+    // override is enabled, but still allow DB-backed local accounts to sign in.
+    if (!opts.builtInLoginEnabled && !localUsersConfigured) {
+      res.status(404).json({ error: "Not Found" });
+      return;
+    }
 
     const parsedLogin = loginRequestSchema.safeParse(req.body);
     if (!parsedLogin.success) {
@@ -73,22 +81,24 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
 
     const { username, password } = parsedLogin.data as { username: string; password: string };
 
-    if (opts.loginUsers.length === 0 && listLocalUsers(opts.dataDir).length === 0) {
+    if (!envUsersConfigured && !localUsersConfigured) {
       res.status(503).json({ error: "No login users configured" });
       return;
     }
 
     // 1. Try env-var (super-admin) users first
-    const envUser = await findEnvUserAndValidate(opts.loginUsers, { username, password });
-    if (envUser) {
-      const token = await signJwt(
-        { sub: envUser.id, name: envUser.name, role: envUser.role, permissions: envUser.permissions,
-          tenants: envUser.tenants, tenantId: envUser.tenantId ?? undefined, delegations: [] },
-        { expiresIn: "8h" },
-      );
-      setJwtCookieOnResponse(res, token, { maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000), sameSite: opts.nodeEnv === "production" ? "none" : "lax" });
-      res.status(200).json({ ok: true, user: { id: envUser.id, name: envUser.name, role: envUser.role } });
-      return;
+    if (opts.builtInLoginEnabled && envUsersConfigured) {
+      const envUser = await findEnvUserAndValidate(opts.loginUsers, { username, password });
+      if (envUser) {
+        const token = await signJwt(
+          { sub: envUser.id, name: envUser.name, role: envUser.role, permissions: envUser.permissions,
+            tenants: envUser.tenants, tenantId: envUser.tenantId ?? undefined, delegations: [] },
+          { expiresIn: "8h" },
+        );
+        setJwtCookieOnResponse(res, token, { maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000), sameSite: opts.nodeEnv === "production" ? "none" : "lax" });
+        res.status(200).json({ ok: true, user: { id: envUser.id, name: envUser.name, role: envUser.role } });
+        return;
+      }
     }
 
     // 2. Try DB-backed local users

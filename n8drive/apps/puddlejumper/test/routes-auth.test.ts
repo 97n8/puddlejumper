@@ -8,7 +8,7 @@ import path from 'node:path';
 import { signJwt, cookieParserMiddleware, csrfProtection } from '@publiclogic/core';
 import { createAuthRoutes } from '../src/api/routes/auth.js';
 import { createSessionRoutes } from '@publiclogic/logic-commons';
-import { resetLocalUserDb } from '../src/api/localUsersStore.js';
+import { createLocalUser, resetLocalUserDb } from '../src/api/localUsersStore.js';
 
 // ── Test helpers ────────────────────────────────────────────────────────────
 
@@ -137,6 +137,26 @@ describe('Auth routes', () => {
         .set('X-PuddleJumper-Request', 'true')
         .send({ username: 'admin', password: TEST_PASSWORD });
       expect(res.status).toBe(404);
+    });
+
+    it('allows DB-backed local users when env login is disabled', async () => {
+      await createLocalUser(TEST_DATA_DIR, {
+        username: 'ac3',
+        name: 'Austin Cyganiewicz',
+        email: 'a.cyganiewicz@town.sutton.ma.us',
+        temporaryPassword: TEST_PASSWORD,
+      });
+
+      const app = buildApp({ builtInLoginEnabled: false, loginUsers: [] });
+      const res = await request(app)
+        .post('/api/login')
+        .set('X-PuddleJumper-Request', 'true')
+        .send({ username: 'ac3', password: TEST_PASSWORD });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(res.body.user.name).toBe('Austin Cyganiewicz');
+      expect(res.body.user.mustChangePassword).toBe(true);
     });
 
     it('returns 503 when no users configured', async () => {
