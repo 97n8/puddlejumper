@@ -89,6 +89,7 @@ import {
 // Route modules
 import { createAuthRoutes } from "./routes/auth.js";
 import { upsertUser, setUserRole, linkEmailToUser, resolveLinkedUser } from "./userStore.js";
+import { findLocalUserById } from "./localUsersStore.js";
 import { createConfigRoutes } from "./routes/config.js";
 import { createPrrRoutes } from "./routes/prr.js";
 import { createDogRoutes } from "./routes/dog.js";
@@ -650,6 +651,21 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     const allowedDomains = (process.env.ALLOWED_DOMAINS ?? '')
       .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
     if (allowedEmails.length > 0 || allowedDomains.length > 0) {
+      const dataDir = process.env.DATA_DIR || "./data";
+      const localUser = findLocalUserById(dataDir, auth.sub);
+      if (localUser) {
+        res.json({
+          sub: auth.sub,
+          email: auth.email ?? localUser.email ?? null,
+          name: auth.name ?? localUser.name ?? null,
+          role: auth.role ?? "viewer",
+          provider: auth.provider ?? null,
+          workspaceId: auth.workspaceId ?? "system",
+          workspaceName: auth.workspaceName ?? null,
+          mustChangePassword: (auth as any).mustChangePassword ?? false,
+        });
+        return;
+      }
       const email = (auth.email ?? '').toLowerCase()
       const domain = email.split('@')[1] ?? ''
       const permitted = allowedEmails.includes(email) || allowedDomains.includes(domain)
