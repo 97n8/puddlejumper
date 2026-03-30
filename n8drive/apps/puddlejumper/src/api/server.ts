@@ -71,6 +71,7 @@ import {
   logServerError,
   logServerInfo,
   requestLogger,
+  createErrorHandler,
 } from "./serverMiddleware.js";
 import { processAccessNotificationQueueOnce } from "./accessNotificationWorker.js";
 import { OAuthStateStore } from "@publiclogic/logic-commons";
@@ -900,12 +901,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   });
 
   // ── Global error handler ──────────────────────────────────────────────
-  app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    if (error instanceof SyntaxError) { res.status(400).json({ error: "Invalid JSON body" }); return; }
-    const correlationId = getCorrelationId(res);
-    logServerError(`${req.method} ${req.path}`, correlationId, error);
-    res.status(500).json({ error: "Internal server error", correlationId });
-  });
+  app.use(createErrorHandler(nodeEnv));
 
   return app;
 }

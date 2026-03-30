@@ -2,6 +2,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import express from "express";
+import { getAuthContext } from "@publiclogic/core";
 import {
   CORRELATION_ID_HEADER,
   CORRELATION_ID_PATTERN,
@@ -238,7 +239,12 @@ export function getCorrelationId(res: express.Response): string {
 
 // ── Structured logging ──────────────────────────────────────────────────────
 
-export function logServerError(scope: string, correlationId: string, error: unknown): void {
+export function logServerError(
+  scope: string,
+  correlationId: string,
+  error: unknown,
+  details?: Record<string, unknown>,
+): void {
   const serialized = {
     level: "error",
     scope,
@@ -246,6 +252,7 @@ export function logServerError(scope: string, correlationId: string, error: unkn
     name: error instanceof Error ? error.name : "UnknownError",
     message: error instanceof Error ? error.message : "Unhandled server error",
     timestamp: new Date().toISOString(),
+    ...details,
   };
   // eslint-disable-next-line no-console
   console.error(JSON.stringify(serialized));
@@ -282,21 +289,65 @@ export function requestLogger(req: express.Request, res: express.Response, next:
   res.on("finish", () => {
     const correlationId = getCorrelationId(res);
     const durationMs = Date.now() - start;
+    const auth = getAuthContext(req);
     const entry = {
       method: req.method,
       path: req.path,
       statusCode: res.statusCode,
       durationMs,
+      userId: auth?.sub ?? "anonymous",
+      workspaceId: auth?.workspaceId ?? auth?.tenantId ?? "unknown",
+      tenantId: auth?.tenantId ?? "unknown",
+      contentLength: req.get("content-length") ?? "0",
     };
     if (res.statusCode >= 500) {
-      logServerError("http.request", correlationId, new Error(`${req.method} ${req.path} → ${res.statusCode}`));
+      logServerError(
+        "http.request",
+        correlationId,
+        new Error(`${req.method} ${req.path} → ${res.statusCode}`),
+        entry,
+      );
     } else if (res.statusCode >= 400) {
-      logServerWarn("http.request", correlationId, entry);
+      const errorType =
+        res.statusCode === 401 ? "unauthorized"
+          : res.statusCode === 403 ? "forbidden"
+            : res.statusCode === 429 ? "rate_limited"
+              : "client_error";
+      logServerWarn("http.request", correlationId, { ...entry, errorType });
     } else {
       logServerInfo("http.request", correlationId, entry);
     }
   });
   next();
+}
+
+export function createErrorHandler(nodeEnv: string): express.ErrorRequestHandler {
+  return (error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    const correlationId = getCorrelationId(res);
+    if (error instanceof SyntaxError) {
+      logServerWarn("http.invalid-json", correlationId, {
+        method: req.method,
+        path: req.path,
+        statusCode: 400,
+      });
+      res.status(400).json({ error: "Invalid JSON body", correlationId });
+      return;
+    }
+
+    logServerError(`${req.method} ${req.path}`, correlationId, error, {
+      method: req.method,
+      path: req.path,
+      statusCode: res.statusCode >= 400 ? res.statusCode : 500,
+    });
+    const body: Record<string, unknown> = {
+      error: "Internal server error",
+      correlationId,
+    };
+    if (nodeEnv !== "production" && error instanceof Error) {
+      body.detail = error.message;
+    }
+    res.status(500).json(body);
+  };
 }
 
 // ── Misc helpers ────────────────────────────────────────────────────────────
