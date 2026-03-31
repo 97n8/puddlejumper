@@ -57,6 +57,14 @@ function getDb(dataDir: string): Database.Database {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_email_links_primary ON user_email_links(primary_sub, primary_provider);
+
+    CREATE TABLE IF NOT EXISTS user_prefs (
+      sub TEXT NOT NULL,
+      key TEXT NOT NULL,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (sub, key)
+    );
   `);
   return _db;
 }
@@ -186,3 +194,34 @@ export function setUserRole(
   return result.changes > 0;
 }
 
+
+// ── User Preferences ────────────────────────────────────────────────────────
+
+interface PrefRow { sub: string; key: string; value: string; updated_at: string }
+
+/** Return all prefs for a user as a key→parsed-value map. */
+export function getAllPrefs(dataDir: string, sub: string): Record<string, unknown> {
+  const db = getDb(dataDir);
+  const rows = db.prepare("SELECT key, value FROM user_prefs WHERE sub = ?").all(sub) as Pick<PrefRow, "key" | "value">[];
+  const result: Record<string, unknown> = {};
+  for (const row of rows) {
+    try { result[row.key] = JSON.parse(row.value); } catch { result[row.key] = row.value; }
+  }
+  return result;
+}
+
+/** Upsert a single pref value (stored as JSON string). */
+export function setPref(dataDir: string, sub: string, key: string, value: unknown): void {
+  const db = getDb(dataDir);
+  const serialized = JSON.stringify(value);
+  const now = new Date().toISOString();
+  db.prepare(
+    "INSERT INTO user_prefs (sub, key, value, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(sub, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
+  ).run(sub, key, serialized, now);
+}
+
+/** Delete a single pref. */
+export function deletePref(dataDir: string, sub: string, key: string): void {
+  const db = getDb(dataDir);
+  db.prepare("DELETE FROM user_prefs WHERE sub = ? AND key = ?").run(sub, key);
+}

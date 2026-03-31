@@ -102,6 +102,7 @@ import { createAdminRoutes } from "./routes/admin.js";
 import { createAdminMembersRoutes } from "./routes/adminMembers.js";
 import { createWebhookActionRoutes } from "./routes/webhookAction.js";
 import { createWorkspaceUsageRoutes } from "./routes/workspaceUsage.js";
+import { createPrefsRoutes } from "./routes/prefs.js";
 import { createWorkspaceCollaborationRoutes } from "./routes/workspaceCollaboration.js";
 import { createCaseSpacesRoutes } from "./routes/casespaces.js";
 import { createAxisChatRoutes } from "./routes/axisChatRoutes.js";
@@ -854,6 +855,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createAdminRoutes({ approvalStore, chainStore }));
   app.use("/api", createAdminMembersRoutes());
   app.use("/api", createWorkspaceUsageRoutes());
+  app.use("/api", createPrefsRoutes());
   app.use("/api", createWorkspaceCollaborationRoutes());
   // Tool access enforcement — server-side mirror of canUseTool() in LogicOS
   app.use("/api/v1/casespaces", requireToolAccess("casespaces"));
