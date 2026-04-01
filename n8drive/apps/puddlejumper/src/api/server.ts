@@ -115,6 +115,10 @@ import { initSeal, getSealHealth, createSealRouter } from "../seal/index.js";
 import { initSyncronate, createSyncronateRouter, getSyncronateHealth } from "../syncronate/index.js";
 import { initLogicBridge, createLogicBridgeRouter, getLogicBridgeHealth } from "../logicbridge/index.js";
 import { initFormKey, createFormKeyRouter, getFormKeyHealth } from "../formkey/index.js";
+import { initWatchLayer, createWatchRouter, scheduleWatchLayer } from "../watchlayer/index.js";
+import { initOrgManager, createOrgManagerRouter } from "../org-manager/index.js";
+import { initFinance, createFinanceRouter } from "../finance/index.js";
+import { initPRR, createPrrRouter } from "../prr/index.js";
 import { initFiscalDb, createFiscalRoutes } from "../fiscalintel/index.js";
 import { createMyHealthRoutes } from "./routes/myHealth.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
@@ -214,8 +218,15 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     console.error('[formkey] init error:', (err as Error).message);
   });
 
+  // ── WATCHLAYER continuous monitoring ─────────────────────────────────
+  initWatchLayer(approvalStore.db);
+  scheduleWatchLayer(approvalStore.db);
+
   // ── FiscalIntel — MA DLS municipal data connector ─────────────────────
   initFiscalDb(approvalStore.db);
+  initOrgManager(approvalStore.db);
+  initFinance(approvalStore.db);
+  initPRR(approvalStore.db);
   
   // ── PolicyProvider: Local or Remote (Vault) ──────────────────────────
   // If VAULT_URL is set, use RemotePolicyProvider to call Vault HTTP service.
@@ -867,12 +878,16 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     vaultUrl: process.env.VAULT_URL 
   }));
   app.use("/api/v1/vault/modules", createModuleBuilderRouter(CONTROLLED_DATA_DIR));
+  app.use("/api/v1/watch", requireToolAccess("admin"), createWatchRouter(approvalStore.db));
   app.use("/api/archieve", requireToolAccess("admin"), createArchieveRouter(approvalStore.db));
   app.use("/api/seal", requireToolAccess("admin"), createSealRouter(approvalStore.db));
   app.use("/api/syncronate", requireToolAccess("admin"), createSyncronateRouter(approvalStore.db));
   app.use("/api/logicbridge", requireToolAccess("logicbridge"), createLogicBridgeRouter());
   app.use("/api/formkey/forms", requireToolAccess("formkey"), createFormKeyRouter(approvalStore.db));
   app.use("/v1/forms", createFormKeyRouter(approvalStore.db)); // public form submissions — no tool gate
+  app.use("/api/v1/org", requireToolAccess("admin"), createOrgManagerRouter(approvalStore.db));
+  app.use("/api/v1/finance", requireToolAccess("admin"), createFinanceRouter(approvalStore.db));
+  app.use("/api/prr", requireToolAccess("admin"), createPrrRouter(approvalStore.db));
   app.use("/public/prr", prrRateLimit);
   app.use(createPublicPRRRoutes({ dataDir: CONTROLLED_DATA_DIR }));
   app.use("/api", createAdminPRRRoutes());

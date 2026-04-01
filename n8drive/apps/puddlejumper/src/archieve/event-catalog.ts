@@ -144,6 +144,13 @@ export const ArchieveEventType = {
   SEAL_KEY_NOT_FOUND: 'SEAL_KEY_NOT_FOUND',
   SEAL_TSA_TIMEOUT: 'SEAL_TSA_TIMEOUT',
   SEAL_MANIFEST_SIGNED: 'SEAL_MANIFEST_SIGNED',
+
+  // Org Manager
+  ORG_POSITION_UPSERTED: 'ORG_POSITION_UPSERTED',
+  ORG_IMPORT_VALIDATED: 'ORG_IMPORT_VALIDATED',
+  ORG_IMPORT_PUBLISHED: 'ORG_IMPORT_PUBLISHED',
+  ORG_DELEGATION_CREATED: 'ORG_DELEGATION_CREATED',
+  ORG_DELEGATION_REVOKED: 'ORG_DELEGATION_REVOKED',
 } as const;
 
 export type ArchieveEventTypeValue = typeof ArchieveEventType[keyof typeof ArchieveEventType];
@@ -244,6 +251,11 @@ const REQUIRED_DATA_FIELDS: Partial<Record<string, string[]>> = {
   SEAL_KEY_ROTATED: ['previousKeyId', 'newKeyId'],
   SEAL_KEY_NOT_FOUND: ['keyId'],
   SEAL_MANIFEST_SIGNED: ['manifestHash', 'keyId'],
+  ORG_POSITION_UPSERTED: ['positionId', 'employeeId'],
+  ORG_IMPORT_VALIDATED: ['jobId', 'rowCount', 'validCount', 'errorCount'],
+  ORG_IMPORT_PUBLISHED: ['jobId', 'upsertedCount'],
+  ORG_DELEGATION_CREATED: ['delegationId', 'delegatorId', 'delegateeId', 'scope'],
+  ORG_DELEGATION_REVOKED: ['delegationId'],
 };
 
 export function isKnownEventType(eventType: string): boolean {
