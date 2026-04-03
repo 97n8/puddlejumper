@@ -120,6 +120,8 @@ import { initOrgManager, createOrgManagerRouter } from "../org-manager/index.js"
 import { initFinance, createFinanceRouter } from "../finance/index.js";
 import { initPRR, createPrrRouter } from "../prr/index.js";
 import { initFiscalDb, createFiscalRoutes } from "../fiscalintel/index.js";
+import { scheduleDailyRegistrySync } from "../townregistry/dailySync.js";
+import { createTownRegistryRoutes } from "../townregistry/routes.js";
 import { createMyHealthRoutes } from "./routes/myHealth.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
@@ -224,6 +226,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   // ── FiscalIntel — MA DLS municipal data connector ─────────────────────
   initFiscalDb(approvalStore.db);
+  scheduleDailyRegistrySync(approvalStore.db);
   initOrgManager(approvalStore.db);
   initFinance(approvalStore.db);
   initPRR(approvalStore.db);
@@ -740,11 +743,15 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       for (const pair of linkedEmailsEnv.split(',')) {
         const [alt, primaryEmail] = pair.split(':').map(s => s.trim().toLowerCase());
         if (!alt || !primaryEmail) continue;
-        // Find the primary user by email
-        const primaryRow = (getDb(CONTROLLED_DATA_DIR)
-          .prepare("SELECT sub, provider FROM users WHERE LOWER(email) = ? LIMIT 1")
-          .get(primaryEmail) as { sub: string; primary_provider: string } | undefined) as any;
-        if (primaryRow) linkEmailToUser(CONTROLLED_DATA_DIR, alt, primaryRow.sub, primaryRow.provider);
+        try {
+          // Find the primary user by email
+          const primaryRow = (getDb(CONTROLLED_DATA_DIR)
+            .prepare("SELECT sub, provider FROM users WHERE LOWER(email) = ? LIMIT 1")
+            .get(primaryEmail) as { sub: string; primary_provider: string } | undefined) as any;
+          if (primaryRow) linkEmailToUser(CONTROLLED_DATA_DIR, alt, primaryRow.sub, primaryRow.provider);
+        } catch {
+          // users table may not exist yet on a fresh DB; upsertUser below will create it
+        }
       }
     }
 
@@ -902,6 +909,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/google", createGoogleProxyRoutes({ store: connectorStore }));
   app.use("/api/cloud-save", createCloudSaveRoutes({ store: connectorStore }));
   app.use("/api/fiscal", createFiscalRoutes(approvalStore.db));
+  app.use("/api/registry", createTownRegistryRoutes(approvalStore.db));
   app.use("/api", createMyHealthRoutes(approvalStore.db));
 
   const vaultDbPath = path.resolve(process.env.VAULT_DB_PATH ?? path.join(CONTROLLED_DATA_DIR, "vault.db"));

@@ -38,6 +38,27 @@ CREATE TABLE IF NOT EXISTS fi_snapshots (
   computed_at   TEXT NOT NULL,
   PRIMARY KEY (municipality, fiscal_year)
 );
+
+CREATE TABLE IF NOT EXISTS town_staff_registry (
+  town_name    TEXT NOT NULL,
+  dor_code     INTEGER,
+  staff_json   TEXT NOT NULL,
+  source_pages TEXT NOT NULL,
+  scraped_at   TEXT NOT NULL,
+  notice       TEXT,
+  PRIMARY KEY (town_name)
+);
+
+CREATE TABLE IF NOT EXISTS town_registry_sync_log (
+  id           TEXT PRIMARY KEY,
+  status       TEXT NOT NULL,
+  started_at   TEXT NOT NULL,
+  finished_at  TEXT,
+  towns_total  INTEGER,
+  towns_ok     INTEGER,
+  towns_err    INTEGER,
+  message      TEXT
+);
 `;
 
 export function initFiscalDb(db: Database): void {
