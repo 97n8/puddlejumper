@@ -220,5 +220,13 @@ export function createCommonsRoutes(opts: CommonsRoutesOptions): express.Router 
     res.json(placements);
   });
 
+  // ── Demo seed ──────────────────────────────────────────────────────────────
+  router.post("/v1/commons/seed", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    if (!auth?.tenantId) { res.status(403).json({ error: "Forbidden" }); return; }
+    commonsStore.seedDemoData(auth.tenantId);
+    res.json({ ok: true, message: "Demo data seeded for tenant" });
+  });
+
   return router;
 }

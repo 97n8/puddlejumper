@@ -438,13 +438,93 @@ export class CommonsStore {
     return this.db.prepare("SELECT * FROM commons_records WHERE id = ? AND tenant_id = ?").get(id, tenantId) as CommonsRecord | null;
   }
 
-  listRecords(tenantId: string, params?: { module_key?: string; status?: string }): CommonsRecord[] {
-    let sql = "SELECT * FROM commons_records WHERE tenant_id = ?";
+  listRecords(tenantId: string, params?: { module_key?: string; status?: string }): unknown[] {
+    let sql = `
+      SELECT cr.*,
+             mi.id       AS instance_id,
+             mi.current_step,
+             mi.workflow_stages
+      FROM   commons_records cr
+      LEFT JOIN module_instances mi
+             ON mi.record_id = cr.id AND mi.tenant_id = cr.tenant_id
+      WHERE  cr.tenant_id = ?
+    `;
     const args: unknown[] = [tenantId];
-    if (params?.module_key) { sql += " AND module_key = ?"; args.push(params.module_key); }
-    if (params?.status) { sql += " AND status = ?"; args.push(params.status); }
-    sql += " ORDER BY created_at DESC";
-    return this.db.prepare(sql).all(...args) as CommonsRecord[];
+    if (params?.module_key) { sql += " AND cr.module_key = ?"; args.push(params.module_key); }
+    if (params?.status) { sql += " AND cr.status = ?"; args.push(params.status); }
+    sql += " ORDER BY cr.created_at DESC";
+    return this.db.prepare(sql).all(...args);
+  }
+
+  hasRecords(tenantId: string): boolean {
+    const row = this.db.prepare("SELECT COUNT(*) as n FROM commons_records WHERE tenant_id = ?").get(tenantId) as { n: number };
+    return row.n > 0;
+  }
+
+  seedDemoData(tenantId: string): void {
+    if (this.hasRecords(tenantId)) return;
+
+    const now = new Date();
+    const actor = "seed";
+
+    // Helper to create a record at a specific workflow step
+    const createAtStep = (
+      description: string, requesterName: string, requesterEmail: string,
+      channel: IntakeChannel, deptId: string, targetStep: number, status: "open" | "in_progress" | "closed",
+      createdDaysAgo: number, slaDaysFromCreated: number
+    ) => {
+      const created = new Date(now);
+      created.setDate(created.getDate() - createdDaysAgo);
+      const record = this.createRecord(tenantId, {
+        record_type: "public_records_request",
+        module_key: "VAULTCLERK.PublicRecords",
+        intake_channel: channel,
+        requester_name: requesterName,
+        requester_email: requesterEmail,
+        request_description: description,
+        department_id: deptId,
+        sla_days: slaDaysFromCreated,
+        actorUserId: actor,
+      });
+      // Advance to target step directly
+      const mi = this.db.prepare("SELECT * FROM module_instances WHERE record_id = ?").get(record.id) as ModuleInstance;
+      if (mi && targetStep > 1) {
+        const stages = JSON.parse(mi.workflow_stages) as Array<{ id: string; order: number; label: string; status: string; completed_at?: string }>;
+        const updatedStages = stages.map((s, i) => {
+          if (i < targetStep - 1) return { ...s, status: "complete", completed_at: created.toISOString() };
+          if (i === targetStep - 1) return { ...s, status: "active" };
+          return s;
+        });
+        this.db.prepare("UPDATE module_instances SET current_step = ?, workflow_stages = ?, updated_at = ? WHERE id = ?")
+          .run(targetStep, JSON.stringify(updatedStages), created.toISOString(), mi.id);
+      }
+      const pipelineStage = Math.min(targetStep * 2, 14);
+      this.db.prepare("UPDATE commons_records SET status = ?, pipeline_stage = ?, created_at = ?, updated_at = ?, closed_at = ? WHERE id = ?")
+        .run(status, pipelineStage, created.toISOString(), created.toISOString(), status === "closed" ? created.toISOString() : null, record.id);
+      return record;
+    };
+
+    this.db.transaction(() => {
+      createAtStep("All Select Board meeting minutes from FY2024.", "James Whitfield", "james.whitfield@logicville.gov", "form", "dept-clerk", 4, "in_progress", 4, 10);
+      createAtStep("Vendor contracts awarded in FY2023 over $10,000.", "Diane Kowalski", "dkowalski@gmail.com", "email", "dept-finance", 3, "in_progress", 2, 10);
+      createAtStep("Building permit applications for 44 Main St, 2022–2024.", "Maria Hernandez", "mhernandez@outlook.com", "form", "dept-clerk", 2, "open", 9, 10);
+      createAtStep("All DPW work orders for Route 9 bridge repair, 2024.", "Tom Garfield", "tgarfield@logicville.gov", "manual", "dept-dpw", 5, "in_progress", 3, 10);
+      createAtStep("Personnel records for former employee John Smith.", "Angela Reyes", "angela.reyes@gmail.com", "email", "dept-clerk", 5, "in_progress", 6, 10);
+      createAtStep("Tax assessment records for 12 Elm Street, 2020–2024.", "Harold Fitch", "hfitch@logicville.gov", "form", "dept-finance", 6, "closed", 20, 10);
+
+      // Seed alerts
+      const alerts: Array<Omit<CommonsAlert, "id" | "tenant_id" | "created_at" | "updated_at">> = [
+        { domain: "compliance", severity: "critical", title: "PRR overdue: Maria Hernandez", detail: "Building permit request past 10-day MGL c.66 deadline. Response required.", affected_object_type: "commons_record", affected_object_id: "seed", suggested_action: "Acknowledge and assign immediately", status: "open", owner_id: null },
+        { domain: "compliance", severity: "high", title: "PRR SLA warning: Angela Reyes", detail: "Personnel records request due within 48 hours.", affected_object_type: "commons_record", affected_object_id: "seed", suggested_action: "Complete records search today", status: "open", owner_id: null },
+        { domain: "organizational", severity: "high", title: "DPW Director position vacant", detail: "Routing for DPW work orders is blocked until the position is filled or an acting director is designated.", affected_object_type: "position", affected_object_id: "pos-dpw-head", suggested_action: "Designate acting DPW Director in Org Manager", status: "open", owner_id: null },
+        { domain: "workflow", severity: "warning", title: "3 public records requests awaiting advance", detail: "Records requests have been in the current stage for more than 2 business days with no action.", affected_object_type: "module_instance", affected_object_id: "seed", suggested_action: "Review and advance or reassign", status: "open", owner_id: null },
+        { domain: "data_freshness", severity: "warning", title: "CivicPlus sync stale — 6 hours", detail: "Last successful data sync with CivicPlus was 6 hours ago. Agenda data may be out of date.", affected_object_type: "connector", affected_object_id: "civicplus", suggested_action: "Check connector health in Connections", status: "open", owner_id: null },
+        { domain: "financial", severity: "warning", title: "Q3 budget variance report pending", detail: "Finance Director has not submitted the Q3 actuals variance report. Period closes in 5 days.", affected_object_type: "module_instance", affected_object_id: "seed", suggested_action: "Submit Q3 variance report", status: "open", owner_id: null },
+        { domain: "access", severity: "info", title: "M365 connector token refreshed", detail: "The M365 connector token was automatically refreshed. No action required.", affected_object_type: "connector", affected_object_id: "m365", suggested_action: "", status: "acknowledged", owner_id: null },
+        { domain: "ai_activity", severity: "info", title: "AI draft generated for PRR response", detail: "PuddleJumper generated a draft response for the Whitfield PRR. Human review required before sending.", affected_object_type: "commons_record", affected_object_id: "seed", suggested_action: "Review AI draft in record detail", status: "open", owner_id: null },
+      ];
+      for (const a of alerts) this.createAlert(tenantId, a);
+    })();
   }
 
   // ── Module instances ──────────────────────────────────────────────────────
