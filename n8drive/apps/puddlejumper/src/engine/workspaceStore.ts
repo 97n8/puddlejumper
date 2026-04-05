@@ -308,6 +308,8 @@ export function decrementMemberCount(dataDir: string, workspaceId: string): void
 }
 
 export function updateWorkspacePlan(dataDir: string, workspaceId: string, plan: string): void {
+  const VALID_PLANS = ['free', 'pro', 'enterprise', 'municipal', 'pilot']
+  if (!VALID_PLANS.includes(plan)) throw new Error(`Invalid plan value: ${plan}`)
   const db = getDb(dataDir);
   db.prepare(`UPDATE workspaces SET plan = ? WHERE id = ?`).run(plan, workspaceId);
 }

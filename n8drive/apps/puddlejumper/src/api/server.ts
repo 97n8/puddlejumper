@@ -210,9 +210,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   const chainStore = new ChainStore(approvalStore.db);
 
   // ── ARCHIEVE immutable audit log ──────────────────────────────────────
-  initArchieve(approvalStore.db, CONTROLLED_DATA_DIR);
-  initSeal(approvalStore.db);
-  initSyncronate(approvalStore.db);
+  try { initArchieve(approvalStore.db, CONTROLLED_DATA_DIR) } catch (err) { console.error('[archieve] init error:', (err as Error).message) }
+  try { initSeal(approvalStore.db) } catch (err) { console.error('[seal] init error:', (err as Error).message) }
+  try { initSyncronate(approvalStore.db) } catch (err) { console.error('[syncronate] init error:', (err as Error).message) }
   // ── LOGICBRIDGE connector registry + handler runner ───────────────────
   initLogicBridge(approvalStore.db, connectorStore).catch(err => {
     console.error('[logicbridge] init error:', (err as Error).message);
