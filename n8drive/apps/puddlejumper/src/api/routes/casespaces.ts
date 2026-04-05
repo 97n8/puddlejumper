@@ -151,9 +151,12 @@ export function createCaseSpacesRoutes(): express.Router {
 
     const existing = getCaseSpace(dataDir, req.params.id);
     if (!existing) { res.status(404).json({ success: false, correlationId, error: "Not found" }); return; }
-    if (existing.workspace_id !== ctx.workspaceId) { res.status(403).json({ success: false, correlationId, error: "Forbidden" }); return; }
 
-    const canDelete = ctx.role === "owner" || ctx.role === "admin" || existing.owner_id === ctx.auth.sub;
+    // Allow deletion if: user owns the casespace (regardless of workspace migration),
+    // or user is owner/admin of the current workspace that holds it.
+    const isOwner = existing.owner_id === ctx.auth.sub;
+    const inSameWorkspace = existing.workspace_id === ctx.workspaceId;
+    const canDelete = isOwner || (inSameWorkspace && (ctx.role === "owner" || ctx.role === "admin"));
     if (!canDelete) { res.status(403).json({ success: false, correlationId, error: "Insufficient permissions" }); return; }
 
     deleteCaseSpace(dataDir, req.params.id);
