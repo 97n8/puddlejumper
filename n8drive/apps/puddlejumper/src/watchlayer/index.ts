@@ -45,7 +45,7 @@ export function initWatchLayer(db: Database.Database): Database.Database {
     console.warn('[watchlayer] Failed to seed default rules:', (err as Error).message);
   }
 
-  console.log('[watchlayer] initialized');
+  console.info('[watchlayer] initialized');
   return db;
 }
 
@@ -91,7 +91,7 @@ export function scheduleWatchLayer(db: Database.Database): void {
             errors.map(e => `${e.domain}: ${e.error}`).join('; '));
         }
         if (totalAlerts > 0) {
-          console.log(`[watchlayer] scheduler: ${totalAlerts} alert(s) fired for tenant ${tenantId}`);
+          console.info(`[watchlayer] scheduler: ${totalAlerts} alert(s) fired for tenant ${tenantId}`);
         }
       } catch (err) {
         console.error(`[watchlayer] scheduler: unexpected error for tenant ${tenantId}:`, (err as Error).message);
@@ -100,5 +100,5 @@ export function scheduleWatchLayer(db: Database.Database): void {
   };
 
   _schedulerHandle = setInterval(tick, INTERVAL_MS);
-  console.log('[watchlayer] scheduler started (15m interval)');
+  console.info('[watchlayer] scheduler started (15m interval)');
 }

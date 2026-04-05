@@ -158,11 +158,11 @@ export function createPolicyProvider(
   const vaultUrl = process.env.VAULT_URL;
 
   if (!vaultUrl) {
-    console.log("[PolicyProvider] VAULT_URL not set, using LocalPolicyProvider");
+    console.info("[PolicyProvider] VAULT_URL not set, using LocalPolicyProvider");
     return localProvider;
   }
 
-  console.log(`[PolicyProvider] VAULT_URL set, using RemotePolicyProvider: ${vaultUrl}`);
+  console.info(`[PolicyProvider] VAULT_URL set, using RemotePolicyProvider: ${vaultUrl}`);
   return new RemotePolicyProvider({
     vaultUrl,
     getAccessToken,

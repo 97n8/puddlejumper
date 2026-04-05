@@ -98,7 +98,7 @@ export async function deliver(bundle: Buffer, feedDef: FeedDef, sinkDef: SinkCon
   const endpoint = sinkDef.config.endpoint as string | undefined;
 
   if (!endpoint || !apiKey) {
-    console.log(`[syncronate/kahana] No endpoint/apiKey configured — bundle stub log (${bundle.length} bytes)`);
+    console.info(`[syncronate/kahana] No endpoint/apiKey configured — bundle stub log (${bundle.length} bytes)`);
     return;
   }
 

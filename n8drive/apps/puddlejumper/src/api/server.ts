@@ -954,7 +954,7 @@ export function startServer() {
   const port = Number.parseInt(process.env.PORT ?? "3002", 10);
   const server = app.listen(port, () => {
     // eslint-disable-next-line no-console
-    console.log(`Puddle Jumper Deploy Remote running on http://localhost:${port}`);
+    console.info(`Puddle Jumper Deploy Remote running on http://localhost:${port}`);
   });
 
   // ── Graceful shutdown ──────────────────────────────────────────────────
@@ -965,11 +965,11 @@ export function startServer() {
     if (shuttingDown) return;
     shuttingDown = true;
     // eslint-disable-next-line no-console
-    console.log(JSON.stringify({ level: "info", scope: "server.shutdown", signal, timestamp: new Date().toISOString() }));
+    console.info(JSON.stringify({ level: "info", scope: "server.shutdown", signal, timestamp: new Date().toISOString() }));
 
     server.close(() => {
       // eslint-disable-next-line no-console
-      console.log(JSON.stringify({ level: "info", scope: "server.shutdown.complete", timestamp: new Date().toISOString() }));
+      console.info(JSON.stringify({ level: "info", scope: "server.shutdown.complete", timestamp: new Date().toISOString() }));
       process.exit(0);
     });
 

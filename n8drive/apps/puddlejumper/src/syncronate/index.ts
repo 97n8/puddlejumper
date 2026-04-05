@@ -18,7 +18,7 @@ export function initSyncronate(db: Database.Database): void {
   initJobStore(db);
   initRecordStore(db);
   scheduleAllActiveFeeds(db);
-  console.log('[syncronate] initialized');
+  console.info('[syncronate] initialized');
 }
 
 export function getSyncronateHealth(): { status: 'ok' | 'degraded'; activeFeeds: number; jobsRunning: number } {

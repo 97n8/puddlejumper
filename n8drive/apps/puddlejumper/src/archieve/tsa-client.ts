@@ -135,7 +135,7 @@ export async function runDailyNotarization(db: Database.Database): Promise<void>
   for (const { tenant_id } of tenants) {
     try {
       await notarizeTenant(db, tenant_id, date);
-      console.log(`[archieve] notarization completed for tenant ${tenant_id} date ${date}`);
+      console.info(`[archieve] notarization completed for tenant ${tenant_id} date ${date}`);
     } catch (err) {
       console.error(`[archieve] notarization failed for tenant ${tenant_id}:`, (err as Error).message);
     }
@@ -161,5 +161,5 @@ export function scheduleNotarization(db: Database.Database): void {
   }
 
   scheduleNext();
-  console.log('[archieve] TSA notarization scheduled (next run at midnight UTC)');
+  console.info('[archieve] TSA notarization scheduled (next run at midnight UTC)');
 }

@@ -121,7 +121,7 @@ export function createCaseSpacesRoutes(): express.Router {
     if (!canEdit) { res.status(403).json({ success: false, correlationId, error: "Insufficient permissions" }); return; }
 
     const { name, description, color, icon, type, town, vaultModuleIds, visibility, members, connectionIds, auditEnabled, retentionEnabled, lastAccessed, fileCount, folderCount, templateCount } = req.body;
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
     if (color !== undefined) updates.color = color;

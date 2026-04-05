@@ -7,5 +7,5 @@ export * from './types.js';
 
 export function initFinance(db: Database.Database): void {
   initFinanceStore(db);
-  console.log('[finance] initialized');
+  console.info('[finance] initialized');
 }

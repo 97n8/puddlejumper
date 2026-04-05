@@ -42,7 +42,7 @@ export async function handleWebhookEvent(
 ): Promise<void> {
   // Route by event type per §5.2
   // V1: log and return. The sync-engine processes via record pipeline
-  console.log(`[syncronate/polimorphic] webhook event ${event.eventType} for feed ${feedDef.feedId}`);
+  console.info(`[syncronate/polimorphic] webhook event ${event.eventType} for feed ${feedDef.feedId}`);
 }
 
 export async function pollEvents(

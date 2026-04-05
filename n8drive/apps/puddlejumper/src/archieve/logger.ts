@@ -74,7 +74,7 @@ export function initArchieve(db: Database.Database, dataDir: string): void {
 
   replayOnStartup(walDb);
   runDeliveryLoop(walDb);
-  console.log('[archieve] initialized, WAL queue:', walPath);
+  console.info('[archieve] initialized, WAL queue:', walPath);
 }
 
 function getWalDb(): Database.Database {

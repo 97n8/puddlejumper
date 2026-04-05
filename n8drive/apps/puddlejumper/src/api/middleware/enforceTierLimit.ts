@@ -6,7 +6,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import { getAuthContext } from "@publiclogic/core";
-import { getWorkspace } from "../../engine/workspaceStore.js";
+import { getWorkspace, type WorkspaceRow } from "../../engine/workspaceStore.js";
 import { getTierLimits } from "../../config/tierLimits.js";
 import { getCorrelationId } from "../serverMiddleware.js";
 
@@ -52,7 +52,7 @@ export function enforceTierLimit(resource: TierResource) {
   };
 }
 
-function getCurrentCount(workspace: any, resource: TierResource): number {
+function getCurrentCount(workspace: WorkspaceRow, resource: TierResource): number {
   switch (resource) {
     case "template":
       return workspace.template_count || 0;
@@ -63,7 +63,7 @@ function getCurrentCount(workspace: any, resource: TierResource): number {
   }
 }
 
-function getLimit(limits: any, resource: TierResource): number {
+function getLimit(limits: ReturnType<typeof getTierLimits>, resource: TierResource): number {
   switch (resource) {
     case "template":
       return limits.templates;

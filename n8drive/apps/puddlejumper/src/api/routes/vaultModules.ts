@@ -184,7 +184,7 @@ export function createModuleBuilderRouter(dataDir: string): Router {
         created_at: now,
         updated_at: now,
       });
-      console.log(`[Vault:ModuleBuilder] Created session ${id} for ${town}`);
+      console.info(`[Vault:ModuleBuilder] Created session ${id} for ${town}`);
       res.status(201).json(rowToJson(row));
     } catch (err) {
       console.error("[Vault:ModuleBuilder] Error creating session:", err);
@@ -246,7 +246,7 @@ export function createModuleBuilderRouter(dataDir: string): Router {
       if (row.status === "activated") { res.status(409).json({ error: "Session already activated" }); return; }
       const now = Date.now();
       store.activate(req.params.id, now);
-      console.log(`[Vault:ModuleBuilder] Activated session ${row.id} for ${row.town}`);
+      console.info(`[Vault:ModuleBuilder] Activated session ${row.id} for ${row.town}`);
       res.json({ ok: true, activatedAt: now });
     } catch (err) {
       res.status(500).json({ error: "Internal server error" });

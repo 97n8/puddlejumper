@@ -302,7 +302,7 @@ export function scheduleFeed(feedDef: FeedDef, db: Database.Database): void {
   }
 
   scheduleNext();
-  console.log(`[syncronate] feed ${feedDef.feedId} scheduled every ${intervalMs / 1000}s`);
+  console.info(`[syncronate] feed ${feedDef.feedId} scheduled every ${intervalMs / 1000}s`);
 }
 
 export function scheduleAllActiveFeeds(db: Database.Database): void {

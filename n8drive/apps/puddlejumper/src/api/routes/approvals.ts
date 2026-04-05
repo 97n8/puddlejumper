@@ -12,7 +12,7 @@ import {
   getAuthContext,
   requireAuthenticated,
 } from "@publiclogic/core";
-import type { ApprovalStore } from "../../engine/approvalStore.js";
+import type { ApprovalStore, ApprovalStatus } from "../../engine/approvalStore.js";
 import type { ChainStore } from "../../engine/chainStore.js";
 import type { DispatcherRegistry, PlanStepInput, RetryPolicy } from "../../engine/dispatch.js";
 import { dispatchPlan } from "../../engine/dispatch.js";
@@ -50,7 +50,7 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
     const operatorId = (auth.role === "admin" || auth.role === "viewer") ? undefined : auth.userId ?? auth.sub;
 
     const rows = approvalStore.query({
-      approvalStatus: approvalStatus as any,
+      approvalStatus: approvalStatus as ApprovalStatus,
       operatorId,
       workspaceId,
       limit,
@@ -451,13 +451,13 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Parse JSON fields for the API response so clients get objects, not strings. */
-function sanitizeRow(row: any) {
+function sanitizeRow(row: Record<string, unknown>) {
   return {
     ...row,
-    plan: safeParse(row.plan_json),
-    auditRecord: safeParse(row.audit_record_json),
-    decisionResult: safeParse(row.decision_result_json),
-    dispatchResult: safeParse(row.dispatch_result_json),
+    plan: safeParse(row.plan_json as string | null),
+    auditRecord: safeParse(row.audit_record_json as string | null),
+    decisionResult: safeParse(row.decision_result_json as string | null),
+    dispatchResult: safeParse(row.dispatch_result_json as string | null),
     // Remove raw JSON fields — clients get parsed objects
     plan_json: undefined,
     audit_record_json: undefined,
