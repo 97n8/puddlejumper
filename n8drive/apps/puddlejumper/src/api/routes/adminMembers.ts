@@ -25,7 +25,6 @@ import {
   updateMemberToolAccess,
   getMemberRole,
   getWorkspace,
-  getDb,
 } from "../../engine/workspaceStore.js";
 import {
   createLocalUser,
@@ -36,6 +35,7 @@ import {
   deleteLocalUser,
   updateLocalUser,
 } from "../localUsersStore.js";
+import { listAllUsers } from "../userStore.js";
 import { logToolEvent } from "@publiclogic/logic-commons";
 import { resolveDemoMemberTemplates } from "../demoMemberTemplates.js";
 
@@ -68,11 +68,8 @@ export function createAdminMembersRoutes(): express.Router {
     const localUsers = listLocalUsers(dataDir);
     const localById = new Map(localUsers.map(u => [u.id, u]));
 
-    // Also pull OAuth user names/emails from users.db
-    const db = getDb(dataDir);
-    const oauthRows = db.prepare("SELECT sub, email, name, provider FROM users").all() as Array<{
-      sub: string; email: string | null; name: string | null; provider: string;
-    }>;
+    // Pull OAuth user names/emails from users.db via userStore
+    const oauthRows = listAllUsers(dataDir);
     const oauthBySub = new Map(oauthRows.map(r => [r.sub, r]));
 
     const enriched = members.map(m => {

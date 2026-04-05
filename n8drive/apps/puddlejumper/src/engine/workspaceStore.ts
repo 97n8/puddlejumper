@@ -530,7 +530,7 @@ export function listCaseSpaces(dataDir: string, workspaceId: string, userId: str
 export function createCaseSpace(dataDir: string, cs: Omit<CaseSpaceRow, 'file_count' | 'folder_count' | 'template_count'>): CaseSpaceRow {
   const db = getDb(dataDir);
   db.prepare(`
-    INSERT INTO casespaces (id, workspace_id, owner_id, name, description, color, icon, type, town,
+    INSERT OR IGNORE INTO casespaces (id, workspace_id, owner_id, name, description, color, icon, type, town,
       vault_module_ids, visibility, members, connection_ids, audit_enabled, retention_enabled,
       file_count, folder_count, template_count, created_at, last_accessed)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?)

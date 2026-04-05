@@ -195,6 +195,14 @@ export function setUserRole(
 }
 
 
+/** List all OAuth users (from users.db). */
+export function listAllUsers(dataDir: string): Array<{ sub: string; email: string | null; name: string | null; provider: string }> {
+  const db = getDb(dataDir);
+  return db.prepare("SELECT sub, email, name, provider FROM users").all() as Array<{
+    sub: string; email: string | null; name: string | null; provider: string;
+  }>;
+}
+
 // ── User Preferences ────────────────────────────────────────────────────────
 
 interface PrefRow { sub: string; key: string; value: string; updated_at: string }
