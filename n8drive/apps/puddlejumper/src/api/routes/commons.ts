@@ -1,6 +1,7 @@
 // ── LogicCommons routes ──────────────────────────────────────────────────────
 //
 //   GET  /api/v1/commons/context
+//   GET  /api/v1/commons/dashboard
 //   GET  /api/v1/commons/alerts
 //   PATCH /api/v1/commons/alerts/:id/acknowledge
 //   PATCH /api/v1/commons/alerts/:id/resolve
@@ -218,6 +219,13 @@ export function createCommonsRoutes(opts: CommonsRoutesOptions): express.Router 
     if (!auth?.tenantId) { res.status(403).json({ error: "Forbidden" }); return; }
     const placements = commonsStore.listPlacements(req.params.instanceId, auth.tenantId);
     res.json(placements);
+  });
+
+  // ── Dashboard stats ────────────────────────────────────────────────────────
+  router.get("/v1/commons/dashboard", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    if (!auth?.tenantId) { res.status(403).json({ error: "Forbidden" }); return; }
+    res.json(commonsStore.getDashboardStats(auth.tenantId));
   });
 
   // ── Demo seed ──────────────────────────────────────────────────────────────

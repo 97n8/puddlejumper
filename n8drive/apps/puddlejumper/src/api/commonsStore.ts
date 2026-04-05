@@ -504,6 +504,42 @@ export class CommonsStore {
       return record;
     };
 
+    // Generic helper — same pattern as createAtStep but configurable module_key and record_type
+    const createGeneric = (
+      moduleKey: string, recordType: string, deptId: string,
+      description: string, requesterName: string, requesterEmail: string | null,
+      targetStep: number, status: "open" | "in_progress" | "closed", daysAgo: number
+    ) => {
+      const created = new Date(now);
+      created.setDate(created.getDate() - daysAgo);
+      const record = this.createRecord(tenantId, {
+        record_type: recordType,
+        module_key: moduleKey,
+        intake_channel: "manual",
+        requester_name: requesterName,
+        requester_email: requesterEmail,
+        request_description: description,
+        department_id: deptId,
+        sla_days: null,
+        actorUserId: actor,
+      });
+      const mi = this.db.prepare("SELECT * FROM module_instances WHERE record_id = ?").get(record.id) as ModuleInstance;
+      if (mi && targetStep > 1) {
+        const stages = JSON.parse(mi.workflow_stages) as Array<{ id: string; order: number; label: string; status: string; completed_at?: string }>;
+        const updatedStages = stages.map((s, i) => {
+          if (i < targetStep - 1) return { ...s, status: "complete", completed_at: created.toISOString() };
+          if (i === targetStep - 1) return { ...s, status: "active" };
+          return s;
+        });
+        this.db.prepare("UPDATE module_instances SET current_step = ?, workflow_stages = ?, updated_at = ? WHERE id = ?")
+          .run(targetStep, JSON.stringify(updatedStages), created.toISOString(), mi.id);
+      }
+      const pipelineStage = Math.min(targetStep * 2, 14);
+      this.db.prepare("UPDATE commons_records SET status = ?, pipeline_stage = ?, created_at = ?, updated_at = ?, closed_at = ? WHERE id = ?")
+        .run(status, pipelineStage, created.toISOString(), created.toISOString(), status === "closed" ? created.toISOString() : null, record.id);
+      return record;
+    };
+
     this.db.transaction(() => {
       createAtStep("All Select Board meeting minutes from FY2024.", "James Whitfield", "james.whitfield@logicville.gov", "form", "dept-clerk", 4, "in_progress", 4, 10);
       createAtStep("Vendor contracts awarded in FY2023 over $10,000.", "Diane Kowalski", "dkowalski@gmail.com", "email", "dept-finance", 3, "in_progress", 2, 10);
@@ -511,6 +547,48 @@ export class CommonsStore {
       createAtStep("All DPW work orders for Route 9 bridge repair, 2024.", "Tom Garfield", "tgarfield@logicville.gov", "manual", "dept-dpw", 5, "in_progress", 3, 10);
       createAtStep("Personnel records for former employee John Smith.", "Angela Reyes", "angela.reyes@gmail.com", "email", "dept-clerk", 5, "in_progress", 6, 10);
       createAtStep("Tax assessment records for 12 Elm Street, 2020–2024.", "Harold Fitch", "hfitch@logicville.gov", "form", "dept-finance", 6, "closed", 20, 10);
+
+      // ── Open Meeting ─────────────────────────────────────────────────────────
+      createGeneric("VAULTCLERK.OpenMeeting", "meeting_notice", "dept-clerk", "Select Board Regular Meeting — April 8, 2026", "Select Board Chair", "chair@logicville.gov", 4, "in_progress", 5);
+      createGeneric("VAULTCLERK.OpenMeeting", "meeting_notice", "dept-clerk", "Conservation Commission Hearing — April 12, 2026", "Conservation Commission Secretary", "conservation@logicville.gov", 3, "in_progress", 2);
+      createGeneric("VAULTCLERK.OpenMeeting", "meeting_notice", "dept-clerk", "Planning Board Workshop — March 25, 2026", "Planning Director", "planning@logicville.gov", 6, "in_progress", 11);
+
+      // ── Board Compliance ──────────────────────────────────────────────────────
+      createGeneric("VAULTCLERK.BoardCompliance", "board_compliance_filing", "dept-clerk", "Statement of Financial Interest — Thomas Alvarez (Select Board)", "Thomas Alvarez", null, 3, "in_progress", 7);
+      createGeneric("VAULTCLERK.BoardCompliance", "board_compliance_filing", "dept-clerk", "Conflict of Interest Annual Certification — Sarah Chen (ZBA)", "Sarah Chen", null, 3, "in_progress", 14);
+      createGeneric("VAULTCLERK.BoardCompliance", "board_compliance_filing", "dept-clerk", "Ethics Training Certificate — Marcus Webb (Conservation Commission)", "Marcus Webb", null, 2, "open", 3);
+
+      // ── Procurement ───────────────────────────────────────────────────────────
+      createGeneric("VAULTFISCAL.Procurement", "procurement_case", "dept-finance", "Lawn mowing services contract — DPW FY2026 (IFB)", "Department Head", null, 4, "in_progress", 18);
+      createGeneric("VAULTFISCAL.Procurement", "procurement_case", "dept-finance", "IT network infrastructure upgrade — Town Hall (RFP)", "Department Head", null, 2, "in_progress", 8);
+      createGeneric("VAULTFISCAL.Procurement", "procurement_case", "dept-finance", "Town Hall roof repair — emergency procurement", "Department Head", null, 6, "in_progress", 30);
+      createGeneric("VAULTFISCAL.Procurement", "procurement_case", "dept-finance", "Office supplies blanket purchase order — under threshold", "Department Head", null, 7, "closed", 45);
+
+      // ── Budget ────────────────────────────────────────────────────────────────
+      createGeneric("VAULTFISCAL.Budget", "budget_cycle", "dept-finance", "FY2026 Operating Budget — Finance Department", "Finance Director", null, 3, "in_progress", 60);
+      createGeneric("VAULTFISCAL.Budget", "budget_cycle", "dept-finance", "FY2026 Capital Budget — DPW Road Resurfacing Program", "Finance Director", null, 5, "in_progress", 45);
+
+      // ── Grants ────────────────────────────────────────────────────────────────
+      createGeneric("VAULTFISCAL.Grants", "grant_award", "dept-finance", "ARPA Community Investment Fund — $2,400,000 — Federal", "Grant Manager", null, 2, "in_progress", 90);
+      createGeneric("VAULTFISCAL.Grants", "grant_award", "dept-finance", "MassWorks Route 9 Corridor Improvement — $850,000 — State", "Grant Manager", null, 3, "in_progress", 60);
+
+      // ── Personnel ─────────────────────────────────────────────────────────────
+      createGeneric("VAULTTIME.PersonnelAdmin", "personnel_action", "dept-admin", "DPW Director — Position Vacancy — Recruitment open", "Town Administrator", null, 2, "open", 14);
+      createGeneric("VAULTTIME.PersonnelAdmin", "personnel_action", "dept-admin", "Administrative Assistant — Town Clerk — New hire appointment", "Town Administrator", null, 3, "in_progress", 7);
+      createGeneric("VAULTTIME.PersonnelAdmin", "personnel_action", "dept-admin", "Highway Superintendent — Retirement separation", "Town Administrator", null, 5, "in_progress", 21);
+
+      // ── Permitting ────────────────────────────────────────────────────────────
+      createGeneric("VAULTPERMIT.Building", "building_permit", "dept-admin", "44 Main Street — Two-story residential addition — BP-2026-0041", "Permit Applicant", null, 3, "in_progress", 12);
+      createGeneric("VAULTPERMIT.Building", "building_permit", "dept-admin", "12 Commerce Blvd — Commercial interior renovation — BP-2026-0038", "Permit Applicant", null, 2, "open", 4);
+      createGeneric("VAULTPERMIT.Building", "building_permit", "dept-admin", "88 Oak Street — Accessory dwelling unit — BP-2026-0035", "Permit Applicant", null, 4, "in_progress", 20);
+      createGeneric("VAULTPERMIT.Building", "building_permit", "dept-admin", "5 Industrial Park Drive — Foundation permit — BP-2026-0029", "Permit Applicant", null, 5, "in_progress", 35);
+
+      // ── Work Orders ───────────────────────────────────────────────────────────
+      createGeneric("VAULTFIX.WorkOrder", "work_order", "dept-dpw", "Pothole repair — Main St & Route 9 intersection [HIGH]", "DPW Crew", null, 3, "in_progress", 3);
+      createGeneric("VAULTFIX.WorkOrder", "work_order", "dept-dpw", "Streetlight outage — 3 lights on Elm Street [MEDIUM]", "DPW Crew", null, 2, "open", 1);
+      createGeneric("VAULTFIX.WorkOrder", "work_order", "dept-dpw", "HVAC failure — Town Hall 2nd floor [CRITICAL]", "DPW Crew", null, 4, "in_progress", 2);
+      createGeneric("VAULTFIX.WorkOrder", "work_order", "dept-dpw", "Sidewalk crack repair — School Street [LOW]", "DPW Crew", null, 1, "open", 5);
+      createGeneric("VAULTFIX.WorkOrder", "work_order", "dept-dpw", "Water main leak — Harbor Road [CRITICAL]", "DPW Crew", null, 5, "closed", 8);
 
       // Seed alerts
       const alerts: Array<Omit<CommonsAlert, "id" | "tenant_id" | "created_at" | "updated_at">> = [
@@ -614,6 +692,64 @@ export class CommonsStore {
 
   listModules(): unknown[] {
     return this.db.prepare("SELECT * FROM module_registry WHERE is_active = 1 ORDER BY module_key").all();
+  }
+
+  // ── Dashboard stats ───────────────────────────────────────────────────────
+
+  getDashboardStats(tenantId: string): {
+    modules: Array<{
+      module_key: string;
+      display_name: string;
+      total: number;
+      open: number;
+      in_progress: number;
+      closed: number;
+      overdue: number;
+    }>;
+    summary: {
+      total_records: number;
+      open_alerts: number;
+      overdue_records: number;
+      active_modules: number;
+    };
+  } {
+    const moduleKeys = [
+      { key: "VAULTCLERK.PublicRecords",   name: "Public Records" },
+      { key: "VAULTCLERK.OpenMeeting",     name: "Open Meeting" },
+      { key: "VAULTCLERK.BoardCompliance", name: "Board Compliance" },
+      { key: "VAULTFISCAL.Procurement",    name: "Procurement" },
+      { key: "VAULTFISCAL.Budget",         name: "Budget" },
+      { key: "VAULTFISCAL.Grants",         name: "Grants" },
+      { key: "VAULTTIME.PersonnelAdmin",   name: "Personnel" },
+      { key: "VAULTPERMIT.Building",       name: "Permitting" },
+      { key: "VAULTFIX.WorkOrder",         name: "Work Orders" },
+    ];
+
+    const now = nowIso();
+    const modules = moduleKeys.map(({ key, name }) => {
+      const rows = this.db.prepare(`
+        SELECT status, sla_due_at FROM commons_records WHERE tenant_id = ? AND module_key = ?
+      `).all(tenantId, key) as Array<{ status: string; sla_due_at: string | null }>;
+      return {
+        module_key: key,
+        display_name: name,
+        total: rows.length,
+        open: rows.filter(r => r.status === "open").length,
+        in_progress: rows.filter(r => r.status === "in_progress").length,
+        closed: rows.filter(r => r.status === "closed").length,
+        overdue: rows.filter(r => r.sla_due_at && r.sla_due_at < now && r.status !== "closed").length,
+      };
+    });
+
+    const totalRecords = (this.db.prepare("SELECT COUNT(*) as n FROM commons_records WHERE tenant_id = ?").get(tenantId) as { n: number }).n;
+    const openAlerts = (this.db.prepare("SELECT COUNT(*) as n FROM commons_alerts WHERE tenant_id = ? AND status = 'open'").get(tenantId) as { n: number }).n;
+    const overdueRecords = (this.db.prepare("SELECT COUNT(*) as n FROM commons_records WHERE tenant_id = ? AND sla_due_at < ? AND status != 'closed'").get(tenantId, now) as { n: number }).n;
+    const activeModules = modules.filter(m => m.total > 0).length;
+
+    return {
+      modules,
+      summary: { total_records: totalRecords, open_alerts: openAlerts, overdue_records: overdueRecords, active_modules: activeModules },
+    };
   }
 
   // ── Audit ─────────────────────────────────────────────────────────────────
