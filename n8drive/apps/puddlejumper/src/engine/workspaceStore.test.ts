@@ -18,7 +18,8 @@ import {
   removeWorkspaceMember,
   updateMemberRole,
   resetWorkspaceDb,
-} from './workspaceStore'
+  type WorkspaceRow,
+} from './workspaceStore.js'
 
 let tmpDir: string
 
@@ -81,8 +82,8 @@ describe('listWorkspaces', () => {
     createWorkspace(tmpDir, 'ws-b', 'Beta', 'user-b')
     const all = listWorkspaces(tmpDir)
     expect(all.length).toBeGreaterThanOrEqual(2)
-    expect(all.map(w => w.id)).toContain('ws-a')
-    expect(all.map(w => w.id)).toContain('ws-b')
+    expect(all.map((w: WorkspaceRow) => w.id)).toContain('ws-a')
+    expect(all.map((w: WorkspaceRow) => w.id)).toContain('ws-b')
   })
 })
 
