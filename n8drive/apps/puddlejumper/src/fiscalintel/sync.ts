@@ -94,7 +94,7 @@ export async function syncMunicipality(
 
   try {
     // ── Fetch stabilization data ─────────────────────────────────────────────
-    console.log(`[FiscalIntel] Fetching stabilization data for ${muni.name}...`);
+    console.info(`[FiscalIntel] Fetching stabilization data for ${muni.name}...`);
     const stabHtml = await fetchDlsReport({
       report: DLS_REPORTS.STABILIZATION,
       municipalities: [muni.name],
@@ -114,7 +114,7 @@ export async function syncMunicipality(
     }
 
     // ── Fetch overlay/levy data ──────────────────────────────────────────────
-    console.log(`[FiscalIntel] Fetching overlay/levy data for ${muni.name}...`);
+    console.info(`[FiscalIntel] Fetching overlay/levy data for ${muni.name}...`);
     const overlayHtml = await fetchDlsReport({
       report: DLS_REPORTS.OVERLAY_LEVY,
       municipalities: [muni.name],
@@ -170,6 +170,6 @@ export async function syncAllWorcesterCounty(db: Database): Promise<void> {
   const { WORCESTER_COUNTY } = await import("./municipalities.js");
   for (const muni of WORCESTER_COUNTY) {
     const result = await syncMunicipality(db, muni.name);
-    console.log(`[FiscalIntel] ${muni.name}: ${result.message}`);
+    console.info(`[FiscalIntel] ${muni.name}: ${result.message}`);
   }
 }

@@ -34,7 +34,7 @@ export function runReconciliation(): void {
     }
 
     if (reregistered > 0) {
-      console.log(`[logicbridge/reconciler] re-registered ${reregistered} connectors`);
+      console.info(`[logicbridge/reconciler] re-registered ${reregistered} connectors`);
 
       try {
         archieveLog({

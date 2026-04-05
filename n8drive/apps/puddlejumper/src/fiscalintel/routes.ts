@@ -95,7 +95,7 @@ export function createFiscalRoutes(db: Database): Router {
 
     // Fire and forget (client polls via snapshot endpoint)
     syncMunicipality(db, muni.name, { years }).then((result) => {
-      console.log(`[FiscalIntel] Sync complete: ${result.message}`);
+      console.info(`[FiscalIntel] Sync complete: ${result.message}`);
     }).catch((err) => {
       console.error("[FiscalIntel] Sync error:", err);
     });

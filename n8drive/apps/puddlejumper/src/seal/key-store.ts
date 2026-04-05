@@ -103,7 +103,7 @@ export function initKeyStore(db: Database.Database): void {
         }
       }
 
-      console.log(`[seal] Loaded ESK for tenant '${tenantId}': keyId=${keyId}`);
+      console.info(`[seal] Loaded ESK for tenant '${tenantId}': keyId=${keyId}`);
     } catch (err) {
       console.warn(`[seal] Failed to load ESK for tenant '${tenantId}':`, (err as Error).message);
       _tenantsWithoutESK.push(tenantId);

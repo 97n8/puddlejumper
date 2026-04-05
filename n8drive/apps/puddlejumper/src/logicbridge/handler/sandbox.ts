@@ -15,7 +15,7 @@ async function tryLoadIvm(): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ivmModule = await (import(/* @vite-ignore */ modName) as Promise<any>);
   ivmAvailable = true;
-  console.log('[logicbridge/sandbox] isolated-vm loaded successfully');
+  console.info('[logicbridge/sandbox] isolated-vm loaded successfully');
 }
 
 interface PooledIsolate {
@@ -38,7 +38,7 @@ export async function initSandboxPool(): Promise<void> {
       console.error('[logicbridge/sandbox] Failed to create isolate', i, (err as Error).message);
     }
   }
-  console.log(`[logicbridge/sandbox] pool initialized: ${pool.length}/${POOL_SIZE} isolates`);
+  console.info(`[logicbridge/sandbox] pool initialized: ${pool.length}/${POOL_SIZE} isolates`);
 }
 
 export function getSandboxPoolInfo(): { poolSize: number; available: number; isolatedVmActive: boolean } {

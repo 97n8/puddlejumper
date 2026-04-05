@@ -24,7 +24,7 @@ export function getFormRegistry(): Map<string, Map<string, FormDefinition>> {
 export async function initFormKey(db: Database.Database): Promise<void> {
   if (_initialized) return;
 
-  console.log('[formkey] initializing...');
+  console.info('[formkey] initializing...');
 
   // Init all stores
   initFormKeyDefinitionStore(db);
@@ -103,7 +103,7 @@ export async function initFormKey(db: Database.Database): Promise<void> {
   }
 
   _initialized = true;
-  console.log(`[formkey] initialized (${registered} forms, ${suspended} suspended)`);
+  console.info(`[formkey] initialized (${registered} forms, ${suspended} suspended)`);
 }
 
 export function getFormKeyHealth(): FormKeyHealth {

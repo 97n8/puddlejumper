@@ -7,5 +7,5 @@ export * from './types.js';
 
 export function initPRR(db: Database.Database): void {
   initPRRStore(db);
-  console.log('[prr] initialized');
+  console.info('[prr] initialized');
 }

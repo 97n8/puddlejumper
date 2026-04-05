@@ -16,7 +16,7 @@ let _initialized = false;
 export async function initLogicBridge(db: Database.Database, connectorStore?: ConnectorStore): Promise<void> {
   if (_initialized) return;
 
-  console.log('[logicbridge] initializing...');
+  console.info('[logicbridge] initializing...');
 
   // Step 1: Init definition store (SQLite schema)
   initDefinitionStore(db);
@@ -44,7 +44,7 @@ export async function initLogicBridge(db: Database.Database, connectorStore?: Co
   startReconciler();
 
   _initialized = true;
-  console.log('[logicbridge] initialized');
+  console.info('[logicbridge] initialized');
 }
 
 export function getLogicBridgeHealth(): LogicBridgeHealth {

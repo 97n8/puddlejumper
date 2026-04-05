@@ -195,5 +195,5 @@ export function loadRegistryFromDb(): void {
     }
   }
 
-  console.log(`[logicbridge/registry] loaded ${loaded} connectors (${corrupt} corrupt/skipped)`);
+  console.info(`[logicbridge/registry] loaded ${loaded} connectors (${corrupt} corrupt/skipped)`);
 }

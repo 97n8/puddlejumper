@@ -79,7 +79,7 @@ export function scheduleDailyRegistrySync(db: Database.Database): void {
     const delay = target.getTime() - now.getTime();
 
     setTimeout(() => {
-      console.log("[town-registry] Starting daily sync...");
+      console.info("[town-registry] Starting daily sync...");
       runDailyRegistrySync(db).catch((e) =>
         console.error("[town-registry] sync failed:", e)
       );
@@ -88,5 +88,5 @@ export function scheduleDailyRegistrySync(db: Database.Database): void {
   }
 
   scheduleNext();
-  console.log("[town-registry] Daily sync scheduled for 2 AM");
+  console.info("[town-registry] Daily sync scheduled for 2 AM");
 }

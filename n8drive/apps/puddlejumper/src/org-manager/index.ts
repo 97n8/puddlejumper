@@ -7,5 +7,5 @@ export * from './types.js';
 
 export function initOrgManager(db: Database.Database): void {
   initOrgStore(db);
-  console.log('[org-manager] initialized');
+  console.info('[org-manager] initialized');
 }
