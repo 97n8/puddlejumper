@@ -589,6 +589,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   // ── Auth gating for /api ──────────────────────────────────────────────
   app.use("/api", (req, res, next) => {
+    if (req.method === "OPTIONS") { next(); return; }
     if (req.method === "POST" && req.path === "/login") { next(); return; }
     if (req.method === "POST" && req.path === "/refresh") { next(); return; }
     if (req.method === "POST" && req.path === "/auth/logout") { next(); return; }
