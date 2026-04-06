@@ -125,6 +125,7 @@ import { initFiscalDb, createFiscalRoutes } from "../fiscalintel/index.js";
 import { scheduleDailyRegistrySync } from "../townregistry/dailySync.js";
 import { createTownRegistryRoutes } from "../townregistry/routes.js";
 import { createMyHealthRoutes } from "./routes/myHealth.js";
+import { createCivicRouter } from "../civic/civicRoutes.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
@@ -916,6 +917,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/fiscal", createFiscalRoutes(approvalStore.db));
   app.use("/api/registry", createTownRegistryRoutes(approvalStore.db));
   app.use("/api", createMyHealthRoutes(approvalStore.db));
+  app.use("/api/v1/civic", createCivicRouter(CONTROLLED_DATA_DIR));
 
   const vaultDbPath = path.resolve(process.env.VAULT_DB_PATH ?? path.join(CONTROLLED_DATA_DIR, "vault.db"));
   const documentRoutes = createDocumentRoutes({ dbPath: vaultDbPath });
