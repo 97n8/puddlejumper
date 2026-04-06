@@ -72,9 +72,11 @@ export interface MMAProfile {
   phone?: string
 }
 
-/** Convert a MA town name to MMA's URL slug format */
+/** Convert a MA town/city name to MMA's URL slug format.
+ *  Strips leading "Town of " / "City of " / "Town of the " prefixes. */
 export function townNameToMMASlug(name: string): string {
   return name
+    .replace(/^(city|town) of (the )?/i, '')
     .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '')
