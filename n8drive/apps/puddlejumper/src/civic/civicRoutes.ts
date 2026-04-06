@@ -105,15 +105,20 @@ export function createCivicRouter(dataDir: string): Router {
 
   // Resolve civic actor from PJ session on every request
   router.use((req: Request & { civicActor?: CivicActor }, res: Response, next) => {
-    const auth = getAuthContext(req);
-    if (!auth?.userId || !auth?.email) {
-      res.status(401).json({ error: 'Authentication required' });
-      return;
+    try {
+      const auth = getAuthContext(req);
+      if (!auth?.userId || !auth?.email) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+      const displayName = deriveDisplayName(auth.email, (auth as any).name);
+      const role = auth.role === 'admin' || auth.role === 'platform-admin' ? 'town_administrator' : 'staff';
+      (req as any).civicActor = getCivicActor(db, auth.userId, auth.email, displayName, role);
+      next();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: `Civic actor resolution failed: ${msg}` });
     }
-    const displayName = deriveDisplayName(auth.email, (auth as any).name);
-    const role = auth.role === 'admin' || auth.role === 'platform-admin' ? 'town_administrator' : 'staff';
-    (req as any).civicActor = getCivicActor(db, auth.userId, auth.email, displayName, role);
-    next();
   });
 
   // ── GET /api/v1/civic/me ────────────────────────────────────────────────────
@@ -429,31 +434,38 @@ export function createCivicRouter(dataDir: string): Router {
   });
 
   router.post('/org-manager/town', (req: Request, res: Response) => {
-    const actor = (req as any).civicActor as CivicActor;
-    const { town_name, population, county, governance_form, dls_muni_code, fiscal_year_end } = req.body;
-    if (!town_name) return res.status(400).json({ error: 'town_name required' });
+    try {
+      const actor = (req as any).civicActor as CivicActor;
+      const { town_name, population, county, governance_form, dls_muni_code, fiscal_year_end } = req.body;
+      if (!town_name) return res.status(400).json({ error: 'town_name required' });
 
-    const now = new Date().toISOString();
-    // Reuse existing town_profile id if it exists — avoid duplicates
-    const existing = db.prepare(`SELECT id FROM objects WHERE subtype='town_profile' ORDER BY created_at ASC LIMIT 1`).get() as { id: string } | undefined;
-    const id = existing?.id ?? crypto.randomUUID();
+      const now = new Date().toISOString();
+      // Reuse existing town_profile id if it exists — avoid duplicates
+      const existing = db.prepare(`SELECT id FROM objects WHERE subtype='town_profile' ORDER BY created_at ASC LIMIT 1`).get() as { id: string } | undefined;
+      const id = existing?.id ?? crypto.randomUUID();
 
-    db.prepare(`
-      INSERT INTO objects (id, type, subtype, stage, status, vault_class, data, created_at, updated_at)
-      VALUES (?, 'body', 'town_profile', 'WORKS', 'active', 'internal', ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at
-    `).run(id, JSON.stringify({ town_name, population, county, governance_form, dls_muni_code, fiscal_year_end }), now, now);
+      db.prepare(`
+        INSERT INTO objects (id, type, subtype, stage, status, vault_class, data, created_at, updated_at)
+        VALUES (?, 'body', 'town_profile', 'WORKS', 'active', 'internal', ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at
+      `).run(id, JSON.stringify({ town_name, population, county, governance_form, dls_muni_code, fiscal_year_end }), now, now);
 
-    db.prepare('UPDATE setup_progress SET town=1 WHERE id=?').run('singleton');
+      db.prepare('UPDATE setup_progress SET town=1 WHERE id=?').run('singleton');
 
-    appendAuditLog(db, {
-      objectId: id, actorId: actor.object_id,
-      action: 'org_manager:town_saved',
-      afterState: { town_name },
-      systemTriggered: false,
-    });
+      if (actor?.object_id) {
+        appendAuditLog(db, {
+          objectId: id, actorId: actor.object_id,
+          action: 'org_manager:town_saved',
+          afterState: { town_name },
+          systemTriggered: false,
+        });
+      }
 
-    res.json({ success: true, object_id: id });
+      return res.json({ success: true, object_id: id });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return res.status(500).json({ error: `Failed to save town profile: ${msg}` });
+    }
   });
 
   router.post('/org-manager/identity', (_req: Request, res: Response) => {
@@ -462,73 +474,94 @@ export function createCivicRouter(dataDir: string): Router {
   });
 
   router.post('/org-manager/staff', (req: Request, res: Response) => {
-    const actor = (req as any).civicActor as CivicActor;
-    const { staff = [] } = req.body as { staff: { name: string; email: string; title: string; role: string }[] };
-    const now = new Date().toISOString();
+    try {
+      const actor = (req as any).civicActor as CivicActor;
+      const { staff = [] } = req.body as { staff: { name: string; email: string; title: string; role: string }[] };
+      const now = new Date().toISOString();
 
-    for (const s of staff.filter(x => x.name && x.email)) {
-      const id = crypto.randomUUID();
-      db.prepare(`
-        INSERT OR IGNORE INTO objects (id, type, subtype, status, vault_class, data, created_at, updated_at)
-        VALUES (?, 'actor', 'staff', 'active', 'internal', ?, ?, ?)
-      `).run(id, JSON.stringify({ full_name: s.name, email: s.email, title: s.title }), now, now);
+      for (const s of staff.filter(x => x.name && x.email)) {
+        const id = crypto.randomUUID();
+        db.prepare(`
+          INSERT OR IGNORE INTO objects (id, type, subtype, status, vault_class, data, created_at, updated_at)
+          VALUES (?, 'actor', 'staff', 'active', 'internal', ?, ?, ?)
+        `).run(id, JSON.stringify({ full_name: s.name, email: s.email, title: s.title }), now, now);
 
-      db.prepare(`
-        INSERT OR IGNORE INTO credentials (id, object_id, email, display_name, role, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(crypto.randomUUID(), id, s.email, s.name, s.role, now);
+        db.prepare(`
+          INSERT OR IGNORE INTO credentials (id, object_id, email, display_name, role, created_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(crypto.randomUUID(), id, s.email, s.name, s.role, now);
 
-      appendAuditLog(db, {
-        objectId: id, actorId: actor.object_id,
-        action: 'org_manager:staff_added',
-        afterState: { email: s.email, role: s.role },
-        systemTriggered: false,
-      });
+        if (actor?.object_id) {
+          appendAuditLog(db, {
+            objectId: id, actorId: actor.object_id,
+            action: 'org_manager:staff_added',
+            afterState: { email: s.email, role: s.role },
+            systemTriggered: false,
+          });
+        }
+      }
+
+      db.prepare('UPDATE setup_progress SET staff = 1 WHERE id = ?').run('singleton');
+      return res.json({ success: true, count: staff.length });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return res.status(500).json({ error: `Failed to save staff: ${msg}` });
     }
-
-    db.prepare('UPDATE setup_progress SET staff = 1 WHERE id = ?').run('singleton');
-    res.json({ success: true, count: staff.length });
   });
 
   router.post('/org-manager/bodies', (req: Request, res: Response) => {
-    const actor = (req as any).civicActor as CivicActor;
-    const { bodies = [] } = req.body as { bodies: { name: string; type: string; members: string }[] };
-    const now = new Date().toISOString();
+    try {
+      const actor = (req as any).civicActor as CivicActor;
+      const { bodies = [] } = req.body as { bodies: { name: string; type: string; members: string }[] };
+      const now = new Date().toISOString();
 
-    for (const b of bodies.filter(x => x.name)) {
-      const id = crypto.randomUUID();
-      db.prepare(`
-        INSERT OR IGNORE INTO objects (id, type, subtype, status, vault_class, data, created_at, updated_at)
-        VALUES (?, 'body', ?, 'active', 'internal', ?, ?, ?)
-      `).run(id, b.type, JSON.stringify({ name: b.name, member_count: parseInt(b.members) || 0 }), now, now);
+      for (const b of bodies.filter(x => x.name)) {
+        const id = crypto.randomUUID();
+        db.prepare(`
+          INSERT OR IGNORE INTO objects (id, type, subtype, status, vault_class, data, created_at, updated_at)
+          VALUES (?, 'body', ?, 'active', 'internal', ?, ?, ?)
+        `).run(id, b.type, JSON.stringify({ name: b.name, member_count: parseInt(b.members) || 0 }), now, now);
 
-      appendAuditLog(db, {
-        objectId: id, actorId: actor.object_id,
-        action: 'org_manager:body_created',
-        afterState: { name: b.name, type: b.type },
-        systemTriggered: false,
-      });
+        if (actor?.object_id) {
+          appendAuditLog(db, {
+            objectId: id, actorId: actor.object_id,
+            action: 'org_manager:body_created',
+            afterState: { name: b.name, type: b.type },
+            systemTriggered: false,
+          });
+        }
+      }
+
+      db.prepare('UPDATE setup_progress SET bodies = 1 WHERE id = ?').run('singleton');
+      return res.json({ success: true, count: bodies.length });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return res.status(500).json({ error: `Failed to save bodies: ${msg}` });
     }
-
-    db.prepare('UPDATE setup_progress SET bodies = 1 WHERE id = ?').run('singleton');
-    res.json({ success: true, count: bodies.length });
   });
 
   router.post('/org-manager/complete', (req: Request, res: Response) => {
-    const actor = (req as any).civicActor as CivicActor;
-    const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get('singleton') as Record<string, unknown> | undefined;
-    if (!progress?.town) {
-      return res.status(422).json({ error: 'Town profile is required to complete setup' });
+    try {
+      const actor = (req as any).civicActor as CivicActor;
+      const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get('singleton') as Record<string, unknown> | undefined;
+      if (!progress?.town) {
+        return res.status(422).json({ error: 'Town profile is required to complete setup' });
+      }
+      const now = new Date().toISOString();
+      db.prepare('UPDATE setup_progress SET completed_at = ?, completed_by = ? WHERE id = ?').run(now, actor?.object_id ?? 'system', 'singleton');
+      if (actor?.object_id) {
+        appendAuditLog(db, {
+          objectId: 'singleton', actorId: actor.object_id,
+          action: 'org_manager:setup_completed',
+          afterState: { completed_at: now },
+          systemTriggered: false,
+        });
+      }
+      return res.json({ success: true, completed_at: now });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return res.status(500).json({ error: `Failed to complete setup: ${msg}` });
     }
-    const now = new Date().toISOString();
-    db.prepare('UPDATE setup_progress SET completed_at = ?, completed_by = ? WHERE id = ?').run(now, actor.object_id, 'singleton');
-    appendAuditLog(db, {
-      objectId: 'singleton', actorId: actor.object_id,
-      action: 'org_manager:setup_completed',
-      afterState: { completed_at: now },
-      systemTriggered: false,
-    });
-    res.json({ success: true, completed_at: now });
   });
 
   // ── Assistant stub ────────────────────────────────────────────────────────────
