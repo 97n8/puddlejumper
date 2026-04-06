@@ -9,23 +9,45 @@ import { ALL_MA_MUNICIPALITIES } from "../fiscalintel/municipalities.js";
 import { runDailyRegistrySync } from "./dailySync.js";
 import { syncFromMma } from "./mmaSync.js";
 import { fetchMMAProfile, townNameToMMASlug, type MMAProfile } from "./mmaScraper.js";
+import { fetchMassGISData, type MassGISMuniData } from "./massGISScraper.js";
+import { fetchLocalBills, fetchAllMembers, type LocalBill, type MALegMember } from "./maLegScraper.js";
 
-const MMA_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const MMA_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;            // 7 days
+const MASSGIS_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;       // 30 days (census data)
+const LEGISLATION_CACHE_TTL_MS = 24 * 60 * 60 * 1000;        // 24 hours
+const MEMBERS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;        // 7 days
 
-function ensureMMATable(db: Database.Database) {
+function ensureTables(db: Database.Database) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS mma_profiles (
       slug        TEXT PRIMARY KEY,
       town_name   TEXT NOT NULL,
       profile_json TEXT NOT NULL,
       fetched_at  TEXT NOT NULL
-    )
+    );
+    CREATE TABLE IF NOT EXISTS massgis_data (
+      town_upper  TEXT PRIMARY KEY,
+      town_name   TEXT NOT NULL,
+      data_json   TEXT NOT NULL,
+      fetched_at  TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS town_legislation (
+      town_upper  TEXT PRIMARY KEY,
+      town_name   TEXT NOT NULL,
+      bills_json  TEXT NOT NULL,
+      fetched_at  TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS ma_leg_members (
+      id          TEXT PRIMARY KEY DEFAULT 'all',
+      members_json TEXT NOT NULL,
+      fetched_at  TEXT NOT NULL
+    );
   `);
 }
 
 export function createTownRegistryRoutes(db: Database.Database): Router {
   const router = Router();
-  ensureMMATable(db);
+  ensureTables(db);
 
   // GET /api/registry/towns — list all 351 towns with latest fiscal snapshot + staff count
   router.get("/towns", (_req, res) => {
@@ -178,6 +200,102 @@ export function createTownRegistryRoutes(db: Database.Database): Router {
     }).catch((e) =>
       console.error("[town-registry] MMA sync failed:", e)
     );
+  });
+
+  // GET /api/registry/town/:name/massgis — MassGIS population history + area (30-day cache)
+  router.get("/town/:name/massgis", async (req, res) => {
+    const name = decodeURIComponent(req.params.name);
+    const muni = ALL_MA_MUNICIPALITIES.find(m => m.name.toLowerCase() === name.toLowerCase());
+    if (!muni) return res.status(404).json({ error: "Town not found" });
+
+    const key = muni.name.replace(/^(city|town) of (the )?/i, '').toUpperCase().trim();
+    const forceRefresh = req.query["refresh"] === "1";
+
+    if (!forceRefresh) {
+      const cached = db.prepare("SELECT data_json, fetched_at FROM massgis_data WHERE town_upper = ?")
+        .get(key) as { data_json: string; fetched_at: string } | undefined;
+      if (cached) {
+        const age = Date.now() - new Date(cached.fetched_at).getTime();
+        if (age < MASSGIS_CACHE_TTL_MS) {
+          return res.json({ source: "cache", data: JSON.parse(cached.data_json) as MassGISMuniData });
+        }
+      }
+    }
+
+    try {
+      const data = await fetchMassGISData(muni.name);
+      db.prepare("INSERT OR REPLACE INTO massgis_data (town_upper, town_name, data_json, fetched_at) VALUES (?, ?, ?, ?)")
+        .run(key, muni.name, JSON.stringify(data), data.fetchedAt);
+      return res.json({ source: "live", data });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const stale = db.prepare("SELECT data_json FROM massgis_data WHERE town_upper = ?").get(key) as { data_json: string } | undefined;
+      if (stale) return res.json({ source: "stale-cache", data: JSON.parse(stale.data_json) as MassGISMuniData, warning: msg });
+      return res.status(502).json({ error: `MassGIS fetch failed: ${msg}` });
+    }
+  });
+
+  // GET /api/registry/town/:name/legislation — local bills from MA Legislature (24h cache)
+  router.get("/town/:name/legislation", async (req, res) => {
+    const name = decodeURIComponent(req.params.name);
+    const muni = ALL_MA_MUNICIPALITIES.find(m => m.name.toLowerCase() === name.toLowerCase());
+    if (!muni) return res.status(404).json({ error: "Town not found" });
+
+    const key = muni.name.toUpperCase();
+    const forceRefresh = req.query["refresh"] === "1";
+
+    if (!forceRefresh) {
+      const cached = db.prepare("SELECT bills_json, fetched_at FROM town_legislation WHERE town_upper = ?")
+        .get(key) as { bills_json: string; fetched_at: string } | undefined;
+      if (cached) {
+        const age = Date.now() - new Date(cached.fetched_at).getTime();
+        if (age < LEGISLATION_CACHE_TTL_MS) {
+          return res.json({ source: "cache", bills: JSON.parse(cached.bills_json) as LocalBill[], fetchedAt: cached.fetched_at });
+        }
+      }
+    }
+
+    try {
+      const bills = await fetchLocalBills(muni.name);
+      const now = new Date().toISOString();
+      db.prepare("INSERT OR REPLACE INTO town_legislation (town_upper, town_name, bills_json, fetched_at) VALUES (?, ?, ?, ?)")
+        .run(key, muni.name, JSON.stringify(bills), now);
+      return res.json({ source: "live", bills, fetchedAt: now });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const stale = db.prepare("SELECT bills_json, fetched_at FROM town_legislation WHERE town_upper = ?").get(key) as { bills_json: string; fetched_at: string } | undefined;
+      if (stale) return res.json({ source: "stale-cache", bills: JSON.parse(stale.bills_json) as LocalBill[], fetchedAt: stale.fetched_at, warning: msg });
+      return res.json({ source: "live", bills: [], fetchedAt: new Date().toISOString() });
+    }
+  });
+
+  // GET /api/registry/members — all 203 current MA legislative members (7-day cache)
+  router.get("/members", async (req, res) => {
+    const forceRefresh = req.query["refresh"] === "1";
+
+    if (!forceRefresh) {
+      const cached = db.prepare("SELECT members_json, fetched_at FROM ma_leg_members WHERE id = 'all'")
+        .get() as { members_json: string; fetched_at: string } | undefined;
+      if (cached) {
+        const age = Date.now() - new Date(cached.fetched_at).getTime();
+        if (age < MEMBERS_CACHE_TTL_MS) {
+          return res.json({ source: "cache", members: JSON.parse(cached.members_json) as MALegMember[], fetchedAt: cached.fetched_at });
+        }
+      }
+    }
+
+    try {
+      const members = await fetchAllMembers();
+      const now = new Date().toISOString();
+      db.prepare("INSERT OR REPLACE INTO ma_leg_members (id, members_json, fetched_at) VALUES ('all', ?, ?)")
+        .run(JSON.stringify(members), now);
+      return res.json({ source: "live", members, fetchedAt: now });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const stale = db.prepare("SELECT members_json, fetched_at FROM ma_leg_members WHERE id = 'all'").get() as { members_json: string; fetched_at: string } | undefined;
+      if (stale) return res.json({ source: "stale-cache", members: JSON.parse(stale.members_json) as MALegMember[], fetchedAt: stale.fetched_at, warning: msg });
+      return res.status(502).json({ error: `MA Legislature fetch failed: ${msg}` });
+    }
   });
 
   return router;
