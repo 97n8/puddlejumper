@@ -122,54 +122,119 @@ function dedupeContacts(contacts: StaffEmployee[]): StaffEmployee[] {
   );
 }
 
+/**
+ * Generate candidate URLs for a MA town's staff/contact directory.
+ * Many MA towns follow predictable CMS patterns — try them before falling
+ * back to a search engine.
+ */
+function candidateUrls(town: string): Array<{ url: string; title: string }> {
+  const slug = town.toLowerCase().replace(/\s+/g, "");
+  const slugHyphen = town.toLowerCase().replace(/\s+/g, "-");
+  const slugUnder = town.toLowerCase().replace(/\s+/g, "_");
+
+  return [
+    // CivicEngage / CivicPlus patterns (most common MA town CMS)
+    { url: `https://${slug}ma.gov/government/staff-directory`, title: `${town} Staff Directory` },
+    { url: `https://${slug}ma.gov/directory.aspx`, title: `${town} Directory` },
+    { url: `https://${slug}ma.gov/Department/index.php`, title: `${town} Departments` },
+    { url: `https://www.${slug}ma.gov/departments`, title: `${town} Departments` },
+    { url: `https://www.${slug}ma.gov/government/town-officials`, title: `${town} Town Officials` },
+
+    // CivicPlus hosted
+    { url: `https://${slugHyphen}-ma.civicplus.com/directory.aspx`, title: `${town} CivicPlus Directory` },
+    { url: `https://${slug}ma.civicplus.com/directory.aspx`, title: `${town} CivicPlus Directory` },
+
+    // Generic MA town patterns
+    { url: `https://www.townof${slug}.com/departments`, title: `Town of ${town} Departments` },
+    { url: `https://www.townof${slug}.org/departments`, title: `Town of ${town} Departments` },
+    { url: `https://${slug}.ma.us/departments`, title: `${town} MA Departments` },
+    { url: `https://${slugHyphen}.ma.us/officials`, title: `${town} Officials` },
+    { url: `https://www.${slugUnder}ma.gov/staff`, title: `${town} Staff` },
+  ];
+}
+
+async function fetchPage(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+        Accept: "text/html,application/xhtml+xml",
+      },
+      signal: AbortSignal.timeout(10_000),
+      redirect: "follow",
+    });
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.includes("html")) return null;
+    return await res.text();
+  } catch {
+    return null;
+  }
+}
+
 async function searchDirectoryPages(
   town: string
 ): Promise<Array<{ url: string; title: string }>> {
-  const queries = [
-    `${town} Massachusetts CivicPlus staff directory`,
-    `${town} Massachusetts town hall staff directory`,
-    `${town} Massachusetts official site departments directory`,
-  ];
+  // First try known URL patterns (no search engine needed)
+  const candidates = candidateUrls(town);
+  const working: Array<{ url: string; title: string }> = [];
 
-  const results: Array<{ url: string; title: string }> = [];
-
-  for (const query of queries) {
+  for (const c of candidates.slice(0, 6)) {
     try {
-      const res = await fetch(
-        `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
-        {
-          headers: {
-            "User-Agent": "PublicLogic/StaffLookup (+https://publiclogic.org)",
-            Accept: "text/html",
-          },
-          signal: AbortSignal.timeout(12_000),
-        }
-      );
-      if (!res.ok) continue;
-      const html = await res.text();
-      results.push(...parseSearchResults(html));
+      const res = await fetch(c.url, {
+        method: "HEAD",
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+        },
+        signal: AbortSignal.timeout(6_000),
+        redirect: "follow",
+      });
+      if (res.ok && res.headers.get("content-type")?.includes("html")) {
+        working.push(c);
+        if (working.length >= 2) break;
+      }
     } catch {
-      continue;
+      // continue
     }
   }
 
-  return results
-    .filter((result) => /^https?:\/\//i.test(result.url))
-    .sort((a, b) => {
-      const score = (value: string) => {
-        let total = 0;
-        if (/civicplus/i.test(value)) total += 4;
-        if (/staff|directory|department|contact/i.test(value)) total += 3;
-        if (/massachusetts|ma\b|town/i.test(value)) total += 2;
-        return total;
-      };
-      return score(b.url + b.title) - score(a.url + a.title);
-    })
-    .filter(
-      (result, index, items) =>
-        items.findIndex((candidate) => candidate.url === result.url) === index
-    )
-    .slice(0, 4);
+  if (working.length > 0) return working;
+
+  // Fall back to a single targeted DuckDuckGo search
+  const query = `"${town}" Massachusetts "town hall" (staff OR directory OR officials) site:.gov OR site:.us OR site:civicplus.com`;
+  try {
+    const res = await fetch(
+      `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+          Accept: "text/html",
+        },
+        signal: AbortSignal.timeout(12_000),
+      }
+    );
+    if (res.ok) {
+      const html = await res.text();
+      const results = parseSearchResults(html)
+        .filter((r) => {
+          // Must include the town name and be a gov/us/civicplus domain
+          const url = r.url.toLowerCase();
+          const townSlug = town.toLowerCase().replace(/\s+/g, "");
+          return (
+            url.includes(townSlug) &&
+            (/\.gov|\.us|civicplus\.com|\.ma\.us/i.test(url))
+          );
+        })
+        .slice(0, 3);
+      return results;
+    }
+  } catch {
+    // search failed — return empty
+  }
+
+  return [];
 }
 
 export async function scrapeStaff(townName: string): Promise<ScrapeResult> {
@@ -178,24 +243,11 @@ export async function scrapeStaff(townName: string): Promise<ScrapeResult> {
     const collected: StaffEmployee[] = [];
 
     for (const page of pages) {
-      try {
-        const response = await fetch(page.url, {
-          headers: {
-            "User-Agent": "PublicLogic/StaffLookup (+https://publiclogic.org)",
-            Accept: "text/html,application/xhtml+xml",
-          },
-          signal: AbortSignal.timeout(12_000),
-        });
-        if (!response.ok) continue;
-        const html = await response.text();
-        collected.push(...extractContactsFromRows(html, page.url));
-        if (collected.length < 6) {
-          collected.push(...extractContactsFromMailto(html, page.url));
-        }
-        if (collected.length >= 8) break;
-      } catch {
-        continue;
-      }
+      const html = await fetchPage(page.url);
+      if (!html) continue;
+      collected.push(...extractContactsFromRows(html, page.url));
+      collected.push(...extractContactsFromMailto(html, page.url));
+      if (collected.length >= 8) break;
     }
 
     const employees = dedupeContacts(collected).slice(0, 8);

@@ -7,9 +7,25 @@ import { Router } from "express";
 import type Database from "better-sqlite3";
 import { ALL_MA_MUNICIPALITIES } from "../fiscalintel/municipalities.js";
 import { runDailyRegistrySync } from "./dailySync.js";
+import { syncFromMma } from "./mmaSync.js";
+import { fetchMMAProfile, townNameToMMASlug, type MMAProfile } from "./mmaScraper.js";
+
+const MMA_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function ensureMMATable(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS mma_profiles (
+      slug        TEXT PRIMARY KEY,
+      town_name   TEXT NOT NULL,
+      profile_json TEXT NOT NULL,
+      fetched_at  TEXT NOT NULL
+    )
+  `);
+}
 
 export function createTownRegistryRoutes(db: Database.Database): Router {
   const router = Router();
+  ensureMMATable(db);
 
   // GET /api/registry/towns — list all 351 towns with latest fiscal snapshot + staff count
   router.get("/towns", (_req, res) => {
@@ -86,6 +102,56 @@ export function createTownRegistryRoutes(db: Database.Database): Router {
     });
   });
 
+  // GET /api/registry/town/:name/mma — MMA Data Hub profile (demographics, finances, governance, reps)
+  // Cached in SQLite for 7 days; pass ?refresh=1 to force re-fetch.
+  router.get("/town/:name/mma", async (req, res) => {
+    const name = decodeURIComponent(req.params.name);
+    const muni = ALL_MA_MUNICIPALITIES.find(
+      (m) => m.name.toLowerCase() === name.toLowerCase()
+    );
+    if (!muni) return res.status(404).json({ error: "Town not found" });
+
+    const slug = townNameToMMASlug(muni.name);
+    const forceRefresh = req.query["refresh"] === "1";
+
+    if (!forceRefresh) {
+      const cached = db
+        .prepare("SELECT profile_json, fetched_at FROM mma_profiles WHERE slug = ?")
+        .get(slug) as { profile_json: string; fetched_at: string } | undefined;
+      if (cached) {
+        const age = Date.now() - new Date(cached.fetched_at).getTime();
+        if (age < MMA_CACHE_TTL_MS) {
+          return res.json({
+            source: "cache",
+            profile: JSON.parse(cached.profile_json) as MMAProfile,
+          });
+        }
+      }
+    }
+
+    try {
+      const profile = await fetchMMAProfile(muni.name);
+      db.prepare(
+        "INSERT OR REPLACE INTO mma_profiles (slug, town_name, profile_json, fetched_at) VALUES (?, ?, ?, ?)"
+      ).run(slug, muni.name, JSON.stringify(profile), profile.fetchedAt);
+      return res.json({ source: "live", profile });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      // Serve stale cache on error rather than failing hard
+      const stale = db
+        .prepare("SELECT profile_json, fetched_at FROM mma_profiles WHERE slug = ?")
+        .get(slug) as { profile_json: string; fetched_at: string } | undefined;
+      if (stale) {
+        return res.json({
+          source: "stale-cache",
+          profile: JSON.parse(stale.profile_json) as MMAProfile,
+          warning: `Live fetch failed: ${errMsg}`,
+        });
+      }
+      return res.status(502).json({ error: `MMA fetch failed: ${errMsg}` });
+    }
+  });
+
   // GET /api/registry/synclog — last 10 sync runs
   router.get("/synclog", (_req, res) => {
     const rows = db
@@ -101,6 +167,16 @@ export function createTownRegistryRoutes(db: Database.Database): Router {
     res.status(202).json({ message: "Daily registry sync started" });
     runDailyRegistrySync(db).catch((e) =>
       console.error("[town-registry] manual sync failed:", e)
+    );
+  });
+
+  // POST /api/registry/sync-mma — trigger just the fast MMA sync (no DLS/scrape)
+  router.post("/sync-mma", (_req, res) => {
+    res.status(202).json({ message: "MMA sync started — populates fiscal data for all 351 towns" });
+    syncFromMma(db).then(r => {
+      console.info("[town-registry] MMA sync complete:", r);
+    }).catch((e) =>
+      console.error("[town-registry] MMA sync failed:", e)
     );
   });
 

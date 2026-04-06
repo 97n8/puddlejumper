@@ -1,5 +1,10 @@
 /**
  * Daily town registry sync — fiscal data + staff directory for all 351 MA municipalities.
+ *
+ * Sync order:
+ *  1. MMA sync — one HTTP request gets real fiscal data for all 351 towns at once.
+ *  2. Per-town DLS sync — enriches with stabilization/overlay detail from MA DLS.
+ *  3. Per-town staff scrape — finds real contact info from town websites.
  */
 
 import type Database from "better-sqlite3";
@@ -7,6 +12,7 @@ import crypto from "node:crypto";
 import { ALL_MA_MUNICIPALITIES } from "../fiscalintel/municipalities.js";
 import { syncMunicipality } from "../fiscalintel/sync.js";
 import { scrapeStaff } from "./staffScraper.js";
+import { syncFromMma } from "./mmaSync.js";
 
 export async function runDailyRegistrySync(db: Database.Database): Promise<void> {
   const syncId = crypto.randomUUID();
@@ -17,6 +23,15 @@ export async function runDailyRegistrySync(db: Database.Database): Promise<void>
      VALUES (?, 'running', ?, ?, 0, 0)`
   ).run(syncId, startedAt, ALL_MA_MUNICIPALITIES.length);
 
+  // ── Step 1: MMA sync (one request, all 351 towns) ───────────────────────
+  try {
+    const mmaResult = await syncFromMma(db);
+    console.info(`[town-registry] MMA sync: ${mmaResult.ok}/${mmaResult.total} towns updated`);
+  } catch (e) {
+    console.error("[town-registry] MMA sync failed (non-fatal):", e);
+  }
+
+  // ── Step 2: Per-town DLS + staff scrape ─────────────────────────────────
   let ok = 0;
   let err = 0;
 
