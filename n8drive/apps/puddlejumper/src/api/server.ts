@@ -125,6 +125,7 @@ import { initFiscalDb, createFiscalRoutes } from "../fiscalintel/index.js";
 import { scheduleDailyRegistrySync } from "../townregistry/dailySync.js";
 import { createTownRegistryRoutes } from "../townregistry/routes.js";
 import { createMyHealthRoutes } from "./routes/myHealth.js";
+import { createFileDraftsRouter } from "./routes/fileDrafts.js";
 import { createCivicRouter } from "../civic/civicRoutes.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
@@ -922,6 +923,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   const vaultDbPath = path.resolve(process.env.VAULT_DB_PATH ?? path.join(CONTROLLED_DATA_DIR, "vault.db"));
   const documentRoutes = createDocumentRoutes({ dbPath: vaultDbPath });
   app.use("/api", documentRoutes);
+  // Re-use the vault DB path for file drafts (separate Database connection, same file)
+  const vaultDb = new Database(vaultDbPath);
+  app.use("/api", createFileDraftsRouter(vaultDb));
 
   // ── Redirects ────────────────────────────────────────────────────────────
   // Redirect /admin and /dashboard to the working backend admin interface at /pj/admin
