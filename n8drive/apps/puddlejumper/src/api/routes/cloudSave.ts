@@ -48,38 +48,6 @@ async function refreshGoogleToken(
   }
 }
 
-// Refresh an expired Microsoft OAuth token and persist the new one.
-// Returns the new access token, or null if refresh failed.
-async function refreshMicrosoftToken(
-  store: ConnectorStore,
-  fetchImpl: typeof fetch,
-  tenantId: string,
-  userId: string,
-  refreshToken: string
-): Promise<string | null> {
-  const clientId = (process.env.MICROSOFT_CLIENT_ID ?? "").trim();
-  const clientSecret = (process.env.MICROSOFT_CLIENT_SECRET ?? "").trim();
-  if (!clientId || !clientSecret) return null;
-  try {
-    const tenantSegment = (process.env.MS_TENANT_ID ?? "common").trim() || "common";
-    const form = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, refresh_token: refreshToken, grant_type: "refresh_token" });
-    const res = await fetchImpl(
-      `https://login.microsoftonline.com/${encodeURIComponent(tenantSegment)}/oauth2/v2.0/token`,
-      { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form.toString() }
-    );
-    if (!res.ok) return null;
-    const payload = await res.json() as Record<string, unknown>;
-    const accessToken = typeof payload.access_token === "string" ? payload.access_token : null;
-    if (!accessToken) return null;
-    const expiresIn = typeof payload.expires_in === "number" ? payload.expires_in : 3600;
-    const newRefreshToken = typeof payload.refresh_token === "string" ? payload.refresh_token : refreshToken;
-    store.upsertToken({ provider: "microsoft", tenantId, userId, accessToken, refreshToken: newRefreshToken, scopes: [], account: null, expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString() });
-    return accessToken;
-  } catch {
-    return null;
-  }
-}
-
 const bodySchema = z.object({
   provider: z.enum(["google", "microsoft", "github"]),
   filename: z.string().trim().min(1).max(255),
@@ -194,31 +162,23 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
             const r = await saveToGoogleDrive({ fetchImpl, accessToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, folderId: item.folderId });
             results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url });
           } catch (err) {
-            const is401 = err instanceof Error && (err.message.includes('"code":401') || err.message.includes('"code": 401'));
+            const is401 = err instanceof Error && (
+              (err as NodeJS.ErrnoException & { code?: number }).code === 401 ||
+              err.message.includes('"code":401') || err.message.includes('"code": 401')
+            );
             if (is401 && token.refreshToken) {
               const newToken = await refreshGoogleToken(opts.store, fetchImpl, tenantId, userId, token.refreshToken);
               if (newToken) {
                 const r = await saveToGoogleDrive({ fetchImpl, accessToken: newToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, folderId: item.folderId });
-                results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url }); return;
+                results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url });
+                return;
               }
             }
             throw err;
           }
         } else if (item.provider === "microsoft") {
-          try {
-            const r = await saveToOneDrive({ fetchImpl, accessToken: token.accessToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, folderId: item.folderId, driveId: item.driveId });
-            results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url });
-          } catch (err) {
-            const is401 = err instanceof Error && /401|Unauthorized|InvalidAuthenticationToken|ExpiredAuthenticationToken/i.test(err.message);
-            if (is401 && token.refreshToken) {
-              const newToken = await refreshMicrosoftToken(opts.store, fetchImpl, tenantId, userId, token.refreshToken);
-              if (newToken) {
-                const r = await saveToOneDrive({ fetchImpl, accessToken: newToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, folderId: item.folderId, driveId: item.driveId });
-                results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url }); return;
-              }
-            }
-            throw err;
-          }
+          const r = await saveToOneDrive({ fetchImpl, accessToken: token.accessToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, folderId: item.folderId, driveId: item.driveId });
+          results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url });
         } else {
           if (!item.githubRepo) { results.push({ filename: item.filename, success: false, error: "githubRepo required" }); return; }
           const r = await saveToGitHub({ fetchImpl, accessToken: token.accessToken, repo: item.githubRepo, filename: item.filename, contentBase64: item.contentBase64, path: item.githubPath, message: item.githubMessage });
@@ -392,7 +352,10 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
           const result = await saveToGoogleDrive({ fetchImpl, accessToken, filename, contentBase64, mimeType, folderId });
           res.json(result); return;
         } catch (err) {
-          const is401 = err instanceof Error && (err.message.includes('"code":401') || err.message.includes('"code": 401'));
+          const is401 = err instanceof Error && (
+            (err as NodeJS.ErrnoException & { code?: number }).code === 401 ||
+            err.message.includes('"code":401') || err.message.includes('"code": 401')
+          );
           if (is401 && token.refreshToken) {
             const newToken = await refreshGoogleToken(opts.store, fetchImpl, tenantId, auth.userId ?? auth.sub, token.refreshToken);
             if (newToken) {
@@ -403,20 +366,8 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
           throw err;
         }
       } else if (provider === "microsoft") {
-        try {
-          const result = await saveToOneDrive({ fetchImpl, accessToken: token.accessToken, filename, contentBase64, mimeType, folderId, driveId });
-          res.json(result); return;
-        } catch (err) {
-          const is401 = err instanceof Error && /401|Unauthorized|InvalidAuthenticationToken|ExpiredAuthenticationToken/i.test(err.message);
-          if (is401 && token.refreshToken) {
-            const newToken = await refreshMicrosoftToken(opts.store, fetchImpl, tenantId, auth.userId ?? auth.sub, token.refreshToken);
-            if (newToken) {
-              const result = await saveToOneDrive({ fetchImpl, accessToken: newToken, filename, contentBase64, mimeType, folderId, driveId });
-              res.json(result); return;
-            }
-          }
-          throw err;
-        }
+        const result = await saveToOneDrive({ fetchImpl, accessToken: token.accessToken, filename, contentBase64, mimeType, folderId, driveId });
+        res.json(result);
       } else {
         if (!githubRepo) { res.status(400).json({ error: "githubRepo is required for GitHub saves" }); return; }
         const result = await saveToGitHub({ fetchImpl, accessToken: token.accessToken, repo: githubRepo, filename, contentBase64, path: githubPath, message: githubMessage });
@@ -469,8 +420,12 @@ async function saveToGoogleDrive(opts: {
         body: content,
       }
     );
+    if (!updateRes.ok) {
+      if (updateRes.status === 401) throw Object.assign(new Error("Google Drive token expired"), { code: 401 });
+      const errBody = await updateRes.json().catch(() => ({})) as Record<string, unknown>;
+      throw new Error(`Google Drive update failed (${updateRes.status}): ${JSON.stringify(errBody)}`);
+    }
     const data = await updateRes.json() as { id?: string; webViewLink?: string };
-    if (!updateRes.ok) throw new Error(`Google Drive update failed: ${JSON.stringify(data)}`);
     return { fileId: data.id ?? existingId, url: data.webViewLink ?? `https://drive.google.com/file/d/${existingId}/view` };
   }
 
@@ -492,8 +447,12 @@ async function saveToGoogleDrive(opts: {
       body,
     }
   );
+  if (!uploadRes.ok) {
+    if (uploadRes.status === 401) throw Object.assign(new Error("Google Drive token expired"), { code: 401 });
+    const errBody = await uploadRes.json().catch(() => ({})) as Record<string, unknown>;
+    throw new Error(`Google Drive upload failed (${uploadRes.status}): ${JSON.stringify(errBody)}`);
+  }
   const uploadData = await uploadRes.json() as { id?: string; webViewLink?: string };
-  if (!uploadRes.ok) throw new Error(`Google Drive upload failed: ${JSON.stringify(uploadData)}`);
   return {
     fileId: uploadData.id ?? "",
     url: uploadData.webViewLink ?? `https://drive.google.com/file/d/${uploadData.id}/view`,
