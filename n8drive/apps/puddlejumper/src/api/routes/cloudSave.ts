@@ -53,6 +53,7 @@ const bodySchema = z.object({
   filename: z.string().trim().min(1).max(255),
   contentBase64: z.string().min(0),
   mimeType: z.string().optional(),
+  targetMimeType: z.string().optional(), // Google: convert-to mime (e.g. application/vnd.google-apps.document)
   // Google / OneDrive
   folderId: z.string().optional(),
   driveId: z.string().optional(),   // OneDrive/SharePoint drive ID
@@ -102,6 +103,7 @@ const batchItemSchema = z.object({
   filename: z.string().trim().min(1).max(255),
   contentBase64: z.string(),
   mimeType: z.string().optional(),
+  targetMimeType: z.string().optional(), // Google: convert-to mime
   folderId: z.string().optional(),
   driveId: z.string().optional(),
   githubRepo: z.string().optional(),
@@ -159,7 +161,7 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
         if (item.provider === "google") {
           let accessToken = token.accessToken;
           try {
-            const r = await saveToGoogleDrive({ fetchImpl, accessToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, folderId: item.folderId });
+            const r = await saveToGoogleDrive({ fetchImpl, accessToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, targetMimeType: item.targetMimeType, folderId: item.folderId });
             results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url });
           } catch (err) {
             const is401 = err instanceof Error && (
@@ -169,7 +171,7 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
             if (is401 && token.refreshToken) {
               const newToken = await refreshGoogleToken(opts.store, fetchImpl, tenantId, userId, token.refreshToken);
               if (newToken) {
-                const r = await saveToGoogleDrive({ fetchImpl, accessToken: newToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, folderId: item.folderId });
+                const r = await saveToGoogleDrive({ fetchImpl, accessToken: newToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, targetMimeType: item.targetMimeType, folderId: item.folderId });
                 results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url });
                 return;
               }
@@ -337,7 +339,7 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
       res.status(400).json({ error: "Invalid request", detail: parsed.error.flatten() });
       return;
     }
-    const { provider, filename, contentBase64, mimeType, folderId, driveId, githubRepo, githubPath, githubMessage } = parsed.data;
+    const { provider, filename, contentBase64, mimeType, targetMimeType, folderId, driveId, githubRepo, githubPath, githubMessage } = parsed.data;
 
     const token = opts.store.getToken(provider, tenantId, auth.userId ?? auth.sub);
     if (!token) {
@@ -349,7 +351,7 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
       if (provider === "google") {
         let accessToken = token.accessToken;
         try {
-          const result = await saveToGoogleDrive({ fetchImpl, accessToken, filename, contentBase64, mimeType, folderId });
+          const result = await saveToGoogleDrive({ fetchImpl, accessToken, filename, contentBase64, mimeType, targetMimeType, folderId });
           res.json(result); return;
         } catch (err) {
           const is401 = err instanceof Error && (
@@ -359,7 +361,7 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
           if (is401 && token.refreshToken) {
             const newToken = await refreshGoogleToken(opts.store, fetchImpl, tenantId, auth.userId ?? auth.sub, token.refreshToken);
             if (newToken) {
-              const result = await saveToGoogleDrive({ fetchImpl, accessToken: newToken, filename, contentBase64, mimeType, folderId });
+              const result = await saveToGoogleDrive({ fetchImpl, accessToken: newToken, filename, contentBase64, mimeType, targetMimeType, folderId });
               res.json(result); return;
             }
           }
@@ -390,10 +392,13 @@ async function saveToGoogleDrive(opts: {
   filename: string;
   contentBase64: string;
   mimeType?: string;
+  targetMimeType?: string; // for Google Docs conversion — goes in metadata, not content-type
   folderId?: string;
 }): Promise<{ fileId: string; url: string }> {
-  const { fetchImpl, accessToken, filename, contentBase64, mimeType, folderId } = opts;
-  const mime = mimeType ?? guessMime(filename);
+  const { fetchImpl, accessToken, filename, contentBase64, mimeType, targetMimeType, folderId } = opts;
+  // sourceMime = content-type for the upload part
+  // targetMimeType (if set) = desired Google Workspace format (goes in metadata)
+  const sourceMime = mimeType ?? guessMime(filename);
   const content = Buffer.from(contentBase64, "base64");
 
   // Check if a file with this name already exists in the folder
@@ -414,7 +419,7 @@ async function saveToGoogleDrive(opts: {
       `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=media&fields=id,webViewLink`,
       {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": mime },
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": sourceMime },
         body: content,
       }
     );
@@ -434,11 +439,15 @@ async function saveToGoogleDrive(opts: {
   // Multipart upload to create new file
   // Try with the requested parent first; if that fails (drive.file scope restriction), fall back to root
   const tryCreate = async (parent: string): Promise<Response> => {
-    const metadata = JSON.stringify({ name: filename, parents: [parent] });
+    // targetMimeType in metadata tells Google to convert (e.g. md → Google Doc)
+    // sourceMime is the Content-Type of the uploaded bytes — MUST be the source format
+    const metaObj: Record<string, unknown> = { name: filename, parents: [parent] };
+    if (targetMimeType) metaObj.mimeType = targetMimeType;
+    const metadata = JSON.stringify(metaObj);
     const boundary = "logicos_boundary_" + Math.random().toString(36).slice(2);
     const body = Buffer.concat([
       Buffer.from(`--${boundary}\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n`),
-      Buffer.from(`--${boundary}\r\nContent-Type: ${mime}\r\n\r\n`),
+      Buffer.from(`--${boundary}\r\nContent-Type: ${sourceMime}\r\n\r\n`),
       content,
       Buffer.from(`\r\n--${boundary}--`),
     ]);
