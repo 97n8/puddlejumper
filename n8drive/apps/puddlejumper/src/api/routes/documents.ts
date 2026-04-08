@@ -114,6 +114,24 @@ export function createDocumentRoutes(opts: { dbPath: string }): express.Router {
       created_at   INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_vfile_owner ON vault_files(tenant_id, user_id);
+
+    CREATE TABLE IF NOT EXISTS case_tasks (
+      id             TEXT PRIMARY KEY,
+      document_id    TEXT NOT NULL REFERENCES vault_documents(id) ON DELETE CASCADE,
+      tenant_id      TEXT NOT NULL,
+      created_by     TEXT NOT NULL,
+      assigned_side  TEXT NOT NULL CHECK(assigned_side IN ('A','B')),
+      title          TEXT NOT NULL,
+      description    TEXT NOT NULL DEFAULT '',
+      status         TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','done','cancelled')),
+      source_event_id TEXT,
+      due_at         TEXT,
+      completed_by   TEXT,
+      completed_at   TEXT,
+      created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at     TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_ctask_doc ON case_tasks(document_id, tenant_id, status);
   `);
 
   // Idempotent schema migrations
@@ -137,10 +155,21 @@ export function createDocumentRoutes(opts: { dbPath: string }): express.Router {
     return { tenantId: a.tenantId ?? "", userId: a.userId ?? a.sub ?? "" };
   }
 
-  function logEvent(documentId: string, tenantId: string, userId: string, userName: string, eventType: string, details: object = {}) {
+  function logEvent(documentId: string, tenantId: string, userId: string, userName: string, eventType: string, details: object = {}): string {
+    const eventId = crypto.randomUUID();
     db.prepare(
       "INSERT INTO vault_events VALUES (?,?,?,?,?,?,?,?)"
-    ).run(crypto.randomUUID(), documentId, tenantId, userId, userName, eventType, JSON.stringify(details), Date.now());
+    ).run(eventId, documentId, tenantId, userId, userName, eventType, JSON.stringify(details), Date.now());
+    return eventId;
+  }
+
+  function createTask(documentId: string, tenantId: string, createdBy: string, assignedSide: 'A' | 'B', title: string, description: string, sourceEventId?: string) {
+    const taskId = crypto.randomUUID();
+    db.prepare(
+      `INSERT INTO case_tasks (id, document_id, tenant_id, created_by, assigned_side, title, description, source_event_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(taskId, documentId, tenantId, createdBy, assignedSide, title, description, sourceEventId ?? null);
+    return taskId;
   }
 
   function contentHash(html: string, css: string) {
@@ -232,7 +261,16 @@ export function createDocumentRoutes(opts: { dbPath: string }): express.Router {
     if (!doc) { res.status(404).json({ error: "Not found" }); return; }
     const now = Date.now();
     db.prepare("UPDATE vault_documents SET status=?, updated_at=? WHERE id=? AND tenant_id=? AND user_id=?").run(status, now, req.params.id, tenantId, userId);
-    logEvent(req.params.id, tenantId, userId, userName, "status_changed", { from: doc.status, to: status });
+    const eventId = logEvent(req.params.id, tenantId, userId, userName, "status_changed", { from: doc.status, to: status });
+    // When transitioning to "review", issue a deficiency and auto-create a Side B task for the applicant
+    if (status === "review") {
+      const defEventId = logEvent(req.params.id, tenantId, userId, userName, "deficiency_issued", { from: doc.status });
+      createTask(req.params.id, tenantId, userId, 'B',
+        'Respond to reviewer deficiency',
+        'A reviewer has requested additional information or changes. Please review and respond.',
+        defEventId
+      );
+    }
     res.json({ ok: true, status, updated_at: now });
   });
 
@@ -264,7 +302,13 @@ export function createDocumentRoutes(opts: { dbPath: string }): express.Router {
     const now = Date.now();
     const sigId = crypto.randomUUID();
     db.prepare("INSERT INTO vault_signatures VALUES (?,?,?,?,?,?,?,?)").run(sigId, req.params.id, tenantId, userId, userName, comment, hash, now);
-    logEvent(req.params.id, tenantId, userId, userName, "signed", { comment, hash });
+    const signedEventId = logEvent(req.params.id, tenantId, userId, userName, "signed", { comment, hash });
+    // Auto-create a Side A task for the reviewer to review the applicant's signature
+    createTask(req.params.id, tenantId, userId, 'A',
+      'Review applicant signature',
+      'Applicant has signed the document. Please review and take action.',
+      signedEventId
+    );
     res.status(201).json({ id: sigId, user_name: userName, comment, content_hash: hash, created_at: now });
   });
 
@@ -334,6 +378,72 @@ export function createDocumentRoutes(opts: { dbPath: string }): express.Router {
     const { tenantId, userId } = authOf(req);
     db.prepare("DELETE FROM vault_files WHERE id=? AND tenant_id=? AND user_id=?").run(req.params.id, tenantId, userId);
     res.json({ ok: true });
+  });
+
+  // ── Case Tasks ────────────────────────────────────────────────────────────
+
+  router.get("/documents/:id/tasks", (req, res) => {
+    const { tenantId } = authOf(req);
+    const doc = db.prepare("SELECT id FROM vault_documents WHERE id=? AND tenant_id=?").get(req.params.id, tenantId);
+    if (!doc) { res.status(404).json({ error: "Not found" }); return; }
+    let sql = "SELECT * FROM case_tasks WHERE document_id=? AND tenant_id=?";
+    const params: string[] = [req.params.id, tenantId];
+    if (req.query.side === 'A' || req.query.side === 'B') { sql += " AND assigned_side=?"; params.push(req.query.side); }
+    if (req.query.status === 'open' || req.query.status === 'done' || req.query.status === 'cancelled') { sql += " AND status=?"; params.push(req.query.status as string); }
+    sql += " ORDER BY created_at ASC";
+    const tasks = db.prepare(sql).all(...params);
+    res.json({ tasks });
+  });
+
+  router.post("/documents/:id/tasks", (req, res) => {
+    const { tenantId, userId } = authOf(req);
+    const doc = db.prepare("SELECT id FROM vault_documents WHERE id=? AND tenant_id=?").get(req.params.id, tenantId);
+    if (!doc) { res.status(404).json({ error: "Not found" }); return; }
+    const parsed = z.object({
+      assignedSide: z.enum(['A', 'B']),
+      title: z.string().trim().min(1).max(255),
+      description: z.string().optional(),
+      dueAt: z.string().optional(),
+    }).safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
+    const { assignedSide, title, description = '', dueAt } = parsed.data;
+    const taskId = crypto.randomUUID();
+    db.prepare(
+      `INSERT INTO case_tasks (id, document_id, tenant_id, created_by, assigned_side, title, description, due_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(taskId, req.params.id, tenantId, userId, assignedSide, title, description, dueAt ?? null);
+    const task = db.prepare("SELECT * FROM case_tasks WHERE id=?").get(taskId);
+    res.status(201).json({ task });
+  });
+
+  router.put("/documents/:id/tasks/:taskId", (req, res) => {
+    const { tenantId, userId } = authOf(req);
+    const doc = db.prepare("SELECT id FROM vault_documents WHERE id=? AND tenant_id=?").get(req.params.id, tenantId);
+    if (!doc) { res.status(404).json({ error: "Not found" }); return; }
+    const task = db.prepare("SELECT * FROM case_tasks WHERE id=? AND document_id=? AND tenant_id=?").get(req.params.taskId, req.params.id, tenantId);
+    if (!task) { res.status(404).json({ error: "Task not found" }); return; }
+    const parsed = z.object({
+      status: z.enum(['done', 'cancelled']).optional(),
+      title: z.string().trim().min(1).max(255).optional(),
+      description: z.string().optional(),
+    }).safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
+    const { status, title, description } = parsed.data;
+    const now = new Date().toISOString();
+    const completedBy = status === 'done' ? userId : null;
+    const completedAt = status === 'done' ? now : null;
+    db.prepare(
+      `UPDATE case_tasks SET
+         status=COALESCE(?,status),
+         title=COALESCE(?,title),
+         description=COALESCE(?,description),
+         completed_by=COALESCE(?,completed_by),
+         completed_at=COALESCE(?,completed_at),
+         updated_at=?
+       WHERE id=? AND document_id=? AND tenant_id=?`
+    ).run(status ?? null, title ?? null, description ?? null, completedBy, completedAt, now, req.params.taskId, req.params.id, tenantId);
+    const updated = db.prepare("SELECT * FROM case_tasks WHERE id=?").get(req.params.taskId);
+    res.json({ task: updated });
   });
 
   return router;

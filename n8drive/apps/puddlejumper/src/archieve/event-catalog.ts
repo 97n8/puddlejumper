@@ -151,6 +151,11 @@ export const ArchieveEventType = {
   ORG_IMPORT_PUBLISHED: 'ORG_IMPORT_PUBLISHED',
   ORG_DELEGATION_CREATED: 'ORG_DELEGATION_CREATED',
   ORG_DELEGATION_REVOKED: 'ORG_DELEGATION_REVOKED',
+
+  // ARCHIEVE Rules
+  ARCHIEVE_RULE_INGESTED: 'ARCHIEVE_RULE_INGESTED',
+  ARCHIEVE_RULE_STATUS_CHANGED: 'ARCHIEVE_RULE_STATUS_CHANGED',
+  ARCHIEVE_RULE_ARCHIVED: 'ARCHIEVE_RULE_ARCHIVED',
 } as const;
 
 export type ArchieveEventTypeValue = typeof ArchieveEventType[keyof typeof ArchieveEventType];
@@ -256,6 +261,9 @@ const REQUIRED_DATA_FIELDS: Partial<Record<string, string[]>> = {
   ORG_IMPORT_PUBLISHED: ['jobId', 'upsertedCount'],
   ORG_DELEGATION_CREATED: ['delegationId', 'delegatorId', 'delegateeId', 'scope'],
   ORG_DELEGATION_REVOKED: ['delegationId'],
+  ARCHIEVE_RULE_INGESTED: ['ruleId', 'title', 'version'],
+  ARCHIEVE_RULE_STATUS_CHANGED: ['ruleId', 'status'],
+  ARCHIEVE_RULE_ARCHIVED: ['ruleId'],
 };
 
 export function isKnownEventType(eventType: string): boolean {
