@@ -10,6 +10,18 @@ const SEVERITY_RANK: Record<AlertSeverity, number> = {
 };
 
 const SCHEMA = `
+  CREATE TABLE IF NOT EXISTS watch_baselines (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    domain TEXT NOT NULL,
+    metric TEXT NOT NULL,
+    baseline_value REAL NOT NULL,
+    sample_count INTEGER NOT NULL DEFAULT 1,
+    last_updated_at TEXT NOT NULL,
+    UNIQUE(tenant_id, domain, metric)
+  );
+  CREATE INDEX IF NOT EXISTS idx_wb_tenant ON watch_baselines(tenant_id, domain, metric);
+
   CREATE TABLE IF NOT EXISTS watch_alerts (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
@@ -277,3 +289,45 @@ export function updateRuleRunStatus(
     WHERE tenant_id = ? AND domain = ?
   `).run(now, status, tenantId, domain);
 }
+
+// ── Baseline helpers ──────────────────────────────────────────────────────────
+
+export function upsertBaseline(
+  db: Database.Database,
+  tenantId: string,
+  domain: AlertDomain,
+  metric: string,
+  newValue: number
+): void {
+  const now = new Date().toISOString();
+  const id = crypto.randomUUID();
+  // Exponential moving average: blend new sample into baseline (α=0.3)
+  const existing = db.prepare(
+    'SELECT baseline_value, sample_count FROM watch_baselines WHERE tenant_id=? AND domain=? AND metric=?'
+  ).get(tenantId, domain, metric) as { baseline_value: number; sample_count: number } | undefined;
+
+  if (!existing) {
+    db.prepare(
+      'INSERT INTO watch_baselines (id, tenant_id, domain, metric, baseline_value, sample_count, last_updated_at) VALUES (?,?,?,?,?,1,?)'
+    ).run(id, tenantId, domain, metric, newValue, now);
+  } else {
+    const alpha = 0.3;
+    const updated = alpha * newValue + (1 - alpha) * existing.baseline_value;
+    db.prepare(
+      'UPDATE watch_baselines SET baseline_value=?, sample_count=sample_count+1, last_updated_at=? WHERE tenant_id=? AND domain=? AND metric=?'
+    ).run(updated, now, tenantId, domain, metric);
+  }
+}
+
+export function getBaseline(
+  db: Database.Database,
+  tenantId: string,
+  domain: AlertDomain,
+  metric: string
+): number | null {
+  const row = db.prepare(
+    'SELECT baseline_value FROM watch_baselines WHERE tenant_id=? AND domain=? AND metric=?'
+  ).get(tenantId, domain, metric) as { baseline_value: number } | undefined;
+  return row?.baseline_value ?? null;
+}
+

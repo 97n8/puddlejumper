@@ -20,6 +20,7 @@
     "@publiclogic/logic-commons": "workspace:*",
     "better-sqlite3": "^12.6.2",
     "cookie-parser": "^1.4.7",
+    "croner": "^10.0.1",
     "express": "^4.21.2",
     "http-proxy-middleware": "^3.0.5",
     "jsonwebtoken": "^9.0.3",

@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { upsertAlert, updateRuleRunStatus } from './store.js';
+import { upsertAlert, updateRuleRunStatus, upsertBaseline, getBaseline } from './store.js';
 import type { AlertDomain, AlertSeverity } from './types.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -200,6 +200,173 @@ function placeholderCheck(domain: AlertDomain): CheckResult {
   return { domain, status: 'skipped', alertsFired: 0 };
 }
 
+// ── Workflow Backlog Check ─────────────────────────────────────────────────────
+
+function checkWorkflowBacklog(db: Database.Database, tenantId: string): CheckResult {
+  try {
+    const tableCheck = db.prepare(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='approvals'`
+    ).get();
+    if (!tableCheck) return { domain: 'workflow', status: 'skipped', alertsFired: 0 };
+
+    const now = Date.now();
+    const sla48h = new Date(now - 48 * 60 * 60 * 1000).toISOString();
+    const sla72h = new Date(now - 72 * 60 * 60 * 1000).toISOString();
+
+    // Pending approvals past 72h → critical; past 48h → warning
+    const overdueCritical = db.prepare(`
+      SELECT id, workflow_type, requested_at FROM approvals
+      WHERE tenant_id = ? AND status = 'pending' AND requested_at < ?
+    `).all(tenantId, sla72h) as { id: string; workflow_type: string; requested_at: string }[];
+
+    const overdueWarning = db.prepare(`
+      SELECT id, workflow_type, requested_at FROM approvals
+      WHERE tenant_id = ? AND status = 'pending' AND requested_at >= ? AND requested_at < ?
+    `).all(tenantId, sla72h, sla48h) as { id: string; workflow_type: string; requested_at: string }[];
+
+    let count = 0;
+    for (const item of overdueCritical) {
+      const hoursWaiting = Math.floor((now - new Date(item.requested_at).getTime()) / (60 * 60 * 1000));
+      upsertAlert(db, tenantId, {
+        domain: 'workflow',
+        severity: 'critical',
+        title: `Approval Backlog: ${item.workflow_type ?? 'Request'} pending ${hoursWaiting}h`,
+        detail: `Approval item ${item.id.slice(0, 8)} (${item.workflow_type}) has been waiting ${hoursWaiting} hours without action — past the 72-hour SLA.`,
+        affectedObjectType: 'approval',
+        affectedObjectId: item.id,
+        suggestedAction: 'Assign and action this approval immediately to clear the backlog.',
+        deduplicationKey: `workflow-backlog-${item.id}`,
+      });
+      count++;
+    }
+    for (const item of overdueWarning) {
+      const hoursWaiting = Math.floor((now - new Date(item.requested_at).getTime()) / (60 * 60 * 1000));
+      upsertAlert(db, tenantId, {
+        domain: 'workflow',
+        severity: 'warning',
+        title: `Approaching SLA: ${item.workflow_type ?? 'Approval'} pending ${hoursWaiting}h`,
+        detail: `Approval item ${item.id.slice(0, 8)} (${item.workflow_type}) has been waiting ${hoursWaiting} hours — approaching the 72-hour SLA limit.`,
+        affectedObjectType: 'approval',
+        affectedObjectId: item.id,
+        suggestedAction: 'Review this approval soon to avoid missing the SLA.',
+        deduplicationKey: `workflow-backlog-${item.id}`,
+      });
+      count++;
+    }
+
+    updateRuleRunStatus(db, tenantId, 'workflow', 'ok');
+    return { domain: 'workflow', status: 'ok', alertsFired: count };
+  } catch (err) {
+    updateRuleRunStatus(db, tenantId, 'workflow', 'error');
+    return { domain: 'workflow', status: 'error', alertsFired: 0, error: (err as Error).message };
+  }
+}
+
+// ── Access Control Drift Check ─────────────────────────────────────────────────
+
+function checkAccessControlDrift(db: Database.Database, tenantId: string): CheckResult {
+  try {
+    const tableCheck = db.prepare(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='org_positions'`
+    ).get();
+    if (!tableCheck) return { domain: 'access', status: 'skipped', alertsFired: 0 };
+
+    // Required governance roles that must always have at least one holder or acting assignment
+    const REQUIRED_ROLES = ['administrator', 'finance_authority', 'records_authority'];
+    let count = 0;
+
+    for (const role of REQUIRED_ROLES) {
+      const holders = db.prepare(`
+        SELECT COUNT(*) as cnt FROM org_positions
+        WHERE tenant_id = ?
+          AND employment_status IN ('active', 'acting')
+          AND governance_roles LIKE ?
+      `).get(tenantId, `%${role}%`) as { cnt: number };
+
+      if (holders.cnt === 0) {
+        upsertAlert(db, tenantId, {
+          domain: 'access',
+          severity: 'high',
+          title: `Access Gap: No active holder for role "${role}"`,
+          detail: `No active or acting person holds the "${role}" governance role. Critical decisions requiring this role cannot be authorized.`,
+          affectedObjectType: 'governance_role',
+          affectedObjectId: role,
+          suggestedAction: `Assign an active or acting person to the "${role}" governance role.`,
+          deduplicationKey: `access-drift-role-${role}`,
+        });
+        count++;
+      }
+    }
+
+    updateRuleRunStatus(db, tenantId, 'access', 'ok');
+    return { domain: 'access', status: 'ok', alertsFired: count };
+  } catch (err) {
+    updateRuleRunStatus(db, tenantId, 'access', 'error');
+    return { domain: 'access', status: 'error', alertsFired: 0, error: (err as Error).message };
+  }
+}
+
+// ── Feed Latency Anomaly Check ─────────────────────────────────────────────────
+
+interface SyncJobRow {
+  feed_id: string;
+  duration_ms: number;
+  started_at: string;
+  status: string;
+}
+
+function checkFeedLatencyAnomalies(db: Database.Database, tenantId: string): CheckResult {
+  try {
+    const tableCheck = db.prepare(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='syncronate_jobs'`
+    ).get();
+    if (!tableCheck) return { domain: 'data_freshness', status: 'skipped', alertsFired: 0 };
+
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const recentJobs = db.prepare(`
+      SELECT feed_id, duration_ms, started_at, status
+      FROM syncronate_jobs
+      WHERE tenant_id = ? AND started_at > ? AND duration_ms IS NOT NULL
+      ORDER BY started_at DESC
+    `).all(tenantId, since24h) as SyncJobRow[];
+
+    // Group by feed_id
+    const byFeed = new Map<string, SyncJobRow[]>();
+    for (const job of recentJobs) {
+      if (!byFeed.has(job.feed_id)) byFeed.set(job.feed_id, []);
+      byFeed.get(job.feed_id)!.push(job);
+    }
+
+    let count = 0;
+    for (const [feedId, jobs] of byFeed) {
+      const latestJob = jobs[0];
+      const avgDuration = jobs.reduce((s, j) => s + j.duration_ms, 0) / jobs.length;
+
+      // Update rolling baseline
+      upsertBaseline(db, tenantId, 'data_freshness', `feed-latency-${feedId}`, avgDuration);
+      const baseline = getBaseline(db, tenantId, 'data_freshness', `feed-latency-${feedId}`);
+
+      if (baseline && latestJob.duration_ms > baseline * 3) {
+        upsertAlert(db, tenantId, {
+          domain: 'data_freshness',
+          severity: 'warning',
+          title: `Feed Latency Anomaly: ${feedId.slice(0, 12)}`,
+          detail: `Latest sync took ${Math.round(latestJob.duration_ms / 1000)}s vs baseline ${Math.round(baseline / 1000)}s (${Math.round(latestJob.duration_ms / baseline)}× slower). May indicate upstream degradation.`,
+          affectedObjectType: 'feed',
+          affectedObjectId: feedId,
+          suggestedAction: 'Check upstream connector health and recent sync logs.',
+          deduplicationKey: `feed-latency-anomaly-${feedId}`,
+        });
+        count++;
+      }
+    }
+
+    return { domain: 'data_freshness', status: 'ok', alertsFired: count };
+  } catch (err) {
+    return { domain: 'data_freshness', status: 'error', alertsFired: 0, error: (err as Error).message };
+  }
+}
+
 // ── Main Runner ───────────────────────────────────────────────────────────────
 
 export async function runChecks(db: Database.Database, tenantId: string): Promise<CheckResult[]> {
@@ -209,9 +376,10 @@ export async function runChecks(db: Database.Database, tenantId: string): Promis
     () => checkPrrSla(db, tenantId),
     () => checkOrgGaps(db, tenantId),
     () => checkFeedFreshness(db, tenantId),
-    () => placeholderCheck('workflow'),
+    () => checkWorkflowBacklog(db, tenantId),
+    () => checkAccessControlDrift(db, tenantId),
+    () => checkFeedLatencyAnomalies(db, tenantId),
     () => placeholderCheck('financial'),
-    () => placeholderCheck('access'),
     () => placeholderCheck('ai_activity'),
     () => placeholderCheck('environment_health'),
   ];

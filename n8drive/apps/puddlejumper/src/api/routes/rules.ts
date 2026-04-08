@@ -4,11 +4,14 @@
 // ARCHIEVE hash chain so that rule provenance is tamper-evident.
 //
 // Routes:
-//   GET    /api/rules               list rules for caller's tenant
-//   GET    /api/rules/:id           get single rule
-//   POST   /api/rules               ingest / create a rule
-//   PUT    /api/rules/:id/status    update status (active | archived)
-//   DELETE /api/rules/:id           soft-delete (sets status = archived)
+//   GET    /api/rules                    list rules for caller's tenant
+//   GET    /api/rules/pending            list rules awaiting approval
+//   GET    /api/rules/recommendations    surface AI rule suggestions from discovery history
+//   GET    /api/rules/:id               get single rule
+//   POST   /api/rules                   ingest / create a rule
+//   POST   /api/rules/:id/approve       approve or reject a pending rule
+//   PUT    /api/rules/:id/status        update status (active | archived)
+//   DELETE /api/rules/:id               soft-delete (sets status = archived)
 
 import crypto from 'node:crypto';
 import express from 'express';
@@ -36,6 +39,9 @@ export interface ArchieveRule {
   ai_confidence: number | null;
   created_by: string;
   archieve_event_id: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,7 +64,7 @@ const ruleBody = z.object({
     object: z.string(),
     dueDays: z.number().optional(),
   })).default([]),
-  status: z.enum(['draft', 'active']).default('draft'),
+  status: z.enum(['draft', 'pending', 'active', 'archived']).default('draft'),
   source: z.enum(['manual', 'ai', 'imported']).default('manual'),
   aiConfidence: z.number().min(0).max(1).optional(),
 });
@@ -85,11 +91,18 @@ export function createRulesRoutes(opts: { db: Database.Database }): express.Rout
       ai_confidence REAL,
       created_by TEXT NOT NULL,
       archieve_event_id TEXT,
+      approved_by TEXT,
+      approved_at TEXT,
+      rejection_reason TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(tenant_id, rule_id, version)
     );
     CREATE INDEX IF NOT EXISTS idx_arules_tenant ON archieve_rules(tenant_id, status, category);
+    -- Migrate: add approval columns if they don't yet exist (safe on re-start)
+    ALTER TABLE archieve_rules ADD COLUMN IF NOT EXISTS approved_by TEXT;
+    ALTER TABLE archieve_rules ADD COLUMN IF NOT EXISTS approved_at TEXT;
+    ALTER TABLE archieve_rules ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
   `);
 
   const router = express.Router();
@@ -104,6 +117,128 @@ export function createRulesRoutes(opts: { db: Database.Database }): express.Rout
       role: (ctx.role as string) ?? 'user',
     };
   }
+
+  // ── GET /api/rules/pending ────────────────────────────────────────────────
+
+  router.get('/rules/pending', (req, res) => {
+    const { tenantId } = auth(req);
+    const rules = db.prepare(
+      `SELECT * FROM archieve_rules WHERE tenant_id=? AND status='pending' ORDER BY created_at ASC`
+    ).all(tenantId) as ArchieveRule[];
+    res.json({ rules });
+  });
+
+  // ── POST /api/rules/:id/approve ───────────────────────────────────────────
+
+  router.post('/rules/:id/approve', (req, res) => {
+    const { tenantId, userId, role } = auth(req);
+    const approveSchema = z.object({
+      approve: z.boolean(),
+      rejectionReason: z.string().optional(),
+    });
+    const parsed = approveSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Body must have { approve: boolean }' });
+      return;
+    }
+
+    const rule = db.prepare(
+      'SELECT * FROM archieve_rules WHERE id=? AND tenant_id=?'
+    ).get(req.params.id, tenantId) as ArchieveRule | undefined;
+    if (!rule) { res.status(404).json({ error: 'Not found' }); return; }
+    if (rule.status !== 'pending') {
+      res.status(409).json({ error: `Rule is "${rule.status}", not "pending"` });
+      return;
+    }
+
+    const { approve, rejectionReason } = parsed.data;
+    const newStatus = approve ? 'active' : 'archived';
+    const now = new Date().toISOString();
+
+    db.prepare(`
+      UPDATE archieve_rules
+      SET status=?, approved_by=?, approved_at=?, rejection_reason=?, updated_at=?
+      WHERE id=? AND tenant_id=?
+    `).run(newStatus, userId, now, rejectionReason ?? null, now, req.params.id, tenantId);
+
+    const requestId = crypto.randomUUID();
+    try {
+      archieveLog({
+        requestId,
+        tenantId,
+        module: 'rules',
+        eventType: approve
+          ? ArchieveEventType.ARCHIEVE_RULE_STATUS_CHANGED
+          : ArchieveEventType.ARCHIEVE_RULE_ARCHIVED,
+        actor: { userId, role, sessionId: requestId },
+        severity: 'info',
+        data: { ruleId: rule.rule_id, decision: approve ? 'approved' : 'rejected', rejectionReason },
+      });
+    } catch (err) {
+      console.warn('[rules] archieveLog approve failed:', (err as Error).message);
+    }
+
+    res.json({ ok: true, status: newStatus, approved_by: userId, approved_at: now });
+  });
+
+  // ── GET /api/rules/recommendations ────────────────────────────────────────
+  // Surface high-frequency discovery query patterns as candidate rule suggestions.
+
+  router.get('/rules/recommendations', (req, res) => {
+    const { tenantId } = auth(req);
+
+    const tableCheck = db.prepare(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='discovery_queries'`
+    ).get();
+    if (!tableCheck) {
+      res.json({ recommendations: [] });
+      return;
+    }
+
+    // Find query patterns that appear ≥3 times and have no matching rule yet
+    const patterns = db.prepare(`
+      SELECT
+        query_text,
+        case_type,
+        COUNT(*) as frequency,
+        AVG(COALESCE(confidence, 0)) as avg_confidence,
+        MAX(created_at) as last_seen
+      FROM discovery_queries
+      WHERE tenant_id = ?
+        AND created_at > datetime('now', '-30 days')
+      GROUP BY case_type
+      HAVING COUNT(*) >= 3
+      ORDER BY frequency DESC
+      LIMIT 10
+    `).all(tenantId) as {
+      query_text: string;
+      case_type: string;
+      frequency: number;
+      avg_confidence: number;
+      last_seen: string;
+    }[];
+
+    const existingRuleIds = new Set(
+      (db.prepare(
+        `SELECT rule_id FROM archieve_rules WHERE tenant_id=? AND status NOT IN ('archived')`
+      ).all(tenantId) as { rule_id: string }[]).map(r => r.rule_id)
+    );
+
+    const recommendations = patterns
+      .filter(p => !existingRuleIds.has(`ai-suggest-${p.case_type}`))
+      .map(p => ({
+        suggestedRuleId: `ai-suggest-${p.case_type}`,
+        title: `Automate: ${p.case_type.replace(/_/g, ' ')}`,
+        description: `This inquiry type appeared ${p.frequency} times in the last 30 days. Consider adding a governance rule to standardize handling.`,
+        caseType: p.case_type,
+        frequency: p.frequency,
+        avgConfidence: Math.round(p.avg_confidence * 100) / 100,
+        lastSeen: p.last_seen,
+        category: 'general' as const,
+      }));
+
+    res.json({ recommendations });
+  });
 
   // ── GET /api/rules ────────────────────────────────────────────────────────
 
@@ -148,8 +283,11 @@ export function createRulesRoutes(opts: { db: Database.Database }): express.Rout
 
     const {
       ruleId, title, description, jurisdiction, category,
-      conditions, actions, status, source, aiConfidence,
+      conditions, actions, source, aiConfidence,
     } = parsed.data;
+
+    // AI-sourced rules always start pending — must be approved before going active
+    const status = source === 'ai' ? 'pending' : parsed.data.status;
 
     // Determine next version (increment if rule_id already exists for this tenant)
     const existing = db.prepare(
@@ -182,8 +320,8 @@ export function createRulesRoutes(opts: { db: Database.Database }): express.Rout
       INSERT INTO archieve_rules
         (id, tenant_id, rule_id, title, description, jurisdiction, category,
          conditions, actions, version, status, source, ai_confidence,
-         created_by, archieve_event_id, created_at, updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         created_by, archieve_event_id, approved_by, approved_at, rejection_reason, created_at, updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,NULL,?,?)
     `).run(
       id, tenantId, ruleId, title, description, jurisdiction, category,
       JSON.stringify(conditions), JSON.stringify(actions),
@@ -199,7 +337,7 @@ export function createRulesRoutes(opts: { db: Database.Database }): express.Rout
 
   router.put('/rules/:id/status', (req, res) => {
     const { tenantId, userId, role } = auth(req);
-    const statusSchema = z.object({ status: z.enum(['active', 'archived']) });
+    const statusSchema = z.object({ status: z.enum(['draft', 'pending', 'active', 'archived']) });
     const parsed = statusSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: 'status must be "active" or "archived"' });

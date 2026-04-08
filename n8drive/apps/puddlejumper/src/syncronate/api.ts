@@ -5,7 +5,7 @@ import { getAuthContext, createJwtAuthenticationMiddleware } from '@publiclogic/
 import { createFeed, getFeed, updateFeed, listFeeds, setFeedStatus } from './feed-store.js';
 import { createJob, getJob, listJobs, listJobsForTenant, countJobsToday } from './job-store.js';
 import { listRecords, getRecord, tombstoneRecord, countRecordsIngested } from './record-store.js';
-import { runSyncJob, scheduleFeed, getSyncronateHealth } from './sync-engine.js';
+import { runSyncJob, scheduleFeed, getSyncronateHealth, getNextScheduleOccurrences } from './sync-engine.js';
 import { verifyWebhookSignature, getWebhookSecretForFeed } from './connectors/polimorphic.js';
 import { log as archieveLog } from '../archieve/logger.js';
 import { ArchieveEventType } from '../archieve/event-catalog.js';
@@ -330,6 +330,29 @@ export function createSyncronateRouter(db: Database.Database): Router {
   });
 
   // ── Feed Status ──
+
+  // GET /api/syncronate/feeds/:feedId/schedule-preview — next N occurrences
+  router.get('/feeds/:feedId/schedule-preview', (req: Request, res: Response) => {
+    const cid = reqId();
+    const tenantId = getTenantId(req);
+    if (!tenantId) { sendErr(res, 403, 'Workspace not linked.', cid, 'TENANT_UNRESOLVABLE'); return; }
+    const feed = getFeed(db, req.params.feedId);
+    if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found.', cid, 'FEED_NOT_FOUND'); return; }
+
+    const count = Math.min(Math.max(parseInt((req.query.count as string) ?? '5', 10), 1), 20);
+    const expr = feed.syncConfig?.scheduleExpression;
+    if (!expr) {
+      sendOk(res, { feedId: feed.feedId, scheduleExpression: null, nextOccurrences: [] }, cid);
+      return;
+    }
+
+    try {
+      const nextOccurrences = getNextScheduleOccurrences(expr, count);
+      sendOk(res, { feedId: feed.feedId, scheduleExpression: expr, nextOccurrences }, cid);
+    } catch (err) {
+      sendErr(res, 400, `Invalid schedule expression: ${(err as Error).message}`, cid, 'INVALID_CRON');
+    }
+  });
 
   // GET /api/syncronate/feeds/:feedId/status — human-friendly feed status summary
   router.get('/feeds/:feedId/status', (req: Request, res: Response) => {

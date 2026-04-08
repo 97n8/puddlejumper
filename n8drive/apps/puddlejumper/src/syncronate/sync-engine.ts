@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { Cron } from 'croner';
 import type Database from 'better-sqlite3';
 import type { FeedDef, SyncJob, FederationRecord, FederationField } from './types.js';
 import { getFeed, listFeeds, updateFeed } from './feed-store.js';
@@ -274,7 +275,31 @@ export async function runSyncJob(
   }
 }
 
-// Schedule feeds using setTimeout pattern (no node-cron)
+// Schedule feeds using croner for proper cron expression support
+
+/**
+ * Get the next N upcoming occurrences of a cron expression.
+ * Falls back to simple interval calculation if croner rejects the expression.
+ */
+export function getNextScheduleOccurrences(expr: string, count = 5): string[] {
+  try {
+    const job = new Cron(expr, { paused: true });
+    const results: string[] = [];
+    let next = job.nextRun();
+    while (next && results.length < count) {
+      results.push(next.toISOString());
+      next = job.nextRun(next);
+    }
+    return results;
+  } catch {
+    // Fallback: treat as */N minutes interval
+    const match = expr.match(/^\*\/(\d+)\s/);
+    const intervalMs = match ? parseInt(match[1], 10) * 60 * 1000 : 15 * 60 * 1000;
+    const now = Date.now();
+    return Array.from({ length: count }, (_, i) => new Date(now + intervalMs * (i + 1)).toISOString());
+  }
+}
+
 function parseCronIntervalMs(expr: string): number {
   // Simple: handle "*/N * * * *" → every N minutes
   const match = expr.match(/^\*\/(\d+)\s/);
