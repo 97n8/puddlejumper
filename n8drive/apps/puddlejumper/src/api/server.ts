@@ -46,6 +46,7 @@ import { createGitHubProxyRoutes } from "./routes/githubProxy.js";
 import { createMicrosoftProxyRoutes } from "./routes/microsoftProxy.js";
 import { createGoogleProxyRoutes } from "./routes/googleProxy.js";
 import { createCloudSaveRoutes } from "./routes/cloudSave.js";
+import { createCloudProvisionRoutes } from "./routes/cloudProvision.js";
 import { createDocumentRoutes } from "./routes/documents.js";
 import {
   LOGIN_WINDOW_MS,
@@ -631,6 +632,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.path.startsWith("/google/")) { next(); return; }
     if (req.path.startsWith("/connectors/")) { next(); return; }
     if (req.path.startsWith("/cloud-save")) { next(); return; }
+    if (req.path.startsWith("/cloud-provision")) { next(); return; }
     if (req.path.startsWith("/documents")) { next(); return; }
     if (req.path.startsWith("/vault-files")) { next(); return; }
     csrfProtection()(req, res, next);
@@ -914,6 +916,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/microsoft", createMicrosoftProxyRoutes({ store: connectorStore }));
   app.use("/api/google", createGoogleProxyRoutes({ store: connectorStore }));
   app.use("/api/cloud-save", createCloudSaveRoutes({ store: connectorStore }));
+  app.use("/api/cloud-provision", createCloudProvisionRoutes({ store: connectorStore, db: approvalStore.db }));
   app.use("/api/fiscal", createFiscalRoutes(approvalStore.db));
   app.use("/api/registry", createTownRegistryRoutes(approvalStore.db));
   app.use("/api", createMyHealthRoutes(approvalStore.db));

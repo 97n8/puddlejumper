@@ -397,23 +397,21 @@ async function saveToGoogleDrive(opts: {
   const content = Buffer.from(contentBase64, "base64");
 
   // Check if a file with this name already exists in the folder
-  const parentId = folderId ?? "root";
+  const parentId = folderId && folderId !== "root" ? folderId : "root";
   const searchQ = `name = '${filename.replace(/'/g, "\\'")}' and '${parentId}' in parents and trashed = false`;
   const searchRes = await fetchImpl(
     `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQ)}&fields=files(id)`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
-  if (!searchRes.ok) {
-    const errBody = await searchRes.json().catch(() => ({})) as Record<string, unknown>;
-    throw new Error(`Google Drive search failed: ${JSON.stringify(errBody)}`);
-  }
-  const searchData = await searchRes.json() as { files?: { id: string }[] };
-  const existingId = searchData.files?.[0]?.id;
+  // Search failure is non-fatal — just skip the update path and create new
+  const existingId = searchRes.ok
+    ? ((await searchRes.json().catch(() => ({})) as { files?: { id: string }[] }).files?.[0]?.id)
+    : undefined;
 
   if (existingId) {
     // Update existing file content
     const updateRes = await fetchImpl(
-      `https://upload.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=media&fields=id,webViewLink`,
+      `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=media&fields=id,webViewLink`,
       {
         method: "PATCH",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": mime },
@@ -422,31 +420,45 @@ async function saveToGoogleDrive(opts: {
     );
     if (!updateRes.ok) {
       if (updateRes.status === 401) throw Object.assign(new Error("Google Drive token expired"), { code: 401 });
-      const errBody = await updateRes.json().catch(() => ({})) as Record<string, unknown>;
-      throw new Error(`Google Drive update failed (${updateRes.status}): ${JSON.stringify(errBody)}`);
+      // 404 on update = file inaccessible; fall through to create a new file
+      if (updateRes.status !== 404 && updateRes.status !== 403) {
+        const errBody = await updateRes.json().catch(() => ({})) as Record<string, unknown>;
+        throw new Error(`Google Drive update failed (${updateRes.status}): ${JSON.stringify(errBody)}`);
+      }
+    } else {
+      const data = await updateRes.json() as { id?: string; webViewLink?: string };
+      return { fileId: data.id ?? existingId, url: data.webViewLink ?? `https://drive.google.com/file/d/${existingId}/view` };
     }
-    const data = await updateRes.json() as { id?: string; webViewLink?: string };
-    return { fileId: data.id ?? existingId, url: data.webViewLink ?? `https://drive.google.com/file/d/${existingId}/view` };
   }
 
   // Multipart upload to create new file
-  const metadata = JSON.stringify({ name: filename, parents: [parentId] });
-  const boundary = "logicos_boundary_" + Math.random().toString(36).slice(2);
-  const body = Buffer.concat([
-    Buffer.from(`--${boundary}\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n`),
-    Buffer.from(`--${boundary}\r\nContent-Type: ${mime}\r\n\r\n`),
-    content,
-    Buffer.from(`\r\n--${boundary}--`),
-  ]);
+  // Try with the requested parent first; if that fails (drive.file scope restriction), fall back to root
+  const tryCreate = async (parent: string): Promise<Response> => {
+    const metadata = JSON.stringify({ name: filename, parents: [parent] });
+    const boundary = "logicos_boundary_" + Math.random().toString(36).slice(2);
+    const body = Buffer.concat([
+      Buffer.from(`--${boundary}\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n`),
+      Buffer.from(`--${boundary}\r\nContent-Type: ${mime}\r\n\r\n`),
+      content,
+      Buffer.from(`\r\n--${boundary}--`),
+    ]);
+    return fetchImpl(
+      "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": `multipart/related; boundary=${boundary}` },
+        body,
+      }
+    );
+  };
 
-  const uploadRes = await fetchImpl(
-    "https://upload.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": `multipart/related; boundary=${boundary}` },
-      body,
-    }
-  );
+  let uploadRes = await tryCreate(parentId);
+
+  // If folder is inaccessible (drive.file scope), retry at root
+  if (!uploadRes.ok && (uploadRes.status === 404 || uploadRes.status === 403) && parentId !== "root") {
+    uploadRes = await tryCreate("root");
+  }
+
   if (!uploadRes.ok) {
     if (uploadRes.status === 401) throw Object.assign(new Error("Google Drive token expired"), { code: 401 });
     const errBody = await uploadRes.json().catch(() => ({})) as Record<string, unknown>;
