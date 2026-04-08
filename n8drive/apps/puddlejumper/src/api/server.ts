@@ -48,6 +48,8 @@ import { createGoogleProxyRoutes } from "./routes/googleProxy.js";
 import { createCloudSaveRoutes } from "./routes/cloudSave.js";
 import { createCloudProvisionRoutes } from "./routes/cloudProvision.js";
 import { createDocumentRoutes } from "./routes/documents.js";
+import { createRulesRoutes } from "./routes/rules.js";
+import { createDiscoveryRoutes } from "./routes/discovery.js";
 import {
   LOGIN_WINDOW_MS,
   LOGIN_MAX_ATTEMPTS,
@@ -103,6 +105,7 @@ import { createApprovalRoutes } from "./routes/approvals.js";
 import { createChainTemplateRoutes } from "./routes/chainTemplates.js";
 import { createAdminRoutes } from "./routes/admin.js";
 import { createAdminMembersRoutes } from "./routes/adminMembers.js";
+import { createTenantRoutes } from "./routes/tenants.js";
 import { createWebhookActionRoutes } from "./routes/webhookAction.js";
 import { createWorkspaceUsageRoutes } from "./routes/workspaceUsage.js";
 import { createPrefsRoutes } from "./routes/prefs.js";
@@ -128,6 +131,7 @@ import { createTownRegistryRoutes } from "../townregistry/routes.js";
 import { createMyHealthRoutes } from "./routes/myHealth.js";
 import { createFileDraftsRouter } from "./routes/fileDrafts.js";
 import { createCivicRouter } from "../civic/civicRoutes.js";
+import { createHealthRoutes, requestCounterMiddleware } from "./routes/health.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
@@ -339,6 +343,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use(withCorrelationId);
   app.use(requestLogger);
   app.use(createCorsMiddleware(nodeEnv));
+  app.use(requestCounterMiddleware);
 
   // Add HSTS and Referrer-Policy headers for production
   if (nodeEnv === "production") {
@@ -607,6 +612,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.method === "GET" && req.path === "/auth/status") { optionalAuthMiddleware(req, res, next); return; }
     if (req.method === "GET" && req.path === "/session") { next(); return; }
     if (req.method === "GET" && req.path === "/health") { next(); return; }
+    if (req.method === "GET" && req.path === "/health/metrics") { next(); return; }
     if (req.method === "GET" && req.path === "/v1/health") { next(); return; }
     if (req.method === "GET" && req.path === "/seal/health") { next(); return; }
     if (req.method === "GET" && req.path === "/archieve/health") { next(); return; }
@@ -639,8 +645,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     csrfProtection()(req, res, next);
   });
 
-  // /api/health — unauthenticated alias for /health (bypassed in auth gate above)
-  app.get("/api/health", (_req, res) => { res.json({ status: "ok" }); });
+  // /api/health — unauthenticated basic health + authenticated metrics (see routes/health.ts)
+  app.use("/api", createHealthRoutes({ db: approvalStore.db, dataDir: CONTROLLED_DATA_DIR }));
 
   // /seal/health — SEAL module health (unauthenticated, used by LogicOS diagnostics)
   app.get("/seal/health", (_req, res) => {
@@ -926,9 +932,12 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   const vaultDbPath = path.resolve(process.env.VAULT_DB_PATH ?? path.join(CONTROLLED_DATA_DIR, "vault.db"));
   const documentRoutes = createDocumentRoutes({ dbPath: vaultDbPath });
   app.use("/api", documentRoutes);
+  app.use("/api", createDiscoveryRoutes({ dbPath: vaultDbPath }));
   // Re-use the vault DB path for file drafts (separate Database connection, same file)
   const vaultDb = new Database(vaultDbPath);
   app.use("/api", createFileDraftsRouter(vaultDb));
+
+  app.use("/api", createRulesRoutes({ db: approvalStore.db }));
 
   // ── Redirects ────────────────────────────────────────────────────────────
   // Redirect /admin and /dashboard to the working backend admin interface at /pj/admin
