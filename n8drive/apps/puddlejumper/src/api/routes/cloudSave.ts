@@ -200,7 +200,9 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
           results.push({ filename: item.filename, path: item.githubPath, success: true, fileId: r.fileId, url: r.url });
         }
       } catch (err) {
-        results.push({ filename: item.filename, success: false, error: err instanceof Error ? err.message : "Save failed" });
+        const errMsg = err instanceof Error ? err.message : "Save failed";
+        console.error(JSON.stringify({ level: "error", scope: "cloud-save.batch", timestamp: new Date().toISOString(), provider: item.provider, filename: item.filename, userId, error: errMsg }));
+        results.push({ filename: item.filename, success: false, error: errMsg });
       }
     }
 
@@ -405,6 +407,8 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upload failed";
+      const userId = auth?.userId ?? (auth as Record<string, unknown> | null)?.sub ?? "unknown";
+      console.error(JSON.stringify({ level: "error", scope: "cloud-save.single", timestamp: new Date().toISOString(), provider: parsed.success ? parsed.data.provider : "unknown", filename: parsed.success ? parsed.data.filename : "unknown", userId, error: message }));
       res.status(502).json({ error: message });
     }
   });

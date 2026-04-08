@@ -152,6 +152,7 @@ export function createMicrosoftProxyRoutes(opts: MicrosoftProxyOptions): express
       res.status(upstream.status).send(responseBody);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upstream request failed";
+      console.error(JSON.stringify({ level: "error", scope: "microsoft-proxy", timestamp: new Date().toISOString(), userId, path: req.path, error: message }));
       res.status(502).json({ error: "Microsoft Graph request failed", detail: message });
     }
   });
