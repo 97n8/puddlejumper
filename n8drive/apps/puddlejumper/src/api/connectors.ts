@@ -714,6 +714,8 @@ export function createConnectorsRouter(options: CreateConnectorsRouterOptions): 
       ? (process.env.GITHUB_REDIRECT_URI ?? "").trim() || `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`
       : provider === "google"
       ? (process.env.GOOGLE_REDIRECT_URI ?? "").trim() || `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`
+      : provider === "microsoft"
+      ? (process.env.MICROSOFT_CONNECTOR_REDIRECT_URI ?? "").trim() || `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`
       : `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`;
 
     try {
@@ -753,7 +755,13 @@ export function createConnectorsRouter(options: CreateConnectorsRouterOptions): 
       return;
     }
     const adapter = buildAdapter(provider, state.tenantId, state.userId, options.store, fetchImpl);
-    const redirectUri = `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`;
+    const redirectUri = provider === "github"
+      ? (process.env.GITHUB_REDIRECT_URI ?? "").trim() || `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`
+      : provider === "google"
+      ? (process.env.GOOGLE_REDIRECT_URI ?? "").trim() || `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`
+      : provider === "microsoft"
+      ? (process.env.MICROSOFT_CONNECTOR_REDIRECT_URI ?? "").trim() || `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`
+      : `${resolveBaseUrl(req)}/api/connectors/${provider}/auth/callback`;
 
     try {
       await adapter.handleCallback(parsedQuery.data.code, redirectUri);

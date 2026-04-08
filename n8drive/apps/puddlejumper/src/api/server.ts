@@ -635,6 +635,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.path.startsWith("/cloud-provision")) { next(); return; }
     if (req.path.startsWith("/documents")) { next(); return; }
     if (req.path.startsWith("/vault-files")) { next(); return; }
+    if (req.path.startsWith("/files/drafts")) { next(); return; }
     csrfProtection()(req, res, next);
   });
 
