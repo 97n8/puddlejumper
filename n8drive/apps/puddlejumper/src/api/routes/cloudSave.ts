@@ -57,13 +57,26 @@ const bodySchema = z.object({
   // Google / OneDrive
   folderId: z.string().optional(),
   driveId: z.string().optional(),   // OneDrive/SharePoint drive ID
+  conflictBehavior: z.enum(["rename", "replace", "fail"]).optional(), // OneDrive conflict handling
   // GitHub-specific
   githubRepo: z.string().optional(),
   githubPath: z.string().optional(),
   githubMessage: z.string().optional(),
 });
 
-// ── Google Drive folder path helper ──────────────────────────────────────────
+const batchItemSchema = z.object({
+  provider: z.enum(["google", "microsoft", "github"]),
+  filename: z.string().trim().min(1).max(255),
+  contentBase64: z.string(),
+  mimeType: z.string().optional(),
+  targetMimeType: z.string().optional(), // Google: convert-to mime
+  folderId: z.string().optional(),
+  driveId: z.string().optional(),
+  conflictBehavior: z.enum(["rename", "replace", "fail"]).optional(),
+  githubRepo: z.string().optional(),
+  githubPath: z.string().optional(),
+  githubMessage: z.string().optional(),
+});
 
 async function ensureGoogleDriveFolderPath(
   fetchImpl: typeof fetch,
@@ -97,19 +110,6 @@ async function ensureGoogleDriveFolderPath(
 }
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
-
-const batchItemSchema = z.object({
-  provider: z.enum(["google", "microsoft", "github"]),
-  filename: z.string().trim().min(1).max(255),
-  contentBase64: z.string(),
-  mimeType: z.string().optional(),
-  targetMimeType: z.string().optional(), // Google: convert-to mime
-  folderId: z.string().optional(),
-  driveId: z.string().optional(),
-  githubRepo: z.string().optional(),
-  githubPath: z.string().optional(),
-  githubMessage: z.string().optional(),
-});
 
 const batchBodySchema = z.object({
   items: z.array(batchItemSchema).min(1).max(500),
@@ -179,8 +179,21 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
             throw err;
           }
         } else if (item.provider === "microsoft") {
-          const r = await saveToOneDrive({ fetchImpl, accessToken: token.accessToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, folderId: item.folderId, driveId: item.driveId });
-          results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url });
+          try {
+            const r = await saveToOneDrive({ fetchImpl, accessToken: token.accessToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, folderId: item.folderId, driveId: item.driveId, conflictBehavior: item.conflictBehavior });
+            results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url });
+          } catch (err) {
+            const is401 = err instanceof Error && (err as NodeJS.ErrnoException & { code?: number }).code === 401;
+            if (is401 && token.refreshToken) {
+              const newToken = await refreshMicrosoftToken(opts.store, fetchImpl, tenantId, userId, token.refreshToken);
+              if (newToken) {
+                const r = await saveToOneDrive({ fetchImpl, accessToken: newToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, folderId: item.folderId, driveId: item.driveId, conflictBehavior: item.conflictBehavior });
+                results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url });
+                return;
+              }
+            }
+            throw err;
+          }
         } else {
           if (!item.githubRepo) { results.push({ filename: item.filename, success: false, error: "githubRepo required" }); return; }
           const r = await saveToGitHub({ fetchImpl, accessToken: token.accessToken, repo: item.githubRepo, filename: item.filename, contentBase64: item.contentBase64, path: item.githubPath, message: item.githubMessage });
@@ -295,15 +308,18 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
               const uploadPath = [basePath, blobPath].filter(Boolean).join("/");
               const encodedPath = uploadPath.split("/").map(encodeURIComponent).join("/");
               const uploadUrl = targetDriveId
-                ? `https://graph.microsoft.com/v1.0/drives/${targetDriveId}/root:/${encodedPath}:/content`
-                : `https://graph.microsoft.com/v1.0/me/drive/root:/${encodedPath}:/content`;
+                ? `https://graph.microsoft.com/v1.0/drives/${targetDriveId}/root:/${encodedPath}:/content?@microsoft.graph.conflictBehavior=rename`
+                : `https://graph.microsoft.com/v1.0/me/drive/root:/${encodedPath}:/content?@microsoft.graph.conflictBehavior=rename`;
               const uploadRes = await fetchImpl(uploadUrl, {
                 method: "PUT",
                 headers: { Authorization: `Bearer ${targetToken.accessToken}`, "Content-Type": guessMime(filename) },
                 body: Buffer.from(contentBase64, "base64"),
               });
-              const uploadData = await uploadRes.json() as { id?: string; webUrl?: string; error?: unknown };
-              if (!uploadRes.ok) throw new Error(`OneDrive upload failed: ${JSON.stringify(uploadData.error ?? uploadData)}`);
+              if (!uploadRes.ok) {
+                const errBody = await uploadRes.json().catch(() => ({})) as Record<string, unknown>;
+                throw new Error(`OneDrive upload failed (${uploadRes.status}): ${JSON.stringify(errBody.error ?? errBody)}`);
+              }
+              const uploadData = await uploadRes.json() as { id?: string; webUrl?: string };
               manifest.push({ path: blobPath, filename, success: true, url: uploadData.webUrl ?? "" });
             } else {
               if (!targetRepo) { manifest.push({ path: blobPath, filename, success: false, error: "targetRepo required for GitHub target" }); return; }
@@ -339,7 +355,7 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
       res.status(400).json({ error: "Invalid request", detail: parsed.error.flatten() });
       return;
     }
-    const { provider, filename, contentBase64, mimeType, targetMimeType, folderId, driveId, githubRepo, githubPath, githubMessage } = parsed.data;
+    const { provider, filename, contentBase64, mimeType, targetMimeType, folderId, driveId, conflictBehavior, githubRepo, githubPath, githubMessage } = parsed.data;
 
     const token = opts.store.getToken(provider, tenantId, auth.userId ?? auth.sub);
     if (!token) {
@@ -368,8 +384,20 @@ export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?:
           throw err;
         }
       } else if (provider === "microsoft") {
-        const result = await saveToOneDrive({ fetchImpl, accessToken: token.accessToken, filename, contentBase64, mimeType, folderId, driveId });
-        res.json(result);
+        try {
+          const result = await saveToOneDrive({ fetchImpl, accessToken: token.accessToken, filename, contentBase64, mimeType, folderId, driveId, conflictBehavior });
+          res.json(result); return;
+        } catch (err) {
+          const is401 = err instanceof Error && (err as NodeJS.ErrnoException & { code?: number }).code === 401;
+          if (is401 && token.refreshToken) {
+            const newToken = await refreshMicrosoftToken(opts.store, fetchImpl, tenantId, auth.userId ?? auth.sub, token.refreshToken);
+            if (newToken) {
+              const result = await saveToOneDrive({ fetchImpl, accessToken: newToken, filename, contentBase64, mimeType, folderId, driveId, conflictBehavior });
+              res.json(result); return;
+            }
+          }
+          throw err;
+        }
       } else {
         if (!githubRepo) { res.status(400).json({ error: "githubRepo is required for GitHub saves" }); return; }
         const result = await saveToGitHub({ fetchImpl, accessToken: token.accessToken, repo: githubRepo, filename, contentBase64, path: githubPath, message: githubMessage });
@@ -480,6 +508,42 @@ async function saveToGoogleDrive(opts: {
   };
 }
 
+// ── Microsoft token refresh ───────────────────────────────────────────────────
+
+async function refreshMicrosoftToken(
+  store: ConnectorStore,
+  fetchImpl: typeof fetch,
+  tenantId: string,
+  userId: string,
+  refreshToken: string
+): Promise<string | null> {
+  const clientId = (process.env.MS_CLIENT_ID ?? "").trim();
+  const clientSecret = (process.env.MS_CLIENT_SECRET ?? "").trim();
+  const tenantSegment = (process.env.MS_TENANT_ID ?? "common").trim() || "common";
+  if (!clientId || !clientSecret) return null;
+  try {
+    const form = new URLSearchParams({
+      client_id: clientId, client_secret: clientSecret,
+      refresh_token: refreshToken, grant_type: "refresh_token",
+      scope: "offline_access Files.Read Files.ReadWrite Sites.Read.All User.Read",
+    });
+    const res = await fetchImpl(
+      `https://login.microsoftonline.com/${encodeURIComponent(tenantSegment)}/oauth2/v2.0/token`,
+      { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form.toString() }
+    );
+    if (!res.ok) return null;
+    const payload = await res.json() as Record<string, unknown>;
+    const accessToken = typeof payload.access_token === "string" ? payload.access_token : null;
+    if (!accessToken) return null;
+    const expiresIn = typeof payload.expires_in === "number" ? payload.expires_in : 3600;
+    const newRefresh = typeof payload.refresh_token === "string" ? payload.refresh_token : refreshToken;
+    store.upsertToken({ provider: "microsoft", tenantId, userId, accessToken, refreshToken: newRefresh, scopes: [], account: null, expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString() });
+    return accessToken;
+  } catch {
+    return null;
+  }
+}
+
 // ── OneDrive ──────────────────────────────────────────────────────────────────
 
 async function saveToOneDrive(opts: {
@@ -490,13 +554,16 @@ async function saveToOneDrive(opts: {
   mimeType?: string;
   folderId?: string;
   driveId?: string;
+  conflictBehavior?: "rename" | "replace" | "fail";
 }): Promise<{ fileId: string; url: string }> {
-  const { fetchImpl, accessToken, filename, contentBase64, folderId, driveId } = opts;
+  const { fetchImpl, accessToken, filename, contentBase64, folderId, driveId, conflictBehavior } = opts;
   const content = Buffer.from(contentBase64, "base64");
+  const cb = conflictBehavior ?? "rename";
 
-  // Use drive-specific URL when driveId is provided (e.g. SharePoint)
+  // When folderId === driveId, user selected the SharePoint library root (not a subfolder).
+  // In that case treat it as drive-root, not items/folderId.
   let uploadUrl: string;
-  if (driveId && folderId) {
+  if (driveId && folderId && folderId !== driveId) {
     uploadUrl = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${folderId}:/${encodeURIComponent(filename)}:/content`;
   } else if (driveId) {
     uploadUrl = `https://graph.microsoft.com/v1.0/drives/${driveId}/root:/${encodeURIComponent(filename)}:/content`;
@@ -505,6 +572,7 @@ async function saveToOneDrive(opts: {
   } else {
     uploadUrl = `https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIComponent(filename)}:/content`;
   }
+  uploadUrl += `?@microsoft.graph.conflictBehavior=${cb}`;
 
   const uploadRes = await fetchImpl(uploadUrl, {
     method: "PUT",
@@ -515,8 +583,15 @@ async function saveToOneDrive(opts: {
     body: content,
   });
 
-  const data = await uploadRes.json() as { id?: string; webUrl?: string; error?: unknown };
-  if (!uploadRes.ok) throw new Error(`OneDrive upload failed: ${JSON.stringify(data.error ?? data)}`);
+  if (!uploadRes.ok) {
+    if (uploadRes.status === 401) {
+      throw Object.assign(new Error("OneDrive token expired"), { code: 401 });
+    }
+    const errBody = await uploadRes.json().catch(() => ({})) as Record<string, unknown>;
+    throw new Error(`OneDrive upload failed (${uploadRes.status}): ${JSON.stringify(errBody.error ?? errBody)}`);
+  }
+
+  const data = await uploadRes.json() as { id?: string; webUrl?: string };
   return { fileId: data.id ?? "", url: data.webUrl ?? "" };
 }
 
