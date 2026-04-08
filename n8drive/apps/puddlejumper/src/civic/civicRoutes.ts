@@ -540,6 +540,84 @@ export function createCivicRouter(dataDir: string): Router {
     }
   });
 
+  // ── GET /org-manager/configure — load saved module configs ───────────────────
+  router.get('/org-manager/configure', (_req: Request, res: Response) => {
+    const rows = db.prepare('SELECT * FROM module_configs').all() as {
+      module_id: string; officer_name: string; officer_title: string;
+      officer_email: string; officer_phone: string; routing: string;
+      automations: string; retention_years: number; updated_at: string;
+    }[];
+    const configs = rows.map(r => ({
+      moduleId:       r.module_id,
+      officerName:    r.officer_name,
+      officerTitle:   r.officer_title,
+      officerEmail:   r.officer_email,
+      officerPhone:   r.officer_phone,
+      routing:        JSON.parse(r.routing),
+      automations:    JSON.parse(r.automations),
+      retentionYears: r.retention_years,
+      updatedAt:      r.updated_at,
+    }));
+    return res.json({ configs });
+  });
+
+  // ── POST /org-manager/configure — save module configs ────────────────────────
+  router.post('/org-manager/configure', (req: Request, res: Response) => {
+    const actor = (req as any).civicActor as CivicActor;
+    const { modules } = req.body as {
+      modules: Array<{
+        moduleId: string; officerName?: string; officerTitle?: string;
+        officerEmail?: string; officerPhone?: string;
+        routing?: Record<string, string>; automations?: Record<string, boolean>;
+        retentionYears?: number;
+      }>
+    };
+    if (!Array.isArray(modules) || modules.length === 0) {
+      return res.status(400).json({ error: 'modules array is required' });
+    }
+    const upsert = db.prepare(`
+      INSERT INTO module_configs (module_id, officer_name, officer_title, officer_email, officer_phone, routing, automations, retention_years, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(module_id) DO UPDATE SET
+        officer_name    = excluded.officer_name,
+        officer_title   = excluded.officer_title,
+        officer_email   = excluded.officer_email,
+        officer_phone   = excluded.officer_phone,
+        routing         = excluded.routing,
+        automations     = excluded.automations,
+        retention_years = excluded.retention_years,
+        updated_at      = excluded.updated_at
+    `);
+    const saveAll = db.transaction((items: typeof modules) => {
+      for (const m of items) {
+        upsert.run(
+          m.moduleId,
+          m.officerName   ?? '',
+          m.officerTitle  ?? '',
+          m.officerEmail  ?? '',
+          m.officerPhone  ?? '',
+          JSON.stringify(m.routing     ?? {}),
+          JSON.stringify(m.automations ?? {}),
+          m.retentionYears ?? 7,
+        );
+      }
+    });
+    try {
+      saveAll(modules);
+      appendAuditLog(db, {
+        objectId: 'singleton', actorId: actor?.object_id ?? 'system',
+        action: 'org_manager:modules_configured',
+        afterState: { moduleCount: modules.length },
+        systemTriggered: false,
+      });
+      return res.json({ saved: modules.length });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return res.status(500).json({ error: `Failed to save module configs: ${msg}` });
+    }
+  });
+
+  // ── POST /org-manager/complete — mark setup as done ─────────────────────────
   router.post('/org-manager/complete', (req: Request, res: Response) => {
     try {
       const actor = (req as any).civicActor as CivicActor;

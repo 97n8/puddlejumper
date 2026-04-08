@@ -140,6 +140,18 @@ CREATE TABLE IF NOT EXISTS object_links (
   link_type  TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS module_configs (
+  module_id       TEXT PRIMARY KEY,
+  officer_name    TEXT NOT NULL DEFAULT '',
+  officer_title   TEXT NOT NULL DEFAULT '',
+  officer_email   TEXT NOT NULL DEFAULT '',
+  officer_phone   TEXT NOT NULL DEFAULT '',
+  routing         TEXT NOT NULL DEFAULT '{}',
+  automations     TEXT NOT NULL DEFAULT '{}',
+  retention_years INTEGER NOT NULL DEFAULT 7,
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;
 
 // ── Singleton store ───────────────────────────────────────────────────────────
