@@ -343,7 +343,10 @@ function getGoogleAdapter(
   const clientSecret = (process.env.GOOGLE_CLIENT_SECRET ?? "").trim();
   const scope = (
     process.env.GOOGLE_SCOPE ??
-    "openid email profile https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly"
+    // drive.file + gmail.send + calendar.events = sensitive but NOT restricted.
+    // Requires sensitivity review (days, not weeks) rather than full verification.
+    // Avoids drive (full) and gmail.readonly which are restricted scopes.
+    "openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/calendar.events"
   )
     .trim()
     .replace(/\s+/g, " ");

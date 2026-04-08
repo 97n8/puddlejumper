@@ -29,7 +29,10 @@ export const microsoftProvider: OAuthProvider = {
     const tenantId = env.MICROSOFT_TENANT_ID || "common";
     return `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
   },
-  scopes: "openid email profile User.Read Files.ReadWrite Mail.Read Calendars.Read",
+  // Login only needs identity — Files/Mail/Calendar scopes are handled by the
+  // separate Microsoft connector flow (getMicrosoftAdapter in connectors.ts).
+  // offline_access is included so the login session gets a refresh token.
+  scopes: "openid email profile User.Read offline_access",
   tokenContentType: "form",
   stateCookieName: "microsoft_oauth_state",
   clientIdEnvVar: "MICROSOFT_CLIENT_ID",
@@ -37,6 +40,6 @@ export const microsoftProvider: OAuthProvider = {
   redirectUriEnvVar: "MICROSOFT_REDIRECT_URI",
   defaultRedirectUri: "http://localhost:3002/api/auth/microsoft/callback",
   extraAuthorizeParams: { response_mode: "query", prompt: "select_account" },
-  extraTokenParams: { scope: "openid email profile User.Read Files.ReadWrite Mail.Read Calendars.Read" },
+  extraTokenParams: { scope: "openid email profile User.Read offline_access" },
   fetchUserInfo: fetchMicrosoftUserInfo,
 };

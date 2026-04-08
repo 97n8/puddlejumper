@@ -62,9 +62,252 @@ const bodySchema = z.object({
   githubMessage: z.string().optional(),
 });
 
+// ── Google Drive folder path helper ──────────────────────────────────────────
+
+async function ensureGoogleDriveFolderPath(
+  fetchImpl: typeof fetch,
+  accessToken: string,
+  rootFolderId: string,
+  pathSegments: string[],
+  folderCache: Map<string, string>
+): Promise<string> {
+  let currentId = rootFolderId;
+  for (const segment of pathSegments) {
+    const cacheKey = `${currentId}/${segment}`;
+    if (folderCache.has(cacheKey)) { currentId = folderCache.get(cacheKey)!; continue; }
+    const q = `name = '${segment.replace(/'/g, "\\'")}' and '${currentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+    const searchRes = await fetchImpl(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const searchData = await searchRes.json() as { files?: { id: string }[] };
+    const existingId = searchData.files?.[0]?.id;
+    if (existingId) { folderCache.set(cacheKey, existingId); currentId = existingId; continue; }
+    const createRes = await fetchImpl("https://www.googleapis.com/drive/v3/files?fields=id", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: segment, mimeType: "application/vnd.google-apps.folder", parents: [currentId] }),
+    });
+    const created = await createRes.json() as { id?: string };
+    const newId = created.id ?? currentId;
+    folderCache.set(cacheKey, newId);
+    currentId = newId;
+  }
+  return currentId;
+}
+
+// ── Schemas ───────────────────────────────────────────────────────────────────
+
+const batchItemSchema = z.object({
+  provider: z.enum(["google", "microsoft", "github"]),
+  filename: z.string().trim().min(1).max(255),
+  contentBase64: z.string(),
+  mimeType: z.string().optional(),
+  folderId: z.string().optional(),
+  driveId: z.string().optional(),
+  githubRepo: z.string().optional(),
+  githubPath: z.string().optional(),
+  githubMessage: z.string().optional(),
+});
+
+const batchBodySchema = z.object({
+  items: z.array(batchItemSchema).min(1).max(500),
+});
+
+const importRepoBodySchema = z.object({
+  owner: z.string().trim().min(1),
+  repo: z.string().trim().min(1),
+  branch: z.string().optional(),
+  paths: z.array(z.string()).optional(),
+  targetProvider: z.enum(["google", "microsoft", "github"]),
+  targetFolderId: z.string().optional(),
+  targetDriveId: z.string().optional(),
+  targetRepo: z.string().optional(),
+  targetBasePath: z.string().optional(),
+  commitMessage: z.string().optional(),
+});
+
 export function createCloudSaveRoutes(opts: { store: ConnectorStore; fetchImpl?: typeof fetch }): express.Router {
   const router = express.Router();
   const fetchImpl = opts.fetchImpl ?? fetch;
+
+  // ── POST /batch ──────────────────────────────────────────────────────────────
+
+  router.post("/batch", async (req, res) => {
+    const auth = getAuthContext(req);
+    if (!auth) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const tenantId = auth.tenantId ?? "";
+    if (!tenantId) { res.status(400).json({ error: "Tenant scope unavailable" }); return; }
+
+    const parsed = batchBodySchema.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: "Invalid request", detail: parsed.error.flatten() }); return; }
+
+    const { items } = parsed.data;
+    const userId = auth.userId ?? auth.sub;
+
+    // Concurrency-limited executor
+    const results: Array<{ filename: string; path?: string; success: boolean; fileId?: string; url?: string; error?: string }> = [];
+    const CONCURRENCY = 10;
+    let idx = 0;
+
+    async function processOne(item: typeof items[0]) {
+      const token = opts.store.getToken(item.provider, tenantId, userId);
+      if (!token) {
+        results.push({ filename: item.filename, success: false, error: `${item.provider} not connected` });
+        return;
+      }
+      try {
+        if (item.provider === "google") {
+          const r = await saveToGoogleDrive({ fetchImpl, accessToken: token.accessToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, folderId: item.folderId });
+          results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url });
+        } else if (item.provider === "microsoft") {
+          const r = await saveToOneDrive({ fetchImpl, accessToken: token.accessToken, filename: item.filename, contentBase64: item.contentBase64, mimeType: item.mimeType, folderId: item.folderId, driveId: item.driveId });
+          results.push({ filename: item.filename, success: true, fileId: r.fileId, url: r.url });
+        } else {
+          if (!item.githubRepo) { results.push({ filename: item.filename, success: false, error: "githubRepo required" }); return; }
+          const r = await saveToGitHub({ fetchImpl, accessToken: token.accessToken, repo: item.githubRepo, filename: item.filename, contentBase64: item.contentBase64, path: item.githubPath, message: item.githubMessage });
+          results.push({ filename: item.filename, path: item.githubPath, success: true, fileId: r.fileId, url: r.url });
+        }
+      } catch (err) {
+        results.push({ filename: item.filename, success: false, error: err instanceof Error ? err.message : "Save failed" });
+      }
+    }
+
+    async function runBatch() {
+      while (idx < items.length) {
+        const batch = items.slice(idx, idx + CONCURRENCY);
+        idx += CONCURRENCY;
+        await Promise.all(batch.map(processOne));
+      }
+    }
+
+    await runBatch();
+    res.json({ results });
+  });
+
+  // ── POST /import-repo ────────────────────────────────────────────────────────
+
+  router.post("/import-repo", async (req, res) => {
+    const auth = getAuthContext(req);
+    if (!auth) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const tenantId = auth.tenantId ?? "";
+    if (!tenantId) { res.status(400).json({ error: "Tenant scope unavailable" }); return; }
+
+    const parsed = importRepoBodySchema.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: "Invalid request", detail: parsed.error.flatten() }); return; }
+
+    const { owner, repo, paths: pathFilter, targetProvider, targetFolderId, targetDriveId, targetRepo, targetBasePath, commitMessage } = parsed.data;
+    let { branch } = parsed.data;
+    const userId = auth.userId ?? auth.sub;
+
+    const githubToken = opts.store.getToken("github", tenantId, userId);
+    if (!githubToken) { res.status(401).json({ error: "GitHub not connected", code: "GITHUB_NOT_CONNECTED" }); return; }
+
+    const targetToken = opts.store.getToken(targetProvider, tenantId, userId);
+    if (!targetToken) { res.status(401).json({ error: `${targetProvider} not connected`, code: `${targetProvider.toUpperCase()}_NOT_CONNECTED` }); return; }
+
+    const ghHeaders = {
+      Authorization: `Bearer ${githubToken.accessToken}`,
+      Accept: "application/vnd.github+json",
+      "User-Agent": "PublicLogic-LogicOS",
+    };
+
+    try {
+      // 1. Get default branch if not provided
+      if (!branch) {
+        const repoRes = await fetchImpl(`https://api.github.com/repos/${owner}/${repo}`, { headers: ghHeaders });
+        if (!repoRes.ok) { res.status(502).json({ error: `Failed to fetch repo info: ${repoRes.status}` }); return; }
+        const repoData = await repoRes.json() as { default_branch?: string };
+        branch = repoData.default_branch ?? "main";
+      }
+
+      // 2. Get branch commit tree SHA
+      const branchRes = await fetchImpl(`https://api.github.com/repos/${owner}/${repo}/branches/${branch}`, { headers: ghHeaders });
+      if (!branchRes.ok) { res.status(502).json({ error: `Failed to fetch branch: ${branchRes.status}` }); return; }
+      const branchData = await branchRes.json() as { commit?: { commit?: { tree?: { sha?: string } } } };
+      const treeSha = branchData.commit?.commit?.tree?.sha;
+      if (!treeSha) { res.status(502).json({ error: "Could not resolve tree SHA" }); return; }
+
+      // 3. Fetch full recursive tree
+      const treeRes = await fetchImpl(`https://api.github.com/repos/${owner}/${repo}/git/trees/${treeSha}?recursive=1`, { headers: ghHeaders });
+      if (!treeRes.ok) { res.status(502).json({ error: `Failed to fetch tree: ${treeRes.status}` }); return; }
+      const treeData = await treeRes.json() as { tree?: Array<{ path?: string; type?: string; size?: number }> };
+
+      // 4. Filter blobs, size limit, path filter, max 500
+      let blobs = (treeData.tree ?? [])
+        .filter(n => n.type === "blob" && (n.size ?? 0) <= 1_000_000 && n.path);
+
+      if (pathFilter && pathFilter.length > 0) {
+        blobs = blobs.filter(n => pathFilter.some(p => n.path!.startsWith(p)));
+      }
+
+      const skippedLarge = (treeData.tree ?? []).filter(n => n.type === "blob" && (n.size ?? 0) > 1_000_000).length;
+      blobs = blobs.slice(0, 500);
+
+      const basePath = targetBasePath ?? `${repo}`;
+      const folderCache = new Map<string, string>();
+      const manifest: Array<{ path: string; filename: string; success: boolean; url?: string; error?: string }> = [];
+
+      // 5. Process in batches of 5
+      const BATCH = 5;
+      for (let i = 0; i < blobs.length; i += BATCH) {
+        const chunk = blobs.slice(i, i + BATCH);
+        await Promise.all(chunk.map(async (blob) => {
+          const blobPath = blob.path!;
+          const filename = blobPath.split("/").pop() ?? blobPath;
+          try {
+            // Fetch file content from GitHub
+            const contentRes = await fetchImpl(
+              `https://api.github.com/repos/${owner}/${repo}/contents/${blobPath}?ref=${branch}`,
+              { headers: ghHeaders }
+            );
+            if (!contentRes.ok) {
+              manifest.push({ path: blobPath, filename, success: false, error: `GitHub fetch failed: ${contentRes.status}` });
+              return;
+            }
+            const contentData = await contentRes.json() as { content?: string };
+            const contentBase64 = (contentData.content ?? "").replace(/\n/g, "");
+
+            if (targetProvider === "google") {
+              const segments = `${basePath}/${blobPath}`.split("/").slice(0, -1).filter(Boolean);
+              const parentId = await ensureGoogleDriveFolderPath(fetchImpl, targetToken.accessToken, targetFolderId ?? "root", segments, folderCache);
+              const r = await saveToGoogleDrive({ fetchImpl, accessToken: targetToken.accessToken, filename, contentBase64, folderId: parentId });
+              manifest.push({ path: blobPath, filename, success: true, url: r.url });
+            } else if (targetProvider === "microsoft") {
+              const uploadPath = [basePath, blobPath].filter(Boolean).join("/");
+              const encodedPath = uploadPath.split("/").map(encodeURIComponent).join("/");
+              const uploadUrl = targetDriveId
+                ? `https://graph.microsoft.com/v1.0/drives/${targetDriveId}/root:/${encodedPath}:/content`
+                : `https://graph.microsoft.com/v1.0/me/drive/root:/${encodedPath}:/content`;
+              const uploadRes = await fetchImpl(uploadUrl, {
+                method: "PUT",
+                headers: { Authorization: `Bearer ${targetToken.accessToken}`, "Content-Type": guessMime(filename) },
+                body: Buffer.from(contentBase64, "base64"),
+              });
+              const uploadData = await uploadRes.json() as { id?: string; webUrl?: string; error?: unknown };
+              if (!uploadRes.ok) throw new Error(`OneDrive upload failed: ${JSON.stringify(uploadData.error ?? uploadData)}`);
+              manifest.push({ path: blobPath, filename, success: true, url: uploadData.webUrl ?? "" });
+            } else {
+              if (!targetRepo) { manifest.push({ path: blobPath, filename, success: false, error: "targetRepo required for GitHub target" }); return; }
+              const targetPath = [basePath, blobPath].filter(Boolean).join("/");
+              const r = await saveToGitHub({ fetchImpl, accessToken: targetToken.accessToken, repo: targetRepo, filename, contentBase64, path: targetPath, message: commitMessage ?? `Import ${blobPath} from ${owner}/${repo}` });
+              manifest.push({ path: blobPath, filename, success: true, url: r.url });
+            }
+          } catch (err) {
+            manifest.push({ path: blobPath, filename, success: false, error: err instanceof Error ? err.message : "Save failed" });
+          }
+        }));
+        // Small delay between batches to respect rate limits
+        if (i + BATCH < blobs.length) await new Promise(r => setTimeout(r, 200));
+      }
+
+      const succeeded = manifest.filter(m => m.success).length;
+      const failed = manifest.filter(m => !m.success).length;
+      res.json({ manifest, total: blobs.length, succeeded, failed, skipped: skippedLarge });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Import failed";
+      res.status(502).json({ error: message });
+    }
+  });
 
   router.post("/", async (req, res) => {
     const auth = getAuthContext(req);

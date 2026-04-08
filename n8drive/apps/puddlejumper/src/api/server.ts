@@ -827,15 +827,14 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     const account = userInfo.email ?? userInfo.name ?? null;
     try {
       if (provider === "github") {
-        const profileRes = await fetch("https://api.github.com/user", {
-          headers: { Authorization: `token ${accessToken}`, Accept: "application/vnd.github+json", "User-Agent": "puddle-jumper" },
-        });
-        const profile = profileRes.ok ? (await profileRes.json() as Record<string, unknown>) : {};
-        connectorStore.upsertToken({ provider: "github", tenantId, userId, account: typeof profile.login === "string" ? profile.login : account, scopes: ["read:user", "repo"], accessToken, refreshToken: null, expiresAt: null });
+        // GitHub login only has user:email scope — not read:user or repo.
+        // Do NOT save as a connector token; user must explicitly connect via /api/connectors/github/auth.
       } else if (provider === "google") {
-        connectorStore.upsertToken({ provider: "google", tenantId, userId, account, scopes: ["openid", "email", "profile", "drive.file", "gmail.readonly", "calendar.readonly"], accessToken, refreshToken: refreshToken ?? null, expiresAt: null });
+        // Google login only has openid/email/profile — not Drive/Gmail/Calendar.
+        // Do NOT save as a connector token; user must explicitly connect Google via /api/connectors/google/auth.
       } else if (provider === "microsoft") {
-        connectorStore.upsertToken({ provider: "microsoft", tenantId, userId, account, scopes: ["openid", "email", "profile", "User.Read", "Files.ReadWrite", "Mail.Read", "Calendars.Read"], accessToken, refreshToken: refreshToken ?? null, expiresAt: null });
+        // Microsoft login only has openid/email/profile/User.Read — not Files/Mail/Calendar.
+        // Do NOT save as a connector token; user must explicitly connect via /api/connectors/microsoft/auth.
       }
     } catch (err: any) {
       console.warn(`${provider} connector auto-connect failed:`, err?.message);
