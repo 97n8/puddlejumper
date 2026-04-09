@@ -94,6 +94,37 @@ function getCivicActor(db: Database.Database, pjUserId: string, email: string, d
   return provisionCivicActor(db, pjUserId, email, displayName, role);
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function addBusinessDays(from: Date, days: number): Date {
+  const d = new Date(from);
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  return d;
+}
+
+// Statutory deadlines auto-created when specific object subtypes are created
+const STATUTORY_DEADLINES: Record<string, { label: string; type: string; statute_ref: string; business_days: number; severity: string }> = {
+  records_request: {
+    label: 'MGL c.66 §10 — 10 business-day response deadline',
+    type: 'statutory',
+    statute_ref: 'MGL c.66 §10',
+    business_days: 10,
+    severity: 'critical',
+  },
+  procurement: {
+    label: 'MGL c.30B — 30-day public notice minimum',
+    type: 'statutory',
+    statute_ref: 'MGL c.30B §5',
+    business_days: 30,
+    severity: 'warning',
+  },
+};
+
 // ── Router factory ────────────────────────────────────────────────────────────
 
 export function createCivicRouter(dataDir: string): Router {
@@ -190,8 +221,26 @@ export function createCivicRouter(dataDir: string): Router {
       ORDER BY created_at DESC LIMIT 10
     `).all();
 
-    // Stub vault score (production SQL in LogicOS_Backend_Schema_API_V1.docx §6)
-    const vaultScore = { authority: 72, accountability: 68, boundary: 55, continuity: 81, records: 48, overall: 66, operational_mode: 'standard' };
+    // Computed vault score from live DB data
+    const totalObjs = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE deleted_at IS NULL AND subtype NOT IN ('town_profile')`).get() as { n: number }).n;
+    const withOwner = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE deleted_at IS NULL AND subtype NOT IN ('town_profile') AND owner_id IS NOT NULL`).get() as { n: number }).n;
+    const classified = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE deleted_at IS NULL AND subtype NOT IN ('town_profile') AND vault_class != 'unset'`).get() as { n: number }).n;
+    const withAuthority = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE deleted_at IS NULL AND type IN ('case','record') AND authority_basis IS NOT NULL`).get() as { n: number }).n;
+    const totalCases = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE deleted_at IS NULL AND type IN ('case','record')`).get() as { n: number }).n;
+    const totalDeadlines = (db.prepare(`SELECT COUNT(*) as n FROM deadlines WHERE status = 'active'`).get() as { n: number }).n;
+    const overdueDeadlines = (db.prepare(`SELECT COUNT(*) as n FROM deadlines WHERE status = 'active' AND due_at < ?`).get(now) as { n: number }).n;
+    const totalPrr = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE subtype = 'records_request' AND deleted_at IS NULL`).get() as { n: number }).n;
+    const resolvedPrr = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE subtype = 'records_request' AND status IN ('responded','closed') AND deleted_at IS NULL`).get() as { n: number }).n;
+
+    const pct = (n: number, d: number) => d === 0 ? 100 : Math.round((n / d) * 100);
+    const accountability = pct(withOwner, totalObjs);
+    const boundary = pct(classified, totalObjs);
+    const authority = pct(withAuthority, totalCases);
+    const continuity = totalDeadlines === 0 ? 100 : pct(totalDeadlines - overdueDeadlines, totalDeadlines);
+    const records = pct(resolvedPrr, totalPrr);
+    const overall = Math.round(accountability * 0.25 + boundary * 0.20 + authority * 0.15 + continuity * 0.20 + records * 0.20);
+    const operational_mode = overall >= 75 ? 'compliant' : overall >= 50 ? 'standard' : 'elevated_risk';
+    const vaultScore = { authority, accountability, boundary, continuity, records, overall, operational_mode };
 
     res.json({
       due_this_week: dueThisWeek,
@@ -238,6 +287,25 @@ export function createCivicRouter(dataDir: string): Router {
       action: 'object.created', afterState: { type, subtype, status, vault_class },
     });
     const created = db.prepare('SELECT * FROM objects WHERE id = ?').get(id);
+
+    // Auto-create statutory deadline for known subtypes
+    const statutoryDef = STATUTORY_DEADLINES[subtype as string];
+    if (statutoryDef) {
+      const deadlineId = crypto.randomUUID();
+      const dueAt = addBusinessDays(new Date(now), statutoryDef.business_days).toISOString();
+      db.prepare(`INSERT INTO deadlines (id,object_id,label,type,statute_ref,due_at,owner_id,severity,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(
+        deadlineId, id, statutoryDef.label, statutoryDef.type, statutoryDef.statute_ref,
+        dueAt, owner_id ?? null, statutoryDef.severity, 'active', now
+      );
+      appendAuditLog(db, {
+        objectId: id, actorId: actor.object_id, actorDisplay: actor.display_name,
+        action: 'deadline.auto_created',
+        afterState: { deadline_id: deadlineId, statute_ref: statutoryDef.statute_ref, due_at: dueAt },
+        systemTriggered: true,
+        notes: `Auto-created statutory deadline: ${statutoryDef.label}`,
+      });
+    }
+
     res.status(201).json(created);
   });
 
