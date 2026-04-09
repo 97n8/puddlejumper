@@ -142,7 +142,8 @@ CREATE TABLE IF NOT EXISTS object_links (
 );
 
 CREATE TABLE IF NOT EXISTS module_configs (
-  module_id       TEXT PRIMARY KEY,
+  namespace       TEXT NOT NULL DEFAULT '',
+  module_id       TEXT NOT NULL,
   officer_name    TEXT NOT NULL DEFAULT '',
   officer_title   TEXT NOT NULL DEFAULT '',
   officer_email   TEXT NOT NULL DEFAULT '',
@@ -150,7 +151,8 @@ CREATE TABLE IF NOT EXISTS module_configs (
   routing         TEXT NOT NULL DEFAULT '{}',
   automations     TEXT NOT NULL DEFAULT '{}',
   retention_years INTEGER NOT NULL DEFAULT 7,
-  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (namespace, module_id)
 );
 `;
 
@@ -166,6 +168,7 @@ export function getCivicDb(dataDir: string): DB {
   _db.pragma('journal_mode = WAL');
   _db.pragma('foreign_keys = ON');
   _db.exec(SCHEMA);
+
   // Idempotent namespace migrations — scope all per-tenant data by town_id
   const nsCol = (_db.pragma('table_info(objects)') as Array<{ name: string }>).some(c => c.name === 'namespace');
   if (!nsCol) {
@@ -173,10 +176,34 @@ export function getCivicDb(dataDir: string): DB {
       'ALTER TABLE objects ADD COLUMN namespace TEXT',
       'ALTER TABLE deadlines ADD COLUMN namespace TEXT',
       'ALTER TABLE exceptions ADD COLUMN namespace TEXT',
-      'ALTER TABLE module_configs ADD COLUMN namespace TEXT NOT NULL DEFAULT \'\'',
     ];
     for (const m of migrations) { try { _db.exec(m); } catch {} }
   }
+
+  // module_configs: migrate to per-namespace table if still using legacy single-PK schema
+  const mcCols = (_db.pragma('table_info(module_configs)') as Array<{ name: string }>).map(c => c.name);
+  if (!mcCols.includes('namespace')) {
+    try {
+      _db.exec(`
+        ALTER TABLE module_configs RENAME TO module_configs_legacy;
+        CREATE TABLE IF NOT EXISTS module_configs (
+          namespace       TEXT NOT NULL DEFAULT '',
+          module_id       TEXT NOT NULL,
+          officer_name    TEXT NOT NULL DEFAULT '',
+          officer_title   TEXT NOT NULL DEFAULT '',
+          officer_email   TEXT NOT NULL DEFAULT '',
+          officer_phone   TEXT NOT NULL DEFAULT '',
+          routing         TEXT NOT NULL DEFAULT '{}',
+          automations     TEXT NOT NULL DEFAULT '{}',
+          retention_years INTEGER NOT NULL DEFAULT 7,
+          updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+          PRIMARY KEY (namespace, module_id)
+        );
+        INSERT OR IGNORE INTO module_configs SELECT '',module_id,officer_name,officer_title,officer_email,officer_phone,routing,automations,retention_years,updated_at FROM module_configs_legacy;
+      `);
+    } catch { /* already migrated */ }
+  }
+
   return _db;
 }
 
