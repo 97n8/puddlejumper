@@ -132,6 +132,7 @@ import { createTownRegistryRoutes } from "../townregistry/routes.js";
 import { createMyHealthRoutes } from "./routes/myHealth.js";
 import { createFileDraftsRouter } from "./routes/fileDrafts.js";
 import { createCivicRouter } from "../civic/civicRoutes.js";
+import { createAEDRouter } from "../aed/aedRoutes.js";
 import { createHealthRoutes, requestCounterMiddleware } from "./routes/health.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
@@ -341,6 +342,13 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     keyGenerator: (req) => {
       const auth = getAuthContext(req);
       return `tenant:${auth?.tenantId ?? 'no-tenant'}:user:${auth?.userId ?? 'anonymous'}:route:/api/v1/civic`;
+    },
+  });
+  const aedRateLimit = createRateLimit({
+    windowMs: 60_000, max: 120,
+    keyGenerator: (req) => {
+      const auth = getAuthContext(req);
+      return `tenant:${auth?.tenantId ?? 'no-tenant'}:user:${auth?.userId ?? 'anonymous'}:route:/api/v1/aed`;
     },
   });
 
@@ -936,6 +944,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/registry", createTownRegistryRoutes(approvalStore.db));
   app.use("/api", createMyHealthRoutes(approvalStore.db));
   app.use("/api/v1/civic", civicRateLimit, createCivicRouter(CONTROLLED_DATA_DIR));
+  app.use("/api/v1/aed", aedRateLimit, createAEDRouter(CONTROLLED_DATA_DIR));
 
   const vaultDbPath = path.resolve(process.env.VAULT_DB_PATH ?? path.join(CONTROLLED_DATA_DIR, "vault.db"));
   const documentRoutes = createDocumentRoutes({ dbPath: vaultDbPath });
