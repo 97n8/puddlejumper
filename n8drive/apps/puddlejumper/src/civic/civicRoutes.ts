@@ -14,7 +14,7 @@
  */
 
 import express from 'express';
-import type { Router, Request, Response } from 'express';
+import type { Router, Request, Response, NextFunction } from 'express';
 import type Database from 'better-sqlite3';
 import crypto from 'crypto';
 import { getAuthContext, createJwtAuthenticationMiddleware } from '@publiclogic/core';
@@ -30,6 +30,20 @@ type CivicActor = {
   role: string;
   pj_user_id: string | null;
 };
+
+// ── Error-handling wrapper ─────────────────────────────────────────────────────
+// Wraps a sync route handler so any thrown error (including JSON.parse failures,
+// SQLite BUSY errors, etc.) returns a clean 500 instead of crashing.
+function tryRoute(fn: (req: Request, res: Response) => unknown) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = fn(req, res);
+      if (result instanceof Promise) result.catch(next);
+    } catch (err) {
+      next(err);
+    }
+  };
+}
 
 // ── Auto-provision civic actor ────────────────────────────────────────────────
 
@@ -54,25 +68,29 @@ function provisionCivicActor(db: Database.Database, pjUserId: string, email: str
   const objectId = crypto.randomUUID();
   const credId = crypto.randomUUID();
 
-  db.transaction(() => {
-    db.prepare(`INSERT INTO objects (id,type,subtype,stage,status,vault_class,owner_id,data,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(
-      objectId, 'actor', 'staff', 'WORKS', 'active', 'internal', ownerId,
-      JSON.stringify({ display_name: displayName, email, pj_user_id: pjUserId }),
-      now, now
-    );
-    db.prepare(`INSERT INTO credentials (id,object_id,email,display_name,role,pj_user_id,created_at) VALUES (?,?,?,?,?,?,?)`).run(
-      credId, objectId, email, displayName, role, pjUserId, now
-    );
-    appendAuditLog(db, {
-      objectId,
-      actorId: objectId,
-      actorDisplay: displayName,
-      action: 'civic.actor.provisioned',
-      afterState: { email, display_name: displayName, role },
-      systemTriggered: true,
-      notes: `Auto-provisioned from PJ session. pj_user_id=${pjUserId}`,
-    });
-  })();
+  try {
+    db.transaction(() => {
+      db.prepare(`INSERT INTO objects (id,type,subtype,stage,status,vault_class,owner_id,data,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(
+        objectId, 'actor', 'staff', 'WORKS', 'active', 'internal', ownerId,
+        JSON.stringify({ display_name: displayName, email, pj_user_id: pjUserId }),
+        now, now
+      );
+      db.prepare(`INSERT INTO credentials (id,object_id,email,display_name,role,pj_user_id,created_at) VALUES (?,?,?,?,?,?,?)`).run(
+        credId, objectId, email, displayName, role, pjUserId, now
+      );
+      appendAuditLog(db, {
+        objectId,
+        actorId: objectId,
+        actorDisplay: displayName,
+        action: 'civic.actor.provisioned',
+        afterState: { email, display_name: displayName, role },
+        systemTriggered: true,
+        notes: `Auto-provisioned from PJ session. pj_user_id=${pjUserId}`,
+      });
+    })();
+  } catch (err) {
+    throw new Error(`Failed to provision civic actor for ${email}: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   return { id: credId, object_id: objectId, email, display_name: displayName, role, pj_user_id: pjUserId };
 }
@@ -82,12 +100,15 @@ function getCivicActor(db: Database.Database, pjUserId: string, email: string, d
   let cred = db.prepare(`SELECT c.*, c.id as id FROM credentials c WHERE c.pj_user_id = ?`).get(pjUserId) as CivicActor | undefined;
   if (cred) return cred;
 
-  // Second: try by email
+  // Second: try by email — only backfill pj_user_id if it was never set (null/empty)
   cred = db.prepare(`SELECT * FROM credentials WHERE email = ?`).get(email) as CivicActor | undefined;
   if (cred) {
-    // Backfill pj_user_id
-    db.prepare(`UPDATE credentials SET pj_user_id = ? WHERE email = ?`).run(pjUserId, email);
-    return { ...cred, pj_user_id: pjUserId };
+    if (!cred.pj_user_id) {
+      db.prepare(`UPDATE credentials SET pj_user_id = ? WHERE email = ? AND (pj_user_id IS NULL OR pj_user_id = '')`).run(pjUserId, email);
+      return { ...cred, pj_user_id: pjUserId };
+    }
+    // Email belongs to a different PJ user — provision a fresh actor instead
+    return provisionCivicActor(db, pjUserId, email, displayName, role);
   }
 
   // Auto-provision
@@ -153,7 +174,7 @@ export function createCivicRouter(dataDir: string): Router {
   });
 
   // ── GET /api/v1/civic/me ────────────────────────────────────────────────────
-  router.get('/me', (req: Request, res: Response) => {
+  router.get('/me', tryRoute((req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
     const obj = db.prepare('SELECT * FROM objects WHERE id = ?').get(actor.object_id) as Record<string, string> | undefined;
     const town = obj?.owner_id
@@ -164,10 +185,10 @@ export function createCivicRouter(dataDir: string): Router {
       object: obj ?? null,
       town: town ? JSON.parse(town.data ?? '{}') : null,
     });
-  });
+  }));
 
   // ── GET /api/v1/civic/dashboard ─────────────────────────────────────────────
-  router.get('/dashboard', (req: Request, res: Response) => {
+  router.get('/dashboard', tryRoute((req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
     const now = new Date().toISOString();
     const sevenDaysOut = new Date(Date.now() + 7 * 86400000).toISOString();
@@ -253,10 +274,10 @@ export function createCivicRouter(dataDir: string): Router {
       vault_score: vaultScore,
       pj_feed: pjFeed,
     });
-  });
+  }));
 
   // ── GET /api/v1/civic/objects ───────────────────────────────────────────────
-  router.get('/objects', (req: Request, res: Response) => {
+  router.get('/objects', tryRoute((req: Request, res: Response) => {
     const { type, subtype, status, vault_class } = req.query as Record<string, string>;
     let sql = 'SELECT * FROM objects WHERE deleted_at IS NULL';
     const params: string[] = [];
@@ -267,10 +288,10 @@ export function createCivicRouter(dataDir: string): Router {
     sql += ' ORDER BY updated_at DESC LIMIT 100';
     const rows = db.prepare(sql).all(...params);
     res.json({ objects: rows, total: rows.length });
-  });
+  }));
 
   // ── POST /api/v1/civic/objects ──────────────────────────────────────────────
-  router.post('/objects', (req: Request, res: Response) => {
+  router.post('/objects', tryRoute((req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
     const { type, subtype, status = 'active', vault_class = 'unset', owner_id, data = {} } = req.body;
     if (!type || !subtype) {
@@ -307,15 +328,15 @@ export function createCivicRouter(dataDir: string): Router {
     }
 
     res.status(201).json(created);
-  });
+  }));
 
   // ── GET /api/v1/civic/objects/:id ──────────────────────────────────────────
-  router.get('/objects/:id', (req: Request, res: Response) => {
+  router.get('/objects/:id', tryRoute((req: Request, res: Response) => {
     const obj = db.prepare('SELECT * FROM objects WHERE id = ?').get(req.params.id);
     if (!obj) { res.status(404).json({ error: 'Object not found' }); return; }
     const audit = db.prepare('SELECT * FROM audit_log WHERE object_id = ? ORDER BY created_at DESC LIMIT 10').all(req.params.id);
     res.json({ object: obj, audit });
-  });
+  }));
 
   // ── PATCH /api/v1/civic/objects/:id/status ──────────────────────────────────
   router.patch('/objects/:id/status', (req: Request, res: Response) => {
@@ -346,7 +367,7 @@ export function createCivicRouter(dataDir: string): Router {
   });
 
   // ── GET /api/v1/civic/exceptions ────────────────────────────────────────────
-  router.get('/exceptions', (_req: Request, res: Response) => {
+  router.get('/exceptions', tryRoute((_req: Request, res: Response) => {
     const rows = db.prepare(`
       SELECT e.*, o.subtype as object_subtype, o.data as object_data
       FROM exceptions e LEFT JOIN objects o ON o.id = e.object_id
@@ -354,10 +375,10 @@ export function createCivicRouter(dataDir: string): Router {
       ORDER BY CASE e.severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 ELSE 3 END, e.created_at ASC
     `).all();
     res.json({ exceptions: rows });
-  });
+  }));
 
   // ── POST /api/v1/civic/exceptions/:id/acknowledge ───────────────────────────
-  router.post('/exceptions/:id/acknowledge', (req: Request, res: Response) => {
+  router.post('/exceptions/:id/acknowledge', tryRoute((req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
     const { reason } = req.body;
     if (!reason || reason.trim().length < 20) {
@@ -376,10 +397,10 @@ export function createCivicRouter(dataDir: string): Router {
       afterState: { exception_id: req.params.id, reason: reason.trim() },
     });
     res.json({ id: req.params.id, status: 'acknowledged', acknowledged_by: actor.display_name });
-  });
+  }));
 
   // ── GET /api/v1/civic/deadlines ─────────────────────────────────────────────
-  router.get('/deadlines', (_req: Request, res: Response) => {
+  router.get('/deadlines', tryRoute((_req: Request, res: Response) => {
     const rows = db.prepare(`
       SELECT d.*, o.subtype as object_subtype
       FROM deadlines d LEFT JOIN objects o ON o.id = d.object_id
@@ -387,16 +408,16 @@ export function createCivicRouter(dataDir: string): Router {
       ORDER BY d.due_at ASC
     `).all();
     res.json({ deadlines: rows });
-  });
+  }));
 
   // ── GET /api/v1/civic/templates ─────────────────────────────────────────────
-  router.get('/templates', (_req: Request, res: Response) => {
+  router.get('/templates', tryRoute((_req: Request, res: Response) => {
     const rows = db.prepare('SELECT * FROM templates WHERE active = 1 ORDER BY category, name').all();
     res.json({ templates: rows });
-  });
+  }));
 
   // ── GET /api/v1/civic/audit ─────────────────────────────────────────────────
-  router.get('/audit', (req: Request, res: Response) => {
+  router.get('/audit', tryRoute((req: Request, res: Response) => {
     const { object_id, limit = '25' } = req.query as Record<string, string>;
     let sql = 'SELECT * FROM audit_log';
     const params: (string | number)[] = [];
@@ -404,16 +425,16 @@ export function createCivicRouter(dataDir: string): Router {
     sql += ` ORDER BY created_at DESC LIMIT ${Math.min(100, parseInt(limit, 10))}`;
     const rows = db.prepare(sql).all(...params);
     res.json({ entries: rows });
-  });
+  }));
 
   // ── GET /api/v1/civic/setup ─────────────────────────────────────────────────
-  router.get('/setup', (_req: Request, res: Response) => {
+  router.get('/setup', tryRoute((_req: Request, res: Response) => {
     const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get('singleton');
     res.json(progress);
-  });
+  }));
 
   // ── PATCH /api/v1/civic/setup ───────────────────────────────────────────────
-  router.patch('/setup', (req: Request, res: Response) => {
+  router.patch('/setup', tryRoute((req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
     const allowed = ['town', 'identity', 'staff', 'bodies'];
     const updates: string[] = [];
@@ -433,10 +454,10 @@ export function createCivicRouter(dataDir: string): Router {
     });
     const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get('singleton');
     res.json(progress);
-  });
+  }));
 
   // ── GET /api/v1/civic/watch/feed ────────────────────────────────────────────
-  router.get('/watch/feed', (req: Request, res: Response) => {
+  router.get('/watch/feed', tryRoute((req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
     const rows = db.prepare(`
       SELECT a.*, o.subtype as object_subtype
@@ -446,11 +467,11 @@ export function createCivicRouter(dataDir: string): Router {
       ORDER BY a.created_at DESC LIMIT 20
     `).all(actor.object_id, actor.object_id);
     res.json({ feed: rows });
-  });
+  }));
 
   // ── Org Manager routes ────────────────────────────────────────────────────────
 
-  router.get('/org-manager/status', (req: Request, res: Response) => {
+  router.get('/org-manager/status', tryRoute((req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
     const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get('singleton') as Record<string, unknown>;
 
@@ -499,7 +520,7 @@ export function createCivicRouter(dataDir: string): Router {
       completed_at: updated.completed_at,
       prefill: { town: townData, staff: staffRows, bodies: bodyRows, actor },
     });
-  });
+  }));
 
   router.post('/org-manager/town', (req: Request, res: Response) => {
     try {
@@ -536,10 +557,10 @@ export function createCivicRouter(dataDir: string): Router {
     }
   });
 
-  router.post('/org-manager/identity', (_req: Request, res: Response) => {
+  router.post('/org-manager/identity', tryRoute((_req: Request, res: Response) => {
     db.prepare('UPDATE setup_progress SET identity = 1 WHERE id = ?').run('singleton');
     res.json({ success: true });
-  });
+  }));
 
   router.post('/org-manager/staff', (req: Request, res: Response) => {
     try {
@@ -609,7 +630,7 @@ export function createCivicRouter(dataDir: string): Router {
   });
 
   // ── GET /org-manager/configure — load saved module configs ───────────────────
-  router.get('/org-manager/configure', (_req: Request, res: Response) => {
+  router.get('/org-manager/configure', tryRoute((_req: Request, res: Response) => {
     const rows = db.prepare('SELECT * FROM module_configs').all() as {
       module_id: string; officer_name: string; officer_title: string;
       officer_email: string; officer_phone: string; routing: string;
@@ -627,7 +648,7 @@ export function createCivicRouter(dataDir: string): Router {
       updatedAt:      r.updated_at,
     }));
     return res.json({ configs });
-  });
+  }));
 
   // ── POST /org-manager/configure — save module configs ────────────────────────
   router.post('/org-manager/configure', (req: Request, res: Response) => {
@@ -712,13 +733,20 @@ export function createCivicRouter(dataDir: string): Router {
 
   // ── Assistant stub ────────────────────────────────────────────────────────────
 
-  router.post('/assistant/ask', (req: Request, res: Response) => {
+  router.post('/assistant/ask', tryRoute((req: Request, res: Response) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return res.status(503).json({ code: 'AI_UNAVAILABLE', reason: 'not_configured' });
     }
     // Full AI implementation requires ANTHROPIC_API_KEY
     res.json({ response: 'AI assistant is configured. Full governance Q&A coming in V2.' });
+  }));
+
+  // ── Error handler for all civic routes ──────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  router.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    console.error('[civic] unhandled error:', err);
+    res.status(500).json({ error: 'Internal server error', detail: err.message });
   });
 
   return router;

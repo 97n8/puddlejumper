@@ -38,7 +38,29 @@ let _db: Database.Database | null = null;
 
 export function initFormKeyDefinitionStore(db: Database.Database): void {
   _db = db;
-  db.exec(SCHEMA);
+  try {
+    db.exec(SCHEMA);
+  } catch (err) {
+    console.warn('[formkey] schema exec warning:', (err as Error).message);
+  }
+  // Idempotent migrations for columns added after initial deploy
+  const migrations = [
+    "ALTER TABLE formkey_definitions ADD COLUMN status TEXT NOT NULL DEFAULT 'draft'",
+    "ALTER TABLE formkey_definitions ADD COLUMN sensitivity TEXT NOT NULL DEFAULT 'standard'",
+    "ALTER TABLE formkey_definitions ADD COLUMN purpose TEXT",
+    "ALTER TABLE formkey_definitions ADD COLUMN legal_basis TEXT",
+    "ALTER TABLE formkey_definitions ADD COLUMN retention_tier TEXT",
+    "ALTER TABLE formkey_definitions ADD COLUMN data_types TEXT",
+    "ALTER TABLE formkey_definitions ADD COLUMN consent_config TEXT",
+    "ALTER TABLE formkey_definitions ADD COLUMN consent_text_hash TEXT",
+    "ALTER TABLE formkey_definitions ADD COLUMN vault_mapping TEXT",
+    "ALTER TABLE formkey_definitions ADD COLUMN output_config TEXT",
+    "ALTER TABLE formkey_definitions ADD COLUMN automation_trigger TEXT",
+    "ALTER TABLE formkey_definitions ADD COLUMN seal_token TEXT",
+    "ALTER TABLE formkey_definitions ADD COLUMN published_at TEXT",
+    "ALTER TABLE formkey_definitions ADD COLUMN deprecated_at TEXT",
+  ];
+  for (const m of migrations) { try { db.exec(m) } catch {} }
 }
 
 function getDb(): Database.Database {

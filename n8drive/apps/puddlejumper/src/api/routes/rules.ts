@@ -99,11 +99,15 @@ export function createRulesRoutes(opts: { db: Database.Database }): express.Rout
       UNIQUE(tenant_id, rule_id, version)
     );
     CREATE INDEX IF NOT EXISTS idx_arules_tenant ON archieve_rules(tenant_id, status, category);
-    -- Migrate: add approval columns if they don't yet exist (safe on re-start)
-    ALTER TABLE archieve_rules ADD COLUMN IF NOT EXISTS approved_by TEXT;
-    ALTER TABLE archieve_rules ADD COLUMN IF NOT EXISTS approved_at TEXT;
-    ALTER TABLE archieve_rules ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
   `);
+
+  // Idempotent migrations — try/catch so re-runs on existing DBs are safe
+  const migrations = [
+    'ALTER TABLE archieve_rules ADD COLUMN approved_by TEXT',
+    'ALTER TABLE archieve_rules ADD COLUMN approved_at TEXT',
+    'ALTER TABLE archieve_rules ADD COLUMN rejection_reason TEXT',
+  ];
+  for (const m of migrations) { try { db.exec(m) } catch {} }
 
   const router = express.Router();
 
