@@ -404,6 +404,46 @@ function checkFormKeySlaBreaches(db: Database.Database, tenantId: string): Check
         deduplicationKey: `fk-sla-${rec.id}`,
       });
       count++;
+
+      // ── vault-auto-reject: auto-close reviews that are 2× past SLA ──
+      // A review that's been sitting for 2× its SLA without a decision is auto-rejected
+      // to unblock the intake lifecycle and log the governance failure.
+      if (hoursOver > 48) {
+        const reviewTableExists = db.prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='formkey_reviews'"
+        ).get();
+        if (reviewTableExists) {
+          const pendingReview = db.prepare(`
+            SELECT id FROM formkey_reviews WHERE record_id = ? AND status = 'pending'
+          `).get(rec.id) as { id: string } | undefined;
+
+          if (pendingReview) {
+            const autoRejectTime = new Date().toISOString();
+            db.prepare(`
+              UPDATE formkey_reviews SET status = 'rejected', reviewed_by = 'system',
+                reviewed_at = ?, review_note = 'Auto-rejected: review SLA exceeded 2× threshold'
+              WHERE id = ?
+            `).run(autoRejectTime, pendingReview.id);
+
+            db.prepare(`
+              UPDATE formkey_intake_records SET status = 'closed', closed_at = ?,
+                status_updated_by = 'system', status_updated_at = ?
+              WHERE id = ?
+            `).run(autoRejectTime, autoRejectTime, rec.id);
+
+            upsertAlert(db, tenantId, {
+              domain: 'compliance',
+              severity: 'critical',
+              title: `FormKey review auto-rejected — ${rec.form_id}`,
+              detail: `Review ${pendingReview.id} auto-rejected after ${hoursOver}h (2× SLA). Record closed. Manual follow-up required.`,
+              affectedObjectType: 'formkey_review',
+              affectedObjectId: pendingReview.id,
+              suggestedAction: 'Investigate why the review was not completed within the SLA and take corrective action.',
+              deduplicationKey: `fk-auto-reject-${pendingReview.id}`,
+            });
+          }
+        }
+      }
     }
 
     return { domain: 'compliance', status: 'ok', alertsFired: count };

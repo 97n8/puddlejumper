@@ -15,6 +15,7 @@ interface PositionRow {
   email: string;
   employment_status: OrgPosition['employmentStatus'];
   authority_level: number;
+  governance_roles: string;
   acting_for_position_id: string | null;
   separation_date: string | null;
   created_at: string;
@@ -62,6 +63,7 @@ function rowToPosition(row: PositionRow): OrgPosition {
     email: row.email,
     employmentStatus: row.employment_status,
     authorityLevel: row.authority_level,
+    governanceRoles: row.governance_roles ? JSON.parse(row.governance_roles) as string[] : [],
     actingForPositionId: row.acting_for_position_id,
     separationDate: row.separation_date,
     createdAt: row.created_at,
@@ -115,6 +117,7 @@ export function initOrgStore(db: Database.Database): void {
       email TEXT NOT NULL,
       employment_status TEXT NOT NULL DEFAULT 'active',
       authority_level INTEGER NOT NULL DEFAULT 1,
+      governance_roles TEXT NOT NULL DEFAULT '[]',
       acting_for_position_id TEXT,
       separation_date TEXT,
       created_at TEXT NOT NULL,
@@ -156,6 +159,12 @@ export function initOrgStore(db: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_org_import_tenant ON org_import_jobs(tenant_id);
   `);
+
+  // Migration: add governance_roles to existing tables
+  const cols = (db.prepare("PRAGMA table_info(org_positions)").all() as { name: string }[]).map(c => c.name);
+  if (!cols.includes('governance_roles')) {
+    db.exec("ALTER TABLE org_positions ADD COLUMN governance_roles TEXT NOT NULL DEFAULT '[]'");
+  }
 }
 
 // ── Positions ────────────────────────────────────────────────────────────────
@@ -178,9 +187,9 @@ export function upsertPosition(
   db.prepare(`
     INSERT INTO org_positions (
       id, tenant_id, employee_id, full_name, title, department,
-      supervisor_id, email, employment_status, authority_level,
+      supervisor_id, email, employment_status, authority_level, governance_roles,
       acting_for_position_id, separation_date, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(tenant_id, employee_id) DO UPDATE SET
       full_name = excluded.full_name,
       title = excluded.title,
@@ -189,18 +198,41 @@ export function upsertPosition(
       email = excluded.email,
       employment_status = excluded.employment_status,
       authority_level = excluded.authority_level,
+      governance_roles = excluded.governance_roles,
       acting_for_position_id = excluded.acting_for_position_id,
       separation_date = excluded.separation_date,
       updated_at = excluded.updated_at
   `).run(
     id, tenantId, data.employeeId, data.fullName, data.title, data.department,
     data.supervisorId ?? null, data.email, data.employmentStatus, data.authorityLevel ?? 1,
+    JSON.stringify(data.governanceRoles ?? []),
     data.actingForPositionId ?? null, data.separationDate ?? null, createdAt, now
   );
 
   return rowToPosition(
     db.prepare(`SELECT * FROM org_positions WHERE id = ?`).get(id) as PositionRow
   );
+}
+
+/**
+ * Check whether any active position held by employeeId has the given governance role.
+ * Used by the FormKey review gate (vault-rbac) to authorize review decisions.
+ */
+export function hasGovernanceRole(
+  db: Database.Database,
+  tenantId: string,
+  employeeId: string,
+  role: string
+): boolean {
+  const rows = db.prepare(`
+    SELECT governance_roles FROM org_positions
+    WHERE tenant_id = ? AND employee_id = ? AND employment_status = 'active'
+  `).all(tenantId, employeeId) as { governance_roles: string }[];
+  return rows.some(r => {
+    try {
+      return (JSON.parse(r.governance_roles) as string[]).includes(role);
+    } catch { return false; }
+  });
 }
 
 export function getPosition(db: Database.Database, tenantId: string, id: string): OrgPosition | null {

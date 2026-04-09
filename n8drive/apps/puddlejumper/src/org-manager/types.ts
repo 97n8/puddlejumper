@@ -9,6 +9,8 @@ export interface OrgPosition {
   email: string
   employmentStatus: 'active' | 'inactive' | 'vacant' | 'acting' | 'interim'
   authorityLevel: number // 1-5, drives approval routing thresholds
+  /** Governance roles this position holds (e.g. finance_authority, grant_manager) */
+  governanceRoles: string[]
   actingForPositionId: string | null
   separationDate: string | null
   createdAt: string

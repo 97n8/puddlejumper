@@ -26,6 +26,7 @@ import { verifyConsent } from './consent/verifier.js';
 import { renderForm } from './output/renderer.js';
 import { getFormRegistry } from './index.js';
 import { archieveLog } from '../archieve/index.js';
+import { hasGovernanceRole } from '../org-manager/store.js';
 
 function getTenantId(req: Request): string {
   return (req.headers['x-tenant-id'] as string) ?? 'default';
@@ -443,6 +444,18 @@ export function createFormKeyApiRouter(db: Database.Database): Router {
 
       if (!review) { res.status(404).json({ error: 'Review not found' }); return; }
       if (review.status !== 'pending') { res.status(409).json({ error: `Review already ${review.status}` }); return; }
+
+      // ── VAULT RBAC: verify reviewer holds the required governance role ──
+      if (review.required_role && reviewedBy && reviewedBy !== 'system') {
+        const authorized = hasGovernanceRole(intakeDb, tenantId, reviewedBy as string, review.required_role as string);
+        if (!authorized) {
+          res.status(403).json({
+            error: `Role '${review.required_role}' required to decide this review`,
+            requiredRole: review.required_role,
+          });
+          return;
+        }
+      }
 
       const now = new Date().toISOString();
       intakeDb.prepare(`

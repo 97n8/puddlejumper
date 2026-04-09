@@ -185,6 +185,7 @@ export function createOrgManagerRouter(db: Database.Database): Router {
         email: body.email!,
         employmentStatus: body.employmentStatus!,
         authorityLevel: body.authorityLevel ?? 1,
+        governanceRoles: Array.isArray(body.governanceRoles) ? body.governanceRoles as string[] : [],
         actingForPositionId: body.actingForPositionId ?? null,
         separationDate: body.separationDate ?? null,
       });
@@ -325,6 +326,7 @@ export function createOrgManagerRouter(db: Database.Database): Router {
       email: r.email as string,
       employmentStatus: r.employmentStatus as OrgPosition['employmentStatus'],
       authorityLevel: r.authorityLevel ? Number(r.authorityLevel) : 1,
+      governanceRoles: Array.isArray(r.governanceRoles) ? r.governanceRoles as string[] : [],
       actingForPositionId: (r.actingForPositionId as string) || null,
       separationDate: (r.separationDate as string) || null,
     }));

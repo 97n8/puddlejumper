@@ -30,7 +30,9 @@ CREATE TABLE IF NOT EXISTS formkey_intake_records (
   reviewed_by TEXT,
   responded_at TEXT,
   closed_at TEXT,
-  review_id TEXT
+  review_id TEXT,
+  status_updated_at TEXT,
+  status_updated_by TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_fk_intake_tenant ON formkey_intake_records(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_fk_intake_form ON formkey_intake_records(tenant_id, form_id);
@@ -66,12 +68,14 @@ export function initIntakeRecordStore(db: Database.Database): void {
 
     // Migration: add lifecycle columns to existing tables
     const cols = (db.prepare("PRAGMA table_info(formkey_intake_records)").all() as { name: string }[]).map(c => c.name);
-    if (!cols.includes('status'))       db.exec("ALTER TABLE formkey_intake_records ADD COLUMN status TEXT NOT NULL DEFAULT 'received'");
-    if (!cols.includes('sla_due_at'))   db.exec("ALTER TABLE formkey_intake_records ADD COLUMN sla_due_at TEXT");
-    if (!cols.includes('reviewed_by'))  db.exec("ALTER TABLE formkey_intake_records ADD COLUMN reviewed_by TEXT");
-    if (!cols.includes('responded_at')) db.exec("ALTER TABLE formkey_intake_records ADD COLUMN responded_at TEXT");
-    if (!cols.includes('closed_at'))    db.exec("ALTER TABLE formkey_intake_records ADD COLUMN closed_at TEXT");
-    if (!cols.includes('review_id'))    db.exec("ALTER TABLE formkey_intake_records ADD COLUMN review_id TEXT");
+    if (!cols.includes('status'))             db.exec("ALTER TABLE formkey_intake_records ADD COLUMN status TEXT NOT NULL DEFAULT 'received'");
+    if (!cols.includes('sla_due_at'))         db.exec("ALTER TABLE formkey_intake_records ADD COLUMN sla_due_at TEXT");
+    if (!cols.includes('reviewed_by'))        db.exec("ALTER TABLE formkey_intake_records ADD COLUMN reviewed_by TEXT");
+    if (!cols.includes('responded_at'))       db.exec("ALTER TABLE formkey_intake_records ADD COLUMN responded_at TEXT");
+    if (!cols.includes('closed_at'))          db.exec("ALTER TABLE formkey_intake_records ADD COLUMN closed_at TEXT");
+    if (!cols.includes('review_id'))          db.exec("ALTER TABLE formkey_intake_records ADD COLUMN review_id TEXT");
+    if (!cols.includes('status_updated_at'))  db.exec("ALTER TABLE formkey_intake_records ADD COLUMN status_updated_at TEXT");
+    if (!cols.includes('status_updated_by'))  db.exec("ALTER TABLE formkey_intake_records ADD COLUMN status_updated_by TEXT");
 
     _intakeDbInitialized = true;
   }
