@@ -20,6 +20,7 @@ import {
 } from './registry/definition-store.js';
 import { runPublishPipeline } from './registry/publisher.js';
 import { processSubmission, getIntakeDb } from './intake/pipeline.js';
+import { normalizeToForm } from './intake/normalizer.js';
 import { grantConsent, getConsentRecord, withdrawConsent } from './consent/store.js';
 import { verifyConsent } from './consent/verifier.js';
 import { renderForm } from './output/renderer.js';
@@ -57,6 +58,27 @@ function checkRateLimit(ip: string, formId: string): boolean {
 
 export function createFormKeyApiRouter(db: Database.Database): Router {
   const router = Router();
+
+  // POST /api/formkey/forms/normalize — plain-text → best matching form + prefill
+  router.post('/normalize', async (req: Request, res: Response) => {
+    try {
+      const { text } = req.body ?? {};
+      if (!text || typeof text !== 'string' || text.trim().length < 3) {
+        res.status(400).json({ error: 'text is required (min 3 chars)' });
+        return;
+      }
+      const tenantId = getTenantId(req);
+      const registry = getFormRegistry();
+      const tenantForms = registry.get(tenantId);
+      const forms = tenantForms ? Array.from(tenantForms.values()) : [];
+
+      const openAiKey = process.env.OPENAI_API_KEY;
+      const result = await normalizeToForm(text.trim(), forms, openAiKey);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
 
   // GET /v1/forms — list
   router.get('/', (req: Request, res: Response) => {

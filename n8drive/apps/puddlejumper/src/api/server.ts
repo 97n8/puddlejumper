@@ -50,6 +50,7 @@ import { createCloudProvisionRoutes } from "./routes/cloudProvision.js";
 import { createDocumentRoutes } from "./routes/documents.js";
 import { createRulesRoutes } from "./routes/rules.js";
 import { createDiscoveryRoutes } from "./routes/discovery.js";
+import { createTasksRoutes } from "./routes/tasks.js";
 import {
   LOGIN_WINDOW_MS,
   LOGIN_MAX_ATTEMPTS,
@@ -938,6 +939,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createFileDraftsRouter(vaultDb));
 
   app.use("/api", createRulesRoutes({ db: approvalStore.db }));
+  app.use("/api", createTasksRoutes({ db: approvalStore.db }));
 
   // ── Redirects ────────────────────────────────────────────────────────────
   // Redirect /admin and /dashboard to the working backend admin interface at /pj/admin
