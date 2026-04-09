@@ -29,6 +29,7 @@ type CivicActor = {
   display_name: string;
   role: string;
   pj_user_id: string | null;
+  town_id: string | null;
 };
 
 // ── Error-handling wrapper ─────────────────────────────────────────────────────
@@ -61,17 +62,23 @@ function deriveDisplayName(email: string, fullName?: string): string {
 function provisionCivicActor(db: Database.Database, pjUserId: string, email: string, displayName: string, role: string): CivicActor {
   const now = new Date().toISOString();
 
-  // Find town (first active town_profile)
-  const town = db.prepare(`SELECT id FROM objects WHERE subtype='town_profile' AND status='active' LIMIT 1`).get() as { id: string } | undefined;
-  const ownerId = town?.id ?? null;
-
+  // Each actor gets their own town_profile namespace
+  const townId = crypto.randomUUID();
   const objectId = crypto.randomUUID();
   const credId = crypto.randomUUID();
 
   try {
     db.transaction(() => {
-      db.prepare(`INSERT INTO objects (id,type,subtype,stage,status,vault_class,owner_id,data,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(
-        objectId, 'actor', 'staff', 'WORKS', 'active', 'internal', ownerId,
+      // Create a blank town_profile for this actor's namespace
+      db.prepare(`INSERT INTO objects (id,type,subtype,stage,status,vault_class,namespace,data,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(
+        townId, 'body', 'town_profile', 'WORKS', 'active', 'internal', townId,
+        JSON.stringify({ display_name: displayName, email }),
+        now, now
+      );
+      // Ensure setup_progress row exists for this namespace
+      db.prepare(`INSERT OR IGNORE INTO setup_progress (id) VALUES (?)`).run(townId);
+      db.prepare(`INSERT INTO objects (id,type,subtype,stage,status,vault_class,namespace,owner_id,data,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(
+        objectId, 'actor', 'staff', 'WORKS', 'active', 'internal', townId, townId,
         JSON.stringify({ display_name: displayName, email, pj_user_id: pjUserId }),
         now, now
       );
@@ -83,7 +90,7 @@ function provisionCivicActor(db: Database.Database, pjUserId: string, email: str
         actorId: objectId,
         actorDisplay: displayName,
         action: 'civic.actor.provisioned',
-        afterState: { email, display_name: displayName, role },
+        afterState: { email, display_name: displayName, role, namespace: townId },
         systemTriggered: true,
         notes: `Auto-provisioned from PJ session. pj_user_id=${pjUserId}`,
       });
@@ -92,27 +99,38 @@ function provisionCivicActor(db: Database.Database, pjUserId: string, email: str
     throw new Error(`Failed to provision civic actor for ${email}: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  return { id: credId, object_id: objectId, email, display_name: displayName, role, pj_user_id: pjUserId };
+  return { id: credId, object_id: objectId, email, display_name: displayName, role, pj_user_id: pjUserId, town_id: townId };
 }
 
 function getCivicActor(db: Database.Database, pjUserId: string, email: string, displayName: string, role: string): CivicActor {
   // First: try by PJ user ID
   let cred = db.prepare(`SELECT c.*, c.id as id FROM credentials c WHERE c.pj_user_id = ?`).get(pjUserId) as CivicActor | undefined;
-  if (cred) return cred;
 
   // Second: try by email — only backfill pj_user_id if it was never set (null/empty)
-  cred = db.prepare(`SELECT * FROM credentials WHERE email = ?`).get(email) as CivicActor | undefined;
-  if (cred) {
-    if (!cred.pj_user_id) {
-      db.prepare(`UPDATE credentials SET pj_user_id = ? WHERE email = ? AND (pj_user_id IS NULL OR pj_user_id = '')`).run(pjUserId, email);
-      return { ...cred, pj_user_id: pjUserId };
+  if (!cred) {
+    cred = db.prepare(`SELECT * FROM credentials WHERE email = ?`).get(email) as CivicActor | undefined;
+    if (cred) {
+      if (!cred.pj_user_id) {
+        db.prepare(`UPDATE credentials SET pj_user_id = ? WHERE email = ? AND (pj_user_id IS NULL OR pj_user_id = '')`).run(pjUserId, email);
+        cred = { ...cred, pj_user_id: pjUserId };
+      } else {
+        // Email belongs to a different PJ user — provision a fresh actor instead
+        return provisionCivicActor(db, pjUserId, email, displayName, role);
+      }
     }
-    // Email belongs to a different PJ user — provision a fresh actor instead
-    return provisionCivicActor(db, pjUserId, email, displayName, role);
   }
 
   // Auto-provision
-  return provisionCivicActor(db, pjUserId, email, displayName, role);
+  if (!cred) return provisionCivicActor(db, pjUserId, email, displayName, role);
+
+  // Resolve town_id from the actor's object owner_id
+  const actorObj = db.prepare(`SELECT owner_id, namespace FROM objects WHERE id = ?`).get(cred.object_id) as { owner_id: string | null; namespace: string | null } | undefined;
+  const town_id = actorObj?.namespace ?? actorObj?.owner_id ?? null;
+
+  // Ensure setup_progress row exists for this namespace
+  if (town_id) db.prepare(`INSERT OR IGNORE INTO setup_progress (id) VALUES (?)`).run(town_id);
+
+  return { ...cred, town_id };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -145,6 +163,17 @@ const STATUTORY_DEADLINES: Record<string, { label: string; type: string; statute
     severity: 'warning',
   },
 };
+
+// ── Admin-only guard ──────────────────────────────────────────────────────────
+// Apply to any route that modifies municipality-level configuration.
+function requireAdminActor(req: Request, res: Response, next: import('express').NextFunction) {
+  const actor = (req as any).civicActor as CivicActor | undefined;
+  if (!actor || actor.role !== 'town_administrator') {
+    res.status(403).json({ error: 'Forbidden: town_administrator role required', code: 'INSUFFICIENT_ROLE' });
+    return;
+  }
+  next();
+}
 
 // ── Router factory ────────────────────────────────────────────────────────────
 
@@ -190,6 +219,7 @@ export function createCivicRouter(dataDir: string): Router {
   // ── GET /api/v1/civic/dashboard ─────────────────────────────────────────────
   router.get('/dashboard', tryRoute((req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
+    const ns = actor.town_id;
     const now = new Date().toISOString();
     const sevenDaysOut = new Date(Date.now() + 7 * 86400000).toISOString();
     const ninetyDaysOut = new Date(Date.now() + 90 * 86400000).toISOString();
@@ -198,60 +228,62 @@ export function createCivicRouter(dataDir: string): Router {
       SELECT d.*, o.subtype as object_subtype
       FROM deadlines d
       LEFT JOIN objects o ON o.id = d.object_id
-      WHERE d.status = 'active' AND d.due_at <= ?
+      WHERE d.namespace = ? AND d.status = 'active' AND d.due_at <= ?
       ORDER BY d.due_at ASC
       LIMIT 20
-    `).all(sevenDaysOut);
+    `).all(ns, sevenDaysOut);
 
     const exceptions = db.prepare(`
       SELECT e.*, o.subtype as object_subtype
       FROM exceptions e
       LEFT JOIN objects o ON o.id = e.object_id
-      WHERE e.status = 'active'
+      WHERE e.namespace = ? AND e.status IN ('active','acknowledged')
       ORDER BY CASE e.severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END
-    `).all();
+    `).all(ns);
 
     const openRecordsRequests = db.prepare(`
       SELECT * FROM objects
-      WHERE subtype = 'records_request' AND status NOT IN ('responded','closed') AND deleted_at IS NULL
-    `).all();
+      WHERE namespace = ? AND subtype = 'records_request' AND status NOT IN ('responded','closed') AND deleted_at IS NULL
+    `).all(ns);
 
     const activeProcurements = db.prepare(`
       SELECT * FROM objects
-      WHERE subtype = 'procurement' AND status NOT IN ('closed','cancelled') AND deleted_at IS NULL
-    `).all();
+      WHERE namespace = ? AND subtype = 'procurement' AND status NOT IN ('closed','cancelled') AND deleted_at IS NULL
+    `).all(ns);
 
     const contractsExpiring = db.prepare(`
       SELECT o.*, d.due_at as expiry_at FROM objects o
       JOIN deadlines d ON d.object_id = o.id
-      WHERE o.subtype = 'contract' AND d.type = 'contractual'
+      WHERE o.namespace = ? AND o.subtype = 'contract' AND d.type = 'contractual'
         AND d.status = 'active' AND d.due_at <= ?
         AND o.deleted_at IS NULL
-    `).all(ninetyDaysOut);
+    `).all(ns, ninetyDaysOut);
 
     const ownerlessCount = (db.prepare(`
-      SELECT COUNT(*) as n FROM objects WHERE owner_id IS NULL AND deleted_at IS NULL AND subtype NOT IN ('town_profile','select_board')
-    `).get() as { n: number }).n;
+      SELECT COUNT(*) as n FROM objects WHERE namespace = ? AND owner_id IS NULL AND deleted_at IS NULL AND subtype NOT IN ('town_profile','select_board')
+    `).get(ns) as { n: number }).n;
 
     const unclassifiedCount = (db.prepare(`
-      SELECT COUNT(*) as n FROM objects WHERE vault_class = 'unset' AND deleted_at IS NULL
-    `).get() as { n: number }).n;
+      SELECT COUNT(*) as n FROM objects WHERE namespace = ? AND vault_class = 'unset' AND deleted_at IS NULL
+    `).get(ns) as { n: number }).n;
 
     const pjFeed = db.prepare(`
-      SELECT * FROM audit_log WHERE system_triggered = 1
-      ORDER BY created_at DESC LIMIT 10
-    `).all();
+      SELECT a.* FROM audit_log a
+      LEFT JOIN objects o ON o.id = a.object_id
+      WHERE a.system_triggered = 1 AND (o.namespace = ? OR a.actor_id = ?)
+      ORDER BY a.created_at DESC LIMIT 10
+    `).all(ns, actor.object_id);
 
-    // Computed vault score from live DB data
-    const totalObjs = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE deleted_at IS NULL AND subtype NOT IN ('town_profile')`).get() as { n: number }).n;
-    const withOwner = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE deleted_at IS NULL AND subtype NOT IN ('town_profile') AND owner_id IS NOT NULL`).get() as { n: number }).n;
-    const classified = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE deleted_at IS NULL AND subtype NOT IN ('town_profile') AND vault_class != 'unset'`).get() as { n: number }).n;
-    const withAuthority = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE deleted_at IS NULL AND type IN ('case','record') AND authority_basis IS NOT NULL`).get() as { n: number }).n;
-    const totalCases = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE deleted_at IS NULL AND type IN ('case','record')`).get() as { n: number }).n;
-    const totalDeadlines = (db.prepare(`SELECT COUNT(*) as n FROM deadlines WHERE status = 'active'`).get() as { n: number }).n;
-    const overdueDeadlines = (db.prepare(`SELECT COUNT(*) as n FROM deadlines WHERE status = 'active' AND due_at < ?`).get(now) as { n: number }).n;
-    const totalPrr = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE subtype = 'records_request' AND deleted_at IS NULL`).get() as { n: number }).n;
-    const resolvedPrr = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE subtype = 'records_request' AND status IN ('responded','closed') AND deleted_at IS NULL`).get() as { n: number }).n;
+    // Computed vault score scoped to this namespace
+    const totalObjs = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE namespace = ? AND deleted_at IS NULL AND subtype NOT IN ('town_profile')`).get(ns) as { n: number }).n;
+    const withOwner = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE namespace = ? AND deleted_at IS NULL AND subtype NOT IN ('town_profile') AND owner_id IS NOT NULL`).get(ns) as { n: number }).n;
+    const classified = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE namespace = ? AND deleted_at IS NULL AND subtype NOT IN ('town_profile') AND vault_class != 'unset'`).get(ns) as { n: number }).n;
+    const withAuthority = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE namespace = ? AND deleted_at IS NULL AND type IN ('case','record') AND authority_basis IS NOT NULL`).get(ns) as { n: number }).n;
+    const totalCases = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE namespace = ? AND deleted_at IS NULL AND type IN ('case','record')`).get(ns) as { n: number }).n;
+    const totalDeadlines = (db.prepare(`SELECT COUNT(*) as n FROM deadlines WHERE namespace = ? AND status = 'active'`).get(ns) as { n: number }).n;
+    const overdueDeadlines = (db.prepare(`SELECT COUNT(*) as n FROM deadlines WHERE namespace = ? AND status = 'active' AND due_at < ?`).get(ns, now) as { n: number }).n;
+    const totalPrr = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE namespace = ? AND subtype = 'records_request' AND deleted_at IS NULL`).get(ns) as { n: number }).n;
+    const resolvedPrr = (db.prepare(`SELECT COUNT(*) as n FROM objects WHERE namespace = ? AND subtype = 'records_request' AND status IN ('responded','closed') AND deleted_at IS NULL`).get(ns) as { n: number }).n;
 
     const pct = (n: number, d: number) => d === 0 ? 100 : Math.round((n / d) * 100);
     const accountability = pct(withOwner, totalObjs);
@@ -278,9 +310,11 @@ export function createCivicRouter(dataDir: string): Router {
 
   // ── GET /api/v1/civic/objects ───────────────────────────────────────────────
   router.get('/objects', tryRoute((req: Request, res: Response) => {
+    const actor = (req as any).civicActor as CivicActor;
+    const ns = actor.town_id;
     const { type, subtype, status, vault_class } = req.query as Record<string, string>;
-    let sql = 'SELECT * FROM objects WHERE deleted_at IS NULL';
-    const params: string[] = [];
+    let sql = 'SELECT * FROM objects WHERE deleted_at IS NULL AND namespace = ?';
+    const params: string[] = [ns as string];
     if (type) { sql += ' AND type = ?'; params.push(type); }
     if (subtype) { sql += ' AND subtype = ?'; params.push(subtype); }
     if (status) { sql += ' AND status = ?'; params.push(status); }
@@ -293,6 +327,7 @@ export function createCivicRouter(dataDir: string): Router {
   // ── POST /api/v1/civic/objects ──────────────────────────────────────────────
   router.post('/objects', tryRoute((req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
+    const ns = actor.town_id;
     const { type, subtype, status = 'active', vault_class = 'unset', owner_id, data = {} } = req.body;
     if (!type || !subtype) {
       res.status(422).json({ error: 'type and subtype are required' });
@@ -300,8 +335,8 @@ export function createCivicRouter(dataDir: string): Router {
     }
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    db.prepare(`INSERT INTO objects (id,type,subtype,status,vault_class,owner_id,data,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)`).run(
-      id, type, subtype, status, vault_class, owner_id ?? null, JSON.stringify(data), now, now
+    db.prepare(`INSERT INTO objects (id,type,subtype,status,vault_class,namespace,owner_id,data,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(
+      id, type, subtype, status, vault_class, ns, owner_id ?? null, JSON.stringify(data), now, now
     );
     appendAuditLog(db, {
       objectId: id, actorId: actor.object_id, actorDisplay: actor.display_name,
@@ -314,9 +349,9 @@ export function createCivicRouter(dataDir: string): Router {
     if (statutoryDef) {
       const deadlineId = crypto.randomUUID();
       const dueAt = addBusinessDays(new Date(now), statutoryDef.business_days).toISOString();
-      db.prepare(`INSERT INTO deadlines (id,object_id,label,type,statute_ref,due_at,owner_id,severity,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(
+      db.prepare(`INSERT INTO deadlines (id,object_id,label,type,statute_ref,due_at,namespace,owner_id,severity,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(
         deadlineId, id, statutoryDef.label, statutoryDef.type, statutoryDef.statute_ref,
-        dueAt, owner_id ?? null, statutoryDef.severity, 'active', now
+        dueAt, ns, owner_id ?? null, statutoryDef.severity, 'active', now
       );
       appendAuditLog(db, {
         objectId: id, actorId: actor.object_id, actorDisplay: actor.display_name,
@@ -332,19 +367,20 @@ export function createCivicRouter(dataDir: string): Router {
 
   // ── GET /api/v1/civic/objects/:id ──────────────────────────────────────────
   router.get('/objects/:id', tryRoute((req: Request, res: Response) => {
-    const obj = db.prepare('SELECT * FROM objects WHERE id = ?').get(req.params.id);
+    const actor = (req as any).civicActor as CivicActor;
+    const obj = db.prepare('SELECT * FROM objects WHERE id = ? AND namespace = ?').get(req.params.id, actor.town_id);
     if (!obj) { res.status(404).json({ error: 'Object not found' }); return; }
     const audit = db.prepare('SELECT * FROM audit_log WHERE object_id = ? ORDER BY created_at DESC LIMIT 10').all(req.params.id);
     res.json({ object: obj, audit });
   }));
 
   // ── PATCH /api/v1/civic/objects/:id/status ──────────────────────────────────
-  router.patch('/objects/:id/status', (req: Request, res: Response) => {
+  router.patch('/objects/:id/status', tryRoute((req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
     const { status } = req.body;
     if (!status) { res.status(422).json({ error: 'status is required' }); return; }
 
-    const obj = db.prepare('SELECT * FROM objects WHERE id = ?').get(req.params.id) as Record<string, string> | undefined;
+    const obj = db.prepare('SELECT * FROM objects WHERE id = ? AND namespace = ?').get(req.params.id, actor.town_id) as Record<string, string> | undefined;
     if (!obj) { res.status(404).json({ error: 'Object not found' }); return; }
 
     try {
@@ -364,16 +400,17 @@ export function createCivicRouter(dataDir: string): Router {
       action: 'object.status.changed', beforeState: prior, afterState: { status },
     });
     res.json({ id: req.params.id, status });
-  });
+  }));
 
   // ── GET /api/v1/civic/exceptions ────────────────────────────────────────────
-  router.get('/exceptions', tryRoute((_req: Request, res: Response) => {
+  router.get('/exceptions', tryRoute((req: Request, res: Response) => {
+    const actor = (req as any).civicActor as CivicActor;
     const rows = db.prepare(`
       SELECT e.*, o.subtype as object_subtype, o.data as object_data
       FROM exceptions e LEFT JOIN objects o ON o.id = e.object_id
-      WHERE e.status IN ('active','acknowledged')
+      WHERE e.namespace = ? AND e.status IN ('active','acknowledged')
       ORDER BY CASE e.severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 ELSE 3 END, e.created_at ASC
-    `).all();
+    `).all(actor.town_id);
     res.json({ exceptions: rows });
   }));
 
@@ -385,7 +422,7 @@ export function createCivicRouter(dataDir: string): Router {
       res.status(422).json({ error: 'acknowledgment_reason must be at least 20 characters', min_length: 20 });
       return;
     }
-    const exc = db.prepare('SELECT * FROM exceptions WHERE id = ?').get(req.params.id) as Record<string, string> | undefined;
+    const exc = db.prepare('SELECT * FROM exceptions WHERE id = ? AND namespace = ?').get(req.params.id, actor.town_id) as Record<string, string> | undefined;
     if (!exc) { res.status(404).json({ error: 'Exception not found' }); return; }
     const now = new Date().toISOString();
     db.prepare(`
@@ -400,13 +437,14 @@ export function createCivicRouter(dataDir: string): Router {
   }));
 
   // ── GET /api/v1/civic/deadlines ─────────────────────────────────────────────
-  router.get('/deadlines', tryRoute((_req: Request, res: Response) => {
+  router.get('/deadlines', tryRoute((req: Request, res: Response) => {
+    const actor = (req as any).civicActor as CivicActor;
     const rows = db.prepare(`
       SELECT d.*, o.subtype as object_subtype
       FROM deadlines d LEFT JOIN objects o ON o.id = d.object_id
-      WHERE d.status = 'active'
+      WHERE d.namespace = ? AND d.status = 'active'
       ORDER BY d.due_at ASC
-    `).all();
+    `).all(actor.town_id);
     res.json({ deadlines: rows });
   }));
 
@@ -428,14 +466,16 @@ export function createCivicRouter(dataDir: string): Router {
   }));
 
   // ── GET /api/v1/civic/setup ─────────────────────────────────────────────────
-  router.get('/setup', tryRoute((_req: Request, res: Response) => {
-    const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get('singleton');
+  router.get('/setup', tryRoute((req: Request, res: Response) => {
+    const actor = (req as any).civicActor as CivicActor;
+    const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get(actor.town_id);
     res.json(progress);
   }));
 
   // ── PATCH /api/v1/civic/setup ───────────────────────────────────────────────
   router.patch('/setup', tryRoute((req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
+    const ns = actor.town_id as string;
     const allowed = ['town', 'identity', 'staff', 'bodies'];
     const updates: string[] = [];
     const vals: (string | number)[] = [];
@@ -446,13 +486,13 @@ export function createCivicRouter(dataDir: string): Router {
       }
     }
     if (updates.length === 0) { res.status(422).json({ error: 'No valid fields to update' }); return; }
-    vals.push('singleton');
+    vals.push(ns);
     db.prepare(`UPDATE setup_progress SET ${updates.join(', ')} WHERE id = ?`).run(...vals);
     appendAuditLog(db, {
       actorId: actor.object_id, actorDisplay: actor.display_name,
       action: 'setup.progress.updated', afterState: req.body,
     });
-    const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get('singleton');
+    const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get(ns);
     res.json(progress);
   }));
 
@@ -463,9 +503,9 @@ export function createCivicRouter(dataDir: string): Router {
       SELECT a.*, o.subtype as object_subtype
       FROM audit_log a
       LEFT JOIN objects o ON o.id = a.object_id
-      WHERE (a.actor_id = ? OR o.owner_id = ?)
+      WHERE (a.actor_id = ? OR o.owner_id = ?) AND (o.namespace IS NULL OR o.namespace = ?)
       ORDER BY a.created_at DESC LIMIT 20
-    `).all(actor.object_id, actor.object_id);
+    `).all(actor.object_id, actor.object_id, actor.town_id);
     res.json({ feed: rows });
   }));
 
@@ -473,165 +513,146 @@ export function createCivicRouter(dataDir: string): Router {
 
   router.get('/org-manager/status', tryRoute((req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
-    const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get('singleton') as Record<string, unknown>;
+    const ns = actor.town_id as string;
+    const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get(ns) as Record<string, unknown>;
 
-    // Pull existing town profile to pre-fill the wizard
-    const townObj = db.prepare(`SELECT data FROM objects WHERE subtype='town_profile' ORDER BY created_at DESC LIMIT 1`).get() as { data: string } | undefined;
+    // Pull existing town profile for this namespace
+    const townObj = db.prepare(`SELECT data FROM objects WHERE namespace = ? AND subtype='town_profile' ORDER BY created_at DESC LIMIT 1`).get(ns) as { data: string } | undefined;
     const townData = townObj ? JSON.parse(townObj.data) : {};
 
-    // Pull existing staff from credentials
+    // Pull existing staff from credentials scoped to this namespace
     const staffRows = db.prepare(`
       SELECT c.email, c.display_name, c.role, json_extract(o.data,'$.title') as title
       FROM credentials c JOIN objects o ON o.id = c.object_id
-      WHERE o.subtype = 'staff' ORDER BY c.created_at ASC
-    `).all() as { email: string; display_name: string; role: string; title: string }[];
+      WHERE o.namespace = ? AND o.subtype = 'staff' ORDER BY c.created_at ASC
+    `).all(ns) as { email: string; display_name: string; role: string; title: string }[];
 
-    // Pull existing bodies
+    // Pull existing bodies scoped to this namespace
     const bodyRows = db.prepare(`
-      SELECT subtype, data FROM objects WHERE type='body' AND subtype != 'town_profile' ORDER BY created_at ASC
-    `).all() as { subtype: string; data: string }[];
+      SELECT subtype, data FROM objects WHERE namespace = ? AND type='body' AND subtype != 'town_profile' ORDER BY created_at ASC
+    `).all(ns) as { subtype: string; data: string }[];
 
-    // Auto-complete setup_progress flags based on what actually exists in the DB
-    // This handles the case where data was seeded but progress flags weren't set
     const hasTown  = !!townObj;
     const hasStaff = staffRows.length > 0;
     const hasBodies = bodyRows.length > 0;
 
-    if (hasTown && !progress.town)   db.prepare('UPDATE setup_progress SET town=1 WHERE id=?').run('singleton');
-    if (hasStaff && !progress.staff) db.prepare('UPDATE setup_progress SET staff=1 WHERE id=?').run('singleton');
-    if (hasBodies && !progress.bodies) db.prepare('UPDATE setup_progress SET bodies=1 WHERE id=?').run('singleton');
-    // Always mark identity as 1 since PJ session IS the identity provider
-    if (!progress.identity) db.prepare('UPDATE setup_progress SET identity=1 WHERE id=?').run('singleton');
+    if (hasTown && !progress?.town)   db.prepare('UPDATE setup_progress SET town=1 WHERE id=?').run(ns);
+    if (hasStaff && !progress?.staff) db.prepare('UPDATE setup_progress SET staff=1 WHERE id=?').run(ns);
+    if (hasBodies && !progress?.bodies) db.prepare('UPDATE setup_progress SET bodies=1 WHERE id=?').run(ns);
+    if (!progress?.identity) db.prepare('UPDATE setup_progress SET identity=1 WHERE id=?').run(ns);
 
-    // If all required steps are satisfied, auto-complete
-    if (hasTown && !progress.completed_at) {
+    if (hasTown && !progress?.completed_at) {
       const now = new Date().toISOString();
-      db.prepare('UPDATE setup_progress SET completed_at=?, completed_by=? WHERE id=?').run(now, actor.object_id, 'singleton');
+      db.prepare('UPDATE setup_progress SET completed_at=?, completed_by=? WHERE id=?').run(now, actor.object_id, ns);
     }
 
-    // Re-read after updates
-    const updated = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get('singleton') as Record<string, unknown>;
-    const complete = !!updated.completed_at;
+    const updated = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get(ns) as Record<string, unknown>;
+    const complete = !!updated?.completed_at;
 
     res.json({
       complete,
       missing: [],
       current_step: complete ? 6 : 1,
-      completed_at: updated.completed_at,
+      completed_at: updated?.completed_at,
       prefill: { town: townData, staff: staffRows, bodies: bodyRows, actor },
     });
   }));
 
-  router.post('/org-manager/town', (req: Request, res: Response) => {
-    try {
-      const actor = (req as any).civicActor as CivicActor;
-      const { town_name, population, county, governance_form, dls_muni_code, fiscal_year_end } = req.body;
-      if (!town_name) return res.status(400).json({ error: 'town_name required' });
+  router.post('/org-manager/town', requireAdminActor, tryRoute((req: Request, res: Response) => {
+    const actor = (req as any).civicActor as CivicActor;
+    const ns = actor.town_id as string;
+    const { town_name, population, county, governance_form, dls_muni_code, fiscal_year_end } = req.body;
+    if (!town_name) return res.status(400).json({ error: 'town_name required' });
 
-      const now = new Date().toISOString();
-      // Reuse existing town_profile id if it exists — avoid duplicates
-      const existing = db.prepare(`SELECT id FROM objects WHERE subtype='town_profile' ORDER BY created_at ASC LIMIT 1`).get() as { id: string } | undefined;
-      const id = existing?.id ?? crypto.randomUUID();
+    const now = new Date().toISOString();
+    const existing = db.prepare(`SELECT id FROM objects WHERE namespace = ? AND subtype='town_profile' ORDER BY created_at ASC LIMIT 1`).get(ns) as { id: string } | undefined;
+    const id = existing?.id ?? crypto.randomUUID();
 
-      db.prepare(`
-        INSERT INTO objects (id, type, subtype, stage, status, vault_class, data, created_at, updated_at)
-        VALUES (?, 'body', 'town_profile', 'WORKS', 'active', 'internal', ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at
-      `).run(id, JSON.stringify({ town_name, population, county, governance_form, dls_muni_code, fiscal_year_end }), now, now);
+    db.prepare(`
+      INSERT INTO objects (id, type, subtype, stage, status, vault_class, namespace, data, created_at, updated_at)
+      VALUES (?, 'body', 'town_profile', 'WORKS', 'active', 'internal', ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at
+    `).run(id, ns, JSON.stringify({ town_name, population, county, governance_form, dls_muni_code, fiscal_year_end }), now, now);
 
-      db.prepare('UPDATE setup_progress SET town=1 WHERE id=?').run('singleton');
+    db.prepare('UPDATE setup_progress SET town=1 WHERE id=?').run(ns);
 
-      if (actor?.object_id) {
-        appendAuditLog(db, {
-          objectId: id, actorId: actor.object_id,
-          action: 'org_manager:town_saved',
-          afterState: { town_name },
-          systemTriggered: false,
-        });
-      }
+    appendAuditLog(db, {
+      objectId: id, actorId: actor.object_id,
+      action: 'org_manager:town_saved',
+      afterState: { town_name },
+      systemTriggered: false,
+    });
 
-      return res.json({ success: true, object_id: id });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return res.status(500).json({ error: `Failed to save town profile: ${msg}` });
-    }
-  });
+    return res.json({ success: true, object_id: id });
+  }));
 
-  router.post('/org-manager/identity', tryRoute((_req: Request, res: Response) => {
-    db.prepare('UPDATE setup_progress SET identity = 1 WHERE id = ?').run('singleton');
+  router.post('/org-manager/identity', tryRoute((req: Request, res: Response) => {
+    const actor = (req as any).civicActor as CivicActor;
+    db.prepare('UPDATE setup_progress SET identity = 1 WHERE id = ?').run(actor.town_id);
     res.json({ success: true });
   }));
 
-  router.post('/org-manager/staff', (req: Request, res: Response) => {
-    try {
-      const actor = (req as any).civicActor as CivicActor;
-      const { staff = [] } = req.body as { staff: { name: string; email: string; title: string; role: string }[] };
-      const now = new Date().toISOString();
+  router.post('/org-manager/staff', requireAdminActor, tryRoute((req: Request, res: Response) => {
+    const actor = (req as any).civicActor as CivicActor;
+    const ns = actor.town_id as string;
+    const { staff = [] } = req.body as { staff: { name: string; email: string; title: string; role: string }[] };
+    const now = new Date().toISOString();
 
-      for (const s of staff.filter(x => x.name && x.email)) {
-        const id = crypto.randomUUID();
-        db.prepare(`
-          INSERT OR IGNORE INTO objects (id, type, subtype, status, vault_class, data, created_at, updated_at)
-          VALUES (?, 'actor', 'staff', 'active', 'internal', ?, ?, ?)
-        `).run(id, JSON.stringify({ full_name: s.name, email: s.email, title: s.title }), now, now);
+    for (const s of staff.filter(x => x.name && x.email)) {
+      const id = crypto.randomUUID();
+      db.prepare(`
+        INSERT OR IGNORE INTO objects (id, type, subtype, status, vault_class, namespace, data, created_at, updated_at)
+        VALUES (?, 'actor', 'staff', 'active', 'internal', ?, ?, ?, ?)
+      `).run(id, ns, JSON.stringify({ full_name: s.name, email: s.email, title: s.title }), now, now);
 
-        db.prepare(`
-          INSERT OR IGNORE INTO credentials (id, object_id, email, display_name, role, created_at)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(crypto.randomUUID(), id, s.email, s.name, s.role, now);
+      db.prepare(`
+        INSERT OR IGNORE INTO credentials (id, object_id, email, display_name, role, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(crypto.randomUUID(), id, s.email, s.name, s.role, now);
 
-        if (actor?.object_id) {
-          appendAuditLog(db, {
-            objectId: id, actorId: actor.object_id,
-            action: 'org_manager:staff_added',
-            afterState: { email: s.email, role: s.role },
-            systemTriggered: false,
-          });
-        }
-      }
-
-      db.prepare('UPDATE setup_progress SET staff = 1 WHERE id = ?').run('singleton');
-      return res.json({ success: true, count: staff.length });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return res.status(500).json({ error: `Failed to save staff: ${msg}` });
+      appendAuditLog(db, {
+        objectId: id, actorId: actor.object_id,
+        action: 'org_manager:staff_added',
+        afterState: { email: s.email, role: s.role },
+        systemTriggered: false,
+      });
     }
-  });
 
-  router.post('/org-manager/bodies', (req: Request, res: Response) => {
-    try {
-      const actor = (req as any).civicActor as CivicActor;
-      const { bodies = [] } = req.body as { bodies: { name: string; type: string; members: string }[] };
-      const now = new Date().toISOString();
+    db.prepare('UPDATE setup_progress SET staff = 1 WHERE id = ?').run(ns);
+    return res.json({ success: true, count: staff.length });
+  }));
 
-      for (const b of bodies.filter(x => x.name)) {
-        const id = crypto.randomUUID();
-        db.prepare(`
-          INSERT OR IGNORE INTO objects (id, type, subtype, status, vault_class, data, created_at, updated_at)
-          VALUES (?, 'body', ?, 'active', 'internal', ?, ?, ?)
-        `).run(id, b.type, JSON.stringify({ name: b.name, member_count: parseInt(b.members) || 0 }), now, now);
+  router.post('/org-manager/bodies', requireAdminActor, tryRoute((req: Request, res: Response) => {
+    const actor = (req as any).civicActor as CivicActor;
+    const ns = actor.town_id as string;
+    const { bodies = [] } = req.body as { bodies: { name: string; type: string; members: string }[] };
+    const now = new Date().toISOString();
 
-        if (actor?.object_id) {
-          appendAuditLog(db, {
-            objectId: id, actorId: actor.object_id,
-            action: 'org_manager:body_created',
-            afterState: { name: b.name, type: b.type },
-            systemTriggered: false,
-          });
-        }
-      }
+    for (const b of bodies.filter(x => x.name)) {
+      const id = crypto.randomUUID();
+      const memberCount = Math.max(0, parseInt(b.members, 10) || 0);
+      db.prepare(`
+        INSERT OR IGNORE INTO objects (id, type, subtype, status, vault_class, namespace, data, created_at, updated_at)
+        VALUES (?, 'body', ?, 'active', 'internal', ?, ?, ?, ?)
+      `).run(id, b.type, ns, JSON.stringify({ name: b.name, member_count: memberCount }), now, now);
 
-      db.prepare('UPDATE setup_progress SET bodies = 1 WHERE id = ?').run('singleton');
-      return res.json({ success: true, count: bodies.length });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return res.status(500).json({ error: `Failed to save bodies: ${msg}` });
+      appendAuditLog(db, {
+        objectId: id, actorId: actor.object_id,
+        action: 'org_manager:body_created',
+        afterState: { name: b.name, type: b.type },
+        systemTriggered: false,
+      });
     }
-  });
+
+    db.prepare('UPDATE setup_progress SET bodies = 1 WHERE id = ?').run(ns);
+    return res.json({ success: true, count: bodies.length });
+  }));
 
   // ── GET /org-manager/configure — load saved module configs ───────────────────
-  router.get('/org-manager/configure', tryRoute((_req: Request, res: Response) => {
-    const rows = db.prepare('SELECT * FROM module_configs').all() as {
+  router.get('/org-manager/configure', tryRoute((req: Request, res: Response) => {
+    const actor = (req as any).civicActor as CivicActor;
+    const ns = actor.town_id as string;
+    const rows = db.prepare('SELECT * FROM module_configs WHERE namespace = ?').all(ns) as {
       module_id: string; officer_name: string; officer_title: string;
       officer_email: string; officer_phone: string; routing: string;
       automations: string; retention_years: number; updated_at: string;
@@ -651,8 +672,9 @@ export function createCivicRouter(dataDir: string): Router {
   }));
 
   // ── POST /org-manager/configure — save module configs ────────────────────────
-  router.post('/org-manager/configure', (req: Request, res: Response) => {
+  router.post('/org-manager/configure', requireAdminActor, (req: Request, res: Response) => {
     const actor = (req as any).civicActor as CivicActor;
+    const ns = actor.town_id as string;
     const { modules } = req.body as {
       modules: Array<{
         moduleId: string; officerName?: string; officerTitle?: string;
@@ -664,37 +686,37 @@ export function createCivicRouter(dataDir: string): Router {
     if (!Array.isArray(modules) || modules.length === 0) {
       return res.status(400).json({ error: 'modules array is required' });
     }
-    const upsert = db.prepare(`
-      INSERT INTO module_configs (module_id, officer_name, officer_title, officer_email, officer_phone, routing, automations, retention_years, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-      ON CONFLICT(module_id) DO UPDATE SET
-        officer_name    = excluded.officer_name,
-        officer_title   = excluded.officer_title,
-        officer_email   = excluded.officer_email,
-        officer_phone   = excluded.officer_phone,
-        routing         = excluded.routing,
-        automations     = excluded.automations,
-        retention_years = excluded.retention_years,
-        updated_at      = excluded.updated_at
-    `);
     const saveAll = db.transaction((items: typeof modules) => {
       for (const m of items) {
-        upsert.run(
-          m.moduleId,
-          m.officerName   ?? '',
-          m.officerTitle  ?? '',
-          m.officerEmail  ?? '',
-          m.officerPhone  ?? '',
-          JSON.stringify(m.routing     ?? {}),
-          JSON.stringify(m.automations ?? {}),
-          m.retentionYears ?? 7,
-        );
+        const existing = db.prepare('SELECT id FROM module_configs WHERE namespace = ? AND module_id = ?').get(ns, m.moduleId);
+        if (existing) {
+          db.prepare(`
+            UPDATE module_configs SET
+              officer_name=?, officer_title=?, officer_email=?, officer_phone=?,
+              routing=?, automations=?, retention_years=?, updated_at=datetime('now')
+            WHERE namespace=? AND module_id=?
+          `).run(
+            m.officerName ?? '', m.officerTitle ?? '', m.officerEmail ?? '', m.officerPhone ?? '',
+            JSON.stringify(m.routing ?? {}), JSON.stringify(m.automations ?? {}),
+            m.retentionYears ?? 7, ns, m.moduleId,
+          );
+        } else {
+          db.prepare(`
+            INSERT INTO module_configs (namespace, module_id, officer_name, officer_title, officer_email, officer_phone, routing, automations, retention_years, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+          `).run(
+            ns, m.moduleId,
+            m.officerName ?? '', m.officerTitle ?? '', m.officerEmail ?? '', m.officerPhone ?? '',
+            JSON.stringify(m.routing ?? {}), JSON.stringify(m.automations ?? {}),
+            m.retentionYears ?? 7,
+          );
+        }
       }
     });
     try {
       saveAll(modules);
       appendAuditLog(db, {
-        objectId: 'singleton', actorId: actor?.object_id ?? 'system',
+        objectId: ns, actorId: actor?.object_id ?? 'system',
         action: 'org_manager:modules_configured',
         afterState: { moduleCount: modules.length },
         systemTriggered: false,
@@ -707,29 +729,23 @@ export function createCivicRouter(dataDir: string): Router {
   });
 
   // ── POST /org-manager/complete — mark setup as done ─────────────────────────
-  router.post('/org-manager/complete', (req: Request, res: Response) => {
-    try {
-      const actor = (req as any).civicActor as CivicActor;
-      const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get('singleton') as Record<string, unknown> | undefined;
-      if (!progress?.town) {
-        return res.status(422).json({ error: 'Town profile is required to complete setup' });
-      }
-      const now = new Date().toISOString();
-      db.prepare('UPDATE setup_progress SET completed_at = ?, completed_by = ? WHERE id = ?').run(now, actor?.object_id ?? 'system', 'singleton');
-      if (actor?.object_id) {
-        appendAuditLog(db, {
-          objectId: 'singleton', actorId: actor.object_id,
-          action: 'org_manager:setup_completed',
-          afterState: { completed_at: now },
-          systemTriggered: false,
-        });
-      }
-      return res.json({ success: true, completed_at: now });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return res.status(500).json({ error: `Failed to complete setup: ${msg}` });
+  router.post('/org-manager/complete', requireAdminActor, tryRoute((req: Request, res: Response) => {
+    const actor = (req as any).civicActor as CivicActor;
+    const ns = actor.town_id as string;
+    const progress = db.prepare('SELECT * FROM setup_progress WHERE id = ?').get(ns) as Record<string, unknown> | undefined;
+    if (!progress?.town) {
+      return res.status(422).json({ error: 'Town profile is required to complete setup' });
     }
-  });
+    const now = new Date().toISOString();
+    db.prepare('UPDATE setup_progress SET completed_at = ?, completed_by = ? WHERE id = ?').run(now, actor.object_id, ns);
+    appendAuditLog(db, {
+      objectId: ns, actorId: actor.object_id,
+      action: 'org_manager:setup_completed',
+      afterState: { completed_at: now },
+      systemTriggered: false,
+    });
+    return res.json({ success: true, completed_at: now });
+  }));
 
   // ── Assistant stub ────────────────────────────────────────────────────────────
 

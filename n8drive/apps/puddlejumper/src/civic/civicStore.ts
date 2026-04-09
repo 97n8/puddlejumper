@@ -166,7 +166,17 @@ export function getCivicDb(dataDir: string): DB {
   _db.pragma('journal_mode = WAL');
   _db.pragma('foreign_keys = ON');
   _db.exec(SCHEMA);
-  seedIfEmpty(_db);
+  // Idempotent namespace migrations — scope all per-tenant data by town_id
+  const nsCol = (_db.pragma('table_info(objects)') as Array<{ name: string }>).some(c => c.name === 'namespace');
+  if (!nsCol) {
+    const migrations = [
+      'ALTER TABLE objects ADD COLUMN namespace TEXT',
+      'ALTER TABLE deadlines ADD COLUMN namespace TEXT',
+      'ALTER TABLE exceptions ADD COLUMN namespace TEXT',
+      'ALTER TABLE module_configs ADD COLUMN namespace TEXT NOT NULL DEFAULT \'\'',
+    ];
+    for (const m of migrations) { try { _db.exec(m); } catch {} }
+  }
   return _db;
 }
 
