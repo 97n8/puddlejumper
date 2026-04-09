@@ -38,6 +38,14 @@ export interface VaultMapping {
   recordType: string;
   namespace: string;
   fieldMap: Record<string, string>;
+  /** Hours until this form response is considered overdue (default: none) */
+  slaHours?: number;
+  /** When true, submission creates a review gate before the record is acted on */
+  requiresApproval?: boolean;
+  /** Org role required to approve — matched against OrgManager governance roles */
+  approvalRole?: string;
+  /** Recurring schedule for this form (annual filing, permit renewal, etc.) */
+  recurrence?: 'once' | 'annual' | 'quarterly' | 'monthly';
 }
 
 export interface OutputConfig {
@@ -97,6 +105,10 @@ export interface SubmissionResult {
   submittedAt: string;
   retentionTier: string;
   consentVersion: string;
+  /** Set when form requires approval — the review record ID */
+  reviewId?: string;
+  /** SLA deadline for response (ISO 8601) */
+  slaDueAt?: string;
 }
 
 export interface ConsentRecord {
@@ -139,6 +151,8 @@ export interface GovernanceEnvelope {
   consentStampId: string | null;
 }
 
+export type IntakeRecordStatus = 'received' | 'under_review' | 'responded' | 'closed';
+
 export interface IntakeRecord {
   id: string;
   tenantId: string;
@@ -149,6 +163,13 @@ export interface IntakeRecord {
   governance: GovernanceEnvelope;
   fields: Record<string, unknown>;
   createdAt: string;
+  // Lifecycle tracking
+  status: IntakeRecordStatus;
+  slaDueAt?: string;
+  reviewedBy?: string;
+  respondedAt?: string;
+  closedAt?: string;
+  reviewId?: string;
 }
 
 export interface FormKeyHealth {

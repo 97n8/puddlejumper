@@ -63,5 +63,6 @@ export function buildIntakeRecord(
     governance,
     fields: mappedFields,
     createdAt: now,
+    status: 'received' as const,
   };
 }

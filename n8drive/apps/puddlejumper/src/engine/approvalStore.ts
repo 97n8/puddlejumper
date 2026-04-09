@@ -58,6 +58,7 @@ export type CreateApprovalInput = {
   auditRecord: unknown;
   decisionResult: unknown;          // full DecisionResult
   ttlSeconds?: number;              // default 48h
+  requiredRole?: string;            // OrgManager governance role required to approve
 };
 
 export type ApprovalDecision = {
@@ -128,6 +129,9 @@ export class ApprovalStore {
       this.db.exec("ALTER TABLE approvals ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'system'");
       this.db.exec("CREATE INDEX IF NOT EXISTS idx_approvals_workspace ON approvals(workspace_id)");
     }
+    if (!pragma.some((col: any) => col.name === "required_role")) {
+      this.db.exec("ALTER TABLE approvals ADD COLUMN required_role TEXT");
+    }
 
     // Auto-expire pending approvals
     this.pruneTimer = setInterval(() => this.expirePending(), PRUNE_INTERVAL_MS);
@@ -148,8 +152,8 @@ export class ApprovalStore {
         operator_id, workspace_id, municipality_id,
         action_intent, action_mode, plan_hash,
         plan_json, audit_record_json, decision_result_json,
-        created_at, updated_at, expires_at
-      ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        created_at, updated_at, expires_at, required_role
+      ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       input.requestId,
@@ -164,6 +168,7 @@ export class ApprovalStore {
       JSON.stringify(input.auditRecord),
       JSON.stringify(input.decisionResult),
       now, now, expiresAt,
+      input.requiredRole ?? null,
     );
 
     return this.findById(id)!;

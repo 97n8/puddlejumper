@@ -367,6 +367,51 @@ function checkFeedLatencyAnomalies(db: Database.Database, tenantId: string): Che
   }
 }
 
+// ── FormKey SLA Breach Check ───────────────────────────────────────────────────
+function checkFormKeySlaBreaches(db: Database.Database, tenantId: string): CheckResult {
+  try {
+    const tableExists = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='formkey_intake_records'"
+    ).get();
+    if (!tableExists) return { domain: 'compliance', status: 'ok', alertsFired: 0 };
+
+    const cols = (db.prepare("PRAGMA table_info(formkey_intake_records)").all() as { name: string }[]).map(c => c.name);
+    if (!cols.includes('sla_due_at')) return { domain: 'compliance', status: 'ok', alertsFired: 0 };
+
+    const now = new Date().toISOString();
+    const breached = db.prepare(`
+      SELECT id, form_id, sla_due_at, status
+      FROM formkey_intake_records
+      WHERE tenant_id = ?
+        AND sla_due_at IS NOT NULL
+        AND sla_due_at < ?
+        AND status NOT IN ('responded', 'closed')
+    `).all(tenantId, now) as { id: string; form_id: string; sla_due_at: string; status: string }[];
+
+    let count = 0;
+    for (const rec of breached) {
+      const hoursOver = Math.round(
+        (Date.now() - new Date(rec.sla_due_at).getTime()) / (1000 * 60 * 60)
+      );
+      upsertAlert(db, tenantId, {
+        domain: 'compliance',
+        severity: hoursOver > 48 ? 'critical' : 'warning',
+        title: `FormKey SLA breach — ${rec.form_id}`,
+        detail: `Intake record ${rec.id} is ${hoursOver}h past SLA. Current status: ${rec.status}.`,
+        affectedObjectType: 'formkey_intake_record',
+        affectedObjectId: rec.id,
+        suggestedAction: 'Review and update the intake record status to resolved or responded.',
+        deduplicationKey: `fk-sla-${rec.id}`,
+      });
+      count++;
+    }
+
+    return { domain: 'compliance', status: 'ok', alertsFired: count };
+  } catch (err) {
+    return { domain: 'compliance', status: 'error', alertsFired: 0, error: (err as Error).message };
+  }
+}
+
 // ── Main Runner ───────────────────────────────────────────────────────────────
 
 export async function runChecks(db: Database.Database, tenantId: string): Promise<CheckResult[]> {
@@ -379,6 +424,7 @@ export async function runChecks(db: Database.Database, tenantId: string): Promis
     () => checkWorkflowBacklog(db, tenantId),
     () => checkAccessControlDrift(db, tenantId),
     () => checkFeedLatencyAnomalies(db, tenantId),
+    () => checkFormKeySlaBreaches(db, tenantId),
     () => placeholderCheck('financial'),
     () => placeholderCheck('ai_activity'),
     () => placeholderCheck('environment_health'),

@@ -273,15 +273,20 @@ export function createFormKeyApiRouter(db: Database.Database): Router {
     }
   });
 
-  // GET /v1/forms/:id/submissions — list submissions
+  // GET /v1/forms/:id/submissions — list submissions (with status + SLA)
   router.get('/:id/submissions', (req: Request, res: Response) => {
     try {
       const tenantId = getTenantId(req);
       const formId = req.params.id;
+      const statusFilter = req.query.status as string | undefined;
       const intakeDb = getIntakeDb();
-      const rows = intakeDb.prepare(
-        'SELECT id, form_id, form_version, record_type, namespace, created_at FROM formkey_intake_records WHERE tenant_id = ? AND form_id = ? ORDER BY created_at DESC LIMIT 100'
-      ).all(tenantId, formId) as Record<string, unknown>[];
+
+      const sql = statusFilter
+        ? 'SELECT id, form_id, form_version, record_type, namespace, created_at, status, sla_due_at, review_id FROM formkey_intake_records WHERE tenant_id = ? AND form_id = ? AND status = ? ORDER BY created_at DESC LIMIT 100'
+        : 'SELECT id, form_id, form_version, record_type, namespace, created_at, status, sla_due_at, review_id FROM formkey_intake_records WHERE tenant_id = ? AND form_id = ? ORDER BY created_at DESC LIMIT 100';
+
+      const params = statusFilter ? [tenantId, formId, statusFilter] : [tenantId, formId];
+      const rows = intakeDb.prepare(sql).all(...params) as Record<string, unknown>[];
       res.json({ submissions: rows, total: rows.length });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
@@ -309,8 +314,160 @@ export function createFormKeyApiRouter(db: Database.Database): Router {
         governance: JSON.parse(row.governance as string),
         fields: JSON.parse(row.fields as string),
         createdAt: row.created_at,
+        status: row.status ?? 'received',
+        slaDueAt: row.sla_due_at ?? null,
+        reviewId: row.review_id ?? null,
       };
       res.json(record);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // PATCH /v1/forms/:id/submissions/:recordId/status — update intake status
+  router.patch('/:id/submissions/:recordId/status', async (req: Request, res: Response) => {
+    try {
+      const tenantId = getTenantId(req);
+      const { recordId, id: formId } = req.params;
+      const { status, note, updatedBy } = req.body ?? {};
+
+      const VALID = ['received', 'under_review', 'responded', 'closed'];
+      if (!VALID.includes(status)) {
+        res.status(400).json({ error: `status must be one of: ${VALID.join(', ')}` });
+        return;
+      }
+
+      const intakeDb = getIntakeDb();
+      const existing = intakeDb.prepare(
+        'SELECT * FROM formkey_intake_records WHERE id = ? AND tenant_id = ? AND form_id = ?'
+      ).get(recordId, tenantId, formId) as Record<string, unknown> | undefined;
+
+      if (!existing) { res.status(404).json({ error: 'Submission not found' }); return; }
+
+      const now = new Date().toISOString();
+      const extra: Record<string, string | null> = {};
+      if (status === 'responded') extra.responded_at = now;
+      if (status === 'closed')    extra.closed_at = now;
+
+      const setClauses = [
+        'status = ?', 'status_updated_at = ?', 'status_updated_by = ?',
+        ...Object.keys(extra).map(k => `${k} = ?`),
+      ].join(', ');
+      const values = [status, now, updatedBy ?? null, ...Object.values(extra), recordId, tenantId];
+
+      intakeDb.prepare(`UPDATE formkey_intake_records SET ${setClauses} WHERE id = ? AND tenant_id = ?`).run(...values);
+
+      try {
+        archieveLog({
+          requestId: crypto.randomUUID(),
+          tenantId,
+          module: 'formkey',
+          eventType: 'FORMKEY_STATUS_UPDATED',
+          actor: { userId: updatedBy ?? 'unknown', role: 'operator', sessionId: 'formkey-status' },
+          severity: 'info',
+          data: { formId, recordId, fromStatus: existing.status, toStatus: status, note: note ?? null },
+        });
+      } catch { /* best-effort */ }
+
+      // If closed + form has recurrence → schedule next intake task
+      if (status === 'closed') {
+        try {
+          const formDef = getFormDefinitionByFormId(tenantId, formId);
+          if (formDef?.vaultMapping.recurrence && formDef.vaultMapping.recurrence !== 'once') {
+            const daysMap = { annual: 365, quarterly: 91, monthly: 30 };
+            const days = daysMap[formDef.vaultMapping.recurrence] ?? 365;
+            const nextDue = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            // Insert renewal task into tasks queue via archieve event
+            archieveLog({
+              requestId: crypto.randomUUID(),
+              tenantId,
+              module: 'formkey',
+              eventType: 'FORMKEY_RENEWAL_SCHEDULED',
+              actor: { userId: 'system', role: 'system', sessionId: 'formkey-renewal' },
+              severity: 'info',
+              data: { formId, recordId, recurrence: formDef.vaultMapping.recurrence, nextDueDate: nextDue },
+            });
+          }
+        } catch { /* best-effort */ }
+      }
+
+      const updated = intakeDb.prepare('SELECT * FROM formkey_intake_records WHERE id = ?').get(recordId) as Record<string, unknown>;
+      res.json({ id: updated.id, status: updated.status, slaDueAt: updated.sla_due_at ?? null });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // GET /v1/forms/reviews — list all pending reviews for this tenant
+  router.get('/reviews', (req: Request, res: Response) => {
+    try {
+      const tenantId = getTenantId(req);
+      const statusFilter = (req.query.status as string) ?? 'pending';
+      const intakeDb = getIntakeDb();
+
+      const tableExists = intakeDb.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='formkey_reviews'"
+      ).get();
+      if (!tableExists) { res.json({ reviews: [], total: 0 }); return; }
+
+      const rows = intakeDb.prepare(`
+        SELECT r.*, i.status as intake_status, i.sla_due_at
+        FROM formkey_reviews r
+        LEFT JOIN formkey_intake_records i ON r.record_id = i.id
+        WHERE r.tenant_id = ? AND r.status = ?
+        ORDER BY r.created_at ASC
+        LIMIT 50
+      `).all(tenantId, statusFilter) as Record<string, unknown>[];
+      res.json({ reviews: rows, total: rows.length });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // POST /v1/forms/reviews/:reviewId/decide — approve or reject a review gate
+  router.post('/reviews/:reviewId/decide', async (req: Request, res: Response) => {
+    try {
+      const tenantId = getTenantId(req);
+      const { reviewId } = req.params;
+      const { decision, reviewedBy, note } = req.body ?? {};
+
+      if (!['approved', 'rejected'].includes(decision)) {
+        res.status(400).json({ error: 'decision must be approved or rejected' });
+        return;
+      }
+
+      const intakeDb = getIntakeDb();
+      const review = intakeDb.prepare(
+        'SELECT * FROM formkey_reviews WHERE id = ? AND tenant_id = ?'
+      ).get(reviewId, tenantId) as Record<string, unknown> | undefined;
+
+      if (!review) { res.status(404).json({ error: 'Review not found' }); return; }
+      if (review.status !== 'pending') { res.status(409).json({ error: `Review already ${review.status}` }); return; }
+
+      const now = new Date().toISOString();
+      intakeDb.prepare(`
+        UPDATE formkey_reviews SET status = ?, reviewed_by = ?, reviewed_at = ?, review_note = ? WHERE id = ?
+      `).run(decision, reviewedBy ?? null, now, note ?? null, reviewId);
+
+      // Update intake record status based on decision
+      const newIntakeStatus = decision === 'approved' ? 'under_review' : 'closed';
+      intakeDb.prepare(`
+        UPDATE formkey_intake_records SET status = ?, status_updated_at = ?, status_updated_by = ? WHERE id = ?
+      `).run(newIntakeStatus, now, reviewedBy ?? null, review.record_id);
+
+      try {
+        archieveLog({
+          requestId: crypto.randomUUID(),
+          tenantId,
+          module: 'formkey',
+          eventType: 'FORMKEY_REVIEW_DECIDED',
+          actor: { userId: reviewedBy ?? 'unknown', role: 'reviewer', sessionId: 'formkey-review' },
+          severity: decision === 'rejected' ? 'warn' : 'info',
+          data: { reviewId, recordId: review.record_id, decision, note: note ?? null },
+        });
+      } catch { /* best-effort */ }
+
+      res.json({ reviewId, decision, intakeStatus: newIntakeStatus });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }

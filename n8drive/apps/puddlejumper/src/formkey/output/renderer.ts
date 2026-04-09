@@ -37,6 +37,7 @@ function loadIntakeRecord(db: Database.Database, tenantId: string, recordId: str
     governance: JSON.parse(row.governance as string),
     fields: JSON.parse(row.fields as string),
     createdAt: row.created_at as string,
+    status: (row.status as string ?? 'received') as 'received' | 'under_review' | 'responded' | 'closed',
   };
 }
 
