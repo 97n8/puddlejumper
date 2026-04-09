@@ -91,10 +91,10 @@ export function createAEDRouter(dataDir: string): Router {
 
   // ── GET /dashboard ─────────────────────────────────────────────────────────
 
-  router.get('/dashboard', tryRoute((_req, res) => {
+  router.get('/dashboard', tryRoute((req, res) => {
+    const actor = (req as any).aedActor as AEDActor;
     const now = new Date().toISOString();
     const in30 = new Date(Date.now() + 30 * 86400000).toISOString();
-    const in7  = new Date(Date.now() +  7 * 86400000).toISOString();
 
     const activeDeals = db.prepare(`SELECT * FROM deals WHERE vault_class = 'active' ORDER BY close_date DESC`).all() as any[];
     const criticalObligations = db.prepare(`
@@ -103,8 +103,9 @@ export function createAEDRouter(dataDir: string): Router {
       WHERE o.status IN ('pending','overdue') AND o.risk_level = 'critical'
       ORDER BY o.due_date ASC NULLS LAST LIMIT 20
     `).all();
-    const overdueCount = (db.prepare(`SELECT COUNT(*) as n FROM obligations WHERE status = 'overdue'`).get() as { n: number }).n;
-    const dueIn7 = db.prepare(`SELECT COUNT(*) as n FROM obligations WHERE status = 'pending' AND due_date <= ? AND due_date >= ?`).get(in7, now) as { n: number };
+    const totalObligations = (db.prepare(`SELECT COUNT(*) as n FROM obligations`).get() as { n: number }).n;
+    const completeObligations = (db.prepare(`SELECT COUNT(*) as n FROM obligations WHERE status = 'complete'`).get() as { n: number }).n;
+    const overdueObligations = (db.prepare(`SELECT COUNT(*) as n FROM obligations WHERE status = 'overdue'`).get() as { n: number }).n;
     const pendingQalicbs = db.prepare(`
       SELECT q.*, d.name as deal_name FROM qalicbs q
       JOIN deals d ON q.deal_id = d.id
@@ -118,28 +119,28 @@ export function createAEDRouter(dataDir: string): Router {
       ORDER BY me.notification_due ASC
     `).all();
 
-    const vaultScores = activeDeals.map(d => ({
-      deal_id: d.id,
-      deal_name: d.name,
-      score: getDealVaultScore(db, d.id),
-    }));
-    const overallScore = vaultScores.length
-      ? Math.round(vaultScores.reduce((s, v) => s + v.score, 0) / vaultScores.length)
-      : 100;
+    const vaultScores = activeDeals.map((d: any) => {
+      const total = (db.prepare(`SELECT COUNT(*) as n FROM obligations WHERE deal_id = ?`).get(d.id) as { n: number }).n;
+      const complete = (db.prepare(`SELECT COUNT(*) as n FROM obligations WHERE deal_id = ? AND status = 'complete'`).get(d.id) as { n: number }).n;
+      const overdue = (db.prepare(`SELECT COUNT(*) as n FROM obligations WHERE deal_id = ? AND status = 'overdue'`).get(d.id) as { n: number }).n;
+      const score = total === 0 ? 100 : Math.round(Math.max(0, ((complete / total) * 100) - (overdue * 10)));
+      return { deal_id: d.id, deal_name: d.name, total, complete, overdue, score };
+    });
 
     res.json({
-      vault_score: { overall: overallScore, deal_scores: vaultScores },
-      active_deals: activeDeals,
-      critical_obligations: criticalObligations,
-      overdue_count: overdueCount,
-      due_in_7_days: dueIn7.n,
-      pending_qalicb_certs: pendingQalicbs,
-      open_material_events: openMaterialEvents,
+      actor,
       summary: {
-        active_vault_count: activeDeals.length,
-        total_qei: activeDeals.reduce((s: number, d: any) => s + (d.qei_amount || 0), 0),
-        total_qalicbs: (db.prepare('SELECT COUNT(*) as n FROM qalicbs WHERE status = ?').get('qualified') as { n: number }).n,
+        active_deals: activeDeals.length,
+        total_obligations: totalObligations,
+        complete_obligations: completeObligations,
+        overdue_obligations: overdueObligations,
+        open_material_events: openMaterialEvents.length,
+        qalicbs_needing_cert: pendingQalicbs.length,
       },
+      vault_scores: vaultScores,
+      critical_obligations: criticalObligations,
+      open_material_events: openMaterialEvents,
+      qalicbs_needing_cert: pendingQalicbs,
     });
   }));
 
