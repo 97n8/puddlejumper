@@ -1,3 +1,18 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// AXIS Credential Vault — PublicLogic System Architecture Boot Position 6
+// ─────────────────────────────────────────────────────────────────────────────
+// AXIS is the credential vault for all external API tokens and AI provider
+// calls within PuddleJumper. SYNCHRON8 never holds credentials directly.
+// All connector calls route through AXIS before dispatch.
+//
+// In the current implementation, AXIS credential vault functionality is
+// embedded within LOGICBRIDGE (boot position 8). When AXIS is extracted as
+// a standalone module, this file becomes the LOGICBRIDGE connector registry
+// only, and credential management moves to src/axis/.
+//
+// Architecture reference: System Architecture FINAL, Part 6 — 13 Resident
+// Modules, Boot Order #6 (AXIS) and #8 (LOGICBRIDGE).
+// ─────────────────────────────────────────────────────────────────────────────
 import type Database from 'better-sqlite3';
 import { initDefinitionStore } from './registry/definition-store.js';
 import { loadRegistryFromDb, countRegistered, countSuspended } from './registry/registry-publisher.js';
