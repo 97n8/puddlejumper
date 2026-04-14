@@ -168,55 +168,7 @@ export function runStayOSMigrations(db: Database.Database): void {
 }
 
 export function seedDefaultTemplates(db: Database.Database, workspaceId: string): void {
-  const existing = db.prepare(
-    `SELECT id FROM stayos_message_templates WHERE workspace_id = ? LIMIT 1`
-  ).get(workspaceId);
-  if (existing) return;
-
-  const ts = new Date().toISOString().replace('T', ' ').slice(0, 19);
-  const templates = [
-    {
-      id: crypto.randomUUID(),
-      name: 'Pre-Arrival (24h before)',
-      trigger: 'pre_checkin',
-      channel: 'sms',
-      body: "Hi {{guest_name}}! Your stay at {{property_name}} starts tomorrow. Check-in is at 3pm. Door code: {{door_code}}. WiFi: {{wifi_name}} / {{wifi_password}}. Let us know if you need anything!",
-    },
-    {
-      id: crypto.randomUUID(),
-      name: 'Check-in Day',
-      trigger: 'pre_checkin',
-      channel: 'sms',
-      body: "Welcome day! {{property_name}} is ready for you. Check-in after 3pm. Door code: {{door_code}}.",
-    },
-    {
-      id: crypto.randomUUID(),
-      name: 'Mid-Stay Check-in',
-      trigger: 'mid_stay',
-      channel: 'sms',
-      body: "Hope you're enjoying your stay at {{property_name}}, {{guest_name}}! Let us know if you need anything.",
-    },
-    {
-      id: crypto.randomUUID(),
-      name: 'Check-out Reminder',
-      trigger: 'post_checkout',
-      channel: 'sms',
-      body: "Reminder: checkout tomorrow at 11am. Please leave keys inside. Hope you had a great stay!",
-    },
-    {
-      id: crypto.randomUUID(),
-      name: 'Post-Checkout Thanks',
-      trigger: 'post_checkout',
-      channel: 'sms',
-      body: "Thanks for staying at {{property_name}}, {{guest_name}}! We'd love a review. Hope to see you again!",
-    },
-  ];
-
-  const insert = db.prepare(`
-    INSERT INTO stayos_message_templates (id, workspace_id, name, trigger, channel, body, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  for (const t of templates) {
-    insert.run(t.id, workspaceId, t.name, t.trigger, t.channel, t.body, ts, ts);
-  }
+  // No-op — generic placeholder templates removed.
+  // Real templates are seeded via POST /api/stayos/seed/kendall-pond.
+  void db; void workspaceId;
 }

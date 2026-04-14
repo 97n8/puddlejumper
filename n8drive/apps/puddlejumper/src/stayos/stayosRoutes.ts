@@ -120,7 +120,6 @@ export function createStayosRoutes(db: Database.Database): Router {
     const id = crypto.randomUUID();
     db.prepare(`INSERT INTO stayos_properties (id, workspace_id, name, address, city, state, zip, unit_count, check_in_time, check_out_time, wifi_name, wifi_password, door_code, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(id, ctx.workspaceId, name, address, city, state, zip, unit_count, check_in_time, check_out_time, wifi_name ?? null, wifi_password ?? null, door_code ?? null, notes ?? null, now(), now());
-    seedDefaultTemplates(db, ctx.workspaceId);
     res.status(201).json(db.prepare(`SELECT * FROM stayos_properties WHERE id = ?`).get(id));
   }));
 
