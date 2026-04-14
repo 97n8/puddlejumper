@@ -132,7 +132,11 @@ import { createTownRegistryRoutes } from "../townregistry/routes.js";
 import { createMyHealthRoutes } from "./routes/myHealth.js";
 import { createFileDraftsRouter } from "./routes/fileDrafts.js";
 import { createCivicRouter } from "../civic/civicRoutes.js";
+import { createStayosRoutes } from '../stayos/stayosRoutes.js';
+import { runStayOSMigrations } from '../stayos/migrations.js';
+import { startAutomationWorker } from '../stayos/automationWorker.js';
 import { createAEDRouter } from "../aed/aedRoutes.js";
+import { createSSCB1Router } from "../sscb1/sscb1Routes.js";
 import { createHealthRoutes, requestCounterMiddleware } from "./routes/health.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
@@ -235,6 +239,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   // ── WATCHLAYER continuous monitoring ─────────────────────────────────
   initWatchLayer(approvalStore.db);
   scheduleWatchLayer(approvalStore.db);
+
+  // ── StayOS — short-term rental management ─────────────────────────────
+  runStayOSMigrations(approvalStore.db);
+  startAutomationWorker(approvalStore.db);
 
   // ── FiscalIntel — MA DLS municipal data connector ─────────────────────
   initFiscalDb(approvalStore.db);
@@ -944,7 +952,17 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/registry", createTownRegistryRoutes(approvalStore.db));
   app.use("/api", createMyHealthRoutes(approvalStore.db));
   app.use("/api/v1/civic", civicRateLimit, createCivicRouter(CONTROLLED_DATA_DIR));
+  app.use("/api/stayos", createStayosRoutes(approvalStore.db));
   app.use("/api/v1/aed", aedRateLimit, createAEDRouter(CONTROLLED_DATA_DIR));
+
+  const sscb1RateLimit = createRateLimit({
+    windowMs: 60_000, max: 200,
+    keyGenerator: (req) => {
+      const auth = getAuthContext(req);
+      return `tenant:${auth?.tenantId ?? 'no-tenant'}:user:${auth?.userId ?? 'anonymous'}:route:/api/v1/sscb1`;
+    },
+  });
+  app.use("/api/v1/sscb1", sscb1RateLimit, createSSCB1Router(CONTROLLED_DATA_DIR));
 
   const vaultDbPath = path.resolve(process.env.VAULT_DB_PATH ?? path.join(CONTROLLED_DATA_DIR, "vault.db"));
   const documentRoutes = createDocumentRoutes({ dbPath: vaultDbPath });
