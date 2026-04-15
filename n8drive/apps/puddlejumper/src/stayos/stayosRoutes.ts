@@ -428,6 +428,62 @@ export function createStayosRoutes(db: Database.Database): Router {
     res.json(db.prepare(`SELECT * FROM stayos_intake_submissions WHERE id = ?`).get(req.params.id));
   }));
 
+  // ── Audit log ────────────────────────────────────────────────────────────────
+  router.get('/audit', tryRoute((req, res) => {
+    const ctx = requireAuth(req, res); if (!ctx) return;
+    const limit = Math.min(Number(req.query['limit'] ?? 100), 500);
+    // Combine audit_log with recent automation queue events and messages
+    const entries = db.prepare(`
+      SELECT id, actor_id, action, entity_type, entity_id, changes, ip_address, created_at
+      FROM stayos_audit_log
+      WHERE workspace_id = ?
+      ORDER BY created_at DESC
+      LIMIT ?
+    `).all(ctx.workspaceId, limit) as Array<{
+      id: string; actor_id: string; action: string; entity_type: string;
+      entity_id: string; changes: string | null; ip_address: string | null; created_at: string;
+    }>;
+    // Also include recent automation queue runs as synthetic audit entries
+    const queueItems = db.prepare(`
+      SELECT q.id, q.automation_id, q.reservation_id, q.status, q.error, q.executed_at, a.name as auto_name
+      FROM stayos_automation_queue q
+      LEFT JOIN stayos_automations a ON q.automation_id = a.id
+      WHERE q.workspace_id = ?
+      AND q.executed_at IS NOT NULL
+      ORDER BY q.executed_at DESC
+      LIMIT 50
+    `).all(ctx.workspaceId) as Array<{
+      id: string; automation_id: string; reservation_id: string | null; status: string;
+      error: string | null; executed_at: string; auto_name: string | null;
+    }>;
+    const syntheticEntries = queueItems.map(q => ({
+      id: `aq_${q.id}`,
+      actor_id: 'pj_automation',
+      action: q.status === 'sent' ? 'automation_sent' : 'automation_failed',
+      entity_type: 'automation',
+      entity_id: q.automation_id,
+      changes: JSON.stringify({ auto_name: q.auto_name, reservation_id: q.reservation_id, status: q.status, error: q.error }),
+      ip_address: null,
+      created_at: q.executed_at,
+    }));
+    const combined = [...entries, ...syntheticEntries].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    ).slice(0, limit);
+    res.json(combined);
+  }));
+
+  router.post('/audit', tryRoute((req, res) => {
+    const ctx = requireAuth(req, res); if (!ctx) return;
+    const body = req.body as Record<string, unknown>;
+    const { action, entity_type, entity_id, changes } = body;
+    if (!action || !entity_type || !entity_id) { res.status(400).json({ error: 'action, entity_type, entity_id are required' }); return; }
+    const id = crypto.randomUUID();
+    const ip = req.ip ?? null;
+    db.prepare(`INSERT INTO stayos_audit_log (id, workspace_id, actor_id, action, entity_type, entity_id, changes, ip_address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`)
+      .run(id, ctx.workspaceId, ctx.userId, action, entity_type, entity_id, changes ? JSON.stringify(changes) : null, ip);
+    res.status(201).json({ id });
+  }));
+
   // ── Seed: Kendall Pond Launch Package ────────────────────────────────────────
   router.post('/seed/kendall-pond', tryRoute((req, res) => {
     const ctx = requireAuth(req, res); if (!ctx) return;
