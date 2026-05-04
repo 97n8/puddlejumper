@@ -749,8 +749,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     const allowedDomains = (process.env.ALLOWED_DOMAINS ?? '')
       .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
     if (allowedEmails.length > 0 || allowedDomains.length > 0) {
-      const dataDir = process.env.DATA_DIR || "./data";
-      const localUser = findLocalUserById(dataDir, auth.sub);
+      const localUser = findLocalUserById(CONTROLLED_DATA_DIR, auth.sub);
       if (localUser) {
         res.json({
           sub: auth.sub,

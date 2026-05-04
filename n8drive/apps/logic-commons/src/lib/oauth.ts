@@ -19,8 +19,8 @@ export interface OAuthUserInfo {
 
 /** Structural interface for the OAuth state store (avoids private-field compatibility issues). */
 export interface IOAuthStateStore {
-  create(provider: string, codeVerifier?: string): string;
-  consume(state: string): { provider: string; codeVerifier?: string } | null;
+  create(provider: string, codeVerifier?: string, redirectTo?: string): string;
+  consume(state: string): { provider: string; codeVerifier?: string; redirectTo?: string } | null;
 }
 
 /** Declarative description of an OAuth 2.0 provider. */
@@ -109,12 +109,77 @@ export function createOAuthRoutes(
   const resolveFrontendUrl = () =>
     opts.frontendUrl || process.env.PJ_PUBLIC_URL || process.env.FRONTEND_URL || "https://pj.publiclogic.org";
 
+  function collectAllowedOrigins(): Set<string> {
+    const origins = new Set<string>();
+    const redirectUri = process.env[provider.redirectUriEnvVar] || provider.defaultRedirectUri;
+    const candidates = [
+      resolveFrontendUrl(),
+      opts.frontendUrl,
+      process.env.PJ_PUBLIC_URL,
+      process.env.FRONTEND_URL,
+      process.env.LOGIC_COMMONS_URL,
+      redirectUri,
+    ];
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      try {
+        origins.add(new URL(candidate).origin);
+      } catch {
+        // Ignore malformed env overrides instead of crashing auth.
+      }
+    }
+    return origins;
+  }
+
+  function resolveDefaultReturnOrigin(): string {
+    const redirectUri = process.env[provider.redirectUriEnvVar] || provider.defaultRedirectUri;
+    try {
+      return new URL(redirectUri).origin;
+    } catch {
+      return resolveFrontendUrl();
+    }
+  }
+
+  function normalizeRedirectTarget(rawTarget: string | undefined): string | null {
+    const target = rawTarget?.trim();
+    if (!target) return null;
+
+    const fallbackOrigin = resolveDefaultReturnOrigin();
+    if (target.startsWith("/") && !target.startsWith("//")) {
+      try {
+        return new URL(target, fallbackOrigin).toString();
+      } catch {
+        return null;
+      }
+    }
+
+    try {
+      const url = new URL(target);
+      if (!["http:", "https:"].includes(url.protocol)) return null;
+      return collectAllowedOrigins().has(url.origin) ? url.toString() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function withRedirectParams(target: string, params: Record<string, string>): string {
+    const url = new URL(target);
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value);
+    }
+    return url.toString();
+  }
+
   // ── Login redirect ────────────────────────────────────────────────────────
-  router.get(`/auth/${provider.name}/login`, (_req, res) => {
+  router.get(`/auth/${provider.name}/login`, (req, res) => {
     const clientId = process.env[provider.clientIdEnvVar];
     if (!clientId) {
       return res.status(500).json({ error: `${provider.name} OAuth not configured` });
     }
+
+    const redirectTo = normalizeRedirectTarget(
+      typeof req.query.redirect_to === "string" ? req.query.redirect_to : undefined,
+    );
 
     // Generate PKCE code_verifier and code_challenge for enhanced security
     const codeVerifier = crypto.randomBytes(32).toString("base64url");
@@ -123,7 +188,7 @@ export function createOAuthRoutes(
       .update(codeVerifier)
       .digest("base64url");
 
-    const state = opts.oauthStateStore.create(provider.name, codeVerifier);
+    const state = opts.oauthStateStore.create(provider.name, codeVerifier, redirectTo || undefined);
     const redirectUri =
       process.env[provider.redirectUriEnvVar] || provider.defaultRedirectUri;
 
@@ -286,7 +351,11 @@ export function createOAuthRoutes(
       });
 
       // Redirect to frontend (cookie carries the session — no token in URL)
-      return res.redirect(`${resolveFrontendUrl()}?auth=success&connected=${encodeURIComponent(provider.name)}`);
+      const finalRedirect = stateResult.redirectTo || resolveFrontendUrl();
+      return res.redirect(withRedirectParams(finalRedirect, {
+        auth: "success",
+        connected: provider.name,
+      }));
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error(`${provider.name} OAuth callback error:`, err?.message);
@@ -297,7 +366,10 @@ export function createOAuthRoutes(
       });
       const isAccessDenied = err?.statusCode === 403
       const errorParam = isAccessDenied ? 'access_denied' : 'authentication_failed'
-      return res.redirect(`${resolveFrontendUrl()}/?oauth_error=${errorParam}`);
+      const finalRedirect = stateResult.redirectTo || resolveFrontendUrl();
+      return res.redirect(withRedirectParams(finalRedirect, {
+        oauth_error: errorParam,
+      }));
     }
   });
 

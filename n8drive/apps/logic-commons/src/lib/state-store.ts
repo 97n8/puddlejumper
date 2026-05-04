@@ -25,7 +25,8 @@ export class OAuthStateStore {
         created_at    INTEGER NOT NULL,
         expires_at    INTEGER NOT NULL,
         used          INTEGER NOT NULL DEFAULT 0,
-        code_verifier TEXT
+        code_verifier TEXT,
+        redirect_to   TEXT
       )
     `);
 
@@ -40,20 +41,24 @@ export class OAuthStateStore {
       this.db.exec("ALTER TABLE oauth_state ADD COLUMN code_verifier TEXT");
     }
 
+    if (!cols.some((c) => c.name === "redirect_to")) {
+      this.db.exec("ALTER TABLE oauth_state ADD COLUMN redirect_to TEXT");
+    }
+
     // Auto-prune expired rows
     this.pruneTimer = setInterval(() => this.prune(), PRUNE_INTERVAL_MS);
     this.pruneTimer.unref?.();
   }
 
   /** Create a new state token for the given provider, optionally with PKCE code_verifier. */
-  create(provider: string, codeVerifier?: string): string {
+  create(provider: string, codeVerifier?: string, redirectTo?: string): string {
     const state = crypto.randomUUID();
     const now = Date.now();
     this.db
       .prepare(
-        "INSERT INTO oauth_state (state, provider, created_at, expires_at, code_verifier) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO oauth_state (state, provider, created_at, expires_at, code_verifier, redirect_to) VALUES (?, ?, ?, ?, ?, ?)",
       )
-      .run(state, provider, now, now + STATE_TTL_MS, codeVerifier || null);
+      .run(state, provider, now, now + STATE_TTL_MS, codeVerifier || null, redirectTo || null);
     return state;
   }
 
@@ -63,7 +68,7 @@ export class OAuthStateStore {
    * Returns an object with provider and code_verifier (if PKCE was used),
    * or `null` if it doesn't exist, was already consumed, or has expired.
    */
-  consume(state: string): { provider: string; codeVerifier?: string } | null {
+  consume(state: string): { provider: string; codeVerifier?: string; redirectTo?: string } | null {
     const now = Date.now();
 
     // Atomic single-use: only marks as used if not already used and not expired
@@ -75,14 +80,15 @@ export class OAuthStateStore {
 
     // Fetch the provider and code_verifier after successful CAS
     const row = this.db
-      .prepare("SELECT provider, code_verifier FROM oauth_state WHERE state = ?")
-      .get(state) as { provider: string; code_verifier: string | null } | undefined;
+      .prepare("SELECT provider, code_verifier, redirect_to FROM oauth_state WHERE state = ?")
+      .get(state) as { provider: string; code_verifier: string | null; redirect_to: string | null } | undefined;
 
     if (!row) return null;
 
     return {
       provider: row.provider,
       codeVerifier: row.code_verifier || undefined,
+      redirectTo: row.redirect_to || undefined,
     };
   }
 

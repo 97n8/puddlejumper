@@ -150,6 +150,35 @@ describe("GitHub OAuth redirect flow", () => {
     expect(refreshCookie).toContain("HttpOnly");
   });
 
+  it("returns to the requested PJ operator route after OAuth login", async () => {
+    const app = await createTestApp();
+
+    const loginRes = await request(app)
+      .get("/api/auth/github/login")
+      .set("referer", "http://localhost:3002/pj/signin")
+      .query({ redirect_to: "http://localhost:3002/pj/admin" });
+    const stateValue = new URL(loginRes.headers.location).searchParams.get("state")!;
+
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (String(url).includes("login/oauth/access_token")) {
+        return { ok: true, json: async () => ({ access_token: "gho_mock" }) };
+      }
+      if (String(url).includes("api.github.com/user")) {
+        return { ok: true, json: async () => ({ id: 12345, login: "octocat", name: "Octocat", email: "octocat@github.com" }) };
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    const callbackRes = await request(app)
+      .get(`/api/auth/github/callback?code=test-auth-code&state=${stateValue}`);
+
+    expect(callbackRes.status).toBe(302);
+    const redirectUrl = new URL(callbackRes.headers.location);
+    expect(redirectUrl.origin + redirectUrl.pathname).toBe("http://localhost:3002/pj/admin");
+    expect(redirectUrl.searchParams.get("auth")).toBe("success");
+    expect(redirectUrl.searchParams.get("connected")).toBe("github");
+  });
+
   it("state is single-use (replay rejected)", async () => {
     const app = await createTestApp();
 

@@ -22,6 +22,16 @@
     return document.getElementById("authState");
   }
 
+  function decorateOAuthLinks(returnPath) {
+    var target = window.location.origin + returnPath;
+    document.querySelectorAll('a[href^="/api/auth/"]').forEach(function (anchor) {
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      var url = new URL(anchor.getAttribute("href"), window.location.origin);
+      url.searchParams.set("redirect_to", target);
+      anchor.setAttribute("href", url.pathname + url.search);
+    });
+  }
+
   function setAuthState(state, text) {
     var pill = getStatusPill();
     if (!pill) return;
@@ -185,6 +195,8 @@
         }
       });
     }
+
+    decorateOAuthLinks("/pj/admin");
 
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && isGateOpen()) {

@@ -114,6 +114,39 @@ describe("GET /api/auth/:provider/login", () => {
     expect(location.searchParams.get("state")).toBeTruthy();
   });
 
+  it("stores an allowed redirect override from the login request", async () => {
+    const app = makeApp();
+    const res = await request(app)
+      .get("/api/auth/testprov/login")
+      .query({ redirect_to: "http://localhost:3000/casespaces/demo" })
+      .redirects(0);
+
+    const state = new URL(res.headers.location).searchParams.get("state");
+    expect(state).toBeTruthy();
+    expect(stateStore.consume(state!)).toEqual({
+      provider: "testprov",
+      codeVerifier: expect.any(String),
+      redirectTo: "http://localhost:3000/casespaces/demo",
+    });
+  });
+
+  it("rejects redirect overrides for untrusted origins even when the referer is attacker-controlled", async () => {
+    const app = makeApp();
+    const res = await request(app)
+      .get("/api/auth/testprov/login")
+      .set("referer", "https://evil.example/launch")
+      .query({ redirect_to: "https://evil.example/callback" })
+      .redirects(0);
+
+    const state = new URL(res.headers.location).searchParams.get("state");
+    expect(state).toBeTruthy();
+    expect(stateStore.consume(state!)).toEqual({
+      provider: "testprov",
+      codeVerifier: expect.any(String),
+      redirectTo: undefined,
+    });
+  });
+
   it("sets a CSRF state cookie", async () => {
     const app = makeApp();
     const res = await request(app).get("/api/auth/testprov/login").redirects(0);
@@ -217,6 +250,36 @@ describe("GET /api/auth/:provider/callback", () => {
       const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader ? [setCookieHeader] : [];
       expect(cookies.some((c: string) => c.startsWith("jwt="))).toBe(true);
       expect(cookies.some((c: string) => c.startsWith("pj_refresh="))).toBe(true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("redirects back to the stored redirect override after callback success", async () => {
+    const app = makeApp();
+    const loginRes = await request(app)
+      .get("/api/auth/testprov/login")
+      .query({ redirect_to: "http://localhost:3000/casespaces/demo?tab=modules" })
+      .redirects(0);
+    const validState = new URL(loginRes.headers.location).searchParams.get("state")!;
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: "mock-access-tok" }),
+    });
+
+    try {
+      const res = await request(app)
+        .get(`/api/auth/testprov/callback?code=good-code&state=${validState}`)
+        .redirects(0);
+
+      expect(res.status).toBe(302);
+      const redirectUrl = new URL(res.headers.location);
+      expect(redirectUrl.origin + redirectUrl.pathname).toBe("http://localhost:3000/casespaces/demo");
+      expect(redirectUrl.searchParams.get("tab")).toBe("modules");
+      expect(redirectUrl.searchParams.get("auth")).toBe("success");
+      expect(redirectUrl.searchParams.get("connected")).toBe("testprov");
     } finally {
       globalThis.fetch = originalFetch;
     }

@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PuddleJumper — Control Plane</title>
+<title>PuddleJumper — Workspace Operations</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles/pj-admin.css">
@@ -16,10 +16,11 @@
   <div class="header-brand">
     <a class="logo" href="/">Puddle<span>Jumper</span></a>
     <div class="sep"></div>
-    <div class="subtitle">Control Plane</div>
+    <div class="subtitle">Workspace Operations</div>
     <div class="ws-chip" id="ws-chip"></div>
   </div>
   <div class="header-right">
+    <a class="header-btn" id="logicos-link" href="https://os.publiclogic.org">LogicOS</a>
     <div class="auto-ref-badge" id="auto-ref"><div class="dot"></div>Auto</div>
     <a class="header-btn" href="/pj/guide">Guide</a>
     <button class="header-btn" onclick="refresh()" id="refresh-btn">↻ Refresh</button>
@@ -33,17 +34,24 @@
 
 <!-- Tabs -->
 <div class="tabs">
-  <button class="tab active" data-tab="queue" onclick="switchTab('queue')">Vault Doc Management <span style="display:inline-block;font-size:9px;font-weight:700;background:#f59e0b;color:#000;padding:1px 5px;border-radius:3px;vertical-align:middle;letter-spacing:0.05em;">DEV</span></button>
+  <button class="tab active" data-tab="queue" onclick="switchTab('queue')">Approvals &amp; Dispatch</button>
   <button class="tab" data-tab="chains" onclick="switchTab('chains')">Chain Templates</button>
   <button class="tab" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
   <button class="tab" data-tab="prr" onclick="switchTab('prr')">Records</button>
-  <button class="tab" data-tab="members" onclick="switchTab('members')">Members</button>
+  <button class="tab" data-tab="members" onclick="switchTab('members')">Members &amp; Plan</button>
+</div>
+
+<div class="viewer-banner" style="display:block;background:#0b1f1a;border-top:1px solid #16352b;border-bottom:1px solid #16352b;">
+  <span>
+    PJ is the backend operator surface for <strong>Docs, Forms, Vault, Flows, Records, and routing</strong>.
+    Use this page for approvals, chain templates, members, and workspace limits — not for authoring document or form templates.
+  </span>
 </div>
 
 <!-- Auth Gate -->
 <div id="auth-gate">
   <h2>// sign in required</h2>
-  <p>Authentication required to access the control plane.</p>
+  <p>Authentication required to access workspace operations.</p>
   <div class="sign-in-card">
     <a href="/api/auth/github/login" class="oauth-btn oauth-github">
       <svg width="18" height="18" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -64,7 +72,7 @@
 <!-- ── APPROVAL QUEUE TAB ─────────────────────────────── -->
 <div class="main" id="tab-queue" style="display:none">
   <div class="tbl-header">
-    <h2>Vault Governed Document Management</h2>
+    <h2>Approvals &amp; Dispatch Queue</h2>
     <div class="tbl-actions">
       <select class="filter-select" id="status-filter" onchange="currentPage=0;loadApprovals()">
         <option value="pending">Pending</option>
@@ -76,6 +84,9 @@
         <option value="">All</option>
       </select>
     </div>
+  </div>
+  <div class="warn-notice" style="margin-bottom:16px">
+    Review governed actions before they dispatch. This queue is the backend execution surface behind LogicOS workspaces.
   </div>
   <div class="tbl-wrap">
     <table>
@@ -107,13 +118,16 @@
 <!-- ── CHAIN TEMPLATES TAB ──────────────────────────────── -->
 <div class="main" id="tab-chains" style="display:none">
   <div class="tbl-header">
-    <h2>Chain Templates</h2>
-    <button class="btn btn-primary btn-lg" id="btn-new-template" onclick="toggleTemplateForm()">+ New Template</button>
+    <h2>Approval Chain Templates</h2>
+    <button class="btn btn-primary btn-lg" id="btn-new-template" onclick="toggleTemplateForm()">+ New Chain</button>
+  </div>
+  <div class="warn-notice" style="margin-bottom:16px">
+    These templates define approval routes for governed actions. They do not replace Docs templates, Forms templates, or Vault document shells.
   </div>
 
   <!-- Create/Edit form -->
   <div class="form-panel" id="template-form">
-    <div class="form-title" id="template-form-title">Create Template</div>
+    <div class="form-title" id="template-form-title">Create Approval Chain</div>
     <input type="hidden" id="template-edit-id">
     <div class="form-row">
       <label>Name</label>
@@ -134,9 +148,9 @@
     </div>
   </div>
 
-  <div id="templates-loading" class="empty" style="display:none">Loading templates…</div>
+  <div id="templates-loading" class="empty" style="display:none">Loading chain templates…</div>
   <div class="template-grid" id="templates-grid"></div>
-  <div id="templates-empty" class="empty" style="display:none">No templates yet — create one above</div>
+  <div id="templates-empty" class="empty" style="display:none">No chain templates yet — create one above</div>
 </div>
 
 <!-- ── DASHBOARD TAB ────────────────────────────────────── -->
@@ -226,6 +240,9 @@
       <div class="empty mono dim" style="padding:12px 0">Loading usage…</div>
     </div>
   </div>
+  <div class="warn-notice" style="margin-bottom:16px">
+    Plan limits shown here cover <strong>chain templates, approvals, and members</strong>. Docs, Forms, and Vault content are managed in LogicOS workspaces.
+  </div>
 
   <div class="tbl-header">
     <h2>Members</h2>
@@ -239,8 +256,8 @@
     <div class="form-row">
       <label>Role</label>
       <select id="invite-role">
-        <option value="admin">Admin — manage templates & invites</option>
-        <option value="member" selected>Member — create & decide approvals</option>
+        <option value="admin">Admin — manage chain templates, members, and invites</option>
+        <option value="member" selected>Member — submit work and decide approvals</option>
         <option value="viewer">Viewer — read-only</option>
       </select>
     </div>
@@ -294,23 +311,26 @@
 <div id="upgrade-modal" onclick="closeUpgradeModal(event)">
   <div class="modal-card" onclick="event.stopPropagation()">
     <div class="modal-head">
-      <h3>Upgrade Workspace</h3>
+      <h3>Workspace Plan &amp; Limits</h3>
       <button class="panel-close" onclick="closeUpgradeModal()">✕</button>
     </div>
     <div style="margin-bottom:16px">
       Current plan: <span id="current-plan-badge" class="plan-badge plan-free">FREE</span>
     </div>
+    <div class="warn-notice" style="margin-bottom:16px">
+      This page controls workspace entitlements only. Docs, Forms, and Vault own their own templates; the quota here refers to <strong>approval chain templates</strong> in PJ operations.
+    </div>
     <label class="plan-option">
       <input type="radio" name="plan-pick" value="free" checked>
-      <div><div class="po-name">Free</div><div class="po-desc">3 templates · 50 approvals/mo · 1 member</div></div>
+      <div><div class="po-name">Free</div><div class="po-desc">3 chain templates · 50 approvals/mo · 1 member</div></div>
     </label>
     <label class="plan-option">
       <input type="radio" name="plan-pick" value="pro">
-      <div><div class="po-name" style="color:var(--accent)">Pro</div><div class="po-desc">Unlimited templates, approvals, and members</div></div>
+      <div><div class="po-name" style="color:var(--accent)">Pro</div><div class="po-desc">Unlimited chain templates, approvals, and members</div></div>
     </label>
-    <div class="warn-notice">⚠ Manual admin operation — billing not yet implemented.</div>
+    <div class="warn-notice">⚠ Manual admin operation — billing is not self-serve yet.</div>
     <div class="form-btns">
-      <button class="btn btn-primary" onclick="submitPlanChange()">Confirm</button>
+      <button class="btn btn-primary" onclick="submitPlanChange()">Save plan</button>
       <button class="btn btn-secondary" onclick="closeUpgradeModal()">Cancel</button>
     </div>
   </div>
@@ -333,6 +353,20 @@ const HASH_TAB = Object.fromEntries(Object.entries(TAB_HASH).map(([k,v])=>[v,k])
 
 // ── Helpers ───────────────────────────────────────────────
 function getCookie(n){const m=document.cookie.match(new RegExp("(?:^|; )"+n+"=([^;]*)"));return m?decodeURIComponent(m[1]):null}
+
+function logicOsUrl(){
+  return window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://os.publiclogic.org';
+}
+
+function setOperatorOAuthReturnLinks(){
+  const redirectTo = `${window.location.origin}/pj/admin`;
+  document.querySelectorAll('a[href^="/api/auth/"]').forEach((anchor)=>{
+    if(!(anchor instanceof HTMLAnchorElement)) return;
+    const url = new URL(anchor.getAttribute('href') || '', window.location.origin);
+    url.searchParams.set('redirect_to', redirectTo);
+    anchor.setAttribute('href', `${url.pathname}${url.search}`);
+  });
+}
 
 function authHeaders(){
   const h={"Content-Type":"application/json"};
@@ -414,6 +448,9 @@ function switchTab(tab){
   if(tab==='prr') loadPRRQueue();
   if(tab==='members'){loadMembers();loadUsage()}
 }
+
+document.getElementById('logicos-link')?.setAttribute('href', logicOsUrl());
+setOperatorOAuthReturnLinks();
 
 // ── Approval Queue ────────────────────────────────────────
 async function loadApprovals(){
@@ -1027,6 +1064,7 @@ function renderUsage(usage){
   badge.className=`plan-badge plan-${usage.plan}`;
   document.getElementById('upgrade-btn').style.display=usage.plan==='free'?'block':'none';
   const metrics=document.getElementById('usage-metrics');
+  const labelMap={templates:'Chain templates',approvals:'Approvals',members:'Members'};
   metrics.innerHTML=['templates','approvals','members'].map(k=>{
     const cur=usage.usage[k],lim=usage.limits[k];
     const pct=lim>0?Math.min((cur/lim)*100,100):0;
@@ -1034,7 +1072,7 @@ function renderUsage(usage){
     const barCls=atLim?'at-limit':nearLim?'near':'';
     const chip=atLim?`<span class="limit-chip err">LIMIT</span>`:nearLim?`<span class="limit-chip warn">NEAR</span>`:'';
     return`<div class="usage-item">
-      <div class="usage-lbl"><strong>${k.charAt(0).toUpperCase()+k.slice(1)}</strong><div>${chip}<span class="usage-count-text">${cur} / ${lim>=999999?'∞':lim}</span></div></div>
+      <div class="usage-lbl"><strong>${labelMap[k] ?? k.charAt(0).toUpperCase()+k.slice(1)}</strong><div>${chip}<span class="usage-count-text">${cur} / ${lim>=999999?'∞':lim}</span></div></div>
       <div class="usage-track"><div class="usage-bar ${barCls}" style="width:${pct}%"></div></div>
     </div>`;
   }).join('');

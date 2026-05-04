@@ -17,6 +17,13 @@
   var successEl = document.getElementById("formSuccess");
   var toastEl = document.getElementById("toast");
 
+  document.querySelectorAll('a[href^="/api/auth/"]').forEach(function (anchor) {
+    if (!(anchor instanceof HTMLAnchorElement)) return;
+    var url = new URL(anchor.getAttribute("href"), window.location.origin);
+    url.searchParams.set("redirect_to", window.location.origin + "/pj/admin");
+    anchor.setAttribute("href", url.pathname + url.search);
+  });
+
   /* ── Helpers ─────────────────────────────────────────────── */
   function setBusy(busy) {
     signinBtn.setAttribute("aria-busy", busy ? "true" : "false");

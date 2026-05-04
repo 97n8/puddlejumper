@@ -26,6 +26,15 @@ describe("OAuthStateStore", () => {
     expect(result?.provider).toBe("github");
   });
 
+  it("persists redirect targets alongside the state token", () => {
+    const state = store.create("github", "pkce-verifier", "https://pj.publiclogic.org/pj/admin");
+    expect(store.consume(state)).toEqual({
+      provider: "github",
+      codeVerifier: "pkce-verifier",
+      redirectTo: "https://pj.publiclogic.org/pj/admin",
+    });
+  });
+
   it("returns null when consuming a non-existent state", () => {
     expect(store.consume("nonexistent")).toBeNull();
   });
