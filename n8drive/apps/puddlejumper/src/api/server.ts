@@ -51,6 +51,7 @@ import { createDocumentRoutes } from "./routes/documents.js";
 import { createRulesRoutes } from "./routes/rules.js";
 import { createDiscoveryRoutes } from "./routes/discovery.js";
 import { createTasksRoutes } from "./routes/tasks.js";
+import { createMcpRouter, oauthMetadata } from "./mcp.js";
 import {
   LOGIN_WINDOW_MS,
   LOGIN_MAX_ATTEMPTS,
@@ -63,6 +64,7 @@ import {
   resolveRuntimeContext,
   resolveLiveTiles,
   resolveLiveCapabilities,
+  resolvePublicAppOrigin,
   assertProductionInvariants,
   isPathInsideDirectory,
 } from "./config.js";
@@ -162,7 +164,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 const ROOT_DIR = path.resolve(__dirname, "../../");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const INTERNAL_SRC_DIR = path.join(ROOT_DIR, "src", "internal-remote");
-const CONTROLLED_DATA_DIR = path.join(ROOT_DIR, "data");
+const CONTROLLED_DATA_DIR = path.resolve(process.env.CONTROLLED_DATA_DIR ?? process.env.DATA_DIR ?? path.join(ROOT_DIR, "data"));
 
 // ── Seed email links from env on startup ────────────────────────────────────
 // Format: LINKED_EMAILS=alt@email.com:primary@email.com,other@email.com:primary@email.com
@@ -434,6 +436,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       secrets,
     });
   });
+  app.get("/live", (_req, res) => res.redirect(307, "/health"));
   // /v1/health — spec-compliant health endpoint (PJ Build Spec §8.1)
   app.get("/v1/health", (_req, res) => {
     const checks: Record<string, { status: string; detail?: string }> = {};
@@ -520,6 +523,44 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use(cookieParser());
   app.use(express.static(PUBLIC_DIR));
   app.use("/internal-src", express.static(INTERNAL_SRC_DIR));
+
+  app.use((req, _res, next) => {
+    if (req.path.startsWith("/mcp") && req.query.token && !req.headers.authorization) {
+      req.headers.authorization = `Bearer ${String(req.query.token)}`;
+    }
+    next();
+  });
+
+  const mcpIssuer =
+    resolvePublicAppOrigin() ||
+    `http://localhost:${process.env.PORT ?? "3002"}`;
+
+  app.get("/.well-known/oauth-authorization-server", (_req, res) => {
+    res.json(
+      oauthMetadata({
+        issuer: mcpIssuer,
+      })
+    );
+  });
+
+  app.use(
+    "/mcp",
+    optionalAuthMiddleware,
+    createMcpRouter({
+      dataDir: CONTROLLED_DATA_DIR,
+      prrStore,
+      approvalStore,
+      runtimeContext,
+      runtimeTiles,
+      runtimeCapabilities,
+      nodeEnv,
+      chainStore,
+      policyProvider,
+      getAuthContext,
+      serverName: "PuddleJumper",
+      serverVersion: process.env.npm_package_version ?? "1.0.0",
+    })
+  );
 
   // Public PRR router (no auth required)
   app.use("/api/public", createPublicPrrRouter(prrStore));
@@ -640,6 +681,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.method === "GET" && req.path === "/v1/health") { next(); return; }
     if (req.method === "GET" && req.path === "/seal/health") { next(); return; }
     if (req.method === "GET" && req.path === "/archieve/health") { next(); return; }
+    if (req.method === "GET" && req.path === "/archive/health") { next(); return; }
     if (req.method === "GET" && req.path === "/v1/metrics") { next(); return; }
     if (req.path.startsWith("/auth/github/")) { next(); return; }
     if (req.path.startsWith("/auth/google/")) { next(); return; }
@@ -694,6 +736,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       res.status(500).json({ status: "error", detail: "ARCHIEVE health check failed" });
     }
   });
+  app.get("/archive/health", (_req, res) => res.redirect(307, "/archieve/health"));
 
   // GET /api/me — returns current user's profile + role from JWT
   app.get("/api/me", (req, res) => {
@@ -918,7 +961,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/v1/casespaces", requireToolAccess("casespaces"));
   app.use("/api", createCaseSpacesRoutes());
   app.use("/api", createAxisChatRoutes());
-  app.use("/api/vault", requireToolAccess("vault"));
+  app.use("/api/vault", requireToolAccess("vault", "formkey"));
   app.use("/api", createVaultRoutes({ 
     dataDir: CONTROLLED_DATA_DIR, 
     vaultUrl: process.env.VAULT_URL 
@@ -926,16 +969,21 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/v1/vault/modules", createModuleBuilderRouter(CONTROLLED_DATA_DIR));
   app.use("/api/v1/watch", requireToolAccess("admin"), createWatchRouter(approvalStore.db));
   app.use("/api/archieve", requireToolAccess("admin"), createArchieveRouter(approvalStore.db));
+  app.use("/api/archive", requireToolAccess("admin"), createArchieveRouter(approvalStore.db));
   app.use("/api/seal", requireToolAccess("admin"), createSealRouter(approvalStore.db));
   app.use("/api/syncronate", requireToolAccess("admin"), createSyncronateRouter(approvalStore.db));
   app.use("/api/logicbridge", requireToolAccess("logicbridge"), createLogicBridgeRouter());
-  app.use("/api/formkey/forms", requireToolAccess("formkey"), createFormKeyRouter(approvalStore.db));
+  app.use("/api/vault/forms", requireToolAccess("vault", "formkey"), createFormKeyRouter(approvalStore.db));
+  app.use("/api/formkey/forms", requireToolAccess("vault", "formkey"), createFormKeyRouter(approvalStore.db));
   app.use("/v1/forms", createFormKeyRouter(approvalStore.db)); // public form submissions — no tool gate
   app.use("/api/v1/org", requireToolAccess("admin"), createOrgManagerRouter(approvalStore.db));
   app.use("/api/v1/finance", requireToolAccess("admin"), createFinanceRouter(approvalStore.db));
   app.use("/api/prr", requireToolAccess("admin"), createPrrRouter(approvalStore.db));
   app.use("/public/prr", prrRateLimit);
-  app.use(createPublicPRRRoutes({ dataDir: CONTROLLED_DATA_DIR }));
+  app.use(createPublicPRRRoutes({
+    prrStore,
+    workspaceId: process.env.PUBLIC_PRR_WORKSPACE_ID,
+  }));
   app.use("/api", createAdminPRRRoutes());
   app.use("/api", createWebhookActionRoutes({
     approvalStore, dispatcherRegistry, chainStore,

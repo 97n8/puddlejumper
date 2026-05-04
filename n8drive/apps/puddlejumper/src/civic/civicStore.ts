@@ -17,6 +17,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import { initCivicFlowStore, seedDemoFlowsIfEmpty } from './flowStore.js';
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
@@ -168,6 +169,7 @@ export function getCivicDb(dataDir: string): DB {
   _db.pragma('journal_mode = WAL');
   _db.pragma('foreign_keys = ON');
   _db.exec(SCHEMA);
+  initCivicFlowStore(_db);
 
   // Idempotent namespace migrations — scope all per-tenant data by town_id
   const nsCol = (_db.pragma('table_info(objects)') as Array<{ name: string }>).some(c => c.name === 'namespace');
@@ -204,6 +206,8 @@ export function getCivicDb(dataDir: string): DB {
     } catch { /* already migrated */ }
   }
 
+  seedIfEmpty(_db);
+  seedDemoFlowsIfEmpty(_db);
   return _db;
 }
 
@@ -362,6 +366,10 @@ function seedIfEmpty(db: DB) {
         JSON.stringify(t.vars), now
       );
     }
+
+    db.prepare(`UPDATE objects SET namespace = ? WHERE created_at = ?`).run(townId, now);
+    db.prepare(`UPDATE deadlines SET namespace = ? WHERE created_at = ?`).run(townId, now);
+    db.prepare(`UPDATE exceptions SET namespace = ? WHERE created_at = ?`).run(townId, now);
 
     // Mark setup as complete — seeded envs are immediately ready
     db.prepare(`

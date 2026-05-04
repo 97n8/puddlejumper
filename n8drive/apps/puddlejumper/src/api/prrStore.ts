@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../../");
-const CONTROLLED_DATA_DIR = path.join(ROOT_DIR, "data");
+const CONTROLLED_DATA_DIR = path.resolve(process.env.CONTROLLED_DATA_DIR ?? process.env.DATA_DIR ?? path.join(ROOT_DIR, "data"));
 
 export const PRR_STATUSES = ["received", "acknowledged", "in_progress", "extended", "closed"] as const;
 export type PrrStatus = (typeof PRR_STATUSES)[number];
@@ -81,6 +81,30 @@ type AccessRequestNotificationRow = {
   last_error: string | null;
   delivery_response: string | null;
   sent_at: string | null;
+};
+
+type PrrAuditRow = {
+  id: number;
+  prr_id: string;
+  tenant_id: string;
+  action: string;
+  actor_user_id: string;
+  from_status: string | null;
+  to_status: string | null;
+  metadata: string | null;
+  created_at: string;
+};
+
+type AccessRequestAuditRow = {
+  id: number;
+  access_request_id: string;
+  tenant_id: string;
+  action: string;
+  actor_user_id: string;
+  from_status: string | null;
+  to_status: string | null;
+  metadata: string | null;
+  created_at: string;
 };
 
 type IntakeInput = {
@@ -561,6 +585,63 @@ export class PrrStore {
     };
   }
 
+  listDetailedForTenant(args: {
+    tenantId: string;
+    status?: PrrStatus;
+    assignedTo?: string;
+    limit: number;
+    offset: number;
+  }): { items: PrrRow[]; total: number; offset: number; limit: number } {
+    const where: string[] = ["tenant_id = ?"];
+    const params: Array<string | number> = [args.tenantId];
+
+    if (args.status) {
+      where.push("status = ?");
+      params.push(args.status);
+    }
+    if (args.assignedTo) {
+      where.push("assigned_to = ?");
+      params.push(args.assignedTo);
+    }
+
+    const whereClause = where.join(" AND ");
+    const totalRow = this.db
+      .prepare(`SELECT COUNT(*) as count FROM prr WHERE ${whereClause}`)
+      .get(...params) as { count: number };
+
+    const rows = this.db
+      .prepare(
+        `
+        SELECT id, public_id, tenant_id, requester_name, requester_email, subject, description, status, assigned_to, received_at, statutory_due_at, last_action_at, closed_at, disposition
+        FROM prr
+        WHERE ${whereClause}
+        ORDER BY received_at DESC
+        LIMIT ? OFFSET ?
+      `
+      )
+      .all(...params, args.limit, args.offset) as PrrRow[];
+
+    return {
+      items: rows,
+      total: Number.isFinite(totalRow.count) ? totalRow.count : 0,
+      offset: args.offset,
+      limit: args.limit
+    };
+  }
+
+  getPrrAuditTrail(prrId: string, tenantId: string): PrrAuditRow[] {
+    return this.db
+      .prepare(
+        `
+        SELECT id, prr_id, tenant_id, action, actor_user_id, from_status, to_status, metadata, created_at
+        FROM prr_audit
+        WHERE prr_id = ? AND tenant_id = ?
+        ORDER BY created_at ASC, id ASC
+      `
+      )
+      .all(prrId, tenantId) as PrrAuditRow[];
+  }
+
   transitionStatus(args: {
     id: string;
     tenantId: string;
@@ -864,6 +945,37 @@ export class PrrStore {
     return row ?? null;
   }
 
+  getPublicStatus(publicId: string): {
+    public_id: string;
+    summary: string;
+    details: string | null;
+    status: PrrStatus;
+    created_at: string;
+    updated_at: string;
+  } | null {
+    const row = this.db
+      .prepare(
+        `
+        SELECT public_id, subject AS summary, description AS details, status, received_at AS created_at,
+               COALESCE(last_action_at, received_at) AS updated_at
+        FROM prr
+        WHERE public_id = ?
+        LIMIT 1
+      `
+      )
+      .get(publicId) as
+      | {
+          public_id: string;
+          summary: string;
+          details: string | null;
+          status: PrrStatus;
+          created_at: string;
+          updated_at: string;
+        }
+      | undefined;
+    return row ?? null;
+  }
+
   getTenantAgencyName(tenantId: string): string | null {
     try {
       const row = this.db
@@ -883,6 +995,87 @@ export class PrrStore {
       .prepare("SELECT * FROM access_request WHERE id = ? AND tenant_id = ?")
       .get(accessRequestId, tenantId) as AccessRequestRow | undefined;
     return row ?? null;
+  }
+
+  listAccessRequestsForTenant(args: {
+    tenantId: string;
+    status?: AccessRequestStatus;
+    requesterId?: string;
+    limit: number;
+    offset: number;
+  }): { items: AccessRequestRow[]; total: number; offset: number; limit: number } {
+    const where: string[] = ["tenant_id = ?"];
+    const params: Array<string | number> = [args.tenantId];
+
+    if (args.status) {
+      where.push("status = ?");
+      params.push(args.status);
+    }
+    if (args.requesterId) {
+      where.push("requested_by_user_id = ?");
+      params.push(args.requesterId);
+    }
+
+    const whereClause = where.join(" AND ");
+    const totalRow = this.db
+      .prepare(`SELECT COUNT(*) as count FROM access_request WHERE ${whereClause}`)
+      .get(...params) as { count: number };
+
+    const rows = this.db
+      .prepare(
+        `
+        SELECT id, case_id, tenant_id, requester_name, requester_email, organization, requested_role, system, justification, status, received_at, last_action_at, closed_at, resolution, requested_by_user_id
+        FROM access_request
+        WHERE ${whereClause}
+        ORDER BY received_at DESC
+        LIMIT ? OFFSET ?
+      `
+      )
+      .all(...params, args.limit, args.offset) as AccessRequestRow[];
+
+    return {
+      items: rows,
+      total: Number.isFinite(totalRow.count) ? totalRow.count : 0,
+      offset: args.offset,
+      limit: args.limit
+    };
+  }
+
+  getAccessRequestAuditTrail(accessRequestId: string, tenantId: string): AccessRequestAuditRow[] {
+    return this.db
+      .prepare(
+        `
+        SELECT id, access_request_id, tenant_id, action, actor_user_id, from_status, to_status, metadata, created_at
+        FROM access_request_audit
+        WHERE access_request_id = ? AND tenant_id = ?
+        ORDER BY created_at ASC, id ASC
+      `
+      )
+      .all(accessRequestId, tenantId) as AccessRequestAuditRow[];
+  }
+
+  getAccessRequestStats(tenantId: string): {
+    total: number;
+    by_status: Record<string, number>;
+  } {
+    const totalRow = this.db
+      .prepare("SELECT COUNT(*) as count FROM access_request WHERE tenant_id = ?")
+      .get(tenantId) as { count: number };
+    const rows = this.db
+      .prepare(
+        `
+        SELECT status, COUNT(*) as count
+        FROM access_request
+        WHERE tenant_id = ?
+        GROUP BY status
+      `
+      )
+      .all(tenantId) as Array<{ status: string; count: number }>;
+
+    return {
+      total: Number.isFinite(totalRow.count) ? totalRow.count : 0,
+      by_status: Object.fromEntries(rows.map((row) => [row.status, row.count]))
+    };
   }
 
   getAccessRequestAuditCount(accessRequestId: string): number {

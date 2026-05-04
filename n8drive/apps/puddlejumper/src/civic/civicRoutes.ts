@@ -21,6 +21,7 @@ import { getAuthContext, createJwtAuthenticationMiddleware } from '@publiclogic/
 import {
   getCivicDb, appendAuditLog, enforceVaultGates, VaultGateError,
 } from './civicStore.js';
+import { createCivicFlowsRouter } from './routes/flows.js';
 
 type CivicActor = {
   id: string;
@@ -201,6 +202,8 @@ export function createCivicRouter(dataDir: string): Router {
       res.status(500).json({ error: `Civic actor resolution failed: ${msg}` });
     }
   });
+
+  router.use('/flows', createCivicFlowsRouter(db));
 
   // ── GET /api/v1/civic/me ────────────────────────────────────────────────────
   router.get('/me', tryRoute((req: Request, res: Response) => {
