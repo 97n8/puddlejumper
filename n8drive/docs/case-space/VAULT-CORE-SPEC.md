@@ -10,7 +10,7 @@
 
 ## Overview
 
-This specification defines the VAULT Core rollout: a structured extension of the existing `@puddlejumper/vault` compliance engine that adds a **Tailored piece** (Piece 10 of the module set), formalizes the **ARCHIEVE + SEAL integrity chain**, and integrates **PuddleJumper (PJ) + Vauly API** to protect deployments, enforce archival integrity, and secure encoding/partner handoffs.
+This specification defines the VAULT Core rollout: a structured extension of the existing `@publiclogic/vault` compliance engine that adds a **Tailored piece** (Piece 10 of the module set), formalizes the **ARCHIEVE + SEAL integrity chain**, and integrates **PuddleJumper (PJ) + Vauly API** to protect deployments, enforce archival integrity, and secure encoding/partner handoffs.
 
 The spec covers identity, schema, API contracts, actor/role model, release gates, and test requirements. No implementation begins until this spec is ratified.
 
@@ -24,7 +24,7 @@ VAULT Core is the canonical baseline for all PublicLogic governance modules. All
 
 | Field | Value |
 |-------|-------|
-| Package | `@puddlejumper/vault` |
+| Package | `@publiclogic/vault` |
 | Schema version | `2.0.0` (VAULT Core release) |
 | Backward compatibility | Core v1 process packages remain valid; `schemaVersion` field drives migration |
 

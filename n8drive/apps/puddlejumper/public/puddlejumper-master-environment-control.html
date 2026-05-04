@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'sha256-seCudkMT4wRjO/nPyFtGWLLhGgxJcHm5CGI2gNLPj2E='; style-src 'sha256-smJ11o5yEy2X4SqKUnfG81FV7di4eBTmvX2IxR0EAIU='; connect-src 'self'; img-src 'self' data:; font-src 'self';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'sha256-KBwBFC34d42fhY4Ma7gy0weWK3cunXbvtmBMHYzxT9Q='; style-src 'sha256-smJ11o5yEy2X4SqKUnfG81FV7di4eBTmvX2IxR0EAIU='; connect-src 'self'; img-src 'self' data:; font-src 'self';" />
     <title>PuddleJumper — Workspace Control</title>
     <style>
       *,
@@ -143,6 +143,9 @@
     </div>
 
     <script>
+      const PJ_EXECUTE = "/api/pj/execute";
+      const ENABLE_BACKEND = true;
+
       // Unified token key
       const TOKEN_KEY = 'pj_token';
 

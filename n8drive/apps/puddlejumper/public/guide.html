@@ -45,7 +45,7 @@
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">5</span> Govern Intake</h4>
-    <p>Open <strong>FormKey</strong> to create governed intake forms. Forms require a legal basis, purpose, and retention tier before publishing.</p>
+    <p>Open <strong>Vault Forms</strong> inside Vault to create governed intake forms. Forms require a legal basis, purpose, and retention tier before publishing.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">6</span> Monitor</h4>
@@ -92,7 +92,7 @@ flyctl deploy -a publiclogic-puddlejumper</code></pre>
     <div class="sys-layer-label api">PuddleJumper (Express on Fly.io)</div>
     <div class="sys-nodes">
       <div class="sys-node">Auth &amp; OAuth</div>
-      <div class="sys-node">FormKey API</div>
+      <div class="sys-node">Vault Forms API</div>
       <div class="sys-node">LOGICBRIDGE API</div>
       <div class="sys-node">SEAL API</div>
       <div class="sys-node">ARCHIEVE API</div>
@@ -117,7 +117,7 @@ flyctl deploy -a publiclogic-puddlejumper</code></pre>
       <div class="sys-node purple">4 · SEAL</div>
       <div class="sys-node purple">5 · Template Library</div>
       <div class="sys-node purple">6 · AXIS</div>
-      <div class="sys-node purple">7 · FormKey</div>
+      <div class="sys-node purple">7 · Vault Forms</div>
       <div class="sys-node purple">8 · LOGICBRIDGE</div>
       <div class="sys-node purple">9 · SYNCHRON8</div>
       <div class="sys-node purple">10 · CaseSpace Factory</div>
@@ -165,10 +165,10 @@ flyctl deploy -a publiclogic-puddlejumper</code></pre>
     └── src/
         ├── api/
         │   ├── server.ts    Boot sequence + all route wiring
-        │   └── routes/      auth, vault, formkey, logicbridge, seal,
+        │   └── routes/      auth, vault, logicbridge, seal,
         │                    archieve, syncronate, casespace, connectors,
         │                    admin, prr, access, axis, governance
-        ├── formkey/         Intake · Consent · Output
+        ├── formkey/         Vault Forms intake · consent · output
         ├── logicbridge/     Registry · Publisher · Sandbox runner
         ├── seal/            ECDSA-P256 sign / verify
         ├── archieve/        Event chain · Notarizations · Export
@@ -177,9 +177,9 @@ flyctl deploy -a publiclogic-puddlejumper</code></pre>
         └── casespace/       Factory · Environment provisioning</code></pre>
 
 <!-- ─────────────── FORMKEY ─────────────── -->
-<h2>FormKey — Intake &amp; Output</h2>
+<h2>Vault Forms — Intake &amp; Output</h2>
 
-<p>Every governed form submission runs through FormKey. Two paths:</p>
+<p>Every governed form submission now runs through Vault Forms inside Vault. Two paths:</p>
 
 <table class="api-table">
   <thead><tr><th>Path</th><th>Steps</th></tr></thead>
@@ -195,17 +195,17 @@ flyctl deploy -a publiclogic-puddlejumper</code></pre>
   </tbody>
 </table>
 
-<h3>FormKey API</h3>
+<h3>Vault Forms API</h3>
 <table class="api-table">
   <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
   <tbody>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/formkey/forms</td><td><span class="auth-badge">bearer</span></td><td>List FormDefinitions</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/formkey/forms</td><td><span class="auth-badge">bearer</span></td><td>Create draft</td></tr>
-    <tr><td><span class="method post">POST</span></td><td class="path">/api/formkey/forms/:id/publish</td><td><span class="auth-badge admin">admin</span></td><td>Publish (5-step pipeline)</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/vault/forms</td><td><span class="auth-badge">bearer</span></td><td>List FormDefinitions</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/vault/forms</td><td><span class="auth-badge">bearer</span></td><td>Create draft</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/vault/forms/:id/publish</td><td><span class="auth-badge admin">admin</span></td><td>Publish (5-step pipeline)</td></tr>
     <tr><td><span class="method post">POST</span></td><td class="path">/v1/forms/:id/submit</td><td><span class="auth-badge public">public</span></td><td>Submit intake (rate limited)</td></tr>
     <tr><td><span class="method post">POST</span></td><td class="path">/v1/forms/:id/consent</td><td><span class="auth-badge public">public</span></td><td>Grant consent</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/formkey/forms/:id/render/:recordId</td><td><span class="auth-badge">bearer</span></td><td>Render VAULT record as form output</td></tr>
-    <tr><td><span class="method get">GET</span></td><td class="path">/api/formkey/forms/:id/submissions</td><td><span class="auth-badge">bearer</span></td><td>List intake records</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/vault/forms/:id/render/:recordId</td><td><span class="auth-badge">bearer</span></td><td>Render VAULT record as form output</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/vault/forms/:id/submissions</td><td><span class="auth-badge">bearer</span></td><td>List intake records</td></tr>
   </tbody>
 </table>
 

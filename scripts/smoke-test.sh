@@ -22,7 +22,7 @@ fi
 
 # 3. Env vars
 echo "Setting env..."
-export PJ_CONTROLLED_DATA_DIR="$(pwd)/data"
+export CONTROLLED_DATA_DIR="$(pwd)/data"
 export PRR_DB_PATH="$(pwd)/data/prr.db"
 export CONNECTOR_DB_PATH="$(pwd)/data/connectors.db"
 export IDEMPOTENCY_DB_PATH="$(pwd)/data/idempotency.db"
@@ -55,9 +55,6 @@ curl -I http://localhost:3002/ | head -10
 echo "=== /health ==="
 curl -s http://localhost:3002/health | jq .
 
-echo "=== /live ==="
-curl -s http://localhost:3002/live | jq .
-
 echo "=== DB files ==="
 ls -la ./data/*.db || echo "No DB files (normal if no writes)"
 
@@ -65,4 +62,4 @@ ls -la ./data/*.db || echo "No DB files (normal if no writes)"
 kill $(cat /tmp/pj_pid) 2>/dev/null || true
 rm -f /tmp/pj_pid
 
-echo "=== Done === If /health & /live 200 → server healthy! ==="
+echo "=== Done === If /health is 200 → server healthy! ==="
