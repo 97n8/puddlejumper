@@ -107,7 +107,7 @@ export function createOAuthRoutes(
 ): express.Router {
   const router = express.Router();
   const resolveFrontendUrl = () =>
-    opts.frontendUrl || process.env.FRONTEND_URL || "https://pj.publiclogic.org";
+    opts.frontendUrl || process.env.PJ_PUBLIC_URL || process.env.FRONTEND_URL || "https://pj.publiclogic.org";
 
   // ── Login redirect ────────────────────────────────────────────────────────
   router.get(`/auth/${provider.name}/login`, (_req, res) => {

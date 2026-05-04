@@ -54,14 +54,14 @@ export function requireRole(...allowedRoles: WorkspaceRole[]) {
 }
 
 /**
- * requireToolAccess(toolKey)
+ * requireToolAccess(...toolKeys)
  *
- * Ensures the authenticated user has been granted access to the named tool
+ * Ensures the authenticated user has been granted access to at least one named tool
  * within their workspace. Owner and admin always pass through.
  * Members with no explicit tool_access list pass through (open by default).
  * Viewers and members with an explicit list must be included in it.
  */
-export function requireToolAccess(toolKey: string) {
+export function requireToolAccess(...toolKeys: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
@@ -85,12 +85,13 @@ export function requireToolAccess(toolKey: string) {
     // member with no explicit tool_access list → full non-admin access
     if (role === "member" && toolAccess === null) { next(); return; }
 
-    if (!toolAccess || !toolAccess.includes(toolKey)) {
+    if (!toolAccess || !toolKeys.some((toolKey) => toolAccess.includes(toolKey))) {
       res.status(403).json({
         success: false,
         correlationId,
         error: "Tool access denied",
-        tool: toolKey,
+        tool: toolKeys[0] ?? "unknown",
+        tool_aliases: toolKeys,
         your_role: role ?? "none",
       });
       return;

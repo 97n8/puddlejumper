@@ -8,6 +8,7 @@ import {
   prrStatusTransitionRequestSchema,
   prrCloseRequestSchema,
 } from "../schemas.js";
+import { resolvePublicAppOrigin } from "../config.js";
 
 type PrrRoutesOptions = {
   prrStore: PrrStore;
@@ -34,7 +35,7 @@ export function createPrrRoutes(opts: PrrRoutesOptions): express.Router {
       subject: parsed.data.subject, description: parsed.data.description ?? null,
       actorUserId, metadata: { source: "api.prr.intake" },
     });
-    const publicBase = (process.env.PJ_PUBLIC_URL ?? "").trim().replace(/\/+$/, "");
+    const publicBase = resolvePublicAppOrigin();
     const trackingPath = `/api/public/prrs/${created.public_id}`;
     const trackingUrl = publicBase ? `${publicBase}${trackingPath}` : trackingPath;
     res.status(201).json({

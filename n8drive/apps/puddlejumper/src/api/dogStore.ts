@@ -9,7 +9,7 @@ import Database from "better-sqlite3";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../../");
-const CONTROLLED_DATA_DIR = path.join(ROOT_DIR, "data");
+const CONTROLLED_DATA_DIR = path.resolve(process.env.CONTROLLED_DATA_DIR ?? process.env.DATA_DIR ?? path.join(ROOT_DIR, "data"));
 
 function isPathInsideDirectory(filePath: string, dir: string): boolean {
   const rel = path.relative(dir, filePath);

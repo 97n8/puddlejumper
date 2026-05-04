@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { resolvePublicAppOrigin } from './config.js';
 
 /**
  * Legacy /auth/callback endpoint.
@@ -11,6 +12,6 @@ import type { Request, Response } from 'express';
  * so existing bookmarks and integrations still work.
  */
 export default function authCallback(_req: Request, res: Response) {
-  const frontendUrl = process.env.FRONTEND_URL || 'https://pj.publiclogic.org';
+  const frontendUrl = resolvePublicAppOrigin() || 'https://pj.publiclogic.org';
   res.redirect(`${frontendUrl}/pj/signin`);
 }

@@ -6,18 +6,15 @@
 //
 import express from "express";
 import { getCorrelationId } from "../serverMiddleware.js";
-import { createPRR, getPRRByToken, listPRRComments } from "../../engine/prrStore.js";
-import { getWorkspace } from "../../engine/workspaceStore.js";
+import type { PrrStore } from "../prrStore.js";
 
 const MAX_SUMMARY_LENGTH = 500;
 const MAX_DETAILS_LENGTH = 5000;
-const MAX_NOTE_LENGTH = 2000;
 
-export function createPublicPRRRoutes(opts?: { dataDir?: string; workspaceId?: string }): express.Router {
+export function createPublicPRRRoutes(opts: { prrStore: PrrStore; workspaceId?: string }): express.Router {
   const router = express.Router();
-  const dataDir = opts?.dataDir ?? process.env.DATA_DIR ?? "./data";
   // Workspace is configured server-side only — never trust client-supplied value
-  const configuredWorkspaceId = opts?.workspaceId ?? process.env.PUBLIC_PRR_WORKSPACE_ID ?? "";
+  const configuredWorkspaceId = opts.workspaceId ?? process.env.PUBLIC_PRR_WORKSPACE_ID ?? "";
 
   // POST /public/prr - Submit a new PRR (public, no auth)
   router.post("/public/prr", (req, res) => {
@@ -29,13 +26,6 @@ export function createPublicPRRRoutes(opts?: { dataDir?: string; workspaceId?: s
         correlationId,
         error: "PRR submissions are not configured for this workspace"
       });
-      return;
-    }
-
-    // Validate workspace exists
-    const ws = getWorkspace(dataDir, configuredWorkspaceId);
-    if (!ws) {
-      res.status(503).json({ success: false, correlationId, error: "Workspace not found" });
       return;
     }
 
@@ -55,13 +45,17 @@ export function createPublicPRRRoutes(opts?: { dataDir?: string; workspaceId?: s
     }
 
     try {
-      const prr = createPRR(dataDir, {
-        workspace_id: configuredWorkspaceId, // always server-controlled
-        name,
-        email,
-        summary: summary.trim(),
-        details,
-        attachments
+      const prr = opts.prrStore.intake({
+        tenantId: configuredWorkspaceId,
+        requesterName: typeof name === "string" ? name : null,
+        requesterEmail: typeof email === "string" ? email : null,
+        subject: summary.trim(),
+        description: typeof details === "string" ? details : null,
+        actorUserId: "public",
+        metadata: {
+          source: "public.prr",
+          attachments: Array.isArray(attachments) ? attachments : [],
+        }
       });
 
       res.status(201).json({
@@ -69,9 +63,9 @@ export function createPublicPRRRoutes(opts?: { dataDir?: string; workspaceId?: s
         correlationId,
         data: {
           id: prr.id,
-          public_token: prr.public_token,
+          public_token: prr.public_id,
           status: prr.status,
-          created_at: prr.created_at
+          created_at: prr.received_at
         }
       });
     } catch (error: unknown) {
@@ -90,19 +84,12 @@ export function createPublicPRRRoutes(opts?: { dataDir?: string; workspaceId?: s
     }
 
     try {
-      const prr = getPRRByToken(dataDir, token);
+      const prr = opts.prrStore.getPublicStatus(token);
 
       if (!prr) {
         res.status(404).json({ success: false, correlationId, error: "PRR not found" });
         return;
       }
-
-      const allComments = listPRRComments(dataDir, prr.id);
-      const comments = allComments.map(c => ({
-        body: c.body,
-        created_at: c.created_at,
-        is_admin: !!c.user_id
-      }));
 
       res.json({
         success: true,
@@ -113,7 +100,7 @@ export function createPublicPRRRoutes(opts?: { dataDir?: string; workspaceId?: s
           status: prr.status,
           created_at: prr.created_at,
           updated_at: prr.updated_at,
-          comments
+          comments: []
         }
       });
     } catch (error: unknown) {

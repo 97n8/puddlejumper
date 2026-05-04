@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { AuthContext } from "@publiclogic/core";
 import { getAuthContext } from "@publiclogic/core";
 import { ConnectorStore, type ConnectorProvider, type ConnectorTokenRecord } from "./connectorStore.js";
+import { resolvePublicAppOrigin } from "./config.js";
 
 type ConnectorStatusPayload = {
   connected: boolean;
@@ -559,16 +560,9 @@ function getGitHubAdapter(
 }
 
 function resolveBaseUrl(req: express.Request): string {
-  const configuredBaseUrl = (process.env.CONNECTOR_PUBLIC_BASE_URL ?? process.env.BASE_URL ?? "").trim();
+  const configuredBaseUrl = resolvePublicAppOrigin();
   if (configuredBaseUrl) {
-    try {
-      const parsed = new URL(configuredBaseUrl);
-      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-        return parsed.origin;
-      }
-    } catch {
-      // Fall through to request-derived base URL.
-    }
+    return configuredBaseUrl;
   }
   const forwardedProtoHeader = req.get("x-forwarded-proto");
   const protocol = forwardedProtoHeader ? forwardedProtoHeader.split(",")[0].trim() : req.protocol;
