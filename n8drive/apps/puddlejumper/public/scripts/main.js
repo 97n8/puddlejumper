@@ -142,6 +142,7 @@
   window.addEventListener("DOMContentLoaded", function () {
     var signInBtn = document.getElementById("signInBtn");
     var routeSignInBtn = document.getElementById("routeSignInBtn");
+    var routePrimarySignInBtn = document.getElementById("routePrimarySignInBtn");
     var adminPanelBtn = document.getElementById("adminPanelBtn");
     var authSubmit = document.getElementById("authSubmit");
     var authClear = document.getElementById("authClear");
@@ -154,6 +155,10 @@
 
     if (routeSignInBtn) {
       routeSignInBtn.addEventListener("click", showAuthGate);
+    }
+
+    if (routePrimarySignInBtn) {
+      routePrimarySignInBtn.addEventListener("click", showAuthGate);
     }
 
     if (adminPanelBtn) {

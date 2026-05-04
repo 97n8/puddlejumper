@@ -23,29 +23,29 @@
       <a href="https://os.publiclogic.org">LogicOS</a>
       <a href="/pj/guide">Guide</a>
       <a href="/pj/signin">Backend sign in</a>
-      <a href="/pj/admin">Admin</a>
+      <a href="/pj/admin">Operations</a>
     </nav>
   </header>
 
   <main id="main-content" class="shell" tabindex="-1">
     <section class="hero">
       <div class="eyebrow">Vibe code fast • Route cleanly • Observe production</div>
-      <h1>LogicOS is where teams work. PuddleJumper runs the backend behind it.</h1>
+      <h1>PuddleJumper is a complete backend workspace for operations, routing, records, and runtime control.</h1>
       <p class="lede">
-        Unified V1 means one clear split: <strong>Docs, Forms, Vault, Flows, and connectors live in LogicOS</strong>;
-        <strong>PuddleJumper</strong> handles auth, routing, approvals, records, and runtime execution behind the scenes.
+        Unified V1 means PuddleJumper stands on its own for backend auth, routing, approvals, records, and runtime execution.
+        LogicOS can sit alongside it, but PJ should never feel like a page whose main job is to send you somewhere else.
       </p>
 
       <div class="hero-actions">
-        <a href="https://os.publiclogic.org" class="btn btn-primary">Open LogicOS</a>
-        <button id="signInBtn" class="btn btn-secondary" type="button">Backend Sign In</button>
-        <button id="adminPanelBtn" class="btn btn-secondary" type="button">Open Backend Admin</button>
+        <button id="signInBtn" class="btn btn-primary" type="button">Backend Sign In</button>
+        <button id="adminPanelBtn" class="btn btn-secondary" type="button">Open PJ Operations</button>
+        <a href="/pj/guide" class="btn btn-secondary">Open Guide</a>
       </div>
 
       <div class="signal-row" role="list" aria-label="Platform signals">
         <div class="signal" role="listitem">
           <span class="signal-label">Best build surface</span>
-          <strong>LogicOS workspaces</strong>
+          <strong>PJ operator workspace</strong>
         </div>
         <div class="signal" role="listitem">
           <span class="signal-label">Runtime substrate</span>
@@ -61,18 +61,18 @@
     <section class="route-grid" aria-label="Choose your path">
       <article class="route-card route-card-primary">
         <div class="route-kicker">Start here</div>
-        <h2>Work in LogicOS</h2>
+        <h2>Operate directly in PJ</h2>
         <p>
-          Use LogicOS for the actual product surfaces: Docs, Forms, Vault, Flows, Records, and governed integrations.
-          That is where day-to-day work should happen.
+          Use PuddleJumper directly when you need approvals, routing, records operations, runtime control,
+          authentication, or backend diagnostics in one place.
         </p>
         <ul class="route-list">
-          <li>Author documents, forms, vault content, and flows</li>
-          <li>Use governed workspace tools without context switching</li>
-          <li>Best experience for normal operators, builders, and admins</li>
+          <li>Run backend operations without leaving this host</li>
+          <li>Handle approvals, records, runtime routing, and workspace controls</li>
+          <li>Best experience for operators, admins, and backend builders</li>
         </ul>
         <div class="route-actions">
-          <a href="https://os.publiclogic.org" class="btn btn-primary">Open LogicOS</a>
+          <button id="routePrimarySignInBtn" class="btn btn-primary" type="button">Sign In to PJ</button>
           <a href="/pj/guide" class="btn btn-ghost">See the systems map</a>
         </div>
       </article>
@@ -81,13 +81,13 @@
         <div class="route-kicker">Backend side</div>
         <h2>Operate the backend directly</h2>
         <p>
-          Come here when you need backend authentication, approval routing, diagnostics, records operations,
-          or workspace-level plan and member controls. PJ is the backend operator surface behind LogicOS.
+          PJ also connects outward to other work surfaces when needed, but this backend host should remain
+          fully usable on its own for day-to-day backend operations.
         </p>
         <ul class="route-list">
-          <li>Approvals, chain templates, members, and plan limits</li>
-          <li>Health, routing, records, and runtime visibility</li>
-          <li>Direct operator sign-in on the PJ host</li>
+          <li>Use the guide, health, and operations pages directly</li>
+          <li>Keep backend auth and runtime visibility local to PJ</li>
+          <li>Open companion surfaces only when you actually want them</li>
         </ul>
         <div class="route-actions">
           <button id="routeSignInBtn" class="btn btn-secondary" type="button">Backend Sign In</button>
@@ -106,7 +106,7 @@
         <article class="loop-card">
           <div class="loop-step">01</div>
           <h3>Build</h3>
-          <p>Start in LogicOS to shape documents, forms, flows, connectors, and governed workspace behavior.</p>
+          <p>Start in PJ to authenticate, inspect routes, manage approvals, and open the backend tools you need.</p>
         </article>
         <article class="loop-card">
           <div class="loop-step">02</div>
@@ -116,16 +116,12 @@
         <article class="loop-card">
           <div class="loop-step">03</div>
           <h3>Observe</h3>
-          <p>Use PJ operations, the systems guide, and health checks to inspect live behavior without confusing the work surface with the backend operator layer.</p>
+          <p>Use PJ operations, the systems guide, and health checks to inspect live behavior without being pushed into another product surface.</p>
         </article>
       </div>
     </section>
 
     <section class="cta-band" aria-label="Quick destinations">
-      <a class="cta-chip" href="https://os.publiclogic.org">
-        <span>Front-end workspace</span>
-        <strong>os.publiclogic.org</strong>
-      </a>
       <a class="cta-chip" href="/pj/signin">
         <span>Direct backend sign-in</span>
         <strong>/pj/signin</strong>
@@ -138,12 +134,16 @@
         <span>Operator guide</span>
         <strong>/pj/guide</strong>
       </a>
+      <a class="cta-chip" href="https://os.publiclogic.org">
+        <span>Companion workspace</span>
+        <strong>LogicOS</strong>
+      </a>
     </section>
 
     <section class="status-panel" aria-label="Current state">
       <div>
         <span class="status-label">Current state</span>
-        <strong>Unified V1 split: LogicOS for work • PJ for backend operations</strong>
+        <strong>PJ is self-sufficient for backend operations • LogicOS is optional alongside it</strong>
       </div>
       <div id="authState" class="status-pill" data-state="public">Public mode</div>
     </section>
@@ -156,8 +156,8 @@
       <div class="auth-kicker">Backend access</div>
       <h2 id="authTitle">Sign in to the PuddleJumper backend</h2>
       <p id="authDesc">
-        Use backend operator auth to open PJ operations here. For day-to-day work in Docs, Forms, Vault,
-        Flows, and connector workflows, go to LogicOS at <a href="https://os.publiclogic.org">os.publiclogic.org</a>.
+        Use backend operator auth to open PJ operations here. This host is meant to stand on its own for backend work,
+        with LogicOS available as a companion workspace when you explicitly want it.
       </p>
 
       <div class="auth-actions">

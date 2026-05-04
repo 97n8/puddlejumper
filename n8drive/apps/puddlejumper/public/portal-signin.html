@@ -26,7 +26,7 @@
       <div class="topnav__links">
         <a href="/pj" class="topnav__link">Home</a>
         <a href="/pj/guide" class="topnav__link">Guide</a>
-        <a href="/pj/admin" class="topnav__link">Admin</a>
+        <a href="/pj/admin" class="topnav__link">Operations</a>
         <a href="/pj/signin" class="topnav__link topnav__link--active">Sign In</a>
       </div>
     </nav>
@@ -150,8 +150,8 @@
                   <path d="M14.5 12a2.5 2.5 0 1 1-5 0a2.5 2.5 0 0 1 5 0Z" />
                 </svg>
               </div>
-              <h3 class="feature__title">Build in LogicOS</h3>
-              <p class="feature__text">For normal user work in Docs, Forms, Vault, Flows, records, and connectors, start at os.publiclogic.org.</p>
+              <h3 class="feature__title">Stay in PJ</h3>
+              <p class="feature__text">Use this host directly for backend operations, approvals, records, routing, and runtime diagnostics.</p>
             </article>
 
             <article class="feature">
@@ -167,7 +167,7 @@
                 </svg>
               </div>
               <h3 class="feature__title">Use PJ for backend ops</h3>
-              <p class="feature__text">This host is for backend admin, API operators, routing, runtime auth, and service troubleshooting.</p>
+              <p class="feature__text">This host is for backend operations, API operators, routing, runtime auth, and service troubleshooting.</p>
             </article>
 
             <article class="feature">
@@ -179,49 +179,38 @@
                 </svg>
               </div>
               <h3 class="feature__title">Keep the route clean</h3>
-              <p class="feature__text">Old bookmarks still work here, but the primary front-end entry point remains LogicOS.</p>
+              <p class="feature__text">Old bookmarks still work here, but PJ itself is a first-class operator surface and should not feel like a redirect page.</p>
             </article>
           </div>
 
-          <div class="bottomline">LogicOS is the front end. PuddleJumper runs behind it.</div>
+          <div class="bottomline">PuddleJumper can stand on its own for backend work.</div>
         </section>
 
         <section class="card" aria-label="Backend sign in form">
           <div class="card__inner">
             <div class="route-grid" aria-label="Choose the right destination">
-              <a class="route-tile route-tile--primary" href="https://os.publiclogic.org">
-                <span class="route-tile__eyebrow">Recommended</span>
-                <strong>Open LogicOS</strong>
-                <span>Best for building, vibe coding, workflows, and normal user work.</span>
-              </a>
-              <a class="route-tile" href="/pj/admin">
-                <span class="route-tile__eyebrow">Backend</span>
+              <a class="route-tile route-tile--primary" href="/pj/admin">
+                <span class="route-tile__eyebrow">Primary</span>
                 <strong>Go to PJ Operations</strong>
-                <span>Use direct backend admin only when you need operator access on this host.</span>
+                <span>Use direct backend operations on this host without leaving PJ.</span>
+              </a>
+              <a class="route-tile" href="/pj/guide">
+                <span class="route-tile__eyebrow">Companion</span>
+                <strong>Open PJ Guide</strong>
+                <span>Use the systems guide when you want context, routes, and operator documentation without leaving PJ.</span>
               </a>
             </div>
 
             <h2>Choose your destination</h2>
-            <p class="sub">Most people should open LogicOS. Only sign in here if you are accessing the PuddleJumper backend or admin surface directly.</p>
-
-            <div class="success" data-show="1" role="note" aria-live="polite">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M8 12l3 3 5-5" />
-              </svg>
-              <div>
-                <strong>Front-end users:</strong> go to
-                <a class="link" href="https://os.publiclogic.org">os.publiclogic.org</a>.
-              </div>
-            </div>
+            <p class="sub">Sign in here when you want to use PuddleJumper directly. LogicOS is available alongside PJ, but PJ should not push you away from its own backend surface.</p>
 
             <div class="row route-row" style="margin: 16px 0 18px;">
-              <a class="btn" href="https://os.publiclogic.org" style="text-decoration:none;text-align:center;flex:1;">Open LogicOS</a>
-              <a class="link" href="/pj/admin" aria-label="Go straight to PuddleJumper admin">Backend admin</a>
+              <a class="btn" href="/pj/admin" style="text-decoration:none;text-align:center;flex:1;">Open PJ Operations</a>
+              <a class="link" href="/pj/guide" aria-label="Open the PJ guide">PJ guide</a>
             </div>
 
             <h3 style="margin: 18px 0 8px; font-size: 16px;">Backend operator sign in</h3>
-            <p class="sub" style="margin-top: 0;">Use your backend account, or continue with SSO, to access PuddleJumper admin on this host.</p>
+            <p class="sub" style="margin-top: 0;">Use your backend account, or continue with SSO, to access PuddleJumper operations on this host.</p>
 
             <div class="error" id="formError" role="alert" aria-live="polite">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -237,7 +226,7 @@
                 <circle cx="12" cy="12" r="10" />
                 <path d="M8 12l3 3 5-5" />
               </svg>
-              <div id="successText">Signed in — redirecting to backend admin…</div>
+              <div id="successText">Signed in — redirecting to PJ operations…</div>
             </div>
 
             <form id="loginForm" novalidate>
@@ -340,7 +329,7 @@
               </div>
 
               <div class="foot">
-                Already signed in? <a class="link" href="/pj/admin">Go to Backend Admin →</a>
+                Already signed in? <a class="link" href="/pj/admin">Go to PJ Operations →</a>
               </div>
             </form>
           </div>

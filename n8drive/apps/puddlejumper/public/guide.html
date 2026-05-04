@@ -23,14 +23,14 @@
 
 <section class="guide-hero">
   <div class="guide-hero__copy">
-    <div class="guide-badge">Work in LogicOS • Run on PJ • Observe in PJ Operations</div>
+    <div class="guide-badge">Work in PJ • Run in PJ • Expand outward only when needed</div>
     <h2>PuddleJumper and LogicOS, one clean operator flow</h2>
-    <p>This guide is the fastest way to understand where to enter, where to build, and where to operate. If you want the shortest version: <strong>use LogicOS for the work surface, and use PuddleJumper for backend auth, admin, and runtime visibility.</strong></p>
+    <p>This guide is the fastest way to understand where to enter, where to build, and where to operate. If you want the shortest version: <strong>PuddleJumper should be usable on its own for backend auth, operations, and runtime visibility.</strong></p>
   </div>
   <div class="guide-hero__actions">
-    <a href="https://os.publiclogic.org" class="guide-pill">
-      <span>Primary workspace</span>
-      <strong>Open LogicOS</strong>
+    <a href="/pj/admin" class="guide-pill">
+      <span>Primary backend workspace</span>
+      <strong>Open PJ Operations</strong>
     </a>
     <a href="/pj/signin" class="guide-pill">
       <span>Operator door</span>
@@ -50,13 +50,13 @@
 <section class="flow-strip" aria-label="Preferred operating flow">
   <article class="flow-strip__card">
     <span>01</span>
-    <strong>Enter through LogicOS</strong>
-    <p>Open the front-end workspace for the cleanest builder experience.</p>
+    <strong>Enter through PJ</strong>
+    <p>Open the backend workspace directly when you want routing, approvals, records, and runtime visibility in one place.</p>
   </article>
   <article class="flow-strip__card">
     <span>02</span>
-    <strong>Build through LogicOS</strong>
-    <p>Use the existing workspace tools, connector builder, and API explorer instead of improvising a new path.</p>
+    <strong>Build through PJ where needed</strong>
+    <p>Use the backend tools, guide, and operations pages directly instead of treating PJ like a handoff screen.</p>
   </article>
   <article class="flow-strip__card">
     <span>03</span>
@@ -68,12 +68,12 @@
 <!-- ─────────────── QUICK START ─────────────── -->
 <h2>Unified V1 Quick Start</h2>
 
-<p>LogicSuite is a public-sector governance platform. <strong>LogicOS</strong> (<a href="https://os.publiclogic.org">os.publiclogic.org</a>) is the primary user interface. <strong>PuddleJumper (PJ)</strong> is the backend API and rules engine running on Fly.io.</p>
+<p>LogicSuite is a public-sector governance platform. <strong>PuddleJumper (PJ)</strong> is the backend API, operator workspace, and rules engine running on Fly.io. <strong>LogicOS</strong> can sit alongside it as a companion workspace, but PJ should not depend on rerouting users away from itself.</p>
 
 <div class="qs-grid">
   <div class="qs-card">
     <h4><span class="qs-num">1</span> Sign In</h4>
-    <p>Open <a href="https://os.publiclogic.org">os.publiclogic.org</a> and sign in with GitHub or Google. OAuth tokens are session-cookie based. Refresh is automatic.</p>
+    <p>Open the PJ sign-in flow or PJ operations directly. OAuth tokens are session-cookie based. Refresh is automatic.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">2</span> Start Screen</h4>
@@ -81,15 +81,15 @@
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">3</span> Create Documents</h4>
-    <p>Open the <strong>Docs / Vault workspace</strong> to draft governed documents, use document templates, and save audited outputs into Vault.</p>
+    <p>Use PJ to operate backend systems, routing, records, and governed workflows. Open companion workspaces only when you explicitly need them.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">4</span> Vibe Code Connectors</h4>
-    <p>Open <strong>LogicBridge</strong> and related builder surfaces in LogicOS when you need integrations, connectors, or backend-facing workflows. PuddleJumper handles runtime execution behind the scenes.</p>
+    <p>Use PJ backend tools and routes directly when you need integrations, connectors, or backend-facing workflows. Companion surfaces can extend this, but PJ remains the anchor.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">5</span> Govern Intake</h4>
-    <p>Open <strong>Forms inside the Docs workspace</strong> to create governed intake forms. Forms require a legal basis, purpose, and retention tier before publishing.</p>
+    <p>Use PJ operations for the backend side of governed intake, records, approvals, and publication flow. Forms and Docs surfaces can sit alongside PJ when needed.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">6</span> Monitor</h4>
@@ -112,7 +112,7 @@ npx tsx src/api/server.ts
 # → http://localhost:3002/v1/health</code></pre>
 
 <h3>Best place to vibe code</h3>
-<p>If you want the smoothest loop, start in <a href="https://os.publiclogic.org"><strong>LogicOS</strong></a> for the actual work surfaces, then use <strong>PuddleJumper</strong> for backend auth, runtime routing, health, approvals, and operator visibility. In short: <strong>work in LogicOS, run on PJ, observe in PJ operations</strong>.</p>
+<p>If you want the smoothest loop, start in <strong>PuddleJumper</strong> for backend auth, runtime routing, health, approvals, and operator visibility. Add companion surfaces only when they help. In short: <strong>work in PJ, run on PJ, observe in PJ operations</strong>.</p>
 
 <h3>Deploy to Fly.io</h3>
 <pre><code># From monorepo root (/n8drive)
