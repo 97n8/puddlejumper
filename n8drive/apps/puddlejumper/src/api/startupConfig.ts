@@ -31,6 +31,7 @@ export const startupConfigSchema = z.object({
   PRR_DB_PATH: z.string().optional(),
   CONNECTOR_DB_PATH: z.string().optional(),
   METRICS_TOKEN: z.string().optional(),
+  PJ_PUBLIC_URL: z.url().optional().or(z.literal("").transform(() => undefined)),
   FRONTEND_URL: z.url().optional().or(z.literal("").transform(() => undefined)),
   LOGIC_COMMONS_DATA_DIR: z.string().optional(),
 });

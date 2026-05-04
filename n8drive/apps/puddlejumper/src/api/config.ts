@@ -83,6 +83,30 @@ export function parseCsv(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
+function normalizeHttpOrigin(value: string | undefined): string {
+  const trimmed = asTrimmedString(value);
+  if (!trimmed) {
+    return "";
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return "";
+    }
+    return parsed.origin;
+  } catch {
+    return "";
+  }
+}
+
+export function resolvePublicAppOrigin(): string {
+  return (
+    normalizeHttpOrigin(process.env.PJ_PUBLIC_URL) ||
+    normalizeHttpOrigin(process.env.FRONTEND_URL) ||
+    normalizeHttpOrigin(process.env.BASE_URL)
+  );
+}
+
 export function normalizePrincipal(value: string | undefined): string {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
@@ -365,12 +389,14 @@ export function assertProductionInvariants(nodeEnv: string, authOptions: AuthOpt
     "IDEMPOTENCY_DB_PATH",
     "RATE_LIMIT_DB_PATH",
     "ACCESS_NOTIFICATION_WEBHOOK_URL",
-    "FRONTEND_URL",
   ];
   for (const variable of requiredEnvVars) {
     if (!process.env[variable]?.trim()) {
       throw new Error(`${variable} must be configured in production`);
     }
+  }
+  if (!resolvePublicAppOrigin()) {
+    throw new Error("PJ_PUBLIC_URL must be configured in production");
   }
 
   // OAuth provider credentials – Microsoft can be public client (ID only), others need ID + secret

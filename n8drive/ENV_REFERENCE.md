@@ -5,6 +5,16 @@
 - Default: Unset (`/pj` relative path fallback in the shell).
 - Read in: PublicLogic OS Component Library `src/auth/publiclogicConfig.ts` via `resolvePuddleJumperUrl`.
 
+## `PJ_PUBLIC_URL`
+- Purpose: Canonical public origin for PuddleJumper redirects, public tracking URLs, and OAuth callback construction.
+- Default: Unset (request-derived origin fallback outside production).
+- Read in: `n8drive/apps/puddlejumper/src/api/config.ts` via `resolvePublicAppOrigin`.
+
+## `FRONTEND_URL`
+- Purpose: Legacy compatibility alias for `PJ_PUBLIC_URL`.
+- Default: Unset.
+- Read in: `n8drive/apps/puddlejumper/src/api/config.ts` and `n8drive/apps/logic-commons/src/lib/oauth.ts` as a fallback only.
+
 ## `IDEMPOTENCY_TTL_HOURS`
 - Purpose: Expiration window for persisted idempotency keys.
 - Default: `24`.

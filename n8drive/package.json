@@ -18,7 +18,7 @@
     "test:root": "tsx --test test/**/*.test.ts",
     "test:core": "pnpm --filter @publiclogic/core run test",
     "test:pj": "pnpm --filter @publiclogic/puddlejumper run test",
-    "typecheck": "tsc --build --noEmit",
+    "typecheck": "pnpm --filter @publiclogic/core exec tsc --noEmit -p tsconfig.json && pnpm --filter @publiclogic/logic-commons exec tsc --noEmit -p tsconfig.json && pnpm --filter @publiclogic/puddlejumper exec tsc --noEmit -p tsconfig.json",
     "check:pj-contract": "node scripts/check-pj-contract.mjs",
     "ci": "pnpm run typecheck && pnpm run check:pj-contract && pnpm run test",
     "db:backup": "tsx apps/puddlejumper/src/api/sqliteMaintenance.ts backup",
