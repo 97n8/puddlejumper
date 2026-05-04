@@ -30,18 +30,19 @@ describe("loadConfig", () => {
     const env = {
       ...validEnv(),
       METRICS_TOKEN: "prom-token",
-      FRONTEND_URL: "https://pj.publiclogic.org",
+      PJ_PUBLIC_URL: "https://pj.publiclogic.org",
       LOGIC_COMMONS_DATA_DIR: "/mnt/data",
     };
     const config = loadConfig(env);
     expect(config.METRICS_TOKEN).toBe("prom-token");
-    expect(config.FRONTEND_URL).toBe("https://pj.publiclogic.org");
+    expect(config.PJ_PUBLIC_URL).toBe("https://pj.publiclogic.org");
     expect(config.LOGIC_COMMONS_DATA_DIR).toBe("/mnt/data");
   });
 
   it("succeeds without optional vars", () => {
     const config = loadConfig(validEnv());
     expect(config.METRICS_TOKEN).toBeUndefined();
+    expect(config.PJ_PUBLIC_URL).toBeUndefined();
     expect(config.FRONTEND_URL).toBeUndefined();
     expect(config.LOGIC_COMMONS_DATA_DIR).toBeUndefined();
   });
@@ -95,8 +96,8 @@ describe("loadConfig", () => {
     expect(config.JWT_SECRET).toBe("my-secret-that-is-at-least-32-characters-long");
   });
 
-  it("rejects invalid FRONTEND_URL when provided", () => {
-    const env = { ...validEnv(), FRONTEND_URL: "not-a-url" };
+  it("rejects invalid PJ_PUBLIC_URL when provided", () => {
+    const env = { ...validEnv(), PJ_PUBLIC_URL: "not-a-url" };
     expect(() => loadConfig(env)).toThrow(StartupConfigError);
   });
 
@@ -108,6 +109,12 @@ describe("loadConfig", () => {
     } catch (err) {
       expect((err as StartupConfigError).message).toContain("32 characters");
     }
+  });
+
+  it("accepts empty string for PJ_PUBLIC_URL (treated as undefined)", () => {
+    const env = { ...validEnv(), PJ_PUBLIC_URL: "" };
+    const config = loadConfig(env);
+    expect(config.PJ_PUBLIC_URL).toBeUndefined();
   });
 
   it("accepts empty string for FRONTEND_URL (treated as undefined)", () => {

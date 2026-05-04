@@ -23,7 +23,7 @@ function setRequiredEnv(): void {
   process.env.CONNECTOR_DB_PATH = "/app/data/conn.db";
   process.env.CONNECTOR_STATE_SECRET = "prod-secret";
   process.env.ACCESS_NOTIFICATION_WEBHOOK_URL = "https://hook.example.com";
-  process.env.FRONTEND_URL = "https://pj.publiclogic.org";
+  process.env.PJ_PUBLIC_URL = "https://pj.publiclogic.org";
   // OAuth: all three providers
   process.env.GITHUB_CLIENT_ID = "gh-id";
   process.env.GITHUB_CLIENT_SECRET = "gh-secret";
@@ -40,7 +40,7 @@ const envSnapshot: Record<string, string | undefined> = {};
 const trackedKeys = [
   "PJ_RUNTIME_CONTEXT_JSON", "PJ_RUNTIME_TILES_JSON", "PJ_RUNTIME_CAPABILITIES_JSON",
   "PRR_DB_PATH", "IDEMPOTENCY_DB_PATH", "RATE_LIMIT_DB_PATH", "CONNECTOR_DB_PATH",
-  "CONNECTOR_STATE_SECRET", "ACCESS_NOTIFICATION_WEBHOOK_URL", "FRONTEND_URL",
+  "CONNECTOR_STATE_SECRET", "ACCESS_NOTIFICATION_WEBHOOK_URL", "PJ_PUBLIC_URL", "FRONTEND_URL",
   "ALLOW_ADMIN_LOGIN", "ALLOW_PROD_ADMIN_LOGIN",
   "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GITHUB_REDIRECT_URI",
   "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI",
@@ -76,11 +76,11 @@ describe("assertProductionInvariants", () => {
     expect(() => assertProductionInvariants("development", validAuthOptions(), CONTROLLED_DIR)).not.toThrow();
   });
 
-  it("throws when FRONTEND_URL is missing in production", () => {
+  it("throws when PJ_PUBLIC_URL is missing in production", () => {
     setRequiredEnv();
-    delete process.env.FRONTEND_URL;
+    delete process.env.PJ_PUBLIC_URL;
     expect(() => assertProductionInvariants("production", validAuthOptions(), CONTROLLED_DIR)).toThrow(
-      "FRONTEND_URL must be configured in production"
+      "PJ_PUBLIC_URL must be configured in production"
     );
   });
 

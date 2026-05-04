@@ -15,7 +15,9 @@ beforeAll(() => {
 const savedEnv: Record<string, string | undefined> = {};
 
 beforeEach(() => {
+  savedEnv.PJ_PUBLIC_URL = process.env.PJ_PUBLIC_URL;
   savedEnv.FRONTEND_URL = process.env.FRONTEND_URL;
+  delete process.env.PJ_PUBLIC_URL;
   delete process.env.FRONTEND_URL;
 });
 
@@ -53,6 +55,15 @@ describe("authCallback handler (legacy redirect)", () => {
     const res = await request(app).get("/auth/callback");
     expect(res.status).toBe(302);
     expect(res.headers.location).toBe("https://custom.example.com/pj/signin");
+  });
+
+  it("prefers PJ_PUBLIC_URL over FRONTEND_URL when both are set", async () => {
+    process.env.PJ_PUBLIC_URL = "https://public.example.com";
+    process.env.FRONTEND_URL = "https://legacy.example.com";
+    const app = buildApp();
+    const res = await request(app).get("/auth/callback");
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe("https://public.example.com/pj/signin");
   });
 
   it("redirects even when providerToken is present (no longer processes it)", async () => {
