@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LogicOS — Quick Start, Systems Map &amp; Vibe Coding</title>
+  <title>LogicOS &amp; PuddleJumper — Unified V1 Guide</title>
 <link rel="stylesheet" href="/styles/pj-guide.css">
 </head>
 <body>
@@ -11,18 +11,62 @@
 <div class="header">
   <div class="header-title">
     <h1>LogicOS</h1>
-    <span class="subtitle">Quick Start, Systems Map &amp; Vibe Coding</span>
+    <span class="subtitle">Unified V1 Guide &amp; Systems Map</span>
   </div>
   <div class="nav-links">
     <a href="https://os.publiclogic.org">LogicOS</a>
-    <a href="/pj/admin">PJ Admin</a>
+    <a href="/pj/admin">PJ Operations</a>
   </div>
 </div>
 
 <div class="page">
 
+<section class="guide-hero">
+  <div class="guide-hero__copy">
+    <div class="guide-badge">Work in LogicOS • Run on PJ • Observe in PJ Operations</div>
+    <h2>PuddleJumper and LogicOS, one clean operator flow</h2>
+    <p>This guide is the fastest way to understand where to enter, where to build, and where to operate. If you want the shortest version: <strong>use LogicOS for the work surface, and use PuddleJumper for backend auth, admin, and runtime visibility.</strong></p>
+  </div>
+  <div class="guide-hero__actions">
+    <a href="https://os.publiclogic.org" class="guide-pill">
+      <span>Primary workspace</span>
+      <strong>Open LogicOS</strong>
+    </a>
+    <a href="/pj/signin" class="guide-pill">
+      <span>Operator door</span>
+      <strong>Backend Sign In</strong>
+    </a>
+    <a href="/pj/admin" class="guide-pill">
+      <span>Direct backend access</span>
+      <strong>PJ Operations</strong>
+    </a>
+    <a href="/health" class="guide-pill">
+      <span>Runtime health</span>
+      <strong>API Health</strong>
+    </a>
+  </div>
+</section>
+
+<section class="flow-strip" aria-label="Preferred operating flow">
+  <article class="flow-strip__card">
+    <span>01</span>
+    <strong>Enter through LogicOS</strong>
+    <p>Open the front-end workspace for the cleanest builder experience.</p>
+  </article>
+  <article class="flow-strip__card">
+    <span>02</span>
+    <strong>Build through LogicOS</strong>
+    <p>Use the existing workspace tools, connector builder, and API explorer instead of improvising a new path.</p>
+  </article>
+  <article class="flow-strip__card">
+    <span>03</span>
+    <strong>Operate through PJ</strong>
+    <p>Use PJ operations, guide surfaces, and health checks to inspect the live runtime.</p>
+  </article>
+</section>
+
 <!-- ─────────────── QUICK START ─────────────── -->
-<h2>Quick Start</h2>
+<h2>Unified V1 Quick Start</h2>
 
 <p>LogicSuite is a public-sector governance platform. <strong>LogicOS</strong> (<a href="https://os.publiclogic.org">os.publiclogic.org</a>) is the primary user interface. <strong>PuddleJumper (PJ)</strong> is the backend API and rules engine running on Fly.io.</p>
 
@@ -37,19 +81,19 @@
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">3</span> Create Documents</h4>
-    <p>Open <strong>LogicPen</strong> to write and print governed documents. Use built-in templates or your LogicCommons templates. Save to Vault.</p>
+    <p>Open the <strong>Docs / Vault workspace</strong> to draft governed documents, use document templates, and save audited outputs into Vault.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">4</span> Vibe Code Connectors</h4>
-    <p>Open <strong>LogicBackend</strong> in LogicOS. This is the fastest place to vibe code integrations using the existing LOGICBRIDGE registry and API Explorer, with PuddleJumper handling runtime execution behind the scenes.</p>
+    <p>Open <strong>LogicBridge</strong> and related builder surfaces in LogicOS when you need integrations, connectors, or backend-facing workflows. PuddleJumper handles runtime execution behind the scenes.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">5</span> Govern Intake</h4>
-    <p>Open <strong>Vault Forms</strong> inside Vault to create governed intake forms. Forms require a legal basis, purpose, and retention tier before publishing.</p>
+    <p>Open <strong>Forms inside the Docs workspace</strong> to create governed intake forms. Forms require a legal basis, purpose, and retention tier before publishing.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">6</span> Monitor</h4>
-    <p>Use <strong>Admin → PJ Health</strong> to see real-time status of all backend modules. Use <strong>Audit Trail</strong> to inspect the ARCHIEVE event chain.</p>
+    <p>Use <strong>PJ operations</strong> for backend status, approval routing, records operations, and workspace limits. Use <strong>Audit Trail</strong> to inspect the archival event chain.</p>
   </div>
 </div>
 
@@ -68,7 +112,7 @@ npx tsx src/api/server.ts
 # → http://localhost:3002/v1/health</code></pre>
 
 <h3>Best place to vibe code</h3>
-<p>If you want the smoothest coding loop, start in <strong>LogicBackend</strong> inside <a href="https://os.publiclogic.org">LogicOS</a>. Use the existing connector builder and API Explorer there, then use <strong>PuddleJumper</strong> for backend auth, runtime routing, health, and operator visibility. In short: <strong>build in LogicOS, run on PJ, observe in PJ admin</strong>.</p>
+<p>If you want the smoothest loop, start in <a href="https://os.publiclogic.org"><strong>LogicOS</strong></a> for the actual work surfaces, then use <strong>PuddleJumper</strong> for backend auth, runtime routing, health, approvals, and operator visibility. In short: <strong>work in LogicOS, run on PJ, observe in PJ operations</strong>.</p>
 
 <h3>Deploy to Fly.io</h3>
 <pre><code># From monorepo root (/n8drive)
@@ -83,7 +127,7 @@ flyctl deploy -a publiclogic-puddlejumper</code></pre>
     <div class="sys-layer-label clients">Clients</div>
     <div class="sys-nodes">
       <div class="sys-node green">LogicOS (Cloudflare Pages)</div>
-      <div class="sys-node green">PJ Admin UI</div>
+      <div class="sys-node green">PJ Operations UI</div>
       <div class="sys-node green">Public Form Endpoint</div>
       <div class="sys-node green">Webhook / API Consumer</div>
     </div>
@@ -95,11 +139,11 @@ flyctl deploy -a publiclogic-puddlejumper</code></pre>
     <div class="sys-layer-label api">PuddleJumper (Express on Fly.io)</div>
     <div class="sys-nodes">
       <div class="sys-node">Auth &amp; OAuth</div>
-      <div class="sys-node">Vault Forms API</div>
+      <div class="sys-node">Forms API</div>
       <div class="sys-node">LOGICBRIDGE API</div>
       <div class="sys-node">SEAL API</div>
-      <div class="sys-node">ARCHIEVE API</div>
-      <div class="sys-node">SYNCRONATE API</div>
+      <div class="sys-node">Archival API</div>
+      <div class="sys-node">Syncronate API</div>
       <div class="sys-node">VAULT Routes</div>
       <div class="sys-node">CaseSpace Routes</div>
       <div class="sys-node">Connector Routes</div>
@@ -115,16 +159,16 @@ flyctl deploy -a publiclogic-puddlejumper</code></pre>
     <div class="sys-layer-label engine">Backend Modules (Boot Order)</div>
     <div class="sys-nodes">
       <div class="sys-node purple">1 · KMS Client</div>
-      <div class="sys-node purple">2 · ARCHIEVE</div>
+      <div class="sys-node purple">2 · Archival</div>
       <div class="sys-node purple">3 · VAULT</div>
       <div class="sys-node purple">4 · SEAL</div>
       <div class="sys-node purple">5 · Template Library</div>
       <div class="sys-node purple">6 · AXIS</div>
-      <div class="sys-node purple">7 · Vault Forms</div>
+      <div class="sys-node purple">7 · Forms</div>
       <div class="sys-node purple">8 · LOGICBRIDGE</div>
       <div class="sys-node purple">9 · SYNCHRON8</div>
       <div class="sys-node purple">10 · CaseSpace Factory</div>
-      <div class="sys-node purple">11 · SYNCRONATE</div>
+      <div class="sys-node purple">11 · Syncronate</div>
     </div>
   </div>
 
@@ -171,7 +215,7 @@ flyctl deploy -a publiclogic-puddlejumper</code></pre>
         │   └── routes/      auth, vault, logicbridge, seal,
         │                    archieve, syncronate, casespace, connectors,
         │                    admin, prr, access, axis, governance
-        ├── formkey/         Vault Forms intake · consent · output
+        ├── formkey/         Forms intake · consent · output
         ├── logicbridge/     Registry · Publisher · Sandbox runner
         ├── seal/            ECDSA-P256 sign / verify
         ├── archieve/        Event chain · Notarizations · Export
@@ -180,16 +224,16 @@ flyctl deploy -a publiclogic-puddlejumper</code></pre>
         └── casespace/       Factory · Environment provisioning</code></pre>
 
 <!-- ─────────────── FORMKEY ─────────────── -->
-<h2>Vault Forms — Intake &amp; Output</h2>
+<h2>Forms — Intake &amp; Output</h2>
 
-<p>Every governed form submission now runs through Vault Forms inside Vault. Two paths:</p>
+<p>Every governed form submission now runs through the Forms layer inside the Docs / Vault workspace. Two paths:</p>
 
 <table class="api-table">
   <thead><tr><th>Path</th><th>Steps</th></tr></thead>
   <tbody>
     <tr>
       <td><strong>Intake</strong></td>
-      <td>Schema validate → Consent check → SEAL stamp → VAULT write → ARCHIEVE event</td>
+      <td>Schema validate → Consent check → SEAL stamp → VAULT write → archival event</td>
     </tr>
     <tr>
       <td><strong>Output / Render</strong></td>
@@ -198,7 +242,7 @@ flyctl deploy -a publiclogic-puddlejumper</code></pre>
   </tbody>
 </table>
 
-<h3>Vault Forms API</h3>
+<h3>Forms API</h3>
 <table class="api-table">
   <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
   <tbody>
@@ -240,7 +284,7 @@ flyctl deploy -a publiclogic-puddlejumper</code></pre>
   </tbody>
 </table>
 
-<h3>ARCHIEVE</h3>
+<h3>Archival</h3>
 <table class="api-table">
   <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
   <tbody>

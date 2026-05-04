@@ -3,91 +3,187 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PuddleJumper — Backend Control Plane</title>
+  <meta name="theme-color" content="#081811">
+  <title>PuddleJumper — Unified V1 Backend</title>
   <link rel="stylesheet" href="/styles/pj.css">
 </head>
 <body>
-  <div id="main-content" class="container" tabindex="-1">
-    <div class="hero">
-      <div class="version-badge">Backend Control Plane • Vibe Code Ready</div>
-      <h1>🚀 PuddleJumper</h1>
-      <p>PuddleJumper is the backend runtime for PublicLogic. The easiest place to <strong>vibe code</strong> integrations is <strong>LogicBackend</strong> in LogicOS at <strong>os.publiclogic.org</strong>, powered by the existing LOGICBRIDGE and PJ runtime on this host.</p>
-    </div>
+  <div class="ambient ambient-a" aria-hidden="true"></div>
+  <div class="ambient ambient-b" aria-hidden="true"></div>
 
-    <div class="features">
-      <div class="feature-card">
-        <div class="icon" aria-hidden="true">✨</div>
-        <h3>Vibe Coding Surface</h3>
-        <p>Use LogicBackend in LogicOS to sketch connectors fast, then let PJ run them through the existing registry, auth, and routing stack.</p>
+  <header class="topbar">
+    <a href="/pj" class="brand" aria-label="PuddleJumper home">
+      <span class="brand-mark">PJ</span>
+      <span class="brand-copy">
+        <strong>PuddleJumper</strong>
+        <span>Unified V1 backend</span>
+      </span>
+    </a>
+    <nav class="topnav" aria-label="Primary">
+      <a href="https://os.publiclogic.org">LogicOS</a>
+      <a href="/pj/guide">Guide</a>
+      <a href="/pj/signin">Backend sign in</a>
+      <a href="/pj/admin">Admin</a>
+    </nav>
+  </header>
+
+  <main id="main-content" class="shell" tabindex="-1">
+    <section class="hero">
+      <div class="eyebrow">Vibe code fast • Route cleanly • Observe production</div>
+      <h1>LogicOS is where teams work. PuddleJumper runs the backend behind it.</h1>
+      <p class="lede">
+        Unified V1 means one clear split: <strong>Docs, Forms, Vault, Flows, and connectors live in LogicOS</strong>;
+        <strong>PuddleJumper</strong> handles auth, routing, approvals, records, and runtime execution behind the scenes.
+      </p>
+
+      <div class="hero-actions">
+        <a href="https://os.publiclogic.org" class="btn btn-primary">Open LogicOS</a>
+        <button id="signInBtn" class="btn btn-secondary" type="button">Backend Sign In</button>
+        <button id="adminPanelBtn" class="btn btn-secondary" type="button">Open Backend Admin</button>
       </div>
-      <div class="feature-card">
-        <div class="icon" aria-hidden="true">🗄️</div>
-        <h3>Runtime Services</h3>
-        <p>PRR, civic flows, connector routing, Vault services, LOGICBRIDGE, and governed backend execution live here.</p>
+
+      <div class="signal-row" role="list" aria-label="Platform signals">
+        <div class="signal" role="listitem">
+          <span class="signal-label">Best build surface</span>
+          <strong>LogicOS workspaces</strong>
+        </div>
+        <div class="signal" role="listitem">
+          <span class="signal-label">Runtime substrate</span>
+          <strong>PJ runtime + module services</strong>
+        </div>
+        <div class="signal" role="listitem">
+          <span class="signal-label">Operator visibility</span>
+          <strong>PJ operations + API health</strong>
+        </div>
       </div>
-      <div class="feature-card">
-        <div class="icon" aria-hidden="true">🎯</div>
-        <h3>Fast Feedback Loop</h3>
-        <p>Build in LogicOS, test in API Explorer, and use PJ admin plus health checks to see what your code is actually doing.</p>
+    </section>
+
+    <section class="route-grid" aria-label="Choose your path">
+      <article class="route-card route-card-primary">
+        <div class="route-kicker">Start here</div>
+        <h2>Work in LogicOS</h2>
+        <p>
+          Use LogicOS for the actual product surfaces: Docs, Forms, Vault, Flows, Records, and governed integrations.
+          That is where day-to-day work should happen.
+        </p>
+        <ul class="route-list">
+          <li>Author documents, forms, vault content, and flows</li>
+          <li>Use governed workspace tools without context switching</li>
+          <li>Best experience for normal operators, builders, and admins</li>
+        </ul>
+        <div class="route-actions">
+          <a href="https://os.publiclogic.org" class="btn btn-primary">Open LogicOS</a>
+          <a href="/pj/guide" class="btn btn-ghost">See the systems map</a>
+        </div>
+      </article>
+
+      <article class="route-card">
+        <div class="route-kicker">Backend side</div>
+        <h2>Operate the backend directly</h2>
+        <p>
+          Come here when you need backend authentication, approval routing, diagnostics, records operations,
+          or workspace-level plan and member controls. PJ is the backend operator surface behind LogicOS.
+        </p>
+        <ul class="route-list">
+          <li>Approvals, chain templates, members, and plan limits</li>
+          <li>Health, routing, records, and runtime visibility</li>
+          <li>Direct operator sign-in on the PJ host</li>
+        </ul>
+        <div class="route-actions">
+          <button id="routeSignInBtn" class="btn btn-secondary" type="button">Backend Sign In</button>
+          <a href="/health" class="btn btn-ghost" target="_blank" rel="noopener noreferrer">Open API Health</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="loop-section" aria-label="Build run observe loop">
+      <div class="section-heading">
+        <span class="section-tag">Flow</span>
+        <h2>One clean loop from idea to runtime</h2>
       </div>
-    </div>
 
-    <div class="actions">
-      <a href="https://os.publiclogic.org" class="btn" style="margin-bottom:8px;">✨ Vibe Code in LogicBackend</a>
-      <button id="signInBtn" class="btn secondary" type="button" style="margin-bottom:8px;">🔐 Backend Sign In</button>
-      <button id="adminPanelBtn" class="btn" type="button">🎛️ Open Backend Admin</button>
-      <a href="/pj/guide" class="btn secondary">📚 Quick Start Guide</a>
-      <a href="/health" class="btn secondary" target="_blank" rel="noopener noreferrer">🏥 System Health</a>
-    </div>
-
-    <div class="status">
-      <strong>Status:</strong> Backend operational • API health live • LogicBackend is the fastest place to vibe code on top of PJ
-    </div>
-
-    <div class="command-panel">
-      <h2>⚡ Vibe Coding Loop</h2>
-      <div class="command-card">
-        <h3>🧩 Build a connector fast</h3>
-        <p>Open LogicBackend in LogicOS, vibe the connector into shape, then use the existing PJ runtime, API Explorer, and admin surface to test and observe it.</p>
-        <button class="command-btn" type="button">Run</button>
-        <div class="command-loading">Running…</div>
-        <div class="command-result" role="status" aria-live="polite"></div>
+      <div class="loop-grid">
+        <article class="loop-card">
+          <div class="loop-step">01</div>
+          <h3>Build</h3>
+          <p>Start in LogicOS to shape documents, forms, flows, connectors, and governed workspace behavior.</p>
+        </article>
+        <article class="loop-card">
+          <div class="loop-step">02</div>
+          <h3>Run</h3>
+          <p>PuddleJumper executes routing, auth, civic flows, records services, Vault services, and integration runtime.</p>
+        </article>
+        <article class="loop-card">
+          <div class="loop-step">03</div>
+          <h3>Observe</h3>
+          <p>Use PJ operations, the systems guide, and health checks to inspect live behavior without confusing the work surface with the backend operator layer.</p>
+        </article>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- Unified Auth Gate Modal -->
-  <div id="auth-gate" class="auth-gate" aria-hidden="true" style="display:none;">
+    <section class="cta-band" aria-label="Quick destinations">
+      <a class="cta-chip" href="https://os.publiclogic.org">
+        <span>Front-end workspace</span>
+        <strong>os.publiclogic.org</strong>
+      </a>
+      <a class="cta-chip" href="/pj/signin">
+        <span>Direct backend sign-in</span>
+        <strong>/pj/signin</strong>
+      </a>
+      <a class="cta-chip" href="/pj/admin">
+        <span>Workspace operations</span>
+        <strong>/pj/admin</strong>
+      </a>
+      <a class="cta-chip" href="/pj/guide">
+        <span>Operator guide</span>
+        <strong>/pj/guide</strong>
+      </a>
+    </section>
+
+    <section class="status-panel" aria-label="Current state">
+      <div>
+        <span class="status-label">Current state</span>
+        <strong>Unified V1 split: LogicOS for work • PJ for backend operations</strong>
+      </div>
+      <div id="authState" class="status-pill" data-state="public">Public mode</div>
+    </section>
+  </main>
+
+  <div id="auth-gate" class="auth-gate" aria-hidden="true" hidden>
+    <div class="auth-backdrop" data-auth-close="true"></div>
     <div class="auth-gate-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <button id="authClose" class="auth-close" type="button" aria-label="Close sign-in dialog">×</button>
+      <div class="auth-kicker">Backend access</div>
       <h2 id="authTitle">Sign in to the PuddleJumper backend</h2>
-      <p id="authDesc">Use backend operator auth to open the admin plane here. For day-to-day work and the best vibe-coding surface, go to LogicOS at os.publiclogic.org.</p>
-      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
-        <a href="/api/auth/github/login" style="display:inline-flex;align-items:center;gap:8px;background:#24292e;color:#fff;padding:12px 24px;border-radius:var(--radius);font-size:1rem;font-weight:500;text-decoration:none;font-family:var(--font);transition:all 0.2s;">
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="white" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-          Sign in with GitHub
+      <p id="authDesc">
+        Use backend operator auth to open PJ operations here. For day-to-day work in Docs, Forms, Vault,
+        Flows, and connector workflows, go to LogicOS at <a href="https://os.publiclogic.org">os.publiclogic.org</a>.
+      </p>
+
+      <div class="auth-actions">
+        <a href="/api/auth/github/login" class="provider provider-github">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <span>Sign in with GitHub</span>
         </a>
-        <a href="/api/auth/google/login" style="display:inline-flex;align-items:center;gap:8px;background:#fff;color:#222;padding:12px 24px;border-radius:var(--radius);font-size:1rem;font-weight:500;text-decoration:none;font-family:var(--font);border:1px solid #dadce0;box-shadow:0 1px 2px rgba(60,64,67,.08);transition:all 0.2s;">
-          <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.36 1.22 8.3 2.97l6.18-6.18C34.64 2.7 29.74 0 24 0 14.82 0 6.73 5.82 2.69 14.09l7.19 5.59C11.27 13.36 17.13 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.22-.42-4.74H24v9.01h12.42c-.54 2.9-2.18 5.36-4.66 7.01l7.19 5.59C43.27 37.27 46.1 31.45 46.1 24.55z"/><path fill="#FBBC05" d="M10.88 28.68a14.5 14.5 0 010-9.36l-7.19-5.59A23.94 23.94 0 000 24c0 3.77.9 7.34 2.69 10.91l7.19-5.59z"/><path fill="#EA4335" d="M24 46c6.48 0 11.92-2.15 15.89-5.86l-7.19-5.59c-2.01 1.35-4.59 2.15-8.7 2.15-6.87 0-12.73-3.86-15.12-9.09l-7.19 5.59C6.73 42.18 14.82 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></g></svg>
-          Sign in with Google
+        <a href="/api/auth/google/login" class="provider provider-google">
+          <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.36 1.22 8.3 2.97l6.18-6.18C34.64 2.7 29.74 0 24 0 14.82 0 6.73 5.82 2.69 14.09l7.19 5.59C11.27 13.36 17.13 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.22-.42-4.74H24v9.01h12.42c-.54 2.9-2.18 5.36-4.66 7.01l7.19 5.59C43.27 37.27 46.1 31.45 46.1 24.55z"/><path fill="#FBBC05" d="M10.88 28.68a14.5 14.5 0 010-9.36l-7.19-5.59A23.94 23.94 0 000 24c0 3.77.9 7.34 2.69 10.91l7.19-5.59z"/><path fill="#EA4335" d="M24 46c6.48 0 11.92-2.15 15.89-5.86l-7.19-5.59c-2.01 1.35-4.59 2.15-8.7 2.15-6.87 0-12.73-3.86-15.12-9.09l-7.19 5.59C6.73 42.18 14.82 48 24 48z"/></g></svg>
+          <span>Sign in with Google</span>
         </a>
-        <a href="/api/auth/microsoft/login" style="display:inline-flex;align-items:center;gap:8px;background:#f3f3f3;color:#2F2F2F;padding:12px 24px;border-radius:var(--radius);font-size:1rem;font-weight:500;text-decoration:none;font-family:var(--font);border:1px solid #e5e5e5;transition:all 0.2s;">
+        <a href="/api/auth/microsoft/login" class="provider provider-microsoft">
           <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><g><rect fill="#F25022" x="1" y="1" width="10" height="10"/><rect fill="#7FBA00" x="13" y="1" width="10" height="10"/><rect fill="#00A4EF" x="1" y="13" width="10" height="10"/><rect fill="#FFB900" x="13" y="13" width="10" height="10"/></g></svg>
-          Sign in with Microsoft
+          <span>Sign in with Microsoft</span>
         </a>
       </div>
-      <div style="margin:16px 0 8px 0;font-size:14px;color:var(--text-dim);">
-        You only need to log in with one provider. Others can be added as connectors in the app.
-      </div>
-      <div style="margin:16px 0 8px 0;font-size:14px;color:var(--text-dim);">Or paste a JWT token below:</div>
-      <input id="jwtInput" type="password" class="auth-input" placeholder="eyJhbGci..." aria-label="JWT token" autocomplete="off" style="width:100%;padding:10px 14px;margin:12px 0;font-family:var(--font-mono);border:1px solid var(--stone-300);border-radius:6px;">
-      <div style="display:flex;gap:8px;">
-        <button id="authSubmit" class="btn btn-approve" type="button" style="flex:1">Authenticate</button>
-        <button id="authClear" class="btn btn-secondary" type="button" style="flex:1">Clear</button>
+
+      <div class="auth-divider">or use a JWT</div>
+      <input id="jwtInput" type="password" class="auth-input" placeholder="eyJhbGci..." aria-label="JWT token" autocomplete="off">
+      <div class="auth-button-row">
+        <button id="authSubmit" class="btn btn-primary" type="button">Authenticate</button>
+        <button id="authClear" class="btn btn-ghost" type="button">Clear</button>
       </div>
     </div>
   </div>
 
-  <script src="/scripts/pj-commands.js"></script>
   <script src="/scripts/main.js"></script>
 </body>
 </html>

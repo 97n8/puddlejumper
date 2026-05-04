@@ -38,7 +38,7 @@
             <div class="mark" aria-hidden="true">PL</div>
             <div>
               <h1 class="brandname">PuddleJumper Backend</h1>
-              <p class="tagline">Backend runtime, operator admin, and service diagnostics for PublicLogic.</p>
+              <p class="tagline">The operator door for backend auth, runtime control, and production diagnostics.</p>
               <div class="badge" aria-label="Backend sign in">
                 <span aria-hidden="true">●</span>
                 Backend sign in
@@ -150,8 +150,8 @@
                   <path d="M14.5 12a2.5 2.5 0 1 1-5 0a2.5 2.5 0 0 1 5 0Z" />
                 </svg>
               </div>
-              <h3 class="feature__title">Use LogicOS</h3>
-              <p class="feature__text">For normal user work, cases, workflows, and daily operations, start at os.publiclogic.org.</p>
+              <h3 class="feature__title">Build in LogicOS</h3>
+              <p class="feature__text">For normal user work in Docs, Forms, Vault, Flows, records, and connectors, start at os.publiclogic.org.</p>
             </article>
 
             <article class="feature">
@@ -167,7 +167,7 @@
                 </svg>
               </div>
               <h3 class="feature__title">Use PJ for backend ops</h3>
-              <p class="feature__text">This host is for backend admin, API operators, routing, and service troubleshooting.</p>
+              <p class="feature__text">This host is for backend admin, API operators, routing, runtime auth, and service troubleshooting.</p>
             </article>
 
             <article class="feature">
@@ -178,8 +178,8 @@
                   <path d="M2 12a10 10 0 0 0 20 0" />
                 </svg>
               </div>
-              <h3 class="feature__title">Keep the front door clean</h3>
-              <p class="feature__text">Old bookmarks still work here, but the primary front-end entry point is LogicOS.</p>
+              <h3 class="feature__title">Keep the route clean</h3>
+              <p class="feature__text">Old bookmarks still work here, but the primary front-end entry point remains LogicOS.</p>
             </article>
           </div>
 
@@ -188,6 +188,19 @@
 
         <section class="card" aria-label="Backend sign in form">
           <div class="card__inner">
+            <div class="route-grid" aria-label="Choose the right destination">
+              <a class="route-tile route-tile--primary" href="https://os.publiclogic.org">
+                <span class="route-tile__eyebrow">Recommended</span>
+                <strong>Open LogicOS</strong>
+                <span>Best for building, vibe coding, workflows, and normal user work.</span>
+              </a>
+              <a class="route-tile" href="/pj/admin">
+                <span class="route-tile__eyebrow">Backend</span>
+                <strong>Go to PJ Operations</strong>
+                <span>Use direct backend admin only when you need operator access on this host.</span>
+              </a>
+            </div>
+
             <h2>Choose your destination</h2>
             <p class="sub">Most people should open LogicOS. Only sign in here if you are accessing the PuddleJumper backend or admin surface directly.</p>
 
@@ -202,7 +215,7 @@
               </div>
             </div>
 
-            <div class="row" style="margin: 16px 0 18px;">
+            <div class="row route-row" style="margin: 16px 0 18px;">
               <a class="btn" href="https://os.publiclogic.org" style="text-decoration:none;text-align:center;flex:1;">Open LogicOS</a>
               <a class="link" href="/pj/admin" aria-label="Go straight to PuddleJumper admin">Backend admin</a>
             </div>

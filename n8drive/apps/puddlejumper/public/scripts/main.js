@@ -1,141 +1,194 @@
-// main.js — CSP-compliant login/auth logic for PuddleJumper
+// main.js — landing page auth and route handling for PuddleJumper
 (function () {
-  // Unified token key
-  const TOKEN_KEY = 'pj_token';
-  let isAuthenticated = false;
+  "use strict";
+
+  var TOKEN_KEY = "pj_token";
+  var lastFocusedElement = null;
 
   function getCookie(name) {
-    const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
-    return m ? decodeURIComponent(m[1]) : null;
+    var match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+    return match ? decodeURIComponent(match[1]) : null;
   }
 
   function getStoredToken() {
     return getCookie(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
   }
 
-  async function checkAuth() {
-    const token = getStoredToken();
-    if (!token) {
-      isAuthenticated = false;
-      showAuthGate();
-      return;
-    }
-    try {
-      const res = await fetch("/api/me", {
-        headers: { "Authorization": "Bearer " + token },
-        credentials: 'include'
-      });
-      if (res.ok) {
-        isAuthenticated = true;
-        hideAuthGate();
-      } else {
-        isAuthenticated = false;
-        localStorage.removeItem(TOKEN_KEY);
-        showAuthGate();
-      }
-    } catch (e) {
-      isAuthenticated = false;
-      console.error('Auth check failed', e);
-      showAuthGate();
-    }
+  function getAuthGate() {
+    return document.getElementById("auth-gate");
+  }
+
+  function getStatusPill() {
+    return document.getElementById("authState");
+  }
+
+  function setAuthState(state, text) {
+    var pill = getStatusPill();
+    if (!pill) return;
+    pill.dataset.state = state;
+    pill.textContent = text;
+  }
+
+  function isGateOpen() {
+    var gate = getAuthGate();
+    return Boolean(gate && !gate.hasAttribute("hidden"));
   }
 
   function showAuthGate() {
-    const gate = document.getElementById("auth-gate");
-    const main = document.getElementById("main-content");
-    if (!gate || !main) return;
-    gate.style.display = "block";
+    var gate = getAuthGate();
+    if (!gate) return;
+
+    lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    gate.removeAttribute("hidden");
     gate.setAttribute("aria-hidden", "false");
-    main.style.display = "none";
-    // Focus management
-    const firstFocusable = gate.querySelector('input, button, [tabindex]:not([tabindex="-1"])');
-    firstFocusable && firstFocusable.focus();
-    gate.addEventListener('keydown', trapFocus);
+    document.body.classList.add("auth-open");
+
+    var focusables = gate.querySelectorAll("a[href], button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex='-1'])");
+    if (focusables.length) {
+      focusables[0].focus();
+    }
   }
 
   function hideAuthGate() {
-    const gate = document.getElementById("auth-gate");
-    const main = document.getElementById("main-content");
-    if (!gate || !main) return;
-    gate.style.display = "none";
+    var gate = getAuthGate();
+    if (!gate) return;
+
+    gate.setAttribute("hidden", "");
     gate.setAttribute("aria-hidden", "true");
-    main.style.display = "block";
-    main.focus();
-    gate.removeEventListener('keydown', trapFocus);
+    document.body.classList.remove("auth-open");
+
+    if (lastFocusedElement) {
+      lastFocusedElement.focus();
+    }
   }
 
-  function trapFocus(e) {
-    if (e.key !== 'Tab') return;
-    const gate = document.getElementById('auth-gate');
-    const focusables = Array.from(gate.querySelectorAll('a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'));
+  function trapFocus(event) {
+    if (!isGateOpen() || event.key !== "Tab") return;
+
+    var gate = getAuthGate();
+    var focusables = Array.from(gate.querySelectorAll("a[href], button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex='-1'])"));
     if (!focusables.length) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
+
+    var first = focusables[0];
+    var last = focusables[focusables.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
       last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
       first.focus();
     }
   }
 
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      const gate = document.getElementById('auth-gate');
-      if (gate && gate.style.display !== 'none') hideAuthGate();
+  async function checkAuth() {
+    var token = getStoredToken();
+    if (!token) {
+      setAuthState("public", "Public mode");
+      return false;
     }
-  });
 
-  window.addEventListener('DOMContentLoaded', function () {
-    // JWT paste auth (demo/ephemeral)
-    var authSubmit = document.getElementById('authSubmit');
-    var authClear = document.getElementById('authClear');
-    var signInBtn = document.getElementById('signInBtn');
-    var adminPanelBtn = document.getElementById('adminPanelBtn');
+    try {
+      var response = await fetch("/api/me", {
+        headers: { Authorization: "Bearer " + token },
+        credentials: "include"
+      });
+
+      if (response.ok) {
+        setAuthState("ready", "Backend session ready");
+        return true;
+      }
+
+      localStorage.removeItem(TOKEN_KEY);
+      setAuthState("public", "Public mode");
+      return false;
+    } catch (_error) {
+      setAuthState("public", "Public mode");
+      return false;
+    }
+  }
+
+  async function handleAdminOpen() {
+    var isAuthed = await checkAuth();
+    if (isAuthed) {
+      window.location.href = "/pj/admin";
+      return;
+    }
+    showAuthGate();
+  }
+
+  function handleJwtSubmit() {
+    var jwtInput = document.getElementById("jwtInput");
+    if (!jwtInput) return;
+
+    var token = jwtInput.value.trim();
+    if (!token) return;
+
+    localStorage.setItem(TOKEN_KEY, token);
+    setAuthState("ready", "Checking backend session…");
+    hideAuthGate();
+    checkAuth();
+  }
+
+  function handleJwtClear() {
+    var jwtInput = document.getElementById("jwtInput");
+    if (jwtInput) {
+      jwtInput.value = "";
+    }
+    localStorage.removeItem(TOKEN_KEY);
+    setAuthState("public", "Public mode");
+  }
+
+  window.addEventListener("DOMContentLoaded", function () {
+    var signInBtn = document.getElementById("signInBtn");
+    var routeSignInBtn = document.getElementById("routeSignInBtn");
+    var adminPanelBtn = document.getElementById("adminPanelBtn");
+    var authSubmit = document.getElementById("authSubmit");
+    var authClear = document.getElementById("authClear");
+    var authClose = document.getElementById("authClose");
+    var gate = getAuthGate();
+
+    if (signInBtn) {
+      signInBtn.addEventListener("click", showAuthGate);
+    }
+
+    if (routeSignInBtn) {
+      routeSignInBtn.addEventListener("click", showAuthGate);
+    }
+
+    if (adminPanelBtn) {
+      adminPanelBtn.addEventListener("click", handleAdminOpen);
+    }
 
     if (authSubmit) {
-      authSubmit.addEventListener('click', function () {
-        var jwt = document.getElementById('jwtInput').value.trim();
-        if (!jwt) return;
-        localStorage.setItem(TOKEN_KEY, jwt);
-        hideAuthGate();
-        checkAuth();
-      });
+      authSubmit.addEventListener("click", handleJwtSubmit);
     }
+
     if (authClear) {
-      authClear.addEventListener('click', function () {
-        document.getElementById('jwtInput').value = '';
-        localStorage.removeItem(TOKEN_KEY);
-      });
+      authClear.addEventListener("click", handleJwtClear);
     }
-    if (signInBtn) {
-      signInBtn.addEventListener('click', function () {
-        showAuthGate();
-      });
+
+    if (authClose) {
+      authClose.addEventListener("click", hideAuthGate);
     }
-    if (adminPanelBtn) {
-      adminPanelBtn.addEventListener('click', async function () {
-        const token = getStoredToken();
-        if (!token) {
-          showAuthGate();
-          return;
-        }
-        try {
-          const res = await fetch("/api/me", {
-            headers: { "Authorization": "Bearer " + token },
-            credentials: 'include'
-          });
-          if (res.ok) {
-            window.location.href = "/pj/admin";
-          } else {
-            showAuthGate();
-          }
-        } catch (e) {
-          showAuthGate();
+
+    if (gate) {
+      gate.addEventListener("click", function (event) {
+        var target = event.target;
+        if (target instanceof HTMLElement && target.dataset.authClose === "true") {
+          hideAuthGate();
         }
       });
     }
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && isGateOpen()) {
+        hideAuthGate();
+        return;
+      }
+      trapFocus(event);
+    });
+
     checkAuth();
   });
 })();

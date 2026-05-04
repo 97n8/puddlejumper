@@ -359,6 +359,56 @@ a { color: inherit; }
   line-height: 1.45;
 }
 
+.route-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.route-tile {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(248, 247, 242, 0.1);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.08));
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.route-tile:hover {
+  transform: translateY(-1px);
+  border-color: rgba(52, 211, 153, 0.26);
+  background: linear-gradient(180deg, rgba(52, 211, 153, 0.08), rgba(0, 0, 0, 0.08));
+}
+
+.route-tile strong {
+  font-size: 15px;
+  letter-spacing: -0.02em;
+}
+
+.route-tile span:last-child {
+  color: rgba(248, 247, 242, 0.72);
+  line-height: 1.45;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.route-tile__eyebrow {
+  color: rgba(52, 211, 153, 0.92);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.route-tile--primary {
+  border-color: rgba(52, 211, 153, 0.22);
+  background: linear-gradient(180deg, rgba(52, 211, 153, 0.1), rgba(0, 0, 0, 0.08));
+}
+
 /* ── Error / Success banners ───────────────────────────────── */
 .error {
   display: none;
@@ -661,5 +711,16 @@ label {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .route-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .route-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
