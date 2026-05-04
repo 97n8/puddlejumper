@@ -1,5 +1,5 @@
 {
-  "name": "@puddlejumper/vault",
+  "name": "@publiclogic/vault",
   "version": "0.1.0",
   "description": "PuddleJumper Upstream Vault - FormKey-based process deployment service",
   "type": "module",

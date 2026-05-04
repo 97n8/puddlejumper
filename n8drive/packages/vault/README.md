@@ -2,7 +2,7 @@
 
 **Status:** Production-ready (Phase 6 complete)  
 **Version:** 0.1.0  
-**Package:** `@puddlejumper/vault`
+**Package:** `@publiclogic/vault`
 
 ## What is Vault?
 
@@ -479,7 +479,7 @@ OS can integrate Vault for compliance-gated workflows:
 
 ```typescript
 // OS governance layer
-import { createVaultClient } from '@puddlejumper/vault';
+import { createVaultClient } from '@publiclogic/vault';
 
 const vault = createVaultClient({
   baseUrl: process.env.VAULT_URL,
