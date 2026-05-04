@@ -3,52 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PuddleJumper — Governance Engine</title>
+  <title>PuddleJumper — Backend Control Plane</title>
   <link rel="stylesheet" href="/styles/pj.css">
 </head>
 <body>
   <div id="main-content" class="container" tabindex="-1">
     <div class="hero">
-      <div class="version-badge">v1.2 Production • Workspace + RBAC + Metrics</div>
+      <div class="version-badge">Backend Control Plane • Vibe Code Ready</div>
       <h1>🚀 PuddleJumper</h1>
-      <p>Governance control plane with workspace isolation, RBAC and tier enforcement, chain approvals, and chain-step observability for operators.</p>
+      <p>PuddleJumper is the backend runtime for PublicLogic. The easiest place to <strong>vibe code</strong> integrations is <strong>LogicBackend</strong> in LogicOS at <strong>os.publiclogic.org</strong>, powered by the existing LOGICBRIDGE and PJ runtime on this host.</p>
     </div>
 
     <div class="features">
       <div class="feature-card">
-        <div class="icon" aria-hidden="true">🔐</div>
-        <h3>Workspace Isolation</h3>
-        <p>Each user gets their own secure workspace with complete data isolation and role-based access control.</p>
+        <div class="icon" aria-hidden="true">✨</div>
+        <h3>Vibe Coding Surface</h3>
+        <p>Use LogicBackend in LogicOS to sketch connectors fast, then let PJ run them through the existing registry, auth, and routing stack.</p>
       </div>
       <div class="feature-card">
         <div class="icon" aria-hidden="true">🗄️</div>
-        <h3>Vault Governed Document Management <span style="display:inline-block;font-size:10px;font-weight:700;background:#f59e0b;color:#000;padding:1px 6px;border-radius:4px;vertical-align:middle;letter-spacing:0.05em;">DEV</span></h3>
-        <p>Vault-enforced document lifecycle with policy-gated approvals, audit trails, and governed publishing controls.</p>
+        <h3>Runtime Services</h3>
+        <p>PRR, civic flows, connector routing, Vault services, LOGICBRIDGE, and governed backend execution live here.</p>
       </div>
       <div class="feature-card">
         <div class="icon" aria-hidden="true">🎯</div>
-        <h3>Operational Observability</h3>
-        <p>Metrics and runbook-ready signals for queue health, chain-step latency, and stuck-step detection.</p>
+        <h3>Fast Feedback Loop</h3>
+        <p>Build in LogicOS, test in API Explorer, and use PJ admin plus health checks to see what your code is actually doing.</p>
       </div>
     </div>
 
     <div class="actions">
-      <button id="signInBtn" class="btn" type="button" style="margin-bottom:8px;">🔑 Sign In</button>
-      <a href="/pj/signin" class="btn secondary" style="margin-bottom:8px;">🌐 Portal Sign In</a>
-      <button id="adminPanelBtn" class="btn" type="button">🎛️ Open Admin Panel</button>
+      <a href="https://os.publiclogic.org" class="btn" style="margin-bottom:8px;">✨ Vibe Code in LogicBackend</a>
+      <button id="signInBtn" class="btn secondary" type="button" style="margin-bottom:8px;">🔐 Backend Sign In</button>
+      <button id="adminPanelBtn" class="btn" type="button">🎛️ Open Backend Admin</button>
       <a href="/pj/guide" class="btn secondary">📚 Quick Start Guide</a>
       <a href="/health" class="btn secondary" target="_blank" rel="noopener noreferrer">🏥 System Health</a>
     </div>
 
     <div class="status">
-      <strong>Status:</strong> System operational • Workspace isolation active • RBAC/tier enforcement enabled
+      <strong>Status:</strong> Backend operational • API health live • LogicBackend is the fastest place to vibe code on top of PJ
     </div>
 
     <div class="command-panel">
-      <h2>⚡ Quick Commands</h2>
+      <h2>⚡ Vibe Coding Loop</h2>
       <div class="command-card">
-        <h3>📊 Summarize Dashboard</h3>
-        <p>Generate a quick summary of active policies, pending reviews, and violations.</p>
+        <h3>🧩 Build a connector fast</h3>
+        <p>Open LogicBackend in LogicOS, vibe the connector into shape, then use the existing PJ runtime, API Explorer, and admin surface to test and observe it.</p>
         <button class="command-btn" type="button">Run</button>
         <div class="command-loading">Running…</div>
         <div class="command-result" role="status" aria-live="polite"></div>
@@ -59,8 +59,8 @@
   <!-- Unified Auth Gate Modal -->
   <div id="auth-gate" class="auth-gate" aria-hidden="true" style="display:none;">
     <div class="auth-gate-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-      <h2 id="authTitle">Sign in to PuddleJumper</h2>
-      <p id="authDesc">Sign in with a provider or paste a JWT token to access the control plane.</p>
+      <h2 id="authTitle">Sign in to the PuddleJumper backend</h2>
+      <p id="authDesc">Use backend operator auth to open the admin plane here. For day-to-day work and the best vibe-coding surface, go to LogicOS at os.publiclogic.org.</p>
       <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
         <a href="/api/auth/github/login" style="display:inline-flex;align-items:center;gap:8px;background:#24292e;color:#fff;padding:12px 24px;border-radius:var(--radius);font-size:1rem;font-weight:500;text-decoration:none;font-family:var(--font);transition:all 0.2s;">
           <svg width="20" height="20" viewBox="0 0 16 16" fill="white" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>

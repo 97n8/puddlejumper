@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicOS — Quick Start &amp; Systems Map</title>
+  <title>LogicOS — Quick Start, Systems Map &amp; Vibe Coding</title>
 <link rel="stylesheet" href="/styles/pj-guide.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
 <div class="header">
   <div class="header-title">
     <h1>LogicOS</h1>
-    <span class="subtitle">Quick Start &amp; Systems Map</span>
+    <span class="subtitle">Quick Start, Systems Map &amp; Vibe Coding</span>
   </div>
   <div class="nav-links">
     <a href="https://os.publiclogic.org">LogicOS</a>
@@ -40,8 +40,8 @@
     <p>Open <strong>LogicPen</strong> to write and print governed documents. Use built-in templates or your LogicCommons templates. Save to Vault.</p>
   </div>
   <div class="qs-card">
-    <h4><span class="qs-num">4</span> Build Connectors</h4>
-    <p>Open <strong>LogicBackend</strong> to register API connectors (LOGICBRIDGE) and test live API calls in the API Explorer.</p>
+    <h4><span class="qs-num">4</span> Vibe Code Connectors</h4>
+    <p>Open <strong>LogicBackend</strong> in LogicOS. This is the fastest place to vibe code integrations using the existing LOGICBRIDGE registry and API Explorer, with PuddleJumper handling runtime execution behind the scenes.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">5</span> Govern Intake</h4>
@@ -66,6 +66,9 @@ export AUTH_AUDIENCE=puddle-jumper-api
 # Start
 npx tsx src/api/server.ts
 # → http://localhost:3002/v1/health</code></pre>
+
+<h3>Best place to vibe code</h3>
+<p>If you want the smoothest coding loop, start in <strong>LogicBackend</strong> inside <a href="https://os.publiclogic.org">LogicOS</a>. Use the existing connector builder and API Explorer there, then use <strong>PuddleJumper</strong> for backend auth, runtime routing, health, and operator visibility. In short: <strong>build in LogicOS, run on PJ, observe in PJ admin</strong>.</p>
 
 <h3>Deploy to Fly.io</h3>
 <pre><code># From monorepo root (/n8drive)

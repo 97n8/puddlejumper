@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#062017" />
-    <title>PublicLogic Portal — Sign In</title>
+    <title>PuddleJumper Backend — Sign In</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -33,15 +33,15 @@
 
     <div class="wrap">
       <main class="shell">
-        <section class="hero" aria-label="PublicLogic overview">
+        <section class="hero" aria-label="PuddleJumper backend overview">
           <div class="hero__top">
             <div class="mark" aria-hidden="true">PL</div>
             <div>
-              <h1 class="brandname">PublicLogic</h1>
-              <p class="tagline">Smarter systems. Stronger futures.</p>
-              <div class="badge" aria-label="Portal sign in">
+              <h1 class="brandname">PuddleJumper Backend</h1>
+              <p class="tagline">Backend runtime, operator admin, and service diagnostics for PublicLogic.</p>
+              <div class="badge" aria-label="Backend sign in">
                 <span aria-hidden="true">●</span>
-                Portal sign in
+                Backend sign in
               </div>
             </div>
           </div>
@@ -135,7 +135,7 @@
             </div>
           </div>
 
-          <div class="features" aria-label="Product pillars">
+          <div class="features" aria-label="Routing guidance">
             <article class="feature">
               <div class="feature__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -150,8 +150,8 @@
                   <path d="M14.5 12a2.5 2.5 0 1 1-5 0a2.5 2.5 0 0 1 5 0Z" />
                 </svg>
               </div>
-              <h3 class="feature__title">Integrate</h3>
-              <p class="feature__text">Connect data and processes with precision.</p>
+              <h3 class="feature__title">Use LogicOS</h3>
+              <p class="feature__text">For normal user work, cases, workflows, and daily operations, start at os.publiclogic.org.</p>
             </article>
 
             <article class="feature">
@@ -166,8 +166,8 @@
                   <path d="M7 8V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3" />
                 </svg>
               </div>
-              <h3 class="feature__title">Govern</h3>
-              <p class="feature__text">Make accountable decisions with authority.</p>
+              <h3 class="feature__title">Use PJ for backend ops</h3>
+              <p class="feature__text">This host is for backend admin, API operators, routing, and service troubleshooting.</p>
             </article>
 
             <article class="feature">
@@ -178,18 +178,37 @@
                   <path d="M2 12a10 10 0 0 0 20 0" />
                 </svg>
               </div>
-              <h3 class="feature__title">Sustain</h3>
-              <p class="feature__text">Manage finite resources for endurance.</p>
+              <h3 class="feature__title">Keep the front door clean</h3>
+              <p class="feature__text">Old bookmarks still work here, but the primary front-end entry point is LogicOS.</p>
             </article>
           </div>
 
-          <div class="bottomline">Governance on the move.</div>
+          <div class="bottomline">LogicOS is the front end. PuddleJumper runs behind it.</div>
         </section>
 
-        <section class="card" aria-label="Sign in form">
+        <section class="card" aria-label="Backend sign in form">
           <div class="card__inner">
-            <h2>Sign in</h2>
-            <p class="sub">Use your municipal email + password, or continue with SSO.</p>
+            <h2>Choose your destination</h2>
+            <p class="sub">Most people should open LogicOS. Only sign in here if you are accessing the PuddleJumper backend or admin surface directly.</p>
+
+            <div class="success" data-show="1" role="note" aria-live="polite">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 12l3 3 5-5" />
+              </svg>
+              <div>
+                <strong>Front-end users:</strong> go to
+                <a class="link" href="https://os.publiclogic.org">os.publiclogic.org</a>.
+              </div>
+            </div>
+
+            <div class="row" style="margin: 16px 0 18px;">
+              <a class="btn" href="https://os.publiclogic.org" style="text-decoration:none;text-align:center;flex:1;">Open LogicOS</a>
+              <a class="link" href="/pj/admin" aria-label="Go straight to PuddleJumper admin">Backend admin</a>
+            </div>
+
+            <h3 style="margin: 18px 0 8px; font-size: 16px;">Backend operator sign in</h3>
+            <p class="sub" style="margin-top: 0;">Use your backend account, or continue with SSO, to access PuddleJumper admin on this host.</p>
 
             <div class="error" id="formError" role="alert" aria-live="polite">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -205,7 +224,7 @@
                 <circle cx="12" cy="12" r="10" />
                 <path d="M8 12l3 3 5-5" />
               </svg>
-              <div id="successText">Signed in — redirecting to dashboard…</div>
+              <div id="successText">Signed in — redirecting to backend admin…</div>
             </div>
 
             <form id="loginForm" novalidate>
@@ -269,11 +288,11 @@
                   <input type="checkbox" name="remember" />
                   Remember me
                 </label>
-                <a class="link" href="/pj" aria-label="Back to PuddleJumper home">Back to Home</a>
+                <a class="link" href="/pj" aria-label="Back to PuddleJumper home">Back to backend home</a>
               </div>
 
               <button class="btn" id="signinBtn" type="submit" aria-busy="false">
-                Sign in
+                Sign in to backend
               </button>
 
               <div class="divider" aria-hidden="true">or continue with</div>
@@ -308,7 +327,7 @@
               </div>
 
               <div class="foot">
-                Already signed in? <a class="link" href="/pj/admin">Go to Dashboard →</a>
+                Already signed in? <a class="link" href="/pj/admin">Go to Backend Admin →</a>
               </div>
             </form>
           </div>
