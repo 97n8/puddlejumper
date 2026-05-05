@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 680 640" role="img">
+<title>L4 — Connector / OAuth path · v2</title>
+<desc>OAuth handshake and connector usage. User clicks connect in LogicOS, redirects to external provider OAuth for consent, provider returns code to PJ API callback, code is exchanged for token, token sealed in operational stores, connector uses token to make authenticated provider API calls. ext markers external dependencies. sealed marks the token at rest. See _glossary.md.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<style>
+text { font-family: system-ui, -apple-system, sans-serif; }
+.title { font-size: 18px; font-weight: 500; fill: #2C2C2A; }
+.subtitle { font-size: 12px; fill: #5F5E5A; }
+.banner { font-size: 11px; fill: #5F5E5A; font-weight: 500; }
+.th { font-size: 14px; font-weight: 500; fill: #2C2C2A; }
+.ts { font-size: 12px; fill: #5F5E5A; }
+.arr-w { stroke: #444441; stroke-width: 2; fill: none; stroke-linecap: round; }
+.gray   > rect { fill: #F1EFE8; stroke: #5F5E5A; stroke-width: 0.5; }
+.gray   .th { fill: #2C2C2A; } .gray .ts { fill: #5F5E5A; }
+.coral  > rect { fill: #FAECE7; stroke: #993C1D; stroke-width: 0.5; }
+.coral  .th { fill: #712B13; } .coral .ts { fill: #993C1D; }
+.teal   > rect { fill: #E1F5EE; stroke: #0F6E56; stroke-width: 0.5; }
+.teal   .th { fill: #085041; } .teal .ts { fill: #0F6E56; }
+.purple > rect { fill: #EEEDFE; stroke: #534AB7; stroke-width: 0.5; }
+.purple .th { fill: #3C3489; } .purple .ts { fill: #534AB7; }
+.badge > rect { fill: #FFFFFF; stroke: #888780; stroke-width: 0.5; }
+.badge text { font-size: 11px; fill: #444441; font-weight: 500; }
+@media (prefers-color-scheme: dark) {
+  .title { fill: #F1EFE8; }
+  .subtitle { fill: #B4B2A9; }
+  .banner { fill: #B4B2A9; }
+  .th { fill: #F1EFE8; } .ts { fill: #B4B2A9; }
+  .arr-w { stroke: #D3D1C7; }
+  .gray   > rect { fill: #2C2C2A; stroke: #B4B2A9; }
+  .gray   .th { fill: #F1EFE8; } .gray .ts { fill: #D3D1C7; }
+  .coral  > rect { fill: #712B13; stroke: #F0997B; }
+  .coral  .th { fill: #FAECE7; } .coral .ts { fill: #F5C4B3; }
+  .teal   > rect { fill: #085041; stroke: #5DCAA5; }
+  .teal   .th { fill: #E1F5EE; } .teal .ts { fill: #9FE1CB; }
+  .purple > rect { fill: #3C3489; stroke: #AFA9EC; }
+  .purple .th { fill: #EEEDFE; } .purple .ts { fill: #CECBF6; }
+  .badge > rect { fill: #2C2C2A; stroke: #B4B2A9; }
+  .badge text { fill: #D3D1C7; }
+}
+</style>
+</defs>
+
+<text class="title" x="40" y="30">L4 — Connector / OAuth path</text>
+<text class="subtitle" x="40" y="50">Provider handshake · token persisted · authenticated call</text>
+<text class="banner" x="640" y="30" text-anchor="end">v2 · 2026-05-05</text>
+
+<g class="gray">
+<rect x="240" y="80" width="200" height="56" rx="8"/>
+<text class="th" x="340" y="98" text-anchor="middle" dominant-baseline="central">User access</text>
+<text class="ts" x="340" y="116" text-anchor="middle" dominant-baseline="central">Initiates connect</text>
+</g>
+<line x1="340" y1="136" x2="340" y2="152" class="arr-w" marker-end="url(#arrow)"/>
+
+<g class="coral">
+<rect x="240" y="152" width="200" height="56" rx="8"/>
+<text class="th" x="340" y="170" text-anchor="middle" dominant-baseline="central">LogicOS</text>
+<text class="ts" x="340" y="188" text-anchor="middle" dominant-baseline="central">Redirect to provider</text>
+</g>
+<line x1="340" y1="208" x2="340" y2="224" class="arr-w" marker-end="url(#arrow)"/>
+
+<g class="gray">
+<rect x="240" y="224" width="200" height="56" rx="8"/>
+<text class="th" x="340" y="242" text-anchor="middle" dominant-baseline="central">Provider OAuth</text>
+<text class="ts" x="340" y="260" text-anchor="middle" dominant-baseline="central">Consent screen</text>
+</g>
+<g class="badge"><rect x="450" y="245" width="36" height="14" rx="7"/>
+<text x="468" y="254" text-anchor="middle" dominant-baseline="central">ext</text></g>
+<line x1="340" y1="280" x2="340" y2="296" class="arr-w" marker-end="url(#arrow)"/>
+
+<g class="teal">
+<rect x="240" y="296" width="200" height="56" rx="8"/>
+<text class="th" x="340" y="314" text-anchor="middle" dominant-baseline="central">PJ API callback</text>
+<text class="ts" x="340" y="332" text-anchor="middle" dominant-baseline="central">Receive code · exchange</text>
+</g>
+<line x1="340" y1="352" x2="340" y2="368" class="arr-w" marker-end="url(#arrow)"/>
+
+<g class="purple">
+<rect x="240" y="368" width="200" height="56" rx="8"/>
+<text class="th" x="340" y="386" text-anchor="middle" dominant-baseline="central">Operational stores</text>
+<text class="ts" x="340" y="404" text-anchor="middle" dominant-baseline="central">Token row · encrypted at rest</text>
+</g>
+<line x1="340" y1="424" x2="340" y2="440" class="arr-w" marker-end="url(#arrow)"/>
+
+<g class="teal">
+<rect x="240" y="440" width="200" height="56" rx="8"/>
+<text class="th" x="340" y="458" text-anchor="middle" dominant-baseline="central">Connectors</text>
+<text class="ts" x="340" y="476" text-anchor="middle" dominant-baseline="central">Use token</text>
+</g>
+<line x1="340" y1="496" x2="340" y2="512" class="arr-w" marker-end="url(#arrow)"/>
+
+<g class="gray">
+<rect x="240" y="512" width="200" height="56" rx="8"/>
+<text class="th" x="340" y="530" text-anchor="middle" dominant-baseline="central">Provider API call</text>
+<text class="ts" x="340" y="548" text-anchor="middle" dominant-baseline="central">Authenticated request</text>
+</g>
+<g class="badge"><rect x="450" y="533" width="36" height="14" rx="7"/>
+<text x="468" y="542" text-anchor="middle" dominant-baseline="central">ext</text></g>
+<g transform="translate(380, 590)">
+<rect x="0" y="0" width="260" height="40" rx="6" fill="none" stroke="#888780" stroke-width="0.5"/>
+<text class="banner" x="8" y="14">Legend</text>
+<line x1="8" y1="26" x2="38" y2="26" class="arr-w"/>
+<text class="banner" x="44" y="29">step</text>
+<g class="badge"><rect x="92" y="20" width="36" height="14" rx="7"/><text x="110" y="29" text-anchor="middle" dominant-baseline="central">ext</text></g>
+<text class="banner" x="138" y="29">external dependency</text>
+</g>
+</svg>

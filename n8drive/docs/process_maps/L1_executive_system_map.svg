@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 680 540" role="img">
+<title>L1 — Executive system map · v2</title>
+<desc>Seven-layer overview of the PublicLogic system: Access, Experience, Control plane, Execution transit, Execution work, State, Evidence. Read top-to-bottom from user-facing to durable evidence. See _glossary.md for token definitions.</desc>
+<defs>
+<style>
+text { font-family: system-ui, -apple-system, sans-serif; }
+.title { font-size: 18px; font-weight: 500; fill: #2C2C2A; }
+.subtitle { font-size: 12px; fill: #5F5E5A; }
+.banner { font-size: 11px; fill: #5F5E5A; font-weight: 500; }
+.th { font-size: 14px; font-weight: 500; fill: #2C2C2A; }
+.lbl { font-size: 11px; font-weight: 500; fill: #5F5E5A; letter-spacing: 0.04em; }
+.gray   > rect { fill: #F1EFE8; stroke: #5F5E5A; stroke-width: 0.5; }
+.gray   .th { fill: #2C2C2A; }
+.coral  > rect { fill: #FAECE7; stroke: #993C1D; stroke-width: 0.5; }
+.coral  .th { fill: #712B13; }
+.teal   > rect { fill: #E1F5EE; stroke: #0F6E56; stroke-width: 0.5; }
+.teal   .th { fill: #085041; }
+.purple > rect { fill: #EEEDFE; stroke: #534AB7; stroke-width: 0.5; }
+.purple .th { fill: #3C3489; }
+@media (prefers-color-scheme: dark) {
+  .title { fill: #F1EFE8; }
+  .subtitle, .banner { fill: #B4B2A9; }
+  .th { fill: #F1EFE8; }
+  .lbl { fill: #B4B2A9; }
+  .gray   > rect { fill: #2C2C2A; stroke: #B4B2A9; }
+  .gray   .th { fill: #F1EFE8; }
+  .coral  > rect { fill: #712B13; stroke: #F0997B; }
+  .coral  .th { fill: #FAECE7; }
+  .teal   > rect { fill: #085041; stroke: #5DCAA5; }
+  .teal   .th { fill: #E1F5EE; }
+  .purple > rect { fill: #3C3489; stroke: #AFA9EC; }
+  .purple .th { fill: #EEEDFE; }
+}
+</style>
+</defs>
+
+<text class="title" x="40" y="34">L1 — Executive system map</text>
+<text class="subtitle" x="40" y="54">Seven-layer overview · read top-down</text>
+<text class="banner" x="640" y="34" text-anchor="end">v2 · 2026-05-05</text>
+
+<text class="lbl" x="20" y="110">Access</text>
+<g class="gray">
+<rect x="80" y="84" width="560" height="44" rx="8"/>
+<text class="th" x="360" y="106" text-anchor="middle" dominant-baseline="central">User access · Operator · External systems</text>
+</g>
+
+<text class="lbl" x="20" y="170">Experience</text>
+<g class="coral">
+<rect x="80" y="144" width="560" height="44" rx="8"/>
+<text class="th" x="360" y="166" text-anchor="middle" dominant-baseline="central">LogicOS</text>
+</g>
+
+<text class="lbl" x="20" y="230">Control plane</text>
+<g class="teal">
+<rect x="80" y="204" width="560" height="44" rx="8"/>
+<text class="th" x="360" y="226" text-anchor="middle" dominant-baseline="central">PuddleJumper API · Org Manager</text>
+</g>
+
+<text class="lbl" x="20" y="290">Execution · transit</text>
+<g class="teal">
+<rect x="80" y="264" width="560" height="44" rx="8"/>
+<text class="th" x="360" y="286" text-anchor="middle" dominant-baseline="central">Auth · session · Routes · Connectors</text>
+</g>
+
+<text class="lbl" x="20" y="350">Execution · work</text>
+<g class="teal">
+<rect x="80" y="324" width="560" height="44" rx="8"/>
+<text class="th" x="360" y="346" text-anchor="middle" dominant-baseline="central">Governance engine · Feature modules</text>
+</g>
+
+<text class="lbl" x="20" y="410">State</text>
+<g class="purple">
+<rect x="80" y="384" width="560" height="44" rx="8"/>
+<text class="th" x="360" y="406" text-anchor="middle" dominant-baseline="central">Operational stores</text>
+</g>
+
+<text class="lbl" x="20" y="470">Evidence</text>
+<g class="purple">
+<rect x="80" y="444" width="560" height="44" rx="8"/>
+<text class="th" x="360" y="466" text-anchor="middle" dominant-baseline="central">audit_events · ARCHIEVE · SEAL</text>
+</g>
+</svg>
