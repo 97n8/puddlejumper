@@ -1,6 +1,22 @@
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? 'dev-secret');
+function resolveJwtSecret(): Uint8Array {
+  const raw = process.env.JWT_SECRET;
+  if (!raw || raw.length < 16) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        '[core/jwt] JWT_SECRET must be set to a value of at least 16 chars in production'
+      );
+    }
+    // Dev/test only: warn loudly so this never silently leaks into staging.
+    // eslint-disable-next-line no-console
+    console.warn('[core/jwt] JWT_SECRET unset or too short — using dev fallback (NOT FOR PRODUCTION)');
+    return new TextEncoder().encode(raw && raw.length > 0 ? raw : 'dev-secret-do-not-use-in-prod');
+  }
+  return new TextEncoder().encode(raw);
+}
+
+const SECRET = resolveJwtSecret();
 
 export async function signJwt(payload: Record<string, any>, opts?: { expiresIn?: number | string }) {
   const builder = new SignJWT(payload).setProtectedHeader({ alg: 'HS256', typ: 'JWT' }).setIssuedAt();

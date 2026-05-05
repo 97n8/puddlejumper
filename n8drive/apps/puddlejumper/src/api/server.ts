@@ -690,9 +690,11 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   });
   // Normalize auth context: copy tenantId → workspaceId so all route handlers
   // can use auth.workspaceId regardless of which JWT claim carries it.
-  app.use("/api", (req: any, _res, next) => {
-    if (req.auth && !req.auth.workspaceId && req.auth.tenantId) {
-      req.auth.workspaceId = req.auth.tenantId;
+  type AuthClaims = { workspaceId?: string; tenantId?: string } & Record<string, unknown>;
+  app.use("/api", (req, _res, next) => {
+    const r = req as express.Request & { auth?: AuthClaims };
+    if (r.auth && !r.auth.workspaceId && r.auth.tenantId) {
+      r.auth.workspaceId = r.auth.tenantId;
     }
     next();
   });
@@ -793,10 +795,14 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   // Session lifecycle routes (refresh, /auth/logout, /auth/revoke, /auth/status,
   // /session, /admin/audit) — provided by logic-commons
   app.use("/api", createSessionRoutes({ nodeEnv }));
-  // Rate-limit OAuth login redirects (10 req/min per IP)
+  // Rate-limit OAuth login redirects AND callbacks (10 req/min per IP).
+  // Callbacks accept attacker-controllable state/code params, so they need limiting too.
   app.use("/api/auth/github/login", loginRateLimit);
   app.use("/api/auth/google/login", loginRateLimit);
   app.use("/api/auth/microsoft/login", loginRateLimit);
+  app.use("/api/auth/github/callback", loginRateLimit);
+  app.use("/api/auth/google/callback", loginRateLimit);
+  app.use("/api/auth/microsoft/callback", loginRateLimit);
   // Mount generic OAuth routes for all three providers (via logic-commons factory)
   const onUserAuthenticated = (userInfo: UserInfo): UserInfo => {
     // ── Access allowlist ──────────────────────────────────────────────────────

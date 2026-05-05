@@ -13,15 +13,45 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Environment configuration
+// ── Environment configuration ────────────────────────────────────────────────
 const PORT = parseInt(process.env.VAULT_PORT ?? "3003", 10);
 const NODE_ENV = process.env.NODE_ENV ?? "development";
+const IS_PROD = NODE_ENV === "production";
 const DATA_DIR = process.env.VAULT_DATA_DIR ?? path.join(__dirname, "../data");
 const DB_DIR = process.env.VAULT_DB_DIR ?? path.join(__dirname, "../data/db");
+const LOG_REQUESTS = (process.env.VAULT_LOG_REQUESTS ?? (IS_PROD ? "false" : "true")).toLowerCase() === "true";
 
-console.log(`[Vault] Starting in ${NODE_ENV} mode`);
-console.log(`[Vault] Data directory: ${DATA_DIR}`);
-console.log(`[Vault] Database directory: ${DB_DIR}`);
+// ── CORS allowlist (validated at startup) ────────────────────────────────────
+const DEFAULT_DEV_ORIGINS = ["http://localhost:3000", "http://localhost:3002"];
+const allowedOrigins = (() => {
+  const fromEnv = (process.env.VAULT_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  if (fromEnv.length > 0) return fromEnv;
+  if (IS_PROD) {
+    throw new Error(
+      "[Vault] VAULT_ALLOWED_ORIGINS must be set in production (comma-separated origins)"
+    );
+  }
+  return DEFAULT_DEV_ORIGINS;
+})();
+
+// ── Structured logger ────────────────────────────────────────────────────────
+type LogLevel = "info" | "warn" | "error";
+function log(level: LogLevel, msg: string, extra?: Record<string, unknown>): void {
+  const entry = { level, scope: "vault", time: new Date().toISOString(), msg, ...extra };
+  const line = JSON.stringify(entry);
+  if (level === "error") {
+    // eslint-disable-next-line no-console
+    console.error(line);
+  } else {
+    // eslint-disable-next-line no-console
+    console.log(line);
+  }
+}
+
+log("info", "starting", { nodeEnv: NODE_ENV, port: PORT });
 
 // Initialize storage, audit ledger, and manifest registry
 const storage = new FileSystemVaultStorage(DATA_DIR);
@@ -33,9 +63,11 @@ const manifestRegistry = new ManifestRegistry(path.join(DB_DIR, "manifests.db"))
 // Initialize PolicyProvider
 const policyProvider = new VaultPolicyProvider(storage, auditLedger, manifestRegistry);
 
-console.log(`[Vault] Storage initialized with ${(await storage.listProcesses({})).length} processes`);
-console.log(`[Vault] Audit ledger ready`);
-console.log(`[Vault] Manifest registry ready`);
+log("info", "subsystems_ready", {
+  processes: (await storage.listProcesses({})).length,
+  auditLedger: true,
+  manifestRegistry: true,
+});
 
 // Create Express app
 const app = express();
@@ -46,14 +78,10 @@ app.use(cookieParser());
 
 // CORS (allow requests from PuddleJumper)
 app.use((req, res, next) => {
-  const allowedOrigins = [
-    "http://localhost:3000",
-    "http://localhost:3002",
-    "https://pj.publiclogic.org",
-  ];
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -65,11 +93,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Request logging
-app.use((req, _res, next) => {
-  console.log(`[Vault] ${req.method} ${req.path}`);
-  next();
-});
+// Request logging — opt-in (off by default in production)
+if (LOG_REQUESTS) {
+  app.use((req, _res, next) => {
+    log("info", "request", { method: req.method, path: req.path });
+    next();
+  });
+}
 
 // Health check (no auth)
 app.get("/health", (_req, res) => {
@@ -79,7 +109,7 @@ app.get("/health", (_req, res) => {
     nodeEnv: NODE_ENV,
     now: new Date().toISOString(),
     stats: {
-      processes: storage.getManifest().then(m => m.processes.length).catch(() => 0),
+      processes: storage.getManifest().then((m) => m.processes.length).catch(() => 0),
       auditEvents: auditLedger.count({}),
       manifests: manifestRegistry.list({ limit: 1 }).length,
     },
@@ -103,15 +133,15 @@ app.get("/api/v1/vault/formkey/:key", authMiddleware, async (req, res) => {
   try {
     const { key } = req.params;
     const pkg = await storage.getProcessByFormKey(key);
-    
+
     if (!pkg) {
       res.status(404).json({ error: "Process not found for FormKey", formKey: key });
       return;
     }
-    
+
     res.json(pkg);
   } catch (err) {
-    console.error("[Vault] Error retrieving FormKey:", err);
+    log("error", "formkey_lookup_failed", { detail: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -127,11 +157,11 @@ app.get("/api/v1/vault/processes", authMiddleware, async (req, res) => {
       jurisdiction: req.query.jurisdiction as string | undefined,
       tenantScope: req.query.tenantScope as string | undefined,
     };
-    
+
     const processes = await storage.listProcesses(filters);
     res.json({ processes, count: processes.length });
   } catch (err) {
-    console.error("[Vault] Error listing processes:", err);
+    log("error", "list_processes_failed", { detail: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -144,17 +174,17 @@ app.get("/api/v1/vault/processes/:id", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const version = req.query.version as string | undefined;
-    
+
     const pkg = await storage.getProcess(id, version);
-    
+
     if (!pkg) {
       res.status(404).json({ error: "Process not found", id, version });
       return;
     }
-    
+
     res.json(pkg);
   } catch (err) {
-    console.error("[Vault] Error retrieving process:", err);
+    log("error", "get_process_failed", { detail: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -166,16 +196,16 @@ app.get("/api/v1/vault/processes/:id", authMiddleware, async (req, res) => {
 app.get("/api/v1/vault/search", authMiddleware, async (req, res) => {
   try {
     const query = req.query.q as string;
-    
+
     if (!query || query.trim().length === 0) {
       res.status(400).json({ error: "Query parameter 'q' required" });
       return;
     }
-    
+
     const results = await storage.searchProcesses(query.trim());
     res.json({ results, count: results.length, query });
   } catch (err) {
-    console.error("[Vault] Error searching processes:", err);
+    log("error", "search_failed", { detail: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -189,7 +219,7 @@ app.get("/api/v1/vault/manifest", authMiddleware, async (_req, res) => {
     const manifest = await storage.getManifest();
     res.json(manifest);
   } catch (err) {
-    console.error("[Vault] Error retrieving manifest:", err);
+    log("error", "manifest_failed", { detail: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -198,52 +228,45 @@ app.get("/api/v1/vault/manifest", authMiddleware, async (_req, res) => {
 
 /**
  * POST /api/v1/vault/check-authorization
- * Check if operator is authorized for action.
  */
 app.post("/api/v1/vault/check-authorization", authMiddleware, async (req, res) => {
   try {
-    const query = req.body;
-    const result = await policyProvider.checkAuthorization(query);
+    const result = await policyProvider.checkAuthorization(req.body);
     res.json(result);
   } catch (err) {
-    console.error("[Vault] Error checking authorization:", err);
+    log("error", "check_authorization_failed", { detail: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 /**
  * POST /api/v1/vault/chain-template
- * Get approval chain template for process/action.
  */
 app.post("/api/v1/vault/chain-template", authMiddleware, async (req, res) => {
   try {
-    const query = req.body;
-    const result = await policyProvider.getChainTemplate(query);
+    const result = await policyProvider.getChainTemplate(req.body);
     res.json(result);
   } catch (err) {
-    console.error("[Vault] Error fetching chain template:", err);
+    log("error", "chain_template_failed", { detail: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 /**
  * POST /api/v1/vault/audit
- * Write audit event (idempotent by eventId).
  */
 app.post("/api/v1/vault/audit", authMiddleware, async (req, res) => {
   try {
-    const event = req.body;
-    await policyProvider.writeAuditEvent(event);
+    await policyProvider.writeAuditEvent(req.body);
     res.json({ success: true });
   } catch (err) {
-    console.error("[Vault] Error writing audit event:", err);
+    log("error", "audit_write_failed", { detail: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 /**
  * GET /api/v1/vault/audit
- * Read audit events (paginated).
  */
 app.get("/api/v1/vault/audit", authMiddleware, async (req, res) => {
   try {
@@ -255,89 +278,78 @@ app.get("/api/v1/vault/audit", authMiddleware, async (req, res) => {
       startDate: req.query.startDate as string | undefined,
       endDate: req.query.endDate as string | undefined,
     };
-    
+
     const events = auditLedger.read(options);
     const total = auditLedger.count({
       workspaceId: options.workspaceId,
       eventType: options.eventType,
     });
-    
+
     res.json({ events, total, limit: options.limit, offset: options.offset });
   } catch (err) {
-    console.error("[Vault] Error reading audit events:", err);
+    log("error", "audit_read_failed", { detail: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 /**
  * POST /api/v1/vault/manifests/register
- * Register manifest (preflight validation).
  */
 app.post("/api/v1/vault/manifests/register", authMiddleware, async (req, res) => {
   try {
-    const input = req.body;
-    const result = await policyProvider.registerManifest(input);
-    
+    const result = await policyProvider.registerManifest(req.body);
     if (!result.accepted) {
       res.status(409).json(result);
       return;
     }
-    
     res.json(result);
   } catch (err) {
-    console.error("[Vault] Error registering manifest:", err);
+    log("error", "manifest_register_failed", { detail: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 /**
  * POST /api/v1/vault/authorize-release
- * Authorize release (post-approval gate).
  */
 app.post("/api/v1/vault/authorize-release", authMiddleware, async (req, res) => {
   try {
-    const query = req.body;
-    const result = await policyProvider.authorizeRelease(query);
-    
+    const result = await policyProvider.authorizeRelease(req.body);
     if (!result.authorized) {
       res.status(403).json(result);
       return;
     }
-    
     res.json(result);
   } catch (err) {
-    console.error("[Vault] Error authorizing release:", err);
+    log("error", "authorize_release_failed", { detail: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 /**
  * POST /api/v1/vault/classify-drift
- * Classify drift between approved and deployed artifacts.
  */
 app.post("/api/v1/vault/classify-drift", authMiddleware, async (req, res) => {
   try {
-    const query = req.body;
-    const result = await policyProvider.classifyDrift(query);
+    const result = await policyProvider.classifyDrift(req.body);
     res.json(result);
   } catch (err) {
-    console.error("[Vault] Error classifying drift:", err);
+    log("error", "classify_drift_failed", { detail: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // ── Error Handler ───────────────────────────────────────────────────────────
 
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error("[Vault] Unhandled error:", err);
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  log("error", "unhandled", { detail: err.message, stack: err.stack });
   res.status(500).json({ error: "Internal server error" });
 });
 
 // ── Start Server ────────────────────────────────────────────────────────────
 
-const HOST = NODE_ENV === "production" ? "0.0.0.0" : "localhost";
+const HOST = IS_PROD ? "0.0.0.0" : "localhost";
 
 app.listen(PORT, HOST, () => {
-  console.log(`[Vault] HTTP server listening on ${HOST}:${PORT}`);
-  console.log(`[Vault] Health check: http://${HOST}:${PORT}/health`);
+  log("info", "listening", { host: HOST, port: PORT });
 });

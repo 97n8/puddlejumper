@@ -55,13 +55,24 @@ export function createRateLimit(options: RateLimitOptions): RequestHandler {
     return { count: nextCount, resetAt: row.reset_at };
   });
 
+  // Use a monotonic anchor to compute "now in ms" so wall-clock jumps (NTP skew,
+  // VM resume) don't accidentally reset all live windows. The persisted reset_at
+  // values still live on the wall clock for cross-process consistency, but the
+  // *delta* used to compare windows is monotonic.
+  const monoOriginNs = process.hrtime.bigint();
+  const wallOriginMs = Date.now();
+  const monoNow = (): number => {
+    const elapsedNs = process.hrtime.bigint() - monoOriginNs;
+    return wallOriginMs + Number(elapsedNs / 1_000_000n);
+  };
+
   const interval = setInterval(() => {
-    pruneBuckets.run(Date.now() - ttlMs);
+    pruneBuckets.run(monoNow() - ttlMs);
   }, 60_000);
   interval.unref?.();
 
   return (req, res, next) => {
-    const now = Date.now();
+    const now = monoNow();
     const key = keyGenerator(req);
     const activeBucket = applyRateLimit(key, now);
     const remaining = Math.max(0, max - activeBucket.count);

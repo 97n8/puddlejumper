@@ -1,94 +1,104 @@
 /**
- * Lightweight JWT middleware for Vault (no dependencies on @publiclogic/core)
+ * JWT middleware for Vault. Uses `jose` for safe verification (matches @publiclogic/core).
+ *
+ * Hardened in this revision:
+ *   - Fails fast at module load if JWT_SECRET is missing/weak in production.
+ *   - Verifies signature, issuer, audience, and expiry with jose (no hand-rolled crypto).
+ *   - Validates the payload shape with zod before exposing it on req.auth.
  */
-import type { RequestHandler } from "express";
-import crypto from "node:crypto";
+import type { Request, RequestHandler } from "express";
+import { jwtVerify, type JWTPayload } from "jose";
+import { z } from "zod";
 
-const JWT_SECRET = process.env.JWT_SECRET || "";
+function resolveSecret(): Uint8Array {
+  const raw = process.env.JWT_SECRET;
+  if (!raw || raw.length < 16) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "[vault/jwtAuth] JWT_SECRET must be set to a value of at least 16 chars in production"
+      );
+    }
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[vault/jwtAuth] JWT_SECRET unset or too short — using dev fallback (NOT FOR PRODUCTION)"
+    );
+    return new TextEncoder().encode(
+      raw && raw.length > 0 ? raw : "dev-secret-do-not-use-in-prod"
+    );
+  }
+  return new TextEncoder().encode(raw);
+}
+
+const SECRET = resolveSecret();
 const AUTH_ISSUER = process.env.AUTH_ISSUER || "puddle-jumper";
 const AUTH_AUDIENCE = process.env.AUTH_AUDIENCE || "puddle-jumper-api";
 
-interface JwtPayload {
-  sub: string;
-  iss: string;
-  aud: string;
-  exp: number;
-  iat: number;
-  workspaceId?: string;
-  tenantId?: string;
+const VaultPayloadSchema = z
+  .object({
+    sub: z.string().min(1),
+    iss: z.string().min(1),
+    aud: z.union([z.string(), z.array(z.string())]),
+    exp: z.number().int().positive().optional(),
+    iat: z.number().int().nonnegative().optional(),
+    workspaceId: z.string().optional(),
+    tenantId: z.string().optional(),
+  })
+  .passthrough();
+
+export type VaultJwtPayload = z.infer<typeof VaultPayloadSchema>;
+
+interface AuthedRequest extends Request {
+  auth?: VaultJwtPayload;
 }
 
-function base64UrlDecode(str: string): string {
-  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
-  return Buffer.from(base64, "base64").toString("utf8");
-}
-
-function verifySignature(header: string, payload: string, signature: string): boolean {
-  const data = `${header}.${payload}`;
-  const expectedSignature = crypto
-    .createHmac("sha256", JWT_SECRET)
-    .update(data)
-    .digest("base64url");
-  return signature === expectedSignature;
-}
-
-function verifyJwt(token: string): JwtPayload {
-  const parts = token.split(".");
-  if (parts.length !== 3) {
-    throw new Error("Invalid JWT format");
-  }
-
-  const [headerB64, payloadB64, signatureB64] = parts;
-
-  // Verify signature
-  if (!verifySignature(headerB64, payloadB64, signatureB64)) {
-    throw new Error("Invalid JWT signature");
-  }
-
-  // Parse payload
-  const payload = JSON.parse(base64UrlDecode(payloadB64)) as JwtPayload;
-
-  // Verify claims
-  if (payload.iss !== AUTH_ISSUER) {
-    throw new Error(`Invalid issuer: ${payload.iss}`);
-  }
-  if (payload.aud !== AUTH_AUDIENCE) {
-    throw new Error(`Invalid audience: ${payload.aud}`);
-  }
-  if (payload.exp && payload.exp < Date.now() / 1000) {
-    throw new Error("JWT expired");
-  }
-
-  return payload;
-}
-
-function extractToken(req: any): string | null {
-  // Check cookie first
-  if (req.cookies?.jwt) return req.cookies.jwt as string;
-  
-  // Check Authorization header
+function extractToken(req: AuthedRequest): string | null {
+  // cookie-parser middleware augments the Express Request with a cookies map.
+  const cookies = (req as Request & { cookies?: Record<string, unknown> }).cookies;
+  const jwtCookie = cookies?.jwt;
+  if (typeof jwtCookie === "string") return jwtCookie;
   const authHeader = req.headers?.authorization;
   if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
     return authHeader.slice(7);
   }
-  
   return null;
 }
 
-export function createJwtAuthenticationMiddleware(): RequestHandler {
-  return async (req: any, res, next) => {
-    const token = extractToken(req);
-    if (!token) {
-      return res.status(401).json({ error: "Missing authentication token" });
-    }
+export async function verifyVaultJwt(token: string): Promise<VaultJwtPayload> {
+  const { payload } = await jwtVerify(token, SECRET, {
+    issuer: AUTH_ISSUER,
+    audience: AUTH_AUDIENCE,
+  });
+  const parsed = VaultPayloadSchema.safeParse(payload as JWTPayload);
+  if (!parsed.success) {
+    throw new Error("Invalid JWT payload shape");
+  }
+  return parsed.data;
+}
 
+export function createJwtAuthenticationMiddleware(): RequestHandler {
+  return async (req, res, next) => {
+    const token = extractToken(req as AuthedRequest);
+    if (!token) {
+      res.status(401).json({ error: "Missing authentication token" });
+      return;
+    }
     try {
-      const payload = verifyJwt(token);
-      req.auth = payload;
+      const payload = await verifyVaultJwt(token);
+      (req as AuthedRequest).auth = payload;
       next();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Invalid token";
-      return res.status(401).json({ error: message });
+      // Don't leak which step failed — uniform error message.
+      const detail = err instanceof Error ? err.message : "Invalid token";
+      // eslint-disable-next-line no-console
+      console.error(
+        JSON.stringify({
+          level: "warn",
+          scope: "vault.auth",
+          msg: "jwt_verify_failed",
+          detail,
+        })
+      );
+      res.status(401).json({ error: "Invalid or expired token" });
     }
   };
 }

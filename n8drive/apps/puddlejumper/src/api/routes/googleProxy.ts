@@ -22,6 +22,30 @@ const FORWARDED_RESPONSE_HEADERS = [
   "x-goog-request-id",
 ];
 
+function logProxy(level: "warn" | "error", msg: string, extra: Record<string, unknown> = {}): void {
+  // eslint-disable-next-line no-console
+  (level === "error" ? console.error : console.warn)(
+    JSON.stringify({ level, scope: "google-proxy", time: new Date().toISOString(), msg, ...extra })
+  );
+}
+
+function safeUpstreamPath(rawPath: string): string | null {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(rawPath);
+  } catch {
+    return null;
+  }
+  if (/[\\]/.test(decoded)) return null;
+  const stripped = decoded.replace(/^\/+/, "");
+  const segments = stripped.split("/");
+  for (const seg of segments) {
+    if (seg === "..") return null;
+    if (seg === "." && segments.length > 1) return null;
+  }
+  return stripped;
+}
+
 async function refreshGoogleToken(
   store: ConnectorStore,
   fetchImpl: typeof fetch,
@@ -43,10 +67,16 @@ async function refreshGoogleToken(
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: form.toString(),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      logProxy("warn", "refresh_non_ok", { status: res.status, userId });
+      return null;
+    }
     const payload = await res.json() as Record<string, unknown>;
     const accessToken = typeof payload.access_token === "string" ? payload.access_token : null;
-    if (!accessToken) return null;
+    if (!accessToken) {
+      logProxy("warn", "refresh_no_access_token", { userId });
+      return null;
+    }
     const expiresIn = typeof payload.expires_in === "number" ? payload.expires_in : 3600;
     store.upsertToken({
       provider: "google",
@@ -59,7 +89,8 @@ async function refreshGoogleToken(
       expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
     });
     return accessToken;
-  } catch {
+  } catch (err) {
+    logProxy("error", "refresh_threw", { userId, detail: err instanceof Error ? err.message : String(err) });
     return null;
   }
 }
@@ -78,7 +109,7 @@ export function createGoogleProxyRoutes(opts: GoogleProxyOptions): express.Route
     if (!tenantId) { res.status(400).json({ error: "Tenant scope unavailable" }); return; }
 
     const userId = auth.userId ?? auth.sub;
-    let tokenRecord = opts.store.getToken("google", tenantId, userId);
+    const tokenRecord = opts.store.getToken("google", tenantId, userId);
     if (!tokenRecord) {
       res.status(401).json({ error: "Google not connected", code: "GOOGLE_NOT_CONNECTED" });
       return;
@@ -90,7 +121,12 @@ export function createGoogleProxyRoutes(opts: GoogleProxyOptions): express.Route
       return;
     }
 
-    const upstreamPath = req.path.startsWith("/") ? req.path.slice(1) : req.path;
+    const upstreamPath = safeUpstreamPath(req.path);
+    if (upstreamPath === null) {
+      logProxy("warn", "rejected_path", { userId, path: req.path });
+      res.status(400).json({ error: "Invalid upstream path" });
+      return;
+    }
     const rawQuery = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
 
     // Google multipart/resumable uploads use upload.googleapis.com
@@ -137,6 +173,8 @@ export function createGoogleProxyRoutes(opts: GoogleProxyOptions): express.Route
         );
         if (newToken) {
           upstream = await makeRequest(newToken);
+        } else {
+          logProxy("warn", "auto_refresh_failed", { userId });
         }
       }
 
@@ -149,7 +187,8 @@ export function createGoogleProxyRoutes(opts: GoogleProxyOptions): express.Route
       res.status(upstream.status).send(responseBody);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upstream request failed";
-      res.status(502).json({ error: "Google API request failed", detail: message });
+      logProxy("error", "upstream_threw", { userId, path: req.path, detail: message });
+      res.status(502).json({ error: "Google API request failed" });
     }
   });
 

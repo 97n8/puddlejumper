@@ -15,6 +15,36 @@ type MicrosoftProxyOptions = {
   fetchImpl?: typeof fetch;
 };
 
+function logProxy(level: "warn" | "error", msg: string, extra: Record<string, unknown> = {}): void {
+  // eslint-disable-next-line no-console
+  (level === "error" ? console.error : console.warn)(
+    JSON.stringify({ level, scope: "microsoft-proxy", time: new Date().toISOString(), msg, ...extra })
+  );
+}
+
+/**
+ * Normalize a request path so we never forward `..`, encoded `..`, or backslashes
+ * to the upstream URL. Returns null if the path is invalid.
+ */
+function safeUpstreamPath(rawPath: string): string | null {
+  // Decode once to catch single-encoded traversal; reject anything that decodes more aggressively.
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(rawPath);
+  } catch {
+    return null;
+  }
+  if (/[\\]/.test(decoded)) return null;
+  const stripped = decoded.replace(/^\/+/, "");
+  // Reject any traversal segment after normalization
+  const segments = stripped.split("/");
+  for (const seg of segments) {
+    if (seg === "..") return null;
+    if (seg === "." && segments.length > 1) return null;
+  }
+  return stripped;
+}
+
 async function refreshMicrosoftToken(
   store: ConnectorStore,
   fetchImpl: typeof fetch,
@@ -36,10 +66,16 @@ async function refreshMicrosoftToken(
       `https://login.microsoftonline.com/${encodeURIComponent(tenantSegment)}/oauth2/v2.0/token`,
       { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form.toString() }
     );
-    if (!res.ok) return null;
+    if (!res.ok) {
+      logProxy("warn", "refresh_non_ok", { status: res.status, userId });
+      return null;
+    }
     const payload = await res.json() as Record<string, unknown>;
     const accessToken = typeof payload.access_token === "string" ? payload.access_token : null;
-    if (!accessToken) return null;
+    if (!accessToken) {
+      logProxy("warn", "refresh_no_access_token", { userId });
+      return null;
+    }
     const expiresIn = typeof payload.expires_in === "number" ? payload.expires_in : 3600;
     const newRefreshToken = typeof payload.refresh_token === "string" ? payload.refresh_token : refreshToken;
     store.upsertToken({
@@ -49,7 +85,8 @@ async function refreshMicrosoftToken(
       expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
     });
     return accessToken;
-  } catch {
+  } catch (err) {
+    logProxy("error", "refresh_threw", { userId, detail: err instanceof Error ? err.message : String(err) });
     return null;
   }
 }
@@ -89,7 +126,12 @@ export function createMicrosoftProxyRoutes(opts: MicrosoftProxyOptions): express
       return;
     }
 
-    const upstreamPath = req.path.startsWith("/") ? req.path.slice(1) : req.path;
+    const upstreamPath = safeUpstreamPath(req.path);
+    if (upstreamPath === null) {
+      logProxy("warn", "rejected_path", { userId, path: req.path });
+      res.status(400).json({ error: "Invalid upstream path" });
+      return;
+    }
     const rawQuery = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
     const upstreamUrl = `https://graph.microsoft.com/v1.0/${upstreamPath}${rawQuery}`;
 
@@ -122,11 +164,12 @@ export function createMicrosoftProxyRoutes(opts: MicrosoftProxyOptions): express
         if (refreshed) {
           activeToken = refreshed;
         } else {
-          res.status(401).json({ error: "Microsoft token empty and refresh failed — please reconnect", code: "MICROSOFT_TOKEN_EMPTY" });
+          // Uniform error: don't differentiate "empty" vs "refresh failed" — both mean reconnect.
+          res.status(401).json({ error: "Microsoft session expired — please reconnect", code: "MICROSOFT_REAUTH_REQUIRED" });
           return;
         }
       } else if (!activeToken) {
-        res.status(401).json({ error: "Microsoft token empty — please reconnect", code: "MICROSOFT_TOKEN_EMPTY" });
+        res.status(401).json({ error: "Microsoft session expired — please reconnect", code: "MICROSOFT_REAUTH_REQUIRED" });
         return;
       }
 
@@ -140,6 +183,8 @@ export function createMicrosoftProxyRoutes(opts: MicrosoftProxyOptions): express
         );
         if (newToken) {
           upstream = await makeRequest(newToken);
+        } else {
+          logProxy("warn", "auto_refresh_failed", { userId });
         }
       }
 
@@ -152,8 +197,8 @@ export function createMicrosoftProxyRoutes(opts: MicrosoftProxyOptions): express
       res.status(upstream.status).send(responseBody);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upstream request failed";
-      console.error(JSON.stringify({ level: "error", scope: "microsoft-proxy", timestamp: new Date().toISOString(), userId, path: req.path, error: message }));
-      res.status(502).json({ error: "Microsoft Graph request failed", detail: message });
+      logProxy("error", "upstream_threw", { userId, path: req.path, detail: message });
+      res.status(502).json({ error: "Microsoft Graph request failed" });
     }
   });
 

@@ -1,9 +1,20 @@
 import { serialize } from 'cookie';
 
+function resolveCookieDomain(): string | undefined {
+  const raw = process.env.COOKIE_DOMAIN?.trim();
+  if (raw && raw.length > 0) return raw;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[core/cookie] COOKIE_DOMAIN must be set in production to scope the session cookie'
+    );
+  }
+  return undefined;
+}
+
 export function createJwtCookie(jwt: string, opts?: { maxAge?: number; sameSite?: 'strict' | 'lax' | 'none' }) {
   const maxAge = opts?.maxAge ?? 60 * 60; // seconds
   const sameSite = opts?.sameSite ?? 'lax';
-  const domain = process.env.COOKIE_DOMAIN || undefined;
+  const domain = resolveCookieDomain();
   const cookieOpts: Parameters<typeof serialize>[2] = {
     path: '/',
     httpOnly: true,
