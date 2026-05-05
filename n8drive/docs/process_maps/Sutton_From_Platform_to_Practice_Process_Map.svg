@@ -1,0 +1,68 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="800" viewBox="0 0 1400 800">
+  <style>
+    text { font-family: Arial, Helvetica, sans-serif; fill: #000; }
+    .title { font-size: 22px; font-weight: bold; }
+    .box { fill: #ffffff; stroke: #000000; stroke-width: 2; }
+    .layer { fill: #f7f7f7; stroke: #000000; stroke-width: 2; }
+    .arrow { stroke: #000000; stroke-width: 2; marker-end: url(#arrowhead); }
+  </style>
+
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#000"/>
+    </marker>
+  </defs>
+
+  <text x="700" y="40" text-anchor="middle" class="title">
+    From Platform to Practice – Sutton Municipal Operations
+  </text>
+
+  <!-- Grant -->
+  <rect x="550" y="70" width="300" height="60" class="box"/>
+  <text x="700" y="105" text-anchor="middle">Grant Investment</text>
+
+  <!-- Layer 1 -->
+  <rect x="80" y="180" width="360" height="220" class="layer"/>
+  <text x="260" y="210" text-anchor="middle" font-weight="bold">Layer 1 – Technology Foundation</text>
+  <text x="100" y="240">• Network Infrastructure</text>
+  <text x="100" y="265">• Standardized Workstations</text>
+  <text x="100" y="290">• Mobile Field Devices</text>
+  <text x="100" y="315">• Document Scanning & Digitization</text>
+  <text x="100" y="340">• Backup & Disaster Recovery</text>
+
+  <!-- Layer 2 -->
+  <rect x="520" y="180" width="360" height="220" class="layer"/>
+  <text x="700" y="210" text-anchor="middle" font-weight="bold">Layer 2 – Organizational Structure</text>
+  <text x="540" y="240">• Finance Workflows</text>
+  <text x="560" y="265">– Accounts Payable & Warrants</text>
+  <text x="560" y="290">– Time & Attendance</text>
+  <text x="540" y="315">• HR Workflows</text>
+  <text x="560" y="340">– Onboarding & Personnel Records</text>
+
+  <!-- Layer 3 -->
+  <rect x="960" y="180" width="360" height="220" class="layer"/>
+  <text x="1140" y="210" text-anchor="middle" font-weight="bold">Layer 3 – Automated Operations</text>
+  <text x="980" y="240">• Digital Forms & Mobile Entry</text>
+  <text x="980" y="265">• Searchable Records & Audit Trails</text>
+  <text x="980" y="290">• Automated Routing & Exceptions</text>
+  <text x="980" y="315">• Consistent Resident Service</text>
+
+  <!-- Outcomes -->
+  <rect x="400" y="470" width="600" height="180" class="box"/>
+  <text x="700" y="505" text-anchor="middle" font-weight="bold">Measured Outcomes</text>
+  <text x="430" y="535">• Reduced Staff Burden</text>
+  <text x="430" y="560">• Operational Continuity</text>
+  <text x="430" y="585">• Audit Readiness & Compliance</text>
+  <text x="430" y="610">• Improved Resident Experience</text>
+  <text x="430" y="635">• Long-term Sustainability</text>
+
+  <!-- Arrows -->
+  <line x1="700" y1="130" x2="260" y2="180" class="arrow"/>
+  <line x1="700" y1="130" x2="700" y2="180" class="arrow"/>
+  <line x1="700" y1="130" x2="1140" y2="180" class="arrow"/>
+
+  <line x1="260" y1="400" x2="700" y2="470" class="arrow"/>
+  <line x1="700" y1="400" x2="700" y2="470" class="arrow"/>
+  <line x1="1140" y1="400" x2="700" y2="470" class="arrow"/>
+</svg>
