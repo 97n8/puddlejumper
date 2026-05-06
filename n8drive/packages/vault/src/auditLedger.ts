@@ -133,10 +133,9 @@ export class AuditLedger {
 
     query += ' ORDER BY timestamp DESC';
 
-    if (options.limit) {
-      query += ' LIMIT ?';
-      params.push(options.limit);
-    }
+    const effectiveLimit = Math.min(options.limit ?? 500, 5000);
+    query += ' LIMIT ?';
+    params.push(effectiveLimit);
 
     if (options.offset) {
       query += ' OFFSET ?';

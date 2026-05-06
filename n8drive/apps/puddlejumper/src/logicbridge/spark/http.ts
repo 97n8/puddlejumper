@@ -10,7 +10,7 @@ const PRIVATE_RANGES = [
   /^169\.254\./, // link-local / AWS+GCP metadata
   /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // RFC 6598 CGNAT
   /^::1$/,
-  /^fc00:/i,
+  /^f[cd]/i, // fc00::/7 unique local addresses
   /^fe80:/i,
 ];
 
