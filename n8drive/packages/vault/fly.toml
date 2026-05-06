@@ -3,7 +3,7 @@ app = "vault-publiclogic"
 primary_region = "iad"
 
 [build]
-  dockerfile = "../../Dockerfile.vault"
+  dockerfile = "Dockerfile"
 
 [env]
   NODE_ENV = "production"
