@@ -3,14 +3,20 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable pnpm
+# Install pnpm and native build toolchain.
+# better-sqlite3 needs python/make/g++ to compile its node binding when the
+# prebuilt musl binary isn't picked up under pnpm's nested layout.
+RUN corepack enable pnpm \
+    && apk add --no-cache python3 make g++ libc6-compat
 
 # Copy package files
 COPY package.json ./
 
-# Install dependencies (production only)
-RUN pnpm install --prod
+# Install dependencies (production only). Force a rebuild of native modules
+# so better_sqlite3.node lands in node_modules even if the prebuild step
+# was skipped or downloaded the wrong arch.
+RUN pnpm install --prod \
+    && pnpm rebuild better-sqlite3
 
 # Copy source code and data
 COPY src ./src
