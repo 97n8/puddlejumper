@@ -506,7 +506,7 @@
       id: item.id,
       name: item.name || "Untitled case",
       kicker: item.description || item.type || "Open in PJ Operations",
-      color: /^#[0-9a-fA-F]{3,8}$/.test(item.color) ? item.color : "#10b981",
+      color: /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(item.color) ? item.color : "#10b981",
       pinned: false,
       lastOpened: item.last_accessed || item.lastAccessed || Date.now()
     };

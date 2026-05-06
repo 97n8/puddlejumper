@@ -17,6 +17,7 @@ function isTokenLookupRateLimited(ip: string): boolean {
   const now = Date.now();
   const entry = tokenLookupCounts.get(ip);
   if (!entry || now > entry.resetAt) {
+    if (entry) tokenLookupCounts.delete(ip); // evict stale
     tokenLookupCounts.set(ip, { count: 1, resetAt: now + 60_000 });
     return false;
   }

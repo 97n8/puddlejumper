@@ -229,6 +229,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   const killSwitchStore = new KillSwitchStore(approvalStore.db);
   const payloadSharedToken =
     (process.env.PJ_PAYLOAD_API_TOKEN ?? (nodeEnv === "production" ? "" : "dev-payload-token")).trim();
+  if (nodeEnv === "production" && !payloadSharedToken) {
+    throw new Error("PJ_PAYLOAD_API_TOKEN must be set in production — the /api/payloads route requires a shared token");
+  }
   const allowedPayloadSources = resolveAllowedPayloadSources(process.env.PJ_ALLOWED_PAYLOAD_SOURCES);
 
   // ── ARCHIEVE immutable audit log ──────────────────────────────────────

@@ -241,10 +241,10 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function deriveIdempotencyKey(payload: InputPayload): string {
+function deriveIdempotencyKey(payload: InputPayload, payloadHash: string): string {
   return crypto
     .createHash("sha256")
-    .update(`${payload.source}:${payload.run_id}:${payload.subject.file_id}`)
+    .update(`${payload.source}:${payload.run_id}:${payload.subject.file_id}:${payloadHash}`)
     .digest("hex");
 }
 
@@ -346,7 +346,8 @@ export function createPayloadsRouter(opts: CreatePayloadsRouterOptions): express
       return;
     }
 
-    const idempotencyKey = deriveIdempotencyKey(payload);
+    const payloadHash = crypto.createHash("sha256").update(stableStringify(payload)).digest("hex");
+    const idempotencyKey = deriveIdempotencyKey(payload, payloadHash);
     const existing = store.get(idempotencyKey);
     if (existing) {
       res.status(200).json({
@@ -366,7 +367,7 @@ export function createPayloadsRouter(opts: CreatePayloadsRouterOptions): express
       idempotencyKey,
       source: payload.source,
       subjectFileId: payload.subject.file_id,
-      payloadHash: crypto.createHash("sha256").update(stableStringify(payload)).digest("hex"),
+      payloadHash,
       chainId,
       decision: decision.decision,
       chainTemplate: decision.chain_template,

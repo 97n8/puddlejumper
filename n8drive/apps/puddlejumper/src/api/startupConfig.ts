@@ -34,6 +34,9 @@ export const startupConfigSchema = z.object({
   PJ_PUBLIC_URL: z.url().optional().or(z.literal("").transform(() => undefined)),
   FRONTEND_URL: z.url().optional().or(z.literal("").transform(() => undefined)),
   LOGIC_COMMONS_DATA_DIR: z.string().optional(),
+  // Required in production when /api/payloads is enabled (enforced in server.ts)
+  PJ_PAYLOAD_API_TOKEN: z.string().optional(),
+  PJ_ALLOWED_PAYLOAD_SOURCES: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof startupConfigSchema>;
