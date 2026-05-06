@@ -9,7 +9,6 @@ PuddleJumper is a multi-tenant governance engine for municipal decision workflow
 | Directory | Description |
 |-----------|-------------|
 | `n8drive/` | Core PuddleJumper application (TypeScript, Express, pnpm monorepo) |
-| `_archived/` | Retired projects preserved for reference |
 
 ## Getting Started
 

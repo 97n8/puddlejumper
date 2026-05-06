@@ -12,10 +12,6 @@ puddlejumper/
 │   │   └── pj-smoke.yml
 │   ├── copilot-anti-patterns.md
 │   └── copilot-instructions.md
-├── _archived/
-│   └── README.md
-├── demo/
-│   └── index.html
 ├── docs/
 │   ├── DEVELOPER.md
 │   ├── DNS.md
