@@ -1,22 +1,28 @@
-# Standalone Vault deployment (simplified)
-FROM node:20-alpine
+# Standalone Vault deployment.
+#
+# We use Debian (bookworm-slim) instead of Alpine because better-sqlite3's
+# prebuilt binaries are glibc-based and consistently resolve here without
+# native compilation. Alpine + pnpm + native modules has well-known issues
+# where the .node binding ends up missing in the nested pnpm layout.
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
-# Install pnpm and native build toolchain.
-# better-sqlite3 needs python/make/g++ to compile its node binding when the
-# prebuilt musl binary isn't picked up under pnpm's nested layout.
+# pnpm + build tools (build tools only fire if the prebuilt download fails;
+# usually they're a no-op for better-sqlite3 on glibc).
 RUN corepack enable pnpm \
-    && apk add --no-cache python3 make g++ libc6-compat
+    && apt-get update \
+    && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package.json ./
 
-# Install dependencies (production only). Force a rebuild of native modules
-# so better_sqlite3.node lands in node_modules even if the prebuild step
-# was skipped or downloaded the wrong arch.
+# Install dependencies (production only). Run lifecycle scripts so
+# better-sqlite3's prebuild-install grabs the native binding.
 RUN pnpm install --prod \
-    && pnpm rebuild better-sqlite3
+    && pnpm rebuild better-sqlite3 \
+    && node -e "require('better-sqlite3'); console.log('better-sqlite3 native binding OK')"
 
 # Copy source code and data
 COPY src ./src
