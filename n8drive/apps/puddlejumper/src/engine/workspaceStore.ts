@@ -346,7 +346,7 @@ export function addWorkspaceMember(dataDir: string, workspaceId: string, userId:
   if (existing) {
     throw new Error("Workspace member already exists");
   }
-  const id = `wm-${userId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const id = `wm-${crypto.randomUUID()}`;
   const toolAccessJson = toolAccess ? JSON.stringify(toolAccess) : null;
   db.prepare(`
     INSERT INTO workspace_members (id, workspace_id, user_id, role, tool_access, invited_by, joined_at)

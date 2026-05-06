@@ -13,6 +13,9 @@ export function encryptHandler(handlerSource: string): { ciphertext: string; han
 
   const dek = getDek();
   if (!dek) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('[logicbridge/encryptor] LOGICBRIDGE_HANDLER_DEK must be set in production');
+    }
     console.warn('[logicbridge/encryptor] LOGICBRIDGE_HANDLER_DEK not set — storing handler unencrypted (dev mode)');
     return { ciphertext: Buffer.from(handlerSource, 'utf8').toString('base64'), handlerHash };
   }

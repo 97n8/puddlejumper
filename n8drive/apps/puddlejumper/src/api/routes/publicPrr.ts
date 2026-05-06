@@ -11,6 +11,19 @@ import type { PrrStore } from "../prrStore.js";
 const MAX_SUMMARY_LENGTH = 500;
 const MAX_DETAILS_LENGTH = 5000;
 
+// Simple in-memory rate limiter: max 10 token lookups per IP per 60s
+const tokenLookupCounts = new Map<string, { count: number; resetAt: number }>();
+function isTokenLookupRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = tokenLookupCounts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    tokenLookupCounts.set(ip, { count: 1, resetAt: now + 60_000 });
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > 10;
+}
+
 export function createPublicPRRRoutes(opts: { prrStore: PrrStore; workspaceId?: string }): express.Router {
   const router = express.Router();
   // Workspace is configured server-side only — never trust client-supplied value
@@ -77,6 +90,12 @@ export function createPublicPRRRoutes(opts: { prrStore: PrrStore; workspaceId?: 
   router.get("/public/prr/:token", (req, res) => {
     const correlationId = getCorrelationId(res);
     const { token } = req.params;
+
+    const clientIp = req.ip ?? "unknown";
+    if (isTokenLookupRateLimited(clientIp)) {
+      res.status(429).json({ success: false, correlationId, error: "Too many requests" });
+      return;
+    }
 
     if (!token || typeof token !== "string" || token.length > 128) {
       res.status(400).json({ success: false, correlationId, error: "Invalid token" });

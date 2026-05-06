@@ -474,8 +474,8 @@ export function createSyncronateRouter(db: Database.Database): Router {
     if (!tenantId) { sendErr(res, 403, 'Your account is not linked to a workspace. Please contact your administrator.', cid, 'TENANT_UNRESOLVABLE'); return; }
     const feed = getFeed(db, req.params.feedId);
     if (!feed || feed.tenantId !== tenantId) { sendErr(res, 404, 'Feed not found. It may have been removed or the ID is incorrect.', cid, 'FEED_NOT_FOUND'); return; }
-    const limit = parseInt(req.query.limit as string ?? '100', 10);
-    const offset = parseInt(req.query.offset as string ?? '0', 10);
+    const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit as string ?? '100', 10) || 100));
+    const offset = Math.max(0, parseInt(req.query.offset as string ?? '0', 10) || 0);
     const records = listRecords(db, req.params.feedId, {}, { limit, offset });
     sendOk(res, { records }, cid);
   });

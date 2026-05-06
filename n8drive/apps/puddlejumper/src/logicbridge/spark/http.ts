@@ -1,4 +1,39 @@
 // spark.http — HTTP client for handler sandbox
+// SSRF guard: block requests to private/metadata IP ranges
+
+const BLOCKED_HOSTNAMES = new Set(["localhost", "0.0.0.0", "::1"]);
+const PRIVATE_RANGES = [
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^169\.254\./, // link-local / AWS+GCP metadata
+  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // RFC 6598 CGNAT
+  /^::1$/,
+  /^fc00:/i,
+  /^fe80:/i,
+];
+
+function assertNotPrivate(rawUrl: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error(`Invalid URL: ${rawUrl}`);
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    throw new Error(`Disallowed protocol: ${parsed.protocol}`);
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (BLOCKED_HOSTNAMES.has(host)) {
+    throw new Error(`Disallowed host: ${host}`);
+  }
+  for (const range of PRIVATE_RANGES) {
+    if (range.test(host)) {
+      throw new Error(`Disallowed private/metadata address: ${host}`);
+    }
+  }
+}
 
 export interface SparkHttpOptions {
   headers?: Record<string, string>;
@@ -29,6 +64,7 @@ function makeResponse(status: number, statusText: string, headers: Record<string
 }
 
 async function doFetch(url: string, init: RequestInit, timeoutMs = 30_000): Promise<SparkHttpResponse> {
+  assertNotPrivate(url);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {

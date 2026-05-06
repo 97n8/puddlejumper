@@ -82,8 +82,8 @@ export function authEvent(req: any, event: string, data: Record<string, unknown>
       request_id: req.correlationId ?? null,
       metadata: data,
     });
-  } catch {
-    // best-effort
+  } catch (err) {
+    console.error('[session] audit event write failed:', err instanceof Error ? err.message : err);
   }
 }
 

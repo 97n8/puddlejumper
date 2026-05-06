@@ -146,6 +146,7 @@ import { LocalPolicyProvider } from "../engine/policyProvider.js";
 import { createPolicyProvider } from "../engine/remotePolicyProvider.js";
 import { DispatcherRegistry } from "../engine/dispatch.js";
 import { GitHubDispatcher } from "../engine/dispatchers/github.js";
+import { GoogleDriveDispatcher } from "../engine/dispatchers/google.js";
 import { SlackDispatcher } from "../engine/dispatchers/slack.js";
 import { WebhookDispatcher } from "../engine/dispatchers/webhook.js";
 import { SharePointDispatcher } from "../engine/dispatchers/sharepoint.js";
@@ -153,6 +154,8 @@ import { approvalMetrics, METRIC, METRIC_HELP } from "../engine/approvalMetrics.
 import { loadConfig, StartupConfigError } from "./startupConfig.js";
 import { ensurePersonalWorkspace, getDb, acceptInvitation } from "../engine/workspaceStore.js";
 import { requireToolAccess } from "./middleware/checkWorkspaceRole.js";
+import { KillSwitchStore } from "../ops/killSwitch.js";
+import { createPayloadsRouter, resolveAllowedPayloadSources } from "./routes/payloads.js";
 
 // ── Directory layout ────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -223,6 +226,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   }
   const approvalStore = new ApprovalStore(approvalDbPath);
   const chainStore = new ChainStore(approvalStore.db);
+  const killSwitchStore = new KillSwitchStore(approvalStore.db);
+  const payloadSharedToken =
+    (process.env.PJ_PAYLOAD_API_TOKEN ?? (nodeEnv === "production" ? "" : "dev-payload-token")).trim();
+  const allowedPayloadSources = resolveAllowedPayloadSources(process.env.PJ_ALLOWED_PAYLOAD_SOURCES);
 
   // ── ARCHIEVE immutable audit log ──────────────────────────────────────
   try { initArchieve(approvalStore.db, CONTROLLED_DATA_DIR) } catch (err) { console.error('[archieve] init error:', (err as Error).message) }
@@ -278,6 +285,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     },
   };
   dispatcherRegistry.register(new GitHubDispatcher(), defaultRetryPolicy);
+  dispatcherRegistry.register(new GoogleDriveDispatcher(), defaultRetryPolicy);
   dispatcherRegistry.register(new SlackDispatcher());
   dispatcherRegistry.register(new WebhookDispatcher(), defaultRetryPolicy);
   dispatcherRegistry.register(new SharePointDispatcher(), defaultRetryPolicy);
@@ -668,6 +676,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.method === "POST" && req.path === "/auth/logout") { next(); return; }
     if (req.method === "POST" && req.path === "/auth/token-exchange") { next(); return; }
     if (req.method === "POST" && req.path === "/auth/revoke") { optionalAuthMiddleware(req, res, next); return; }
+    if (req.method === "POST" && req.path === "/payloads") { optionalAuthMiddleware(req, res, next); return; }
     if (req.method === "POST" && req.path === "/prr/intake") { optionalAuthMiddleware(req, res, next); return; }
     if (req.method === "POST" && req.path === "/access/request") { optionalAuthMiddleware(req, res, next); return; }
     if (req.method === "GET" && /^\/connectors\/(?:microsoft|google|github)\/auth\/callback$/.test(req.path)) {
@@ -705,6 +714,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.path.startsWith("/microsoft/")) { next(); return; }
     if (req.path.startsWith("/google/")) { next(); return; }
     if (req.path.startsWith("/connectors/")) { next(); return; }
+    if (req.path.startsWith("/payloads")) { next(); return; }
     if (req.path.startsWith("/cloud-save")) { next(); return; }
     if (req.path.startsWith("/cloud-provision")) { next(); return; }
     if (req.path.startsWith("/documents")) { next(); return; }
@@ -715,6 +725,12 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   // /api/health — unauthenticated basic health + authenticated metrics (see routes/health.ts)
   app.use("/api", createHealthRoutes({ db: approvalStore.db, dataDir: CONTROLLED_DATA_DIR }));
+  app.use("/api", createPayloadsRouter({
+    db: approvalStore.db,
+    killSwitch: killSwitchStore,
+    sharedToken: payloadSharedToken,
+    allowedSources: allowedPayloadSources,
+  }));
 
   // /seal/health — SEAL module health (unauthenticated, used by LogicOS diagnostics)
   app.get("/seal/health", (_req, res) => {

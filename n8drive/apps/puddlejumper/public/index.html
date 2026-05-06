@@ -3,185 +3,331 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#081811">
-  <title>PuddleJumper — Unified V1 Backend</title>
+  <meta name="theme-color" content="#09090b">
+  <title>PublicLogic Mobile Entrance</title>
   <link rel="stylesheet" href="/styles/pj.css">
 </head>
 <body>
-  <div class="ambient ambient-a" aria-hidden="true"></div>
-  <div class="ambient ambient-b" aria-hidden="true"></div>
+  <div class="app-bg" aria-hidden="true"></div>
 
-  <header class="topbar">
-    <a href="/pj" class="brand" aria-label="PuddleJumper home">
-      <span class="brand-mark">PJ</span>
-      <span class="brand-copy">
-        <strong>PuddleJumper</strong>
-        <span>Unified V1 backend</span>
-      </span>
-    </a>
-    <nav class="topnav" aria-label="Primary">
-      <a href="https://os.publiclogic.org">LogicOS</a>
-      <a href="/pj/guide">Guide</a>
-      <a href="/pj/signin">Backend sign in</a>
-      <a href="/pj/admin">Operations</a>
-    </nav>
-  </header>
+  <main class="mobile-root">
+    <section class="device-shell" aria-label="PublicLogic mobile entrance">
+      <header class="masthead">
+        <div class="masthead__brand">
+          <span class="masthead__mark">PL</span>
+          <div>
+            <p class="masthead__eyebrow">Mobile entrance</p>
+            <h1>PublicLogic</h1>
+          </div>
+        </div>
 
-  <main id="main-content" class="shell" tabindex="-1">
-    <section class="hero">
-      <div class="eyebrow">Vibe code fast • Route cleanly • Observe production</div>
-      <h1>PuddleJumper is a complete backend workspace for operations, routing, records, and runtime control.</h1>
-      <p class="lede">
-        Unified V1 means PuddleJumper stands on its own for backend auth, routing, approvals, records, and runtime execution.
-        LogicOS can sit alongside it, but PJ should never feel like a page whose main job is to send you somewhere else.
-      </p>
+        <div class="masthead__meta">
+          <button id="commandBtn" class="masthead__chip" type="button" aria-label="Open quick actions">K</button>
+          <div class="signal-pill" id="onlinePill" data-state="checking">
+            <span class="signal-dot" aria-hidden="true"></span>
+            <span id="onlineLabel">Checking</span>
+          </div>
+        </div>
+      </header>
 
-      <div class="hero-actions">
-        <button id="signInBtn" class="btn btn-primary" type="button">Backend Sign In</button>
-        <button id="adminPanelBtn" class="btn btn-secondary" type="button">Open PJ Operations</button>
-        <a href="/pj/guide" class="btn btn-secondary">Open Guide</a>
+      <section class="summary-card" aria-label="Current operator status">
+        <div class="summary-card__top">
+          <div>
+            <p class="summary-card__label">Current state</p>
+            <strong id="summaryHeadline">Loading PublicLogic mobile entrance...</strong>
+          </div>
+          <div id="authState" class="status-chip" data-state="public">Public mode</div>
+        </div>
+
+        <div class="summary-card__actions">
+          <button id="signInBtn" class="btn btn-primary" type="button">Sign In</button>
+          <a id="dashboardLink" class="btn btn-secondary" href="/pj/admin#dashboard">Dashboard</a>
+          <a id="intakeLink" class="btn btn-secondary" href="/prr.html">Intake</a>
+        </div>
+      </section>
+
+      <div class="device-screen">
+        <section id="tab-today" class="tab-panel" aria-labelledby="nav-today">
+          <div class="hero-card">
+            <div>
+              <p class="hero-card__eyebrow">Home</p>
+              <h2>The mobile entrance to all things PL.</h2>
+              <p id="todayIntro" class="hero-card__copy">Loading tasks and runtime context...</p>
+            </div>
+            <a id="heroDashboardLink" class="btn btn-primary btn-small" href="/pj/admin#dashboard">Dashboard</a>
+          </div>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <h3>Fast lane</h3>
+              <span class="hint-text">The things you said matter most</span>
+            </div>
+
+            <div class="fast-lane-grid">
+              <a id="fastDashboardLink" class="fast-lane-card fast-lane-card--dashboard" href="/pj/admin#dashboard">
+                <span class="quick-tile__label">Dash</span>
+                <strong>Operational Dashboard</strong>
+                <span class="list-card__copy">Go straight to the PJ dashboard without getting lost in tabs.</span>
+              </a>
+              <a id="fastIntakeLink" class="fast-lane-card fast-lane-card--intake" href="/prr.html">
+                <span class="quick-tile__label">Intake</span>
+                <strong>Public Records Intake</strong>
+                <span class="list-card__copy">Open the PRR intake flow immediately from the mobile entrance.</span>
+              </a>
+              <a id="fastStatusLink" class="fast-lane-card" href="/prr-status.html">
+                <span class="quick-tile__label">Status</span>
+                <strong>Check request status</strong>
+                <span class="list-card__copy">Track submitted requests without opening the full admin surface.</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <h3>Launch</h3>
+              <span class="hint-text">Everything else</span>
+            </div>
+
+            <div class="launch-grid">
+              <a id="launchLogicOsLink" class="launch-tile" href="https://os.publiclogic.org">
+                <span class="quick-tile__label">Companion</span>
+                <strong>LogicOS</strong>
+                <span class="list-card__copy">Open the wider operator workspace.</span>
+              </a>
+              <a id="launchOperationsLink" class="launch-tile" href="/pj/admin">
+                <span class="quick-tile__label">Backend</span>
+                <strong>PJ Operations</strong>
+                <span class="list-card__copy">Go straight into PuddleJumper control.</span>
+              </a>
+              <a id="launchGuideLink" class="launch-tile" href="/pj/guide">
+                <span class="quick-tile__label">Maps</span>
+                <strong>System Guide</strong>
+                <span class="list-card__copy">Open the L1-L4 system view.</span>
+              </a>
+              <a id="launchPublicLogicLink" class="launch-tile" href="https://publiclogic.org">
+                <span class="quick-tile__label">Public</span>
+                <strong>publiclogic.org</strong>
+                <span class="list-card__copy">Jump to the broader PublicLogic surface.</span>
+              </a>
+            </div>
+          </section>
+
+          <div class="stats-row" role="list" aria-label="Workspace summary">
+            <article class="stat-card" role="listitem">
+              <span class="stat-card__label">Tasks</span>
+              <strong id="taskCount">0</strong>
+            </article>
+            <article class="stat-card" role="listitem">
+              <span class="stat-card__label">Cases</span>
+              <strong id="caseCount">0</strong>
+            </article>
+            <article class="stat-card" role="listitem">
+              <span class="stat-card__label">Captures</span>
+              <strong id="captureCount">0</strong>
+            </article>
+          </div>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <h3>Queue</h3>
+              <button id="refreshBtn" class="text-button" type="button">Refresh</button>
+            </div>
+            <div id="taskList" class="stack-list"></div>
+            <p id="taskEmpty" class="empty-state" hidden>No tasks yet.</p>
+          </section>
+        </section>
+
+        <section id="tab-cases" class="tab-panel" aria-labelledby="nav-cases" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <h2>Work</h2>
+              <span class="hint-text">Cases, workspaces, and active threads</span>
+            </div>
+            <div id="caseList" class="stack-list"></div>
+            <p id="caseEmpty" class="empty-state" hidden>No cases available.</p>
+          </section>
+        </section>
+
+        <section id="tab-capture" class="tab-panel" aria-labelledby="nav-capture" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <h2>Capture</h2>
+              <span class="hint-text">Local first, then route onward</span>
+            </div>
+
+            <form id="captureForm" class="form-stack">
+              <label class="field">
+                <span>Send to case</span>
+                <select id="captureCase"></select>
+              </label>
+
+              <label class="field">
+                <span>Capture text</span>
+                <textarea id="captureText" rows="5" placeholder="Capture thought, task, or note..."></textarea>
+              </label>
+
+              <div class="form-actions">
+                <button class="btn btn-primary" type="submit">Save capture</button>
+                <a id="captureOpsLink" class="btn btn-secondary" href="/pj/admin">Open operations</a>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <h3>Recent captures</h3>
+            </div>
+            <div id="captureList" class="stack-list"></div>
+            <p id="captureEmpty" class="empty-state" hidden>No captures yet.</p>
+          </section>
+        </section>
+
+        <section id="tab-settings" class="tab-panel" aria-labelledby="nav-settings" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <h2>Settings</h2>
+              <span class="hint-text">Saved in this browser</span>
+            </div>
+
+            <form id="settingsForm" class="form-stack">
+              <label class="field">
+                <span>PuddleJumper URL</span>
+                <input id="settingsPjUrl" type="url">
+              </label>
+
+              <label class="field">
+                <span>LogicOS URL</span>
+                <input id="settingsLogicOsUrl" type="url">
+              </label>
+
+              <label class="field">
+                <span>PublicLogic URL</span>
+                <input id="settingsPublicLogicUrl" type="url">
+              </label>
+
+              <label class="field">
+                <span>Operations URL</span>
+                <input id="settingsOpsUrl" type="url">
+              </label>
+
+              <label class="field">
+                <span>Guide URL</span>
+                <input id="settingsGuideUrl" type="url">
+              </label>
+
+              <label class="field">
+                <span>AI model</span>
+                <select id="settingsAiModel">
+                  <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+                  <option value="claude-opus-4-7">Claude Opus 4.7</option>
+                  <option value="claude-haiku-4-5">Claude Haiku 4.5</option>
+                </select>
+              </label>
+
+              <label class="toggle-row">
+                <input id="settingsAiEnabled" type="checkbox">
+                <span>Enable AI features</span>
+              </label>
+
+              <div class="form-actions">
+                <button class="btn btn-primary" type="submit">Save settings</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel-card panel-card--muted">
+            <h3>Interaction model</h3>
+            <p>Home is the PublicLogic launcher, Today uses PJ tasks when available, Work prefers live CaseSpaces, and Capture stays explicit about local-only saves when PJ does not expose a matching intake route.</p>
+          </section>
+        </section>
       </div>
 
-      <div class="signal-row" role="list" aria-label="Platform signals">
-        <div class="signal" role="listitem">
-          <span class="signal-label">Best build surface</span>
-          <strong>PJ operator workspace</strong>
-        </div>
-        <div class="signal" role="listitem">
-          <span class="signal-label">Runtime substrate</span>
-          <strong>PJ runtime + module services</strong>
-        </div>
-        <div class="signal" role="listitem">
-          <span class="signal-label">Operator visibility</span>
-          <strong>PJ operations + API health</strong>
-        </div>
-      </div>
-    </section>
-
-    <section class="route-grid" aria-label="Choose your path">
-      <article class="route-card route-card-primary">
-        <div class="route-kicker">Start here</div>
-        <h2>Operate directly in PJ</h2>
-        <p>
-          Use PuddleJumper directly when you need approvals, routing, records operations, runtime control,
-          authentication, or backend diagnostics in one place.
-        </p>
-        <ul class="route-list">
-          <li>Run backend operations without leaving this host</li>
-          <li>Handle approvals, records, runtime routing, and workspace controls</li>
-          <li>Best experience for operators, admins, and backend builders</li>
-        </ul>
-        <div class="route-actions">
-          <button id="routePrimarySignInBtn" class="btn btn-primary" type="button">Sign In to PJ</button>
-          <a href="/pj/guide" class="btn btn-ghost">See the systems map</a>
-        </div>
-      </article>
-
-      <article class="route-card">
-        <div class="route-kicker">Backend side</div>
-        <h2>Operate the backend directly</h2>
-        <p>
-          PJ also connects outward to other work surfaces when needed, but this backend host should remain
-          fully usable on its own for day-to-day backend operations.
-        </p>
-        <ul class="route-list">
-          <li>Use the guide, health, and operations pages directly</li>
-          <li>Keep backend auth and runtime visibility local to PJ</li>
-          <li>Open companion surfaces only when you actually want them</li>
-        </ul>
-        <div class="route-actions">
-          <button id="routeSignInBtn" class="btn btn-secondary" type="button">Backend Sign In</button>
-          <a href="/health" class="btn btn-ghost" target="_blank" rel="noopener noreferrer">Open API Health</a>
-        </div>
-      </article>
-    </section>
-
-    <section class="loop-section" aria-label="Build run observe loop">
-      <div class="section-heading">
-        <span class="section-tag">Flow</span>
-        <h2>One clean loop from idea to runtime</h2>
-      </div>
-
-      <div class="loop-grid">
-        <article class="loop-card">
-          <div class="loop-step">01</div>
-          <h3>Build</h3>
-          <p>Start in PJ to authenticate, inspect routes, manage approvals, and open the backend tools you need.</p>
-        </article>
-        <article class="loop-card">
-          <div class="loop-step">02</div>
-          <h3>Run</h3>
-          <p>PuddleJumper executes routing, auth, civic flows, records services, Vault services, and integration runtime.</p>
-        </article>
-        <article class="loop-card">
-          <div class="loop-step">03</div>
-          <h3>Observe</h3>
-          <p>Use PJ operations, the systems guide, and health checks to inspect live behavior without being pushed into another product surface.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="cta-band" aria-label="Quick destinations">
-      <a class="cta-chip" href="/pj/signin">
-        <span>Direct backend sign-in</span>
-        <strong>/pj/signin</strong>
-      </a>
-      <a class="cta-chip" href="/pj/admin">
-        <span>Workspace operations</span>
-        <strong>/pj/admin</strong>
-      </a>
-      <a class="cta-chip" href="/pj/guide">
-        <span>Operator guide</span>
-        <strong>/pj/guide</strong>
-      </a>
-      <a class="cta-chip" href="https://os.publiclogic.org">
-        <span>Companion workspace</span>
-        <strong>LogicOS</strong>
-      </a>
-    </section>
-
-    <section class="status-panel" aria-label="Current state">
-      <div>
-        <span class="status-label">Current state</span>
-        <strong>PJ is self-sufficient for backend operations • LogicOS is optional alongside it</strong>
-      </div>
-      <div id="authState" class="status-pill" data-state="public">Public mode</div>
+      <nav class="bottom-nav" role="tablist" aria-label="Mobile home navigation">
+        <button id="nav-today" class="bottom-nav__item is-active" type="button" role="tab" aria-selected="true" data-tab="today">
+          <span class="bottom-nav__icon" aria-hidden="true">O</span>
+          <span>Home</span>
+        </button>
+        <button id="nav-cases" class="bottom-nav__item" type="button" role="tab" aria-selected="false" data-tab="cases">
+          <span class="bottom-nav__icon" aria-hidden="true">[]</span>
+          <span>Work</span>
+        </button>
+        <button id="nav-capture" class="bottom-nav__item" type="button" role="tab" aria-selected="false" data-tab="capture">
+          <span class="bottom-nav__icon" aria-hidden="true">+</span>
+          <span>Capture</span>
+        </button>
+        <button id="nav-settings" class="bottom-nav__item" type="button" role="tab" aria-selected="false" data-tab="settings">
+          <span class="bottom-nav__icon" aria-hidden="true">=</span>
+          <span>Settings</span>
+        </button>
+      </nav>
     </section>
   </main>
 
-  <div id="auth-gate" class="auth-gate" aria-hidden="true" hidden>
-    <div class="auth-backdrop" data-auth-close="true"></div>
-    <div class="auth-gate-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-      <button id="authClose" class="auth-close" type="button" aria-label="Close sign-in dialog">×</button>
-      <div class="auth-kicker">Backend access</div>
-      <h2 id="authTitle">Sign in to the PuddleJumper backend</h2>
-      <p id="authDesc">
-        Use backend operator auth to open PJ operations here. This host is meant to stand on its own for backend work,
-        with LogicOS available as a companion workspace when you explicitly want it.
-      </p>
-
-      <div class="auth-actions">
-        <a href="/api/auth/github/login" class="provider provider-github">
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-          <span>Sign in with GitHub</span>
-        </a>
-        <a href="/api/auth/google/login" class="provider provider-google">
-          <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.36 1.22 8.3 2.97l6.18-6.18C34.64 2.7 29.74 0 24 0 14.82 0 6.73 5.82 2.69 14.09l7.19 5.59C11.27 13.36 17.13 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.55c0-1.64-.15-3.22-.42-4.74H24v9.01h12.42c-.54 2.9-2.18 5.36-4.66 7.01l7.19 5.59C43.27 37.27 46.1 31.45 46.1 24.55z"/><path fill="#FBBC05" d="M10.88 28.68a14.5 14.5 0 010-9.36l-7.19-5.59A23.94 23.94 0 000 24c0 3.77.9 7.34 2.69 10.91l7.19-5.59z"/><path fill="#EA4335" d="M24 46c6.48 0 11.92-2.15 15.89-5.86l-7.19-5.59c-2.01 1.35-4.59 2.15-8.7 2.15-6.87 0-12.73-3.86-15.12-9.09l-7.19 5.59C6.73 42.18 14.82 48 24 48z"/></g></svg>
-          <span>Sign in with Google</span>
-        </a>
-        <a href="/api/auth/microsoft/login" class="provider provider-microsoft">
-          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><g><rect fill="#F25022" x="1" y="1" width="10" height="10"/><rect fill="#7FBA00" x="13" y="1" width="10" height="10"/><rect fill="#00A4EF" x="1" y="13" width="10" height="10"/><rect fill="#FFB900" x="13" y="13" width="10" height="10"/></g></svg>
-          <span>Sign in with Microsoft</span>
-        </a>
+  <div id="quickActions" class="drawer" hidden>
+    <div class="drawer__backdrop" data-close-drawer="true"></div>
+    <section class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="quickActionsTitle">
+      <div class="section-head">
+        <h2 id="quickActionsTitle">Quick actions</h2>
+        <button id="closeDrawerBtn" class="icon-button" type="button" aria-label="Close quick actions">x</button>
       </div>
 
-      <div class="auth-divider">or use a JWT</div>
-      <input id="jwtInput" type="password" class="auth-input" placeholder="eyJhbGci..." aria-label="JWT token" autocomplete="off">
-      <div class="auth-button-row">
+      <div class="quick-grid">
+        <a id="drawerLogicOsLink" class="quick-tile" href="https://os.publiclogic.org">
+          <span class="quick-tile__label">Companion</span>
+          <strong>Open LogicOS</strong>
+        </a>
+        <a id="drawerDashboardLink" class="quick-tile" href="/pj/admin#dashboard">
+          <span class="quick-tile__label">Dash</span>
+          <strong>Open dashboard</strong>
+        </a>
+        <a id="drawerIntakeLink" class="quick-tile" href="/prr.html">
+          <span class="quick-tile__label">Intake</span>
+          <strong>Open PRR intake</strong>
+        </a>
+        <a id="drawerGuideLink" class="quick-tile" href="/pj/guide">
+          <span class="quick-tile__label">Guide</span>
+          <strong>System map</strong>
+        </a>
+        <a id="drawerPublicLogicLink" class="quick-tile" href="https://publiclogic.org">
+          <span class="quick-tile__label">Public</span>
+          <strong>Open publiclogic.org</strong>
+        </a>
+        <button id="drawerSignInBtn" class="quick-tile quick-tile--button" type="button">
+          <span class="quick-tile__label">Auth</span>
+          <strong>Open sign in</strong>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <div id="auth-gate" class="drawer" hidden>
+    <div class="drawer__backdrop" data-auth-close="true"></div>
+    <section class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <div class="section-head">
+        <h2 id="authTitle">Sign in to PublicLogic</h2>
+        <button id="authClose" class="icon-button" type="button" aria-label="Close sign in">x</button>
+      </div>
+
+      <p class="drawer-copy">Use the PublicLogic mobile entrance to move between LogicOS, PuddleJumper, guides, and your authenticated work.</p>
+
+      <div class="provider-list">
+        <a href="/api/auth/github/login" class="provider-btn">Sign in with GitHub</a>
+        <a href="/api/auth/google/login" class="provider-btn">Sign in with Google</a>
+        <a href="/api/auth/microsoft/login" class="provider-btn">Sign in with Microsoft</a>
+      </div>
+
+      <div class="divider">or use a JWT</div>
+
+      <label class="field">
+        <span>JWT token</span>
+        <input id="jwtInput" type="password" placeholder="eyJhbGci..." autocomplete="off">
+      </label>
+
+      <div class="form-actions">
         <button id="authSubmit" class="btn btn-primary" type="button">Authenticate</button>
-        <button id="authClear" class="btn btn-ghost" type="button">Clear</button>
+        <button id="authClear" class="btn btn-secondary" type="button">Clear</button>
       </div>
-    </div>
+    </section>
   </div>
 
   <script src="/scripts/main.js"></script>

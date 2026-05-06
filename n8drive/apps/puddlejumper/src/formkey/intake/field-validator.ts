@@ -116,9 +116,17 @@ export function validateFields(
           errors.push({ code: 'FIELD_MAX_LENGTH_VIOLATED', fieldId: field.id, maxLength: field.validation.maxLength, actual: str.length });
         }
         if (field.validation?.pattern) {
-          const re = new RegExp(field.validation.pattern);
-          if (!re.test(str)) {
-            errors.push({ code: 'FIELD_PATTERN_MISMATCH', fieldId: field.id, pattern: field.validation.pattern });
+          if (field.validation.pattern.length > 500) {
+            errors.push({ code: 'FIELD_PATTERN_INVALID', fieldId: field.id });
+          } else {
+            try {
+              const re = new RegExp(field.validation.pattern);
+              if (!re.test(str)) {
+                errors.push({ code: 'FIELD_PATTERN_MISMATCH', fieldId: field.id, pattern: field.validation.pattern });
+              }
+            } catch {
+              errors.push({ code: 'FIELD_PATTERN_INVALID', fieldId: field.id });
+            }
           }
         }
         break;

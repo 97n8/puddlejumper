@@ -287,10 +287,8 @@ export function createWorkspaceCollaborationRoutes(): express.Router {
 
     const callerRole = getMemberRole(dataDir, workspaceId, auth!.sub);
     const isWorkspaceAdmin = callerRole === "owner" || callerRole === "admin" || auth!.role === "admin";
-    // Tools may pass x-tool-admin header to indicate the caller has tool-level admin rights
-    const isToolAdmin = req.headers["x-tool-admin"] === "true";
 
-    if (!isWorkspaceAdmin && !isToolAdmin) {
+    if (!isWorkspaceAdmin) {
       res.status(403).json({ success: false, correlationId, error: "Insufficient permissions" });
       return;
     }

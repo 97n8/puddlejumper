@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import Database from 'better-sqlite3';
 import { z } from 'zod';
 import path from 'path';
@@ -178,7 +179,7 @@ export class AuditLedger {
   }
 
   private generateEventId(): string {
-    return `evt_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    return `evt_${crypto.randomUUID().replace(/-/g, "")}`;
   }
 
   close(): void {

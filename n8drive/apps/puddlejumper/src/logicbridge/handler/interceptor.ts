@@ -108,7 +108,7 @@ export async function runInterceptor(
     return { success: false, output: null, durationMs: Date.now() - start, error: `Decrypt failed: ${(err as Error).message}` };
   }
 
-  if (entry!.handlerHash && !verifyHandlerHash(handlerSource, entry!.handlerHash)) {
+  if (!entry!.handlerHash || !verifyHandlerHash(handlerSource, entry!.handlerHash)) {
     const reason = 'Handler integrity check failed at runtime';
     logGateBlocked(tenantId, connectorId, req.userId ?? 'unknown', 'hash-verify', reason, requestId);
     return { success: false, output: null, durationMs: Date.now() - start, error: reason };
