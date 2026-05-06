@@ -287,12 +287,12 @@ describe("Admin HTML page — via full createApp", () => {
       .expect(200);
 
     expect(res.type).toMatch(/html/);
-    expect(res.text).toContain("PuddleJumper Backend");
+    expect(res.text).toContain("PublicLogic Control Plane");
     expect(res.text).toContain("pj-signin.js");
     expect(res.text).toContain("/api/auth/microsoft/login");
     expect(res.text).toContain("/api/auth/github/login");
     expect(res.text).toContain("/api/auth/google/login");
-    expect(res.text).toContain("/pj/admin");
+    expect(res.text).toContain("/operator.html");
   });
 });
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#09090b">
-  <title>PublicLogic Mobile Entrance</title>
+  <title>PublicLogic Universe</title>
   <link rel="stylesheet" href="/styles/pj.css">
 </head>
 <body>
@@ -34,15 +34,15 @@
         <div class="summary-card__top">
           <div>
             <p class="summary-card__label">Current state</p>
-            <strong id="summaryHeadline">Loading PublicLogic mobile entrance...</strong>
+            <strong id="summaryHeadline">Loading the PublicLogic universe...</strong>
           </div>
           <div id="authState" class="status-chip" data-state="public">Public mode</div>
         </div>
 
         <div class="summary-card__actions">
           <button id="signInBtn" class="btn btn-primary" type="button">Sign In</button>
-          <a id="dashboardLink" class="btn btn-secondary" href="/pj/admin#dashboard">Dashboard</a>
-          <a id="intakeLink" class="btn btn-secondary" href="/prr.html">Intake</a>
+          <a id="dashboardLink" class="btn btn-secondary" href="/operator.html">Operator</a>
+          <a id="intakeLink" class="btn btn-secondary" href="/prr.html">Municipal</a>
         </div>
       </section>
 
@@ -54,63 +54,68 @@
               <h2>The mobile entrance to all things PL.</h2>
               <p id="todayIntro" class="hero-card__copy">Loading tasks and runtime context...</p>
             </div>
-            <a id="heroDashboardLink" class="btn btn-primary btn-small" href="/pj/admin#dashboard">Dashboard</a>
+             <a id="heroDashboardLink" class="btn btn-primary btn-small" href="/operator.html">Operator</a>
           </div>
 
           <section class="panel-card">
             <div class="section-head">
-              <h3>Fast lane</h3>
-              <span class="hint-text">The things you said matter most</span>
+               <h3>Tracks</h3>
+               <span class="hint-text">Municipal is one track inside the larger system</span>
             </div>
 
             <div class="fast-lane-grid">
-              <a id="fastDashboardLink" class="fast-lane-card fast-lane-card--dashboard" href="/pj/admin#dashboard">
+               <a id="fastDashboardLink" class="fast-lane-card fast-lane-card--dashboard" href="/operator.html">
                 <span class="quick-tile__label">Dash</span>
-                <strong>Operational Dashboard</strong>
-                <span class="list-card__copy">Go straight to the PJ dashboard without getting lost in tabs.</span>
+                 <strong>Governance track</strong>
+                 <span class="list-card__copy">Open the control-plane overview for approvals, dispatch, and audit state.</span>
               </a>
               <a id="fastIntakeLink" class="fast-lane-card fast-lane-card--intake" href="/prr.html">
                 <span class="quick-tile__label">Intake</span>
-                <strong>Public Records Intake</strong>
-                <span class="list-card__copy">Open the PRR intake flow immediately from the mobile entrance.</span>
+                 <strong>Municipal track</strong>
+                 <span class="list-card__copy">Open the public-records intake flow as one governed civic track inside PublicLogic.</span>
               </a>
               <a id="fastStatusLink" class="fast-lane-card" href="/prr-status.html">
                 <span class="quick-tile__label">Status</span>
-                <strong>Check request status</strong>
-                <span class="list-card__copy">Track submitted requests without opening the full admin surface.</span>
+                 <strong>Public status</strong>
+                 <span class="list-card__copy">Track submitted requests without opening the full operator surface.</span>
               </a>
             </div>
           </section>
 
           <section class="panel-card">
             <div class="section-head">
-              <h3>Launch</h3>
-              <span class="hint-text">Everything else</span>
+               <h3>Products</h3>
+               <span class="hint-text">One universe, four connected surfaces</span>
             </div>
 
             <div class="launch-grid">
               <a id="launchLogicOsLink" class="launch-tile" href="https://os.publiclogic.org">
-                <span class="quick-tile__label">Companion</span>
-                <strong>LogicOS</strong>
-                <span class="list-card__copy">Open the wider operator workspace.</span>
+                 <span class="quick-tile__label">Workspace</span>
+                 <strong>LogicOS</strong>
+                 <span class="list-card__copy">Open the primary operator workspace.</span>
               </a>
-              <a id="launchOperationsLink" class="launch-tile" href="/pj/admin">
-                <span class="quick-tile__label">Backend</span>
-                <strong>PJ Operations</strong>
-                <span class="list-card__copy">Go straight into PuddleJumper control.</span>
-              </a>
-              <a id="launchGuideLink" class="launch-tile" href="/pj/guide">
-                <span class="quick-tile__label">Maps</span>
-                <strong>System Guide</strong>
-                <span class="list-card__copy">Open the L1-L4 system view.</span>
-              </a>
-              <a id="launchPublicLogicLink" class="launch-tile" href="https://publiclogic.org">
-                <span class="quick-tile__label">Public</span>
-                <strong>publiclogic.org</strong>
-                <span class="list-card__copy">Jump to the broader PublicLogic surface.</span>
-              </a>
-            </div>
-          </section>
+               <a id="launchOperationsLink" class="launch-tile" href="/operator.html">
+                  <span class="quick-tile__label">Control plane</span>
+                  <strong>PuddleJumper</strong>
+                  <span class="list-card__copy">Go straight into approvals, runtime control, and governed dispatch.</span>
+                </a>
+               <a id="launchGuideLink" class="launch-tile" href="/pj/guide">
+                 <span class="quick-tile__label">Commons</span>
+                 <strong>LogicCommons</strong>
+                 <span class="list-card__copy">Open the shared governance and repository context.</span>
+                </a>
+               <a class="launch-tile" href="/api/admin/audit">
+                 <span class="quick-tile__label">Trust</span>
+                 <strong>Vault</strong>
+                 <span class="list-card__copy">Surface policy and audit authority through operational evidence.</span>
+               </a>
+               <a id="launchPublicLogicLink" class="launch-tile" href="https://publiclogic.org">
+                 <span class="quick-tile__label">Narrative</span>
+                 <strong>publiclogic.org</strong>
+                 <span class="list-card__copy">Jump to the broader PublicLogic story and external surface.</span>
+               </a>
+             </div>
+           </section>
 
           <div class="stats-row" role="list" aria-label="Workspace summary">
             <article class="stat-card" role="listitem">
@@ -168,7 +173,7 @@
 
               <div class="form-actions">
                 <button class="btn btn-primary" type="submit">Save capture</button>
-                <a id="captureOpsLink" class="btn btn-secondary" href="/pj/admin">Open operations</a>
+                <a id="captureOpsLink" class="btn btn-secondary" href="/operator.html">Open operator</a>
               </div>
             </form>
           </section>
@@ -276,10 +281,10 @@
           <span class="quick-tile__label">Companion</span>
           <strong>Open LogicOS</strong>
         </a>
-        <a id="drawerDashboardLink" class="quick-tile" href="/pj/admin#dashboard">
-          <span class="quick-tile__label">Dash</span>
-          <strong>Open dashboard</strong>
-        </a>
+         <a id="drawerDashboardLink" class="quick-tile" href="/operator.html">
+           <span class="quick-tile__label">Operator</span>
+           <strong>Open operator shell</strong>
+         </a>
         <a id="drawerIntakeLink" class="quick-tile" href="/prr.html">
           <span class="quick-tile__label">Intake</span>
           <strong>Open PRR intake</strong>

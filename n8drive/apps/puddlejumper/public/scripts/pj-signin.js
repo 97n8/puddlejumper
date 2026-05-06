@@ -52,7 +52,7 @@
   fetch("/api/me", { credentials: "include" })
     .then(function (res) {
       if (res.ok) {
-        window.location.href = "/pj/admin";
+        window.location.href = "/operator.html";
       }
     })
     .catch(function () { /* not signed in, stay on page */ });
@@ -106,7 +106,7 @@
         setBusy(false);
         showSuccess("Signed in as " + (data.user ? data.user.name : email) + " — redirecting…");
         setTimeout(function () {
-          window.location.href = "/pj/admin";
+          window.location.href = "/operator.html";
         }, 600);
       })
       .catch(function (err) {

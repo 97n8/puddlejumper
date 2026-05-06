@@ -13,7 +13,7 @@
     puddleJumperUrl: window.location.origin,
     logicOsUrl: "https://os.publiclogic.org",
     publicLogicUrl: "https://publiclogic.org",
-    operationsUrl: window.location.origin + "/pj/admin",
+    operationsUrl: window.location.origin + "/operator.html",
     guideUrl: window.location.origin + "/pj/guide",
     aiModel: "claude-sonnet-4-6",
     aiEnabled: true
@@ -265,7 +265,7 @@
           '  <p class="list-card__copy">' + escapeHtml(item.detail || "") + "</p>",
           '  <div class="list-card__actions">',
           '    <button class="text-button" type="button" data-action="dismiss-remote-task" data-task-id="' + escapeHtml(item.id) + '">Done</button>',
-          '    <a class="text-button" href="' + escapeHtml(relativePath(item.actionUrl || state.settings.operationsUrl, "/pj/admin")) + '">Open</a>',
+          '    <a class="text-button" href="' + escapeHtml(relativePath(item.actionUrl || state.settings.operationsUrl, "/operator.html")) + '">Open</a>',
           "  </div>",
           "</article>"
         ].join("");
@@ -363,7 +363,7 @@
     var puddleJumperUrl = absoluteUrl(state.settings.puddleJumperUrl, "/");
     var logicOsUrl = absoluteUrl(state.settings.logicOsUrl, "https://os.publiclogic.org");
     var publicLogicUrl = absoluteUrl(state.settings.publicLogicUrl, "https://publiclogic.org");
-    var operationsUrl = absoluteUrl(state.settings.operationsUrl, "/pj/admin");
+    var operationsUrl = absoluteUrl(state.settings.operationsUrl, "/operator.html");
     var dashboardUrl = operationsUrl.replace(/#.*$/, "") + "#dashboard";
     var guideUrl = absoluteUrl(state.settings.guideUrl, "/pj/guide");
     var intakeUrl = new URL("/prr.html", puddleJumperUrl).toString();
@@ -572,7 +572,7 @@
   function openCase(caseId) {
     var item = findCase(caseId);
     if (!item) {
-      window.location.href = absoluteUrl(state.settings.operationsUrl, "/pj/admin");
+      window.location.href = absoluteUrl(state.settings.operationsUrl, "/operator.html");
       return;
     }
 
@@ -584,7 +584,7 @@
       persistLocalState();
     }
 
-    window.location.href = absoluteUrl(state.settings.operationsUrl, "/pj/admin");
+    window.location.href = absoluteUrl(state.settings.operationsUrl, "/operator.html");
   }
 
   function handleCaptureSubmit(event) {
