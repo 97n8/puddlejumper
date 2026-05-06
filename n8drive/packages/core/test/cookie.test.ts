@@ -62,8 +62,16 @@ describe('createJwtCookie', () => {
     expect(cookie).not.toContain('Secure');
   });
 
+  it('throws in production when COOKIE_DOMAIN is not set', () => {
+    process.env.NODE_ENV = 'production';
+    expect(() => createJwtCookie(FAKE_JWT)).toThrow(
+      '[core/cookie] COOKIE_DOMAIN must be set in production to scope the session cookie',
+    );
+  });
+
   it('includes Secure in production', () => {
     process.env.NODE_ENV = 'production';
+    process.env.COOKIE_DOMAIN = '.example.com';
     const cookie = createJwtCookie(FAKE_JWT);
     expect(cookie).toContain('Secure');
   });

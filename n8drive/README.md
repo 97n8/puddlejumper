@@ -1,6 +1,21 @@
-# PuddleJumper
+# PuddleJumper / n8drive
 
-Multi-tenant governance engine for decision workflows. Secure, scalable, and built for the enterprise.
+PuddleJumper is the **control-plane backbone** inside the broader PublicLogic universe.
+
+Within the full system:
+
+- **LogicOS** is the operator workspace
+- **PuddleJumper** is the governed execution and approval layer
+- **LogicCommons** provides shared governance/repository primitives
+- **Vault** provides policy, compliance, and audit authority
+
+This `n8drive/` directory is the canonical implementation root for that work in this repository.
+
+## Repo truth
+
+- Run local commands from `n8drive/`
+- Treat the repository-root `.github/workflows/` directory as the only live GitHub Actions surface
+- Treat the UI here as one module in the PublicLogic ecosystem, not a standalone municipal-only app
 
 ## Features
 
@@ -160,10 +175,10 @@ Configure OAuth providers in your environment:
 
 ### Testing
 
-> **Note**: The repository currently has both `test/` and `tests/` directories. These should be consolidated in a future update for consistency.
+> **Note**: The repository currently has both `test/` and `tests/` directories. They still need consolidation, but the active CI path now follows the same package-level test order used by the root workflow.
 
 ```bash
-# Run all tests
+# Run the canonical local test sequence
 pnpm run test
 
 # Run specific test suites

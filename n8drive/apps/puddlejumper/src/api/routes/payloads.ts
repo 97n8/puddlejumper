@@ -37,8 +37,6 @@ const ProposedPlanSchema = z.object({
 });
 
 const PolicyContextSchema = z.object({
-  requires_review: z.boolean(),
-  review_reason: z.string().nullable(),
   dry_run: z.boolean(),
   legal_ip_sensitive: z.boolean(),
   externally_owned: z.boolean(),

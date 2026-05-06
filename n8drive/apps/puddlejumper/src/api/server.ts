@@ -521,8 +521,11 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       res.status(503).json({ error: "Metrics not available: METRICS_TOKEN not configured" });
       return;
     }
-    const authHeader = req.headers.authorization;
-    if (authHeader !== `Bearer ${metricsToken}`) {
+    const authHeader = req.headers.authorization ?? "";
+    const expected = `Bearer ${metricsToken}`;
+    const a = Buffer.from(authHeader, "utf8");
+    const b = Buffer.from(expected, "utf8");
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
       res.status(401).json({ error: "Invalid or missing metrics token" });
       return;
     }
@@ -717,7 +720,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.path.startsWith("/microsoft/")) { next(); return; }
     if (req.path.startsWith("/google/")) { next(); return; }
     if (req.path.startsWith("/connectors/")) { next(); return; }
-    if (req.path.startsWith("/payloads")) { next(); return; }
+    if (req.path === "/payloads") { next(); return; }
     if (req.path.startsWith("/cloud-save")) { next(); return; }
     if (req.path.startsWith("/cloud-provision")) { next(); return; }
     if (req.path.startsWith("/documents")) { next(); return; }

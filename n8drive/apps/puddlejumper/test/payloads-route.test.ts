@@ -148,6 +148,103 @@ describe("payload intake route", () => {
     db.close();
   });
 
+  it("rejects requests with no authorization (401)", async () => {
+    const { app, db } = await buildApp();
+    const res = await request(app)
+      .post("/api/payloads")
+      .set("X-PJ-Source", "drive-intake-router")
+      .send(buildPayload());
+    expect(res.status).toBe(401);
+    db.close();
+  });
+
+  it("rejects requests with the wrong shared token (401)", async () => {
+    const { app, db } = await buildApp();
+    const res = await request(app)
+      .post("/api/payloads")
+      .set("Authorization", "Bearer wrong-token-of-different-length")
+      .set("X-PJ-Source", "drive-intake-router")
+      .send(buildPayload());
+    expect(res.status).toBe(401);
+    db.close();
+  });
+
+  it("rejects payloads from disallowed sources (403)", async () => {
+    const { app, db } = await buildApp();
+    const payload = buildPayload();
+    payload.source = "rogue-source";
+    const res = await request(app)
+      .post("/api/payloads")
+      .set("Authorization", `Bearer ${TEST_SHARED_TOKEN}`)
+      .set("X-PJ-Source", "drive-intake-router")
+      .send(payload);
+    expect(res.status).toBe(403);
+    db.close();
+  });
+
+  it("rejects schema-invalid payloads (400)", async () => {
+    const { app, db } = await buildApp();
+    const res = await request(app)
+      .post("/api/payloads")
+      .set("Authorization", `Bearer ${TEST_SHARED_TOKEN}`)
+      .set("X-PJ-Source", "drive-intake-router")
+      .send({ payload_version: "1.0", source: "drive-intake-router" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_payload");
+    db.close();
+  });
+
+  it("rejects non-noop plans below the 0.7 confidence floor (400)", async () => {
+    const { app, db } = await buildApp();
+    const payload = buildPayload();
+    payload.classification.confidence = 0.5;
+    const res = await request(app)
+      .post("/api/payloads")
+      .set("Authorization", `Bearer ${TEST_SHARED_TOKEN}`)
+      .set("X-PJ-Source", "drive-intake-router")
+      .send(payload);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("confidence_floor");
+    db.close();
+  });
+
+  it("rate-limits a flood from a single source (429)", async () => {
+    const { app, db } = await buildApp();
+    fs.mkdirSync(TEST_DIR, { recursive: true });
+    const dbPath = path.join(TEST_DIR, `flood-${Date.now()}.db`);
+    const fdb = new Database(dbPath);
+    const ks = new KillSwitchStore(fdb);
+    const fapp = express();
+    fapp.use(cookieParserMiddleware());
+    fapp.use(express.json());
+    fapp.use("/api", createPayloadsRouter({
+      db: fdb,
+      killSwitch: ks,
+      sharedToken: TEST_SHARED_TOKEN,
+      rateLimitCapacity: 2,
+      rateLimitRefillPerSec: 0,
+    }));
+
+    const send = (n: number) => {
+      const p = buildPayload();
+      p.run_id = `run_flood_${n}`;
+      return request(fapp)
+        .post("/api/payloads")
+        .set("Authorization", `Bearer ${TEST_SHARED_TOKEN}`)
+        .set("X-PJ-Source", "drive-intake-router")
+        .send(p);
+    };
+
+    const r1 = await send(1);
+    const r2 = await send(2);
+    const r3 = await send(3);
+    expect(r1.status).toBe(202);
+    expect(r2.status).toBe(202);
+    expect(r3.status).toBe(429);
+    fdb.close();
+    db.close();
+  });
+
   it("lets admins read the kill switch state", async () => {
     const { app, db } = await buildApp();
     const token = await signJwt({

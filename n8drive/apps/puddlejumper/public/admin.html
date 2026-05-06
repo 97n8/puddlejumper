@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PuddleJumper — Control Plane</title>
+<title>PublicLogic — Control Plane</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles/pj-admin.css">
@@ -16,7 +16,7 @@
   <div class="header-brand">
     <a class="logo" href="/">Puddle<span>Jumper</span></a>
     <div class="sep"></div>
-    <div class="subtitle">Control Plane</div>
+    <div class="subtitle">PublicLogic Control Plane</div>
     <div class="ws-chip" id="ws-chip"></div>
   </div>
   <div class="header-right">
@@ -33,11 +33,11 @@
 
 <!-- Tabs -->
 <div class="tabs">
-  <button class="tab active" data-tab="queue" onclick="switchTab('queue')">Vault Doc Management <span style="display:inline-block;font-size:9px;font-weight:700;background:#f59e0b;color:#000;padding:1px 5px;border-radius:3px;vertical-align:middle;letter-spacing:0.05em;">DEV</span></button>
-  <button class="tab" data-tab="chains" onclick="switchTab('chains')">Chain Templates</button>
-  <button class="tab" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
-  <button class="tab" data-tab="prr" onclick="switchTab('prr')">Records</button>
-  <button class="tab" data-tab="members" onclick="switchTab('members')">Members</button>
+  <button class="tab active" data-tab="queue" onclick="switchTab('queue')">Governance Queue</button>
+  <button class="tab" data-tab="chains" onclick="switchTab('chains')">Governance Templates</button>
+  <button class="tab" data-tab="dashboard" onclick="switchTab('dashboard')">Overview</button>
+  <button class="tab" data-tab="prr" onclick="switchTab('prr')">Municipal Track</button>
+  <button class="tab" data-tab="members" onclick="switchTab('members')">Platform Access</button>
 </div>
 
 <!-- Auth Gate -->
@@ -64,7 +64,7 @@
 <!-- ── APPROVAL QUEUE TAB ─────────────────────────────── -->
 <div class="main" id="tab-queue" style="display:none">
   <div class="tbl-header">
-    <h2>Vault Governed Document Management</h2>
+    <h2>Governed Queue</h2>
     <div class="tbl-actions">
       <select class="filter-select" id="status-filter" onchange="currentPage=0;loadApprovals()">
         <option value="pending">Pending</option>
@@ -107,7 +107,7 @@
 <!-- ── CHAIN TEMPLATES TAB ──────────────────────────────── -->
 <div class="main" id="tab-chains" style="display:none">
   <div class="tbl-header">
-    <h2>Chain Templates</h2>
+    <h2>Governance Templates</h2>
     <button class="btn btn-primary btn-lg" id="btn-new-template" onclick="toggleTemplateForm()">+ New Template</button>
   </div>
 
@@ -142,8 +142,46 @@
 <!-- ── DASHBOARD TAB ────────────────────────────────────── -->
 <div class="main" id="tab-dashboard" style="display:none">
   <div class="tbl-header">
-    <h2>Operational Dashboard</h2>
+    <h2>PublicLogic Overview</h2>
     <span class="mono dim" id="dash-ts"></span>
+  </div>
+
+  <div class="template-grid">
+    <a class="template-card" href="https://os.publiclogic.org" style="display:block;color:inherit;text-decoration:none">
+      <div class="template-name">LogicOS</div>
+      <div class="template-meta">Operator workspace and front-stage experience across the PublicLogic universe.</div>
+    </a>
+    <div class="template-card">
+      <div class="template-name">PuddleJumper</div>
+      <div class="template-meta">Control plane for approvals, dispatch, runtime diagnostics, and connector execution.</div>
+    </div>
+    <a class="template-card" href="/pj/guide" style="display:block;color:inherit;text-decoration:none">
+      <div class="template-name">LogicCommons</div>
+      <div class="template-meta">Shared governance and repository primitives that support reusable operational patterns.</div>
+    </a>
+    <a class="template-card" href="/api/admin/audit" style="display:block;color:inherit;text-decoration:none">
+      <div class="template-name">Vault</div>
+      <div class="template-meta">Policy, audit, and compliance authority surfaced here as trust and evidence context.</div>
+    </a>
+  </div>
+
+  <div class="template-grid">
+    <a class="template-card" href="#prr" onclick="switchTab('prr'); return false;" style="display:block;color:inherit;text-decoration:none">
+      <div class="template-name">Municipal</div>
+      <div class="template-meta">Records, requests, and governed public-service workflows.</div>
+    </a>
+    <a class="template-card" href="#queue" onclick="switchTab('queue'); return false;" style="display:block;color:inherit;text-decoration:none">
+      <div class="template-name">Governance</div>
+      <div class="template-meta">Approvals, chain progression, auditability, and dispatch state.</div>
+    </a>
+    <a class="template-card" href="#dashboard" onclick="switchTab('dashboard'); return false;" style="display:block;color:inherit;text-decoration:none">
+      <div class="template-name">Automations</div>
+      <div class="template-meta">Connector health, operational summaries, retries, and execution outcomes.</div>
+    </a>
+    <a class="template-card" href="#members" onclick="switchTab('members'); return false;" style="display:block;color:inherit;text-decoration:none">
+      <div class="template-name">Platform</div>
+      <div class="template-meta">Workspace access, roles, usage, and operator account management.</div>
+    </a>
   </div>
 
   <div class="stats-grid" id="stats-grid">
@@ -174,7 +212,7 @@
 <!-- ── PRR TAB ───────────────────────────────────────────── -->
 <div class="main" id="tab-prr" style="display:none">
   <div class="tbl-header">
-    <h2>Records Requests</h2>
+    <h2>Municipal Records Track</h2>
     <div class="tbl-actions">
       <select class="filter-select" id="prr-status-filter" onchange="loadPRRQueue()">
         <option value="">All Status</option>
@@ -189,7 +227,7 @@
 
   <!-- New PRR form -->
   <div class="form-panel" id="prr-form">
-    <div class="form-title">New Records Request</div>
+    <div class="form-title">New municipal records request</div>
     <div class="form-row"><label>Subject / What records are requested</label><input type="text" id="prr-subject" placeholder="e.g. All emails re: zoning 2024"></div>
     <div class="form-row"><label>Requester Name</label><input type="text" id="prr-name" placeholder="Jane Sullivan"></div>
     <div class="form-row"><label>Requester Email</label><input type="email" id="prr-email" placeholder="jane@example.com"></div>
