@@ -3,370 +3,207 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#09090b">
-  <title>PublicLogic Operator Shell</title>
+  <meta name="theme-color" content="#111827">
+  <title>LogicOS Flow</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/pj-operator.css">
 </head>
 <body>
-  <div class="operator-bg" aria-hidden="true"></div>
+  <div class="flow-bg" aria-hidden="true"></div>
 
   <div id="pjDrawer" class="drawer" hidden>
     <div class="drawer__backdrop" data-close-drawer="true"></div>
     <aside class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="pjDrawerTitle">
       <div class="drawer__header">
         <div>
-          <p class="shell-eyebrow">PJ / PuddleJumper</p>
-          <h2 id="pjDrawerTitle">Live gaps</h2>
+          <p class="shell-eyebrow">Governance handoff</p>
+          <h2 id="pjDrawerTitle">PuddleJumper and VAULT</h2>
         </div>
-        <button id="closeDrawerBtn" class="icon-button" type="button" aria-label="Close PJ drawer">×</button>
+        <button id="closeDrawerBtn" class="icon-button" type="button" aria-label="Close governance drawer">×</button>
       </div>
 
       <div class="drawer__summary">
-        <span id="drawerPill" class="pj-pill pj-pill--blocked">PJ blocked</span>
-        <p class="drawer-copy">The drawer shows current release blockers and explicit placeholders for backend touchpoints that will be wired later.</p>
+        <span id="drawerPill" class="status-pill status-pill--warn">Phase 2 / Offline</span>
+        <p class="drawer-copy">Flow lives in LogicOS. PuddleJumper routes governed actions later. VAULT governs policy and proof.</p>
       </div>
 
       <section class="drawer__section">
-        <h3>Current release blockers</h3>
-        <ul id="gapList" class="gap-list"></ul>
-        <p id="gapEmpty" class="empty-state" hidden>PJ is clear. Release and seal can proceed in this front-end shell.</p>
+        <h3>Current handoff blockers</h3>
+        <ul id="gapList" class="meta-list"></ul>
+        <p id="gapEmpty" class="empty-state" hidden>No handoff blockers are active for the selected thread.</p>
       </section>
 
       <section class="drawer__section">
-        <h3>Future touchpoints</h3>
+        <h3>Connector posture</h3>
         <ul class="touchpoint-list">
-          <li><code>buildManifest()</code> assembles release metadata in the browser.</li>
-          <li><code>createBundle()</code> prepares a static payload for download.</li>
-          <li><code>sealAndRelease()</code> computes the SHA-256 seal and generates artifacts.</li>
-          <li><code>writeChainAnchor()</code> is reserved for future governance persistence.</li>
-          <li><code>issueReaderToken()</code> is reserved for future reader token issuance.</li>
+          <li><code>PuddleJumper</code> stays visible as the governed action router.</li>
+          <li><code>VAULT</code> stays visible as the proof and authority layer.</li>
+          <li><code>LogicOS</code> remains the host environment for Flow.</li>
         </ul>
       </section>
     </aside>
   </div>
 
-  <main class="shell">
-    <header class="shell-header">
-      <div class="shell-brand">
-        <div class="shell-mark">PL</div>
-        <div>
-          <p class="shell-eyebrow">Operator shell</p>
-          <h1>PublicLogic Operator Shell</h1>
-        </div>
-      </div>
-      <div class="shell-actions">
-        <button id="pjDrawerToggle" class="pj-pill pj-pill--blocked" type="button">PJ blocked</button>
-        <a class="shell-link" href="/">Home</a>
-        <a class="shell-link" href="/pj/guide">Guide</a>
-        <a class="shell-link shell-link--active" href="/operator.html">Operator</a>
-      </div>
-    </header>
-
-    <section class="hero-card">
-      <div class="hero-copy">
-        <p class="hero-card__eyebrow">Canonical front door</p>
-        <h2>Author to Wild now starts here, with PuddleJumper visible globally and the ecosystem held in one operator-facing surface.</h2>
-        <p class="hero-card__copy">This shell stays static for now: no invented APIs, no backend behavior, no build step. It uses browser state, sample operator data, and WebCrypto sealing so the front end can lock the flow before backend wiring arrives.</p>
-      </div>
-      <div class="hero-state">
-        <div class="signal-pill" data-state="warn">
-          <span class="signal-dot" aria-hidden="true"></span>
-          <span>Front-end only</span>
-        </div>
-        <p class="hero-note">All downloads are locally generated. Any backend touchpoint is isolated behind explicit future function boundaries.</p>
-      </div>
-    </section>
-
-    <section class="summary-grid" aria-label="Operator shell summary">
-      <article class="summary-card">
-        <p class="summary-card__label">Queue</p>
-        <strong id="queueCount">0</strong>
-        <span>Governance items visible in the current filter.</span>
-      </article>
-      <article class="summary-card">
-        <p class="summary-card__label">Current work</p>
-        <strong id="workCount">0</strong>
-        <span>Operator cards connected to the selected view.</span>
-      </article>
-      <article class="summary-card">
-        <p class="summary-card__label">Release posture</p>
-        <strong id="releasePosture">Blocked</strong>
-        <span>People-first validation and governance gaps determine release readiness.</span>
-      </article>
-      <article class="summary-card">
-        <p class="summary-card__label">Seal</p>
-        <strong id="sealDigest">Waiting</strong>
-        <span>Browser SHA-256 seal is generated only when PJ is clear.</span>
-      </article>
-    </section>
-
-    <section class="workspace-grid">
-      <div class="workspace-main">
-        <section class="filter-card">
-          <div class="section-head">
-            <div>
-              <p class="quick-tile__label">Filters</p>
-              <h3>Products and tracks</h3>
-            </div>
-            <button id="clearFilters" class="text-button" type="button">Reset</button>
-          </div>
-          <div id="filterChips" class="chip-group" aria-label="Product and track filters"></div>
-        </section>
-
-        <section class="lifecycle-card">
-          <div class="section-head">
-            <div>
-              <p class="quick-tile__label">Lifecycle</p>
-              <h3>Intake → Review → Action → Lock</h3>
-            </div>
-            <span class="hint-text">Shared governance lifecycle across the ecosystem.</span>
-          </div>
-          <div class="lifecycle-grid">
-            <article class="lifecycle-step" data-lifecycle="Intake">
-              <span class="lifecycle-step__number">1</span>
-              <strong>Intake</strong>
-              <p>Capture new work, requests, and operator signals.</p>
-            </article>
-            <article class="lifecycle-step" data-lifecycle="Review">
-              <span class="lifecycle-step__number">2</span>
-              <strong>Review</strong>
-              <p>Resolve policy, people, and governance readiness.</p>
-            </article>
-            <article class="lifecycle-step" data-lifecycle="Action">
-              <span class="lifecycle-step__number">3</span>
-              <strong>Action</strong>
-              <p>Operate through the control plane without collapsing authority and execution.</p>
-            </article>
-            <article class="lifecycle-step" data-lifecycle="Lock">
-              <span class="lifecycle-step__number">4</span>
-              <strong>Lock</strong>
-              <p>Preserve evidence, seal output, and close the loop.</p>
-            </article>
-          </div>
-        </section>
-
-        <section class="phase-card">
-          <div class="section-head">
-            <div>
-              <p class="quick-tile__label">Author to Wild</p>
-              <h3>Five-phase release workbench</h3>
-            </div>
-            <span class="hint-text">Release stays disabled until PJ is clear.</span>
-          </div>
-
-          <div class="phase-grid">
-            <article class="phase-column">
-              <div class="phase-column__header">
-                <span class="phase-number">1</span>
-                <div>
-                  <p class="quick-tile__label">Phase</p>
-                  <h4>People</h4>
-                </div>
-              </div>
-              <p class="phase-copy">People-first validation must be complete before anything moves toward release.</p>
-              <form id="peopleForm" class="form-stack">
-                <label class="field">
-                  <span>Accountable owner</span>
-                  <input id="ownerInput" type="text" placeholder="Name the accountable operator">
-                </label>
-                <label class="field">
-                  <span>Affected people</span>
-                  <input id="audienceInput" type="text" placeholder="Who is impacted by this release?">
-                </label>
-                <label class="checkbox-row">
-                  <input id="validationPeople" type="checkbox">
-                  <span>People boundary checked</span>
-                </label>
-                <label class="checkbox-row">
-                  <input id="validationAuthority" type="checkbox">
-                  <span>Authority path confirmed</span>
-                </label>
-                <label class="checkbox-row">
-                  <input id="validationFallback" type="checkbox">
-                  <span>Fallback path documented</span>
-                </label>
-              </form>
-            </article>
-
-            <article class="phase-column">
-              <div class="phase-column__header">
-                <span class="phase-number">2</span>
-                <div>
-                  <p class="quick-tile__label">Phase</p>
-                  <h4>Normalize</h4>
-                </div>
-              </div>
-              <p class="phase-copy">Normalize the release description into a durable front-end bundle shape.</p>
-              <label class="field">
-                <span>Normalized intent</span>
-                <textarea id="normalizedIntent" rows="6" placeholder="Describe the release intent in normalized operator language."></textarea>
-              </label>
-              <div class="meta-block">
-                <strong>Selected item</strong>
-                <p id="normalizeSelected" class="meta-copy">No item selected.</p>
-              </div>
-            </article>
-
-            <article class="phase-column">
-              <div class="phase-column__header">
-                <span class="phase-number">3</span>
-                <div>
-                  <p class="quick-tile__label">Phase</p>
-                  <h4>Apply Logic</h4>
-                </div>
-              </div>
-              <p class="phase-copy">Apply operator logic in the browser before release tries to proceed.</p>
-              <div class="logic-grid">
-                <div class="logic-row">
-                  <span>People ready</span>
-                  <strong id="peopleReadyValue">No</strong>
-                </div>
-                <div class="logic-row">
-                  <span>Governance ready</span>
-                  <strong id="governanceReadyValue">No</strong>
-                </div>
-                <div class="logic-row">
-                  <span>PJ clear</span>
-                  <strong id="pjClearValue">No</strong>
-                </div>
-              </div>
-              <ul id="logicGapList" class="gap-list"></ul>
-            </article>
-
-            <article class="phase-column">
-              <div class="phase-column__header">
-                <span class="phase-number">4</span>
-                <div>
-                  <p class="quick-tile__label">Phase</p>
-                  <h4>Release</h4>
-                </div>
-              </div>
-              <p class="phase-copy">Release and seal remain blocked until People and governance are both clear.</p>
-              <button id="releaseButton" class="release-button" type="button" disabled>Release blocked by PJ</button>
-              <div class="meta-block">
-                <strong>Current release state</strong>
-                <p id="releaseMessage" class="meta-copy">Complete People and remove governance gaps to enable release.</p>
-              </div>
-            </article>
-
-            <article class="phase-column">
-              <div class="phase-column__header">
-                <span class="phase-number">5</span>
-                <div>
-                  <p class="quick-tile__label">Phase</p>
-                  <h4>Wild</h4>
-                </div>
-              </div>
-              <p class="phase-copy">Static artifacts are generated in the browser: bundle, manifest, token URL, and verify.html.</p>
-              <div id="wildEmpty" class="empty-state phase-empty">
-                Nothing released yet. Once PJ is clear, this phase will expose generated downloads.
-              </div>
-              <div id="wildDownloads" class="download-list" hidden></div>
-            </article>
-          </div>
-        </section>
-
-        <section class="panel-card">
-          <div class="section-head">
-            <div>
-              <p class="quick-tile__label">Queue</p>
-              <h3>Unified governance queue</h3>
-            </div>
-            <span class="hint-text">Shared queue across LogicOS, PuddleJumper, LogicCommons, Vault, and Municipal.</span>
-          </div>
-          <div class="operator-table-wrap">
-            <table class="operator-table">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Product</th>
-                  <th>Track</th>
-                  <th>Lifecycle</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="queueTableBody"></tbody>
-            </table>
-          </div>
-          <div id="queueEmpty" class="empty-state" hidden>
-            No queue items match this filter. The shell still renders structure even when the backend is quiet.
-          </div>
-        </section>
-
-        <section class="panel-card">
-          <div class="section-head">
-            <div>
-              <p class="quick-tile__label">Work</p>
-              <h3>Current work items</h3>
-            </div>
-            <span class="hint-text">Static work cards until live operator wiring arrives.</span>
-          </div>
-          <div id="workList" class="stack-list"></div>
-          <div id="workEmpty" class="empty-state" hidden>
-            No current work items match this filter. Static empty states remain visible by design.
-          </div>
-        </section>
+  <main id="flow-root" class="flow-shell">
+    <aside class="flow-sidebar">
+      <div class="sidebar-card sidebar-card--brand">
+        <p class="shell-eyebrow">LogicOS Environment</p>
+        <h1>Flow</h1>
+        <p class="sidebar-subtitle">Pressure Management Protocol</p>
+        <p class="sidebar-copy">Flow keeps active work visible before pressure becomes failure.</p>
       </div>
 
-      <aside class="detail-card" aria-labelledby="detailTitle">
-        <div class="section-head">
-          <div>
-            <p class="quick-tile__label">Selection</p>
-            <h3 id="detailTitle">Selected item detail</h3>
-          </div>
-          <span id="detailMode" class="status-chip" data-state="ready">Static detail</span>
+      <div class="sidebar-card">
+        <p class="sidebar-label">Flow</p>
+        <nav id="flow-shell-nav" class="sidebar-nav" aria-label="Flow sections"></nav>
+      </div>
+
+      <div class="sidebar-card">
+        <p class="sidebar-label">Sources</p>
+        <div id="flow-sources-nav" class="sidebar-stack" aria-label="Flow sources"></div>
+      </div>
+
+      <div class="sidebar-card">
+        <p class="sidebar-label">Governance</p>
+        <div id="flow-governance-nav" class="sidebar-stack" aria-label="Flow governance"></div>
+      </div>
+    </aside>
+
+    <section class="flow-stage">
+      <header class="flow-topbar">
+        <div class="topbar-copy">
+          <p class="topbar-breadcrumb">LogicOS &rsaquo; PublicLogic &rsaquo; Flow</p>
+          <p class="topbar-line">Flow lives in LogicOS. PuddleJumper routes governed actions. VAULT provides authority and proof.</p>
+        </div>
+        <div class="topbar-meta">
+          <span class="status-chip">v1.2</span>
+          <span class="status-chip">n.boudreau</span>
+          <span class="status-chip status-chip--active">Environment Active</span>
+          <button id="pjDrawerToggle" class="status-pill status-pill--warn" type="button">PuddleJumper Handoff</button>
+        </div>
+      </header>
+
+      <section class="environment-hero">
+        <div class="hero-copy">
+          <p class="hero-eyebrow">LogicOS Environment</p>
+          <h2>Flow</h2>
+          <p class="hero-subtitle">Pressure Management Protocol · LogicOS Environment</p>
+          <p class="hero-copy__body">Notes hold context. Reminders hold action. Flow reads pressure. Claude drafts. Drive and M365 store the work.</p>
+        </div>
+        <div class="hero-metrics">
+          <article class="metric-card">
+            <span class="metric-label">Last Reset</span>
+            <strong>Apr 7, 2026</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Next Reset</span>
+            <strong>Apr 13, 2026</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Active Threads</span>
+            <strong id="flowThreadCount">0</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Open Dependencies</span>
+            <strong id="flowDependencyCount">0</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Data Sources</span>
+            <strong>5 configured · 1 offline</strong>
+          </article>
+        </div>
+      </section>
+
+      <div class="flow-workspace">
+        <div class="flow-primary">
+          <section id="flow-connections" class="surface-card">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">Connections</p>
+                <h3>Flow connectors</h3>
+              </div>
+            </div>
+            <div id="flowConnectionsGrid" class="connections-grid"></div>
+          </section>
+
+          <section class="surface-card">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">Flow Path</p>
+                <h3>Notes → Reminders → Flow → Claude → Drive / M365</h3>
+              </div>
+            </div>
+            <div id="flowPath" class="flow-path" aria-label="Flow path"></div>
+          </section>
+
+          <section id="flow-threads" class="surface-card">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">Threads</p>
+                <h3>Active work</h3>
+              </div>
+            </div>
+            <div id="flowThreadsList" class="thread-list"></div>
+          </section>
         </div>
 
-        <div id="detailEmpty" class="empty-state detail-empty" hidden>
-          Select an item to inspect its product, track, lifecycle, and current operator posture.
-        </div>
-
-        <div id="detailContent" class="detail-content">
-          <div class="detail-header">
-            <strong id="detailName">No item selected</strong>
-            <span id="detailStatus" class="status-badge pending">Pending</span>
-          </div>
-          <p id="detailSummary" class="detail-summary">Choose a queue item or work item to populate this panel.</p>
-
-          <div class="detail-grid">
-            <div class="detail-field">
-              <span class="detail-label">Product</span>
-              <strong id="detailProduct">—</strong>
+        <aside class="flow-secondary">
+          <section id="flow-pressure-summary" class="surface-card">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">Pressure</p>
+                <h3>State summary</h3>
+              </div>
             </div>
-            <div class="detail-field">
-              <span class="detail-label">Track</span>
-              <strong id="detailTrack">—</strong>
-            </div>
-            <div class="detail-field">
-              <span class="detail-label">Lifecycle</span>
-              <strong id="detailLifecycle">—</strong>
-            </div>
-            <div class="detail-field">
-              <span class="detail-label">Owner</span>
-              <strong id="detailOwner">—</strong>
-            </div>
-          </div>
+            <div id="flowPressureGrid" class="pressure-grid"></div>
+          </section>
 
-          <div class="detail-section">
-            <h4>Why it matters</h4>
-            <p id="detailWhy" class="detail-copy">No item selected.</p>
-          </div>
+          <section id="flow-thread-detail" class="surface-card">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">Selected Thread</p>
+                <h3 id="threadDetailName">No thread selected</h3>
+              </div>
+              <span id="threadDetailPressure" class="pressure-badge pressure-badge--blocked">■ Blocked</span>
+            </div>
+            <div id="threadDetailBody" class="thread-detail"></div>
+          </section>
 
-          <div class="detail-section">
-            <h4>Next move</h4>
-            <p id="detailNext" class="detail-copy">No next move available.</p>
-          </div>
+          <section id="flow-compliance" class="surface-card">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">Compliance Watch</p>
+                <h3>Anchors</h3>
+              </div>
+            </div>
+            <div id="flowComplianceList" class="watch-list"></div>
+          </section>
 
-          <div class="detail-section">
-            <h4>Governance gaps</h4>
-            <ul id="detailGapList" class="gap-list"></ul>
-            <p id="detailGapEmpty" class="empty-state detail-gap-empty" hidden>No active governance gaps on the selected item.</p>
-          </div>
-        </div>
-      </aside>
+          <section id="flow-weekly-reset" class="surface-card">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">Weekly Reset</p>
+                <h3>Reset protocol</h3>
+              </div>
+            </div>
+            <ol id="flowWeeklyResetList" class="reset-list"></ol>
+          </section>
+
+          <section id="flow-vault-alignment" class="surface-card">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">VAULT Alignment</p>
+                <h3>Execution mapping</h3>
+              </div>
+            </div>
+            <div id="flowVaultAlignmentList" class="alignment-list"></div>
+          </section>
+        </aside>
+      </div>
+
+      <footer id="flow-status-bar" class="status-bar"></footer>
     </section>
   </main>
 

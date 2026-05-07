@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LogicOS &amp; PuddleJumper — Unified V1 Guide</title>
+  <title>PublicLogic Operator Guide</title>
 <link rel="stylesheet" href="/styles/pj-guide.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
 <div class="header">
   <div class="header-title">
     <h1>LogicOS</h1>
-    <span class="subtitle">Unified V1 Guide &amp; Systems Map</span>
+    <span class="subtitle">Flow Guide &amp; Systems Map</span>
   </div>
   <div class="nav-links">
     <a href="https://os.publiclogic.org">LogicOS</a>
@@ -23,22 +23,22 @@
 
 <section class="guide-hero">
   <div class="guide-hero__copy">
-    <div class="guide-badge">Work in PJ • Run in PJ • Expand outward only when needed</div>
-    <h2>PuddleJumper and LogicOS, one clean operator flow</h2>
-    <p>This guide is the fastest way to understand where to enter, where to build, and where to operate. If you want the shortest version: <strong>PuddleJumper should be usable on its own for backend auth, operations, and runtime visibility.</strong></p>
+    <div class="guide-badge">LogicOS → Flow → PuddleJumper / VAULT</div>
+    <h2>Flow lives inside LogicOS</h2>
+    <p>This guide is the fastest way to understand the LogicOS Flow hierarchy. Short version: <strong>Flow lives in LogicOS. PuddleJumper routes governed actions. VAULT provides authority and proof.</strong></p>
   </div>
   <div class="guide-hero__actions">
     <a href="/operator.html" class="guide-pill">
-      <span>Primary operator workspace</span>
-      <strong>Open operator shell</strong>
+      <span>Primary Flow workspace</span>
+      <strong>Open LogicOS Flow</strong>
     </a>
     <a href="/pj/signin" class="guide-pill">
       <span>Operator door</span>
-      <strong>Backend Sign In</strong>
+      <strong>Operator sign in</strong>
     </a>
     <a href="/operator.html" class="guide-pill">
-      <span>Direct ecosystem access</span>
-      <strong>Operator shell</strong>
+      <span>Direct Flow access</span>
+      <strong>LogicOS Flow</strong>
     </a>
     <a href="/health" class="guide-pill">
       <span>Runtime health</span>
@@ -50,50 +50,50 @@
 <section class="flow-strip" aria-label="Preferred operating flow">
   <article class="flow-strip__card">
     <span>01</span>
-    <strong>Enter through PJ</strong>
-    <p>Open the backend workspace directly when you want routing, approvals, records, and runtime visibility in one place.</p>
+    <strong>Enter through Flow</strong>
+    <p>Open LogicOS Flow when you want threads, pressure, dependencies, compliance, and reset in one place.</p>
   </article>
   <article class="flow-strip__card">
     <span>02</span>
-    <strong>Build through PJ where needed</strong>
-    <p>Use the backend tools, guide, and operations pages directly instead of treating PJ like a handoff screen.</p>
+    <strong>Work inside LogicOS</strong>
+    <p>Use Flow for pressure-aware work management, then hand off to PuddleJumper only when the action becomes governed.</p>
   </article>
   <article class="flow-strip__card">
     <span>03</span>
-    <strong>Operate through PJ</strong>
-    <p>Use PJ operations, guide surfaces, and health checks to inspect the live runtime.</p>
+    <strong>Route governed action later</strong>
+    <p>Use PuddleJumper as the routing surface and VAULT as the proof layer once Flow has made the work visible.</p>
   </article>
 </section>
 
 <!-- ─────────────── QUICK START ─────────────── -->
 <h2>Unified V1 Quick Start</h2>
 
-<p>LogicSuite is a public-sector governance platform. <strong>PuddleJumper (PJ)</strong> is the backend API, operator workspace, and rules engine running on Fly.io. <strong>LogicOS</strong> can sit alongside it as a companion workspace, but PJ should not depend on rerouting users away from itself.</p>
+<p>PublicLogic connects LogicOS, Flow, PuddleJumper, LogicCommons, VAULT, and municipal work. <strong>Flow</strong> is a LogicOS operating track for pressure-aware work management. <strong>PuddleJumper</strong> routes governed actions later, and <strong>VAULT</strong> governs policy and proof.</p>
 
 <div class="qs-grid">
   <div class="qs-card">
     <h4><span class="qs-num">1</span> Sign In</h4>
-    <p>Open the PJ sign-in flow or PJ operations directly. OAuth tokens are session-cookie based. Refresh is automatic.</p>
+    <p>Open the sign-in flow or LogicOS Flow directly. OAuth tokens use session cookies and refresh automatically.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">2</span> Start Screen</h4>
     <p>All tools available to your role appear as tiles. Click any tool to launch it. Recent CaseSpaces appear below for quick re-entry.</p>
   </div>
   <div class="qs-card">
-    <h4><span class="qs-num">3</span> Create Documents</h4>
-    <p>Use PJ to operate backend systems, routing, records, and governed workflows. Open companion workspaces only when you explicitly need them.</p>
+    <h4><span class="qs-num">3</span> Operate</h4>
+    <p>Use PuddleJumper to run routing, records, and governed workflows. Open companion workspaces only when you explicitly need them.</p>
   </div>
   <div class="qs-card">
-    <h4><span class="qs-num">4</span> Vibe Code Connectors</h4>
-    <p>Use PJ backend tools and routes directly when you need integrations, connectors, or backend-facing workflows. Companion surfaces can extend this, but PJ remains the anchor.</p>
+    <h4><span class="qs-num">4</span> Connectors</h4>
+    <p>Use PuddleJumper routes when you need integrations, connectors, or controlled workflow handoffs. Companion surfaces can extend this, but PJ remains the anchor.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">5</span> Govern Intake</h4>
-    <p>Use PJ operations for the backend side of governed intake, records, approvals, and publication flow. Forms and Docs surfaces can sit alongside PJ when needed.</p>
+    <p>Use the operator shell for governed intake, records, approvals, and publication flow. Forms and document surfaces can sit alongside it when needed.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">6</span> Monitor</h4>
-    <p>Use <strong>PJ operations</strong> for backend status, approval routing, records operations, and workspace limits. Use <strong>Audit Trail</strong> to inspect the archival event chain.</p>
+    <p>Use the <strong>operator shell</strong> for runtime status, approval routing, records operations, and workspace limits. Use <strong>Audit Trail</strong> to inspect the archival event chain.</p>
   </div>
 </div>
 
@@ -111,8 +111,8 @@ export AUTH_AUDIENCE=puddle-jumper-api
 npx tsx src/api/server.ts
 # → http://localhost:3002/v1/health</code></pre>
 
-<h3>Best place to vibe code</h3>
-<p>If you want the smoothest loop, start in <strong>PuddleJumper</strong> for backend auth, runtime routing, health, approvals, and operator visibility. Add companion surfaces only when they help. In short: <strong>work in PJ, run on PJ, observe in PJ operations</strong>.</p>
+<h3>Best place to work</h3>
+<p>If you want the smoothest loop, start in <strong>PuddleJumper</strong> for auth, runtime routing, health, approvals, and operator visibility. Add companion surfaces only when they help. In short: <strong>start in PJ, operate through the shell, expand outward when needed</strong>.</p>
 
 <h3>Deploy to Fly.io</h3>
 <pre><code># From monorepo root (/n8drive)
