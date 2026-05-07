@@ -2,13 +2,13 @@
   "use strict";
 
   var flowSections = [
-    { label: "Connections", href: "#flow-connections" },
     { label: "Threads", href: "#flow-threads" },
-    { label: "Pressure", href: "#flow-pressure-summary" },
-    { label: "Dependencies", href: "#flow-thread-detail" },
     { label: "Compliance", href: "#flow-compliance" },
+    { label: "Dependencies", href: "#flow-thread-detail" },
+    { label: "Pressure", href: "#flow-pressure-summary" },
+    { label: "Connections", href: "#flow-connections" },
     { label: "Weekly Reset", href: "#flow-weekly-reset" },
-    { label: "AI Runtime", href: "#flow-connections" }
+    { label: "Handoff", href: "#flow-vault-alignment" }
   ];
 
   var sourceSections = ["Notes", "Reminders", "Claude", "Drive", "M365"];
@@ -32,9 +32,9 @@
     {
       id: "claude",
       name: "Claude",
-      role: "AI runtime",
+      role: "Draft support",
       status: "live",
-      note: "Drafting, continuity, and pressure read support."
+      note: "Used when drafting or continuity support is needed."
     },
     {
       id: "drive",
@@ -76,8 +76,8 @@
   var flowPath = [
     { name: "Notes", detail: "threads" },
     { name: "Reminders", detail: "actions" },
-    { name: "Flow", detail: "pressure protocol" },
-    { name: "Claude", detail: "AI runtime" },
+    { name: "Flow", detail: "workbench" },
+    { name: "Claude", detail: "drafting" },
     { name: "Drive / M365", detail: "storage" }
   ];
 
@@ -106,9 +106,9 @@
       id: "sutton",
       name: "Sutton",
       folder: "Active Clients",
-      status: "Diagnostic underway",
+      status: "Waiting on board schedule and PRR log",
       pressure: "blocked",
-      next: "Follow up Austin",
+      next: "Follow up Austin for board schedule access",
       dependencySummary: "2 blocking · 1 resolved",
       dependencies: [
         { state: "wait", owner: "Austin", item: "Board schedule access" },
@@ -119,15 +119,15 @@
         { name: "Diagnostic delivery", date: "May 15", tag: "GOV" },
         { name: "Invoice Phase 1", date: "Apr 30", tag: "PL" }
       ],
-      stateCheck: "2 unresolved dependencies → BLOCKED is correct."
+      stateCheck: "Two unresolved dependencies are blocking the next move."
     },
     {
       id: "phillipston",
       name: "Phillipston",
       folder: "Active Clients",
-      status: "Launch assembly in progress",
+      status: "Preparing DNS launch package",
       pressure: "building",
-      next: "Assemble DNS launch thread",
+      next: "Assemble DNS launch package",
       dependencySummary: "1 blocking",
       dependencies: [
         { state: "wait", owner: "Vendor", item: "DNS launch approval" }
@@ -135,13 +135,13 @@
       compliance: [
         { name: "Phillipston DNS launch", date: "Apr 15", tag: "GOV" }
       ],
-      stateCheck: "One live blocker keeps this thread in BUILDING."
+      stateCheck: "One live blocker keeps this thread in building."
     },
     {
       id: "westminster",
       name: "Westminster",
       folder: "Active Clients",
-      status: "Grant support moving cleanly",
+      status: "LOI packet in progress",
       pressure: "flowing",
       next: "Prepare LOI packet",
       dependencySummary: "—",
@@ -149,45 +149,45 @@
       compliance: [
         { name: "Westminster MBI LOI", date: "Jun 1", tag: "GOV" }
       ],
-      stateCheck: "No unresolved dependencies → FLOWING is correct."
+      stateCheck: "No unresolved dependencies are open."
     },
     {
       id: "logicos",
       name: "LogicOS",
       folder: "PublicLogic",
-      status: "Environment updates underway",
+      status: "Reviewing operator shell follow-ups",
       pressure: "building",
-      next: "Resolve Flow shell follow-ons",
+      next: "Resolve operator shell follow-ups",
       dependencySummary: "1 blocking",
       dependencies: [
         { state: "wait", owner: "Design", item: "Environment chrome review" }
       ],
       compliance: [],
-      stateCheck: "Shared environment work is still collecting dependencies."
+      stateCheck: "Shared environment work still has an open review dependency."
     },
     {
       id: "vault",
       name: "VAULT",
       folder: "PublicLogic",
-      status: "Governance model mapped",
+      status: "Alignment notes current",
       pressure: "flowing",
       next: "Keep alignment notes current",
       dependencySummary: "—",
       dependencies: [],
       compliance: [],
-      stateCheck: "Alignment is current, so FLOWING is correct."
+      stateCheck: "Alignment is current and not blocked."
     },
     {
       id: "pl-ops",
       name: "PL Ops",
       folder: "PublicLogic",
-      status: "Reference thread retained",
+      status: "Reference only",
       pressure: "archivedActive",
       next: "Review on weekly reset",
       dependencySummary: "—",
       dependencies: [],
       compliance: [],
-      stateCheck: "The thread is inactive but intentionally retained for continuity."
+      stateCheck: "This thread is parked but still kept for reference."
     }
   ];
 
@@ -211,9 +211,16 @@
   var statusBar = document.getElementById("flow-status-bar");
   var threadCount = document.getElementById("flowThreadCount");
   var dependencyCount = document.getElementById("flowDependencyCount");
+  var blockedMetric = document.getElementById("flowBlockedMetric");
+  var dueMetric = document.getElementById("flowDueMetric");
+  var handoffState = document.getElementById("flowHandoffState");
+  var focusNext = document.getElementById("flowFocusNext");
+  var focusBlocked = document.getElementById("flowBlockedCount");
+  var focusDue = document.getElementById("flowDueCount");
 
   var pjDrawer = document.getElementById("pjDrawer");
   var pjDrawerToggle = document.getElementById("pjDrawerToggle");
+  var pjDrawerQuickAction = document.getElementById("pjDrawerQuickAction");
   var closeDrawerBtn = document.getElementById("closeDrawerBtn");
   var drawerPill = document.getElementById("drawerPill");
   var gapList = document.getElementById("gapList");
@@ -268,6 +275,12 @@
         };
       });
     });
+  }
+
+  function blockedThreadsCount() {
+    return threads.filter(function (thread) {
+      return thread.pressure === "blocked";
+    }).length;
   }
 
   function renderNavGroup(node, items, className) {
@@ -469,12 +482,12 @@
     var thread = selectedThread();
     statusBar.innerHTML = [
       "<div class=\"status-bar__copy\">",
-      "  <span class=\"status-text\">Flow keeps active work visible before pressure becomes failure.</span>",
+      "  <span class=\"status-text\">Pick a thread. Clear blockers. Check due dates. Route governed work when ready.</span>",
       "</div>",
       "<div class=\"status-bar__meta\">",
       "  <span class=\"status-chip\">Selected: " + thread.name + "</span>",
       "  <span class=\"status-chip\">Pressure: " + pressureLabel(thread.pressure) + "</span>",
-      "  <span class=\"status-chip\">Sources: 5 configured · 1 offline</span>",
+      "  <span class=\"status-chip\">Next: " + thread.next + "</span>",
       "</div>"
     ].join("");
   }
@@ -495,12 +508,23 @@
   }
 
   function renderCounts() {
+    var allCompliance = allComplianceItems();
+    var blockedCountValue = blockedThreadsCount();
+    var thread = selectedThread();
+    var selectedBlockers = unresolvedDependencies(thread).length;
+
     threadCount.textContent = String(threads.length);
+    blockedMetric.textContent = String(blockedCountValue);
     dependencyCount.textContent = String(
       threads.reduce(function (total, thread) {
         return total + unresolvedDependencies(thread).length;
       }, 0)
     );
+    dueMetric.textContent = String(allCompliance.length);
+    handoffState.textContent = selectedBlockers ? "Blocked" : "Waiting";
+    focusNext.textContent = thread.name + ": " + thread.next;
+    focusBlocked.textContent = blockedCountValue + " blocked";
+    focusDue.textContent = allCompliance.length + " due";
   }
 
   function render() {
@@ -521,6 +545,7 @@
   }
 
   pjDrawerToggle.addEventListener("click", openDrawer);
+  pjDrawerQuickAction.addEventListener("click", openDrawer);
   closeDrawerBtn.addEventListener("click", closeDrawer);
   pjDrawer.addEventListener("click", function (event) {
     if (event.target && event.target.dataset.closeDrawer === "true") {

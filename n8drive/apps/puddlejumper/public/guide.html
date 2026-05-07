@@ -11,11 +11,11 @@
 <div class="header">
   <div class="header-title">
     <h1>LogicOS</h1>
-    <span class="subtitle">Flow Guide &amp; Systems Map</span>
+  <span class="subtitle">Operator Guide &amp; Systems Map</span>
   </div>
   <div class="nav-links">
     <a href="https://os.publiclogic.org">LogicOS</a>
-    <a href="/operator.html">Operator Shell</a>
+    <a href="/operator.html">Flow</a>
   </div>
 </div>
 
@@ -24,25 +24,25 @@
 <section class="guide-hero">
   <div class="guide-hero__copy">
     <div class="guide-badge">LogicOS → Flow → PuddleJumper / VAULT</div>
-    <h2>Flow lives inside LogicOS</h2>
-    <p>This guide is the fastest way to understand the LogicOS Flow hierarchy. Short version: <strong>Flow lives in LogicOS. PuddleJumper routes governed actions. VAULT provides authority and proof.</strong></p>
+    <h2>Use Flow first</h2>
+    <p>Open Flow for active work, blockers, deadlines, and thread detail. Use PuddleJumper when the action becomes governed. Use VAULT when you need proof and policy records.</p>
   </div>
   <div class="guide-hero__actions">
     <a href="/operator.html" class="guide-pill">
-      <span>Primary Flow workspace</span>
+      <span>Primary workspace</span>
       <strong>Open LogicOS Flow</strong>
     </a>
     <a href="/pj/signin" class="guide-pill">
-      <span>Operator door</span>
+      <span>Sign-in door</span>
       <strong>Operator sign in</strong>
     </a>
-    <a href="/operator.html" class="guide-pill">
-      <span>Direct Flow access</span>
-      <strong>LogicOS Flow</strong>
-    </a>
     <a href="/health" class="guide-pill">
-      <span>Runtime health</span>
+      <span>Runtime check</span>
       <strong>API Health</strong>
+    </a>
+    <a href="/pj/google-drive" class="guide-pill">
+      <span>Connector notes</span>
+      <strong>Google Drive route</strong>
     </a>
   </div>
 </section>
@@ -50,50 +50,50 @@
 <section class="flow-strip" aria-label="Preferred operating flow">
   <article class="flow-strip__card">
     <span>01</span>
-    <strong>Enter through Flow</strong>
-    <p>Open LogicOS Flow when you want threads, pressure, dependencies, compliance, and reset in one place.</p>
+    <strong>Open Flow</strong>
+    <p>Start with current work, blockers, deadlines, and selected-thread detail.</p>
   </article>
   <article class="flow-strip__card">
     <span>02</span>
-    <strong>Work inside LogicOS</strong>
-    <p>Use Flow for pressure-aware work management, then hand off to PuddleJumper only when the action becomes governed.</p>
+    <strong>Handle the work</strong>
+    <p>Pick a thread, clear dependencies, and watch compliance dates.</p>
   </article>
   <article class="flow-strip__card">
     <span>03</span>
-    <strong>Route governed action later</strong>
-    <p>Use PuddleJumper as the routing surface and VAULT as the proof layer once Flow has made the work visible.</p>
+    <strong>Route later</strong>
+    <p>Use PuddleJumper for governed action and VAULT for policy or proof only when needed.</p>
   </article>
 </section>
 
 <!-- ─────────────── QUICK START ─────────────── -->
-<h2>Unified V1 Quick Start</h2>
+<h2>Quick Start</h2>
 
-<p>PublicLogic connects LogicOS, Flow, PuddleJumper, LogicCommons, VAULT, and municipal work. <strong>Flow</strong> is a LogicOS operating track for pressure-aware work management. <strong>PuddleJumper</strong> routes governed actions later, and <strong>VAULT</strong> governs policy and proof.</p>
+<p>Use this order: <strong>Flow for work, PuddleJumper for governed action, VAULT for proof.</strong></p>
 
 <div class="qs-grid">
   <div class="qs-card">
     <h4><span class="qs-num">1</span> Sign In</h4>
-    <p>Open the sign-in flow or LogicOS Flow directly. OAuth tokens use session cookies and refresh automatically.</p>
+    <p>Open Flow directly, or sign in first if you need an authenticated surface.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">2</span> Start Screen</h4>
-    <p>All tools available to your role appear as tiles. Click any tool to launch it. Recent CaseSpaces appear below for quick re-entry.</p>
+    <p>Open the workbench and select the thread that needs action now.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">3</span> Operate</h4>
-    <p>Use PuddleJumper to run routing, records, and governed workflows. Open companion workspaces only when you explicitly need them.</p>
+    <p>Use Flow until the work is ready to route or govern.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">4</span> Connectors</h4>
-    <p>Use PuddleJumper routes when you need integrations, connectors, or controlled workflow handoffs. Companion surfaces can extend this, but PJ remains the anchor.</p>
+    <p>Use connector pages when you need route details or integration behavior.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">5</span> Govern Intake</h4>
-    <p>Use the operator shell for governed intake, records, approvals, and publication flow. Forms and document surfaces can sit alongside it when needed.</p>
+    <p>Use the municipal track when you need intake, records, approvals, or publication flow.</p>
   </div>
   <div class="qs-card">
     <h4><span class="qs-num">6</span> Monitor</h4>
-    <p>Use the <strong>operator shell</strong> for runtime status, approval routing, records operations, and workspace limits. Use <strong>Audit Trail</strong> to inspect the archival event chain.</p>
+    <p>Use Flow for status and deadlines. Use audit surfaces only when you need evidence.</p>
   </div>
 </div>
 
@@ -112,7 +112,7 @@ npx tsx src/api/server.ts
 # → http://localhost:3002/v1/health</code></pre>
 
 <h3>Best place to work</h3>
-<p>If you want the smoothest loop, start in <strong>PuddleJumper</strong> for auth, runtime routing, health, approvals, and operator visibility. Add companion surfaces only when they help. In short: <strong>start in PJ, operate through the shell, expand outward when needed</strong>.</p>
+<p>Start in <strong>Flow</strong>. Move to PuddleJumper only when the work becomes governed or connector-specific.</p>
 
 <h3>Deploy to Fly.io</h3>
 <pre><code># From monorepo root (/n8drive)

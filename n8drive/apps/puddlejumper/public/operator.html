@@ -26,7 +26,7 @@
 
       <div class="drawer__summary">
         <span id="drawerPill" class="status-pill status-pill--warn">Phase 2 / Offline</span>
-        <p class="drawer-copy">Flow lives in LogicOS. PuddleJumper routes governed actions later. VAULT governs policy and proof.</p>
+        <p class="drawer-copy">Selected work still has gaps before governed handoff.</p>
       </div>
 
       <section class="drawer__section">
@@ -36,24 +36,24 @@
       </section>
 
       <section class="drawer__section">
-        <h3>Connector posture</h3>
+        <h3>What each layer does</h3>
         <ul class="touchpoint-list">
-          <li><code>PuddleJumper</code> stays visible as the governed action router.</li>
-          <li><code>VAULT</code> stays visible as the proof and authority layer.</li>
-          <li><code>LogicOS</code> remains the host environment for Flow.</li>
+          <li><code>LogicOS</code> holds the active work view.</li>
+          <li><code>PuddleJumper</code> handles governed routing.</li>
+          <li><code>VAULT</code> holds proof and policy records.</li>
         </ul>
       </section>
     </aside>
   </div>
 
   <main id="flow-root" class="flow-shell">
-    <aside class="flow-sidebar">
-      <div class="sidebar-card sidebar-card--brand">
-        <p class="shell-eyebrow">LogicOS Environment</p>
-        <h1>Flow</h1>
-        <p class="sidebar-subtitle">Pressure Management Protocol</p>
-        <p class="sidebar-copy">Flow keeps active work visible before pressure becomes failure.</p>
-      </div>
+      <aside class="flow-sidebar">
+        <div class="sidebar-card sidebar-card--brand">
+          <p class="shell-eyebrow">LogicOS</p>
+          <h1>Flow</h1>
+          <p class="sidebar-subtitle">Operator workbench</p>
+          <p class="sidebar-copy">Threads, blockers, deadlines, and governed handoff.</p>
+        </div>
 
       <div class="sidebar-card">
         <p class="sidebar-label">Flow</p>
@@ -71,119 +71,145 @@
       </div>
     </aside>
 
-    <section class="flow-stage">
-      <header class="flow-topbar">
-        <div class="topbar-copy">
-          <p class="topbar-breadcrumb">LogicOS &rsaquo; PublicLogic &rsaquo; Flow</p>
-          <p class="topbar-line">Flow lives in LogicOS. PuddleJumper routes governed actions. VAULT provides authority and proof.</p>
-        </div>
-        <div class="topbar-meta">
-          <span class="status-chip">v1.2</span>
-          <span class="status-chip">n.boudreau</span>
-          <span class="status-chip status-chip--active">Environment Active</span>
-          <button id="pjDrawerToggle" class="status-pill status-pill--warn" type="button">PuddleJumper Handoff</button>
-        </div>
-      </header>
+      <section class="flow-stage">
+        <header class="flow-topbar">
+          <div class="topbar-copy">
+            <p class="topbar-breadcrumb">LogicOS &rsaquo; PublicLogic &rsaquo; Flow</p>
+            <p class="topbar-line">Start here: review active work, clear blockers, check deadlines, then hand off governed action.</p>
+          </div>
+          <div class="topbar-meta">
+            <span class="status-chip">v1.2</span>
+            <span class="status-chip">n.boudreau</span>
+            <span class="status-chip status-chip--active">Environment Active</span>
+            <button id="pjDrawerToggle" class="status-pill status-pill--warn" type="button">Handoff gaps</button>
+          </div>
+        </header>
 
-      <section class="environment-hero">
-        <div class="hero-copy">
-          <p class="hero-eyebrow">LogicOS Environment</p>
-          <h2>Flow</h2>
-          <p class="hero-subtitle">Pressure Management Protocol · LogicOS Environment</p>
-          <p class="hero-copy__body">Notes hold context. Reminders hold action. Flow reads pressure. Claude drafts. Drive and M365 store the work.</p>
-        </div>
-        <div class="hero-metrics">
-          <article class="metric-card">
-            <span class="metric-label">Last Reset</span>
-            <strong>Apr 7, 2026</strong>
-          </article>
-          <article class="metric-card">
-            <span class="metric-label">Next Reset</span>
-            <strong>Apr 13, 2026</strong>
-          </article>
-          <article class="metric-card">
-            <span class="metric-label">Active Threads</span>
-            <strong id="flowThreadCount">0</strong>
-          </article>
-          <article class="metric-card">
-            <span class="metric-label">Open Dependencies</span>
-            <strong id="flowDependencyCount">0</strong>
-          </article>
-          <article class="metric-card">
-            <span class="metric-label">Data Sources</span>
-            <strong>5 configured · 1 offline</strong>
-          </article>
-        </div>
-      </section>
+        <section class="focus-strip surface-card" aria-label="Operator actions">
+          <div class="focus-strip__copy">
+            <p class="section-kicker">Now</p>
+            <h3>What needs attention</h3>
+          </div>
+          <div class="focus-strip__cards">
+            <article class="focus-card">
+              <p class="detail-key">Next action</p>
+              <strong id="flowFocusNext">Select a thread</strong>
+            </article>
+            <article class="focus-card">
+              <p class="detail-key">Blocked threads</p>
+              <strong id="flowBlockedCount">0</strong>
+            </article>
+            <article class="focus-card">
+              <p class="detail-key">Due items</p>
+              <strong id="flowDueCount">0</strong>
+            </article>
+          </div>
+          <div class="focus-strip__actions">
+            <a class="action-link" href="#flow-threads">Open work</a>
+            <a class="action-link" href="#flow-compliance">Open deadlines</a>
+            <button id="pjDrawerQuickAction" class="action-link action-link--button" type="button">Open handoff gaps</button>
+          </div>
+        </section>
 
-      <div class="flow-workspace">
-        <div class="flow-primary">
-          <section id="flow-connections" class="surface-card">
-            <div class="section-head">
-              <div>
-                <p class="section-kicker">Connections</p>
-                <h3>Flow connectors</h3>
+        <section class="environment-hero">
+          <div class="hero-copy">
+            <p class="hero-eyebrow">Operator workbench</p>
+            <h2>Work the queue</h2>
+            <p class="hero-subtitle">Open work, blockers, deadlines, and handoff status.</p>
+            <p class="hero-copy__body">Select a thread, clear what is blocked, watch compliance dates, then route governed action when the work is actually ready.</p>
+          </div>
+          <div class="hero-metrics">
+            <article class="metric-card">
+              <span class="metric-label">Active Threads</span>
+              <strong id="flowThreadCount">0</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Blocked Threads</span>
+              <strong id="flowBlockedMetric">0</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Open Dependencies</span>
+              <strong id="flowDependencyCount">0</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Due Items</span>
+              <strong id="flowDueMetric">0</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Handoff</span>
+              <strong id="flowHandoffState">Offline</strong>
+            </article>
+          </div>
+        </section>
+
+        <div class="flow-workspace">
+          <div class="flow-primary">
+            <section id="flow-threads" class="surface-card">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Threads</p>
+                  <h3>Current work</h3>
+                </div>
               </div>
-            </div>
-            <div id="flowConnectionsGrid" class="connections-grid"></div>
-          </section>
+              <div id="flowThreadsList" class="thread-list"></div>
+            </section>
 
-          <section class="surface-card">
-            <div class="section-head">
-              <div>
-                <p class="section-kicker">Flow Path</p>
-                <h3>Notes → Reminders → Flow → Claude → Drive / M365</h3>
+            <section id="flow-thread-detail" class="surface-card">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Selected Thread</p>
+                  <h3 id="threadDetailName">No thread selected</h3>
+                </div>
+                <span id="threadDetailPressure" class="pressure-badge pressure-badge--blocked">■ Blocked</span>
               </div>
-            </div>
-            <div id="flowPath" class="flow-path" aria-label="Flow path"></div>
-          </section>
+              <div id="threadDetailBody" class="thread-detail"></div>
+            </section>
 
-          <section id="flow-threads" class="surface-card">
-            <div class="section-head">
-              <div>
-                <p class="section-kicker">Threads</p>
-                <h3>Active work</h3>
+            <section id="flow-compliance" class="surface-card">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Compliance Watch</p>
+                  <h3>Upcoming dates</h3>
+                </div>
               </div>
-            </div>
-            <div id="flowThreadsList" class="thread-list"></div>
-          </section>
-        </div>
+              <div id="flowComplianceList" class="watch-list"></div>
+            </section>
+          </div>
 
-        <aside class="flow-secondary">
-          <section id="flow-pressure-summary" class="surface-card">
+          <aside class="flow-secondary">
+            <section id="flow-pressure-summary" class="surface-card">
             <div class="section-head">
               <div>
                 <p class="section-kicker">Pressure</p>
                 <h3>State summary</h3>
               </div>
-            </div>
-            <div id="flowPressureGrid" class="pressure-grid"></div>
-          </section>
-
-          <section id="flow-thread-detail" class="surface-card">
-            <div class="section-head">
-              <div>
-                <p class="section-kicker">Selected Thread</p>
-                <h3 id="threadDetailName">No thread selected</h3>
               </div>
-              <span id="threadDetailPressure" class="pressure-badge pressure-badge--blocked">■ Blocked</span>
-            </div>
-            <div id="threadDetailBody" class="thread-detail"></div>
-          </section>
+              <div id="flowPressureGrid" class="pressure-grid"></div>
+            </section>
 
-          <section id="flow-compliance" class="surface-card">
-            <div class="section-head">
-              <div>
-                <p class="section-kicker">Compliance Watch</p>
-                <h3>Anchors</h3>
+            <section id="flow-connections" class="surface-card">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Connections</p>
+                  <h3>Supporting systems</h3>
+                </div>
               </div>
-            </div>
-            <div id="flowComplianceList" class="watch-list"></div>
-          </section>
+              <div id="flowConnectionsGrid" class="connections-grid"></div>
+            </section>
 
-          <section id="flow-weekly-reset" class="surface-card">
-            <div class="section-head">
-              <div>
+            <section class="surface-card">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Flow Path</p>
+                  <h3>Notes → Reminders → Flow → Claude → Drive / M365</h3>
+                </div>
+              </div>
+              <div id="flowPath" class="flow-path" aria-label="Flow path"></div>
+            </section>
+
+            <section id="flow-weekly-reset" class="surface-card">
+              <div class="section-head">
+                <div>
                 <p class="section-kicker">Weekly Reset</p>
                 <h3>Reset protocol</h3>
               </div>
@@ -201,9 +227,9 @@
             <div id="flowVaultAlignmentList" class="alignment-list"></div>
           </section>
         </aside>
-      </div>
+        </div>
 
-      <footer id="flow-status-bar" class="status-bar"></footer>
+        <footer id="flow-status-bar" class="status-bar"></footer>
     </section>
   </main>
 
