@@ -661,6 +661,20 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     }
   });
 
+  // ── Google Drive explainer ──────────────────────────────────────────────
+  const GOOGLE_DRIVE_HTML_FILE = path.join(PUBLIC_DIR, "google-drive.html");
+  app.get("/google-drive", (_req, res) => res.redirect(301, "/pj/google-drive"));
+  app.get("/pj/google-drive", (_req, res) => {
+    try {
+      res.setHeader("Cache-Control", "no-store, max-age=0");
+      res.type("html").sendFile(GOOGLE_DRIVE_HTML_FILE);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to serve Google Drive HTML:", (err as Error).message);
+      res.status(503).json({ error: "Google Drive HTML not available" });
+    }
+  });
+
   // ── Portal Sign-In ───────────────────────────────────────────────────
   const SIGNIN_HTML_FILE = path.join(PUBLIC_DIR, "portal-signin.html");
   app.get("/pj/signin", (_req, res) => {

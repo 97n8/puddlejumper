@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Drive Connector — PuddleJumper</title>
+<link rel="stylesheet" href="/styles/pj-guide.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">
+    <h1>PuddleJumper</h1>
+    <span class="subtitle">Google Drive Connector Surface</span>
+  </div>
+  <div class="nav-links">
+    <a href="/pj">Home</a>
+    <a href="/pj/guide">Guide</a>
+    <a href="/operator.html">Operator Shell</a>
+    <a href="/pj/signin">Sign In</a>
+  </div>
+</div>
+
+<div class="page">
+
+<section class="guide-hero">
+  <div class="guide-hero__copy">
+    <div class="guide-badge">Google Drive via PuddleJumper</div>
+    <h2>The Google Drive thing lives in LogicOS, but it runs through PuddleJumper.</h2>
+    <p>This page is the quick explainer for the Google Drive connector contract: what LogicOS calls, what PuddleJumper proxies, and what an operator should expect when Drive folders or files are created.</p>
+  </div>
+  <div class="guide-hero__actions">
+    <a href="/pj/signin" class="guide-pill">
+      <span>Auth</span>
+      <strong>Sign in to PuddleJumper</strong>
+    </a>
+    <a href="/health" class="guide-pill">
+      <span>Runtime</span>
+      <strong>Check health</strong>
+    </a>
+    <a href="/pj/guide" class="guide-pill">
+      <span>Context</span>
+      <strong>Open operator guide</strong>
+    </a>
+    <a href="https://os.publiclogic.org" class="guide-pill">
+      <span>Workspace</span>
+      <strong>Open LogicOS</strong>
+    </a>
+  </div>
+</section>
+
+<section class="flow-strip" aria-label="Connector flow">
+  <article class="flow-strip__card">
+    <span>01</span>
+    <strong>LogicOS starts the work</strong>
+    <p>LogicOS asks for a Drive file list, upload, or folder creation using its PJ-backed Google client.</p>
+  </article>
+  <article class="flow-strip__card">
+    <span>02</span>
+    <strong>PuddleJumper owns auth</strong>
+    <p>The browser never gets the Google token. PJ reads the session cookie, resolves the connector, and signs the upstream request server-side.</p>
+  </article>
+  <article class="flow-strip__card">
+    <span>03</span>
+    <strong>Google Drive receives the call</strong>
+    <p>PuddleJumper proxies to the Drive API and returns only the response LogicOS needs, such as folder ID, name, and webViewLink.</p>
+  </article>
+</section>
+
+<h2>Where it lives</h2>
+
+<div class="qs-grid">
+  <div class="qs-card">
+    <h4><span class="qs-num">1</span> LogicOS folder creation</h4>
+    <p><code>src/lib/logicos/google.ts</code> creates a Drive folder for a LogicOS record and calls PJ at <code>/api/google/drive/v3/files</code>.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">2</span> LogicOS connector wiring</h4>
+    <p><code>src/lib/logicos/connectors.ts</code> routes <code>google-folder</code> connector work into that folder-creation path.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">3</span> LogicOS general Drive service</h4>
+    <p><code>src/services/googlePJService.ts</code> wraps listing, upload, create, copy, and delete calls using the PJ proxy.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">4</span> PuddleJumper proxy route</h4>
+    <p>PuddleJumper serves the browser-facing Google proxy under <code>/api/google/*</code> and the upload surface under <code>/api/google/upload/*</code>.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">5</span> Save UI</h4>
+    <p><code>SaveToCloudDialog</code> and the file-editor <code>GoogleSavePanel</code> are the main LogicOS UI entry points for Drive-backed saves.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">6</span> Operator expectation</h4>
+    <p>If Google is not connected, the fix is not in the browser. The user must go through the PuddleJumper connector OAuth flow.</p>
+  </div>
+</div>
+
+<h2>Core contract</h2>
+
+<pre><code>List files
+GET /api/google/drive/v3/files
+
+Create folder
+POST /api/google/drive/v3/files
+Content-Type: application/json
+
+Upload file bytes
+POST /api/google/upload/drive/v3/files
+
+Typical create-folder body
+{
+  "name": "record-id - Record title",
+  "mimeType": "application/vnd.google-apps.folder",
+  "parents": ["optional-parent-folder-id"]
+}</code></pre>
+
+<h2>Important behavior</h2>
+
+<div class="qs-grid">
+  <div class="qs-card">
+    <h4><span class="qs-num">A</span> No token in the browser</h4>
+    <p>LogicOS always uses <code>credentials: 'include'</code>. The PJ session cookie is the only browser-side auth material.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">B</span> Drive folder naming</h4>
+    <p>Folder names are sanitized before creation so illegal control characters and path-hostile characters are stripped out.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">C</span> Parent folder selection</h4>
+    <p>LogicOS uses <code>record.googleParentId</code> first, then falls back to <code>LOGICOS_GOOGLE_ROOT_FOLDER_ID</code> when present.</p>
+  </div>
+  <div class="qs-card">
+    <h4><span class="qs-num">D</span> Common failure mode</h4>
+    <p>If the connector is missing, PJ should return an explicit not-connected/auth-required error. A spinner is the wrong answer.</p>
+  </div>
+</div>
+
+<h2>Operator checklist</h2>
+
+<pre><code>1. Check PuddleJumper health
+   GET /health
+
+2. Confirm Google connector auth exists for the user
+   Use PJ connector flow, not a browser-direct OAuth jump
+
+3. Retry the LogicOS action
+   - Save to cloud
+   - Create Google Drive folder
+   - File upload / copy / list
+
+4. If needed, inspect the PJ Google proxy route behavior
+   /api/google/*
+   /api/google/upload/*</code></pre>
+
+<h3>Bottom line</h3>
+<p>The Google Drive feature is a <strong>LogicOS workflow</strong> with a <strong>PuddleJumper runtime contract</strong>. If you are debugging the UI, start in LogicOS. If you are debugging auth, upstream calls, or connector health, start in PuddleJumper.</p>
+
+</div>
+
+</body>
+</html>
