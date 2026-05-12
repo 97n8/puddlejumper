@@ -31,6 +31,7 @@ import {
   createJwtAuthenticationMiddleware,
   csrfProtection,
   getAuthContext,
+  requireAuthenticated,
   resolveAuthOptions,
 } from "@publiclogic/core";
 import authCallback from "./authCallback.js";
@@ -140,6 +141,8 @@ import { startAutomationWorker } from '../stayos/automationWorker.js';
 import { createAEDRouter } from "../aed/aedRoutes.js";
 import { createSSCB1Router } from "../sscb1/sscb1Routes.js";
 import { createHealthRoutes, requestCounterMiddleware } from "./routes/health.js";
+import { initProjectStore, buildProjectAIContext } from "../projects/projectStore.js";
+import { createProjectRouter } from "../projects/routes/projectRoutes.js";
 import { ApprovalStore } from "../engine/approvalStore.js";
 import { ChainStore } from "../engine/chainStore.js";
 import { LocalPolicyProvider } from "../engine/policyProvider.js";
@@ -258,6 +261,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
 
   // ── FiscalIntel — MA DLS municipal data connector ─────────────────────
   initFiscalDb(approvalStore.db);
+  initProjectStore(approvalStore.db);
   scheduleDailyRegistrySync(approvalStore.db);
   initOrgManager(approvalStore.db);
   initFinance(approvalStore.db);
@@ -1021,6 +1025,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api/v1/org", requireToolAccess("admin"), createOrgManagerRouter(approvalStore.db));
   app.use("/api/v1/finance", requireToolAccess("admin"), createFinanceRouter(approvalStore.db));
   app.use("/api/prr", requireToolAccess("admin"), createPrrRouter(approvalStore.db));
+  app.use("/api/projects", createProjectRouter(approvalStore.db));
   app.use("/public/prr", prrRateLimit);
   app.use(createPublicPRRRoutes({
     prrStore,
