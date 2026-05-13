@@ -211,7 +211,7 @@ type FlowRunPatch = {
 }
 
 const PROJECT_SCHEMA = `
-CREATE TABLE IF NOT EXISTS audit_events (
+CREATE TABLE IF NOT EXISTS project_audit_events (
   id TEXT PRIMARY KEY,
   org_id TEXT NOT NULL,
   event_type TEXT NOT NULL,
@@ -221,16 +221,16 @@ CREATE TABLE IF NOT EXISTS audit_events (
   payload TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL DEFAULT (datetime('now','utc'))
 );
-CREATE INDEX IF NOT EXISTS idx_audit_events_org_created
-  ON audit_events(org_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_events_resource
-  ON audit_events(resource_type, resource_id, created_at DESC);
-CREATE TRIGGER IF NOT EXISTS audit_events_no_update
-  BEFORE UPDATE ON audit_events
-  BEGIN SELECT RAISE(ABORT, 'audit_events is append-only'); END;
-CREATE TRIGGER IF NOT EXISTS audit_events_no_delete
-  BEFORE DELETE ON audit_events
-  BEGIN SELECT RAISE(ABORT, 'audit_events is append-only'); END;
+CREATE INDEX IF NOT EXISTS idx_project_audit_events_org_created
+  ON project_audit_events(org_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_project_audit_events_resource
+  ON project_audit_events(resource_type, resource_id, created_at DESC);
+CREATE TRIGGER IF NOT EXISTS project_audit_events_no_update
+  BEFORE UPDATE ON project_audit_events
+  BEGIN SELECT RAISE(ABORT, 'project_audit_events is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS project_audit_events_no_delete
+  BEFORE DELETE ON project_audit_events
+  BEGIN SELECT RAISE(ABORT, 'project_audit_events is append-only'); END;
 
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
@@ -373,7 +373,7 @@ CREATE TRIGGER IF NOT EXISTS flow_steps_no_delete
 CREATE TRIGGER IF NOT EXISTS projects_audit_insert
   AFTER INSERT ON projects
   BEGIN
-    INSERT INTO audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
+    INSERT INTO project_audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
     VALUES (
       lower(hex(randomblob(16))),
       NEW.owner_id,
@@ -388,7 +388,7 @@ CREATE TRIGGER IF NOT EXISTS projects_audit_insert
 CREATE TRIGGER IF NOT EXISTS projects_audit_update
   AFTER UPDATE ON projects
   BEGIN
-    INSERT INTO audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
+    INSERT INTO project_audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
     VALUES (
       lower(hex(randomblob(16))),
       NEW.owner_id,
@@ -404,7 +404,7 @@ CREATE TRIGGER IF NOT EXISTS projects_audit_update
 CREATE TRIGGER IF NOT EXISTS flows_audit_insert
   AFTER INSERT ON flows
   BEGIN
-    INSERT INTO audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
+    INSERT INTO project_audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
     VALUES (
       lower(hex(randomblob(16))),
       NEW.owner_id,
@@ -419,7 +419,7 @@ CREATE TRIGGER IF NOT EXISTS flows_audit_insert
 CREATE TRIGGER IF NOT EXISTS flows_audit_update
   AFTER UPDATE ON flows
   BEGIN
-    INSERT INTO audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
+    INSERT INTO project_audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
     VALUES (
       lower(hex(randomblob(16))),
       NEW.owner_id,
@@ -435,7 +435,7 @@ CREATE TRIGGER IF NOT EXISTS flows_audit_update
 CREATE TRIGGER IF NOT EXISTS captures_audit_insert
   AFTER INSERT ON captures
   BEGIN
-    INSERT INTO audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
+    INSERT INTO project_audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
     VALUES (
       lower(hex(randomblob(16))),
       NEW.owner_id,
@@ -450,7 +450,7 @@ CREATE TRIGGER IF NOT EXISTS captures_audit_insert
 CREATE TRIGGER IF NOT EXISTS captures_audit_update
   AFTER UPDATE ON captures
   BEGIN
-    INSERT INTO audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
+    INSERT INTO project_audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
     VALUES (
       lower(hex(randomblob(16))),
       NEW.owner_id,
@@ -586,7 +586,7 @@ function insertProjectAuditEvent(
   },
 ): void {
   db.prepare(`
-    INSERT INTO audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
+    INSERT INTO project_audit_events (id, org_id, event_type, resource_type, resource_id, actor_id, payload, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     crypto.randomUUID(),
