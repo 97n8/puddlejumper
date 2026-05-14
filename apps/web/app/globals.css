@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/* ── PuddleJumper Design Tokens ── */
+:root {
+  /* Navy governance palette */
+  --pj-midnight: #062047;
+  --pj-navy: #0a2f5c;
+  --pj-steel: #1e3a5f;
+  --pj-slate: #3d5a80;
+  --pj-sky: #98c1d9;
+
+  /* Warm accents */
+  --pj-gold: #e8a838;
+  --pj-amber: #d4820c;
+  --pj-cream: #faf7f2;
+
+  /* Functional */
+  --pj-success: #2d6a4f;
+  --pj-warning: #e8a838;
+  --pj-error: #9b2226;
+
+  /* Type scale */
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-body: "Satoshi", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Surfaces */
+  --surface-primary: var(--pj-cream);
+  --surface-elevated: #ffffff;
+  --surface-inverse: var(--pj-midnight);
+  --text-primary: var(--pj-midnight);
+  --text-muted: var(--pj-slate);
+  --text-inverse: var(--pj-cream);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-primary: var(--pj-midnight);
+    --surface-elevated: var(--pj-navy);
+    --surface-inverse: var(--pj-cream);
+    --text-primary: var(--pj-cream);
+    --text-muted: var(--pj-sky);
+    --text-inverse: var(--pj-midnight);
+  }
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--surface-primary);
+  color: var(--text-primary);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+}
+
+code, pre {
+  font-family: var(--font-mono);
+}
+
+/* ── The duck comment ── */
+/* // GPR */

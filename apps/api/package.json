@@ -1,0 +1,29 @@
+{
+  "name": "@pj/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsup src/server.ts --format esm --dts",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "better-sqlite3": "^11.8.0",
+    "cors": "^2.8.5",
+    "@pj/core": "workspace:*",
+    "@pj/db": "workspace:*",
+    "@pj/mcp": "workspace:*",
+    "@pj/sync8": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/cors": "^2.8.17",
+    "tsx": "^4.19.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0"
+  }
+}

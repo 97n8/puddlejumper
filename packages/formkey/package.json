@@ -1,0 +1,14 @@
+{
+  "name": "@pj/formkey",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@pj/core": "workspace:*",
+    "@pj/db": "workspace:*"
+  },
+  "devDependencies": { "typescript": "^5.7.0" }
+}

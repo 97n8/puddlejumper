@@ -1,0 +1,46 @@
+%% PuddleJumper Runtime Loop V1
+%% Canonical process map — Inbound → CaseSpace → Transfer
+%% // GPR
+
+graph LR
+    subgraph INBOUND["INBOUND"]
+        A1["Microsoft SSO"] --> ID["Identity Verified"]
+        A2["Google SSO"] --> ID
+        A3["Magic Link"] --> ID
+        FK["Formkey Submission"] --> REC["Governed Record Created"]
+        CS_IN["Cloud Sync Inbound"] --> REC
+        EM["Email / CivicPlus Trigger"] --> REC
+    end
+
+    ID -->|"Org Manager resolves position"| CASE
+    REC -->|"Flow created, VAULT activated"| CASE
+
+    subgraph CASESPACE["CASESPACE"]
+        CASE["CaseSpace Built"] --> ENV["Position, Tools, Rules, Deadlines, Context"]
+        ENV --> ACT["User Takes Action"]
+        ACT --> VAULT{"VAULT: V A U L T"}
+        VAULT -->|"All met"| APP["Approved"]
+        VAULT -->|"Not met"| BLK["Blocked"]
+        BLK --> AUD_BLK["Audit Event: Block Logged"]
+        AUD_BLK -->|"Reason visible, step still pending"| ENV
+        APP --> ART["Artifact Generated From Flow State"]
+        ART --> AUD_APP["Audit Event: Approval + Artifact Logged"]
+    end
+
+    AUD_APP -->|"T in VAULT"| FP
+
+    subgraph OUTBOUND["OUTBOUND: TRANSFER"]
+        FP["Governance Fingerprint Attached"] --> SP["SharePoint"]
+        FP --> GD["Google Drive"]
+        FP --> CP["CivicPlus"]
+        FP --> STATE["State Portal"]
+        FP --> RES["Resident Inbox"]
+        SP --> CONF["Sync Confirmed"]
+        GD --> CONF
+        CP --> CONF
+        STATE --> CONF
+        RES --> CONF
+    end
+
+    CONF -->|"Transfer audit written"| AUD_FINAL["Audit Event: Transfer Complete"]
+    AUD_FINAL -->|"CaseSpace updates"| ENV
