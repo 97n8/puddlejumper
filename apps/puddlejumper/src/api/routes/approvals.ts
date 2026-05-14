@@ -14,6 +14,7 @@ import {
 } from "@publiclogic/core";
 import type { ApprovalStore, ApprovalStatus } from "../../engine/approvalStore.js";
 import type { ChainStore } from "../../engine/chainStore.js";
+import type { PolicyProvider } from "../../engine/policyProvider.js";
 import type { DispatcherRegistry, PlanStepInput, RetryPolicy } from "../../engine/dispatch.js";
 import { dispatchPlan } from "../../engine/dispatch.js";
 import { getCorrelationId } from "../serverMiddleware.js";
@@ -25,6 +26,8 @@ export type ApprovalRouteOptions = {
   nodeEnv: string;
   /** When provided, approval decisions flow through the chain progression layer. */
   chainStore?: ChainStore;
+  /** When provided, release authorization is validated before dispatch. */
+  policyProvider?: PolicyProvider;
 };
 
 export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router {
@@ -349,6 +352,32 @@ export function createApprovalRoutes(opts: ApprovalRouteOptions): express.Router
       return;
     }
     approvalMetrics.increment(METRIC.CONSUME_CAS_SUCCESS);
+
+    // Post-approval gate: authorize release with policy provider
+    if (opts.policyProvider && dispatching.manifest_id) {
+      try {
+        const releaseAuth = await opts.policyProvider.authorizeRelease({
+          approvalId: dispatching.id,
+          manifestId: dispatching.manifest_id,
+          workspaceId: dispatching.workspace_id,
+          municipalityId: dispatching.municipality_id,
+          operatorId: auth.userId ?? auth.sub ?? "unknown",
+          planHash: dispatching.plan_hash,
+          timestamp: new Date().toISOString(),
+        });
+        if (!releaseAuth.authorized) {
+          res.status(403).json({
+            success: false,
+            correlationId,
+            error: "release_not_authorized",
+            reason: releaseAuth.reason ?? "Policy provider did not authorize this release",
+          });
+          return;
+        }
+      } catch {
+        // Auth failure is non-fatal in degraded mode
+      }
+    }
 
     const dryRun = req.body?.dryRun === true;
     emitApprovalEvent("dispatch_started", { approvalId: row.id, correlationId, dryRun });
