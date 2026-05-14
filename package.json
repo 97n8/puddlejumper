@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "PuddleJumper GPR — Government Process Runtime. The governed execution engine for PublicLogic municipal AI.",
+  "packageManager": "pnpm@9.15.9",
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"
