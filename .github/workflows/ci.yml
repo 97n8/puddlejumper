@@ -14,10 +14,6 @@ jobs:
     permissions:
       contents: read
 
-    defaults:
-      run:
-        working-directory: n8drive
-
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -27,7 +23,7 @@ jobs:
       - name: Enable corepack/pnpm
         run: |
           corepack enable
-          corepack prepare pnpm@8.15.8 --activate
+          corepack prepare pnpm@9 --activate
           pnpm --version
 
       - name: Setup Node.js 20.x
@@ -35,7 +31,7 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm"
-          cache-dependency-path: n8drive/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
