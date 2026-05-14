@@ -44,6 +44,7 @@ export type ApprovalRow = {
   expires_at: string;
   dispatched_at: string | null;
   dispatch_result_json: string | null;
+  manifest_id: string | null;
 };
 
 export type CreateApprovalInput = {
@@ -59,6 +60,7 @@ export type CreateApprovalInput = {
   decisionResult: unknown;          // full DecisionResult
   ttlSeconds?: number;              // default 48h
   requiredRole?: string;            // OrgManager governance role required to approve
+  manifestId?: string;              // policy provider manifest ID (optional)
 };
 
 export type ApprovalDecision = {
@@ -115,7 +117,8 @@ export class ApprovalStore {
         updated_at TEXT NOT NULL,
         expires_at TEXT NOT NULL,
         dispatched_at TEXT,
-        dispatch_result_json TEXT
+        dispatch_result_json TEXT,
+        manifest_id TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_approvals_status ON approvals(approval_status);
       CREATE INDEX IF NOT EXISTS idx_approvals_operator ON approvals(operator_id);
@@ -131,6 +134,9 @@ export class ApprovalStore {
     }
     if (!pragma.some((col: any) => col.name === "required_role")) {
       this.db.exec("ALTER TABLE approvals ADD COLUMN required_role TEXT");
+    }
+    if (!pragma.some((col: any) => col.name === "manifest_id")) {
+      this.db.exec("ALTER TABLE approvals ADD COLUMN manifest_id TEXT");
     }
 
     // Auto-expire pending approvals
@@ -152,8 +158,8 @@ export class ApprovalStore {
         operator_id, workspace_id, municipality_id,
         action_intent, action_mode, plan_hash,
         plan_json, audit_record_json, decision_result_json,
-        created_at, updated_at, expires_at, required_role
-      ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        created_at, updated_at, expires_at, required_role, manifest_id
+      ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       input.requestId,
@@ -169,6 +175,7 @@ export class ApprovalStore {
       JSON.stringify(input.decisionResult),
       now, now, expiresAt,
       input.requiredRole ?? null,
+      input.manifestId ?? null,
     );
 
     return this.findById(id)!;

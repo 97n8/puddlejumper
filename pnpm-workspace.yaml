@@ -1,2 +1,7 @@
 packages:
-  - n8drive
+  - apps/*
+  - packages/*
+
+ignoredBuiltDependencies:
+  - better-sqlite3
+  - esbuild

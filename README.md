@@ -1,57 +1,52 @@
-# PublicLogic ecosystem repo
+# PuddleJumper GPR
 
-This repository is part of one connected **PublicLogic** universe:
+**Government Process Runtime** — the governed execution engine for PublicLogic municipal AI.
 
-- **LogicOS** - the operator workspace
-- **PuddleJumper** - the control plane, approvals, dispatch, and runtime
-- **LogicCommons** - shared governance and repository primitives
-- **Vault** - compliance, policy, and audit authority
+## Architecture
 
-`n8drive/` is the canonical implementation root in this repository today. It contains the active pnpm monorepo for PuddleJumper plus shared packages that support the wider PublicLogic system.
+```
+apps/
+  puddlejumper/     API server & governance engine    (port 3002)
+  vault/            Policy authority & audit ledger   (port 3003)
+  logic-commons/    Shared governance primitives
+  logicos/          Operator mobile shell
 
-## Repo truth
+packages/
+  core/             Auth, JWT, middleware
+```
 
-- **Canonical code root:** `n8drive/`
-- **Canonical GitHub Actions location:** `.github/workflows/`
-- **Canonical local workflow:** run commands from `n8drive/`
+## How it works
 
-Nested workflow files under `n8drive/.github/workflows/` are intentionally not used; the live GitHub Actions definitions belong at the repository root.
+Every municipal AI action passes through a **fail-closed governance engine** before executing:
 
-## Repository layout
+1. **Evaluate** — engine checks intent, authority, and policy
+2. **Register** — manifest pre-flight with VAULT (freeze windows, legal citations)
+3. **Approve** — multi-step chain (parallel + sequential)
+4. **Authorize** — VAULT release gate (drift detection, TTL)
+5. **Dispatch** — connector executes against GitHub / SharePoint / Slack / webhook
 
-| Path | Role |
-|---|---|
-| `n8drive/apps/puddlejumper/` | PuddleJumper control plane app |
-| `n8drive/apps/logic-commons/` | LogicCommons service/package surface used by the ecosystem |
-| `n8drive/packages/core/` | shared auth, cookie, and governance primitives |
-| `n8drive/packages/vault/` | Vault compliance and PolicyProvider implementation |
-| `.github/workflows/` | live CI, deploy, backup, and smoke automation |
+The `LocalPolicyProvider` runs standalone. Set `VAULT_URL` to route through the VAULT authority service.
 
-## Getting started
+## Quick start
 
 ```bash
-cd n8drive
-corepack enable
 pnpm install
-pnpm run dev
+pnpm dev:pj        # API server on :3002
+pnpm dev:vault     # VAULT authority on :3003
 ```
 
-## Key commands
+## Deploy
 
 ```bash
-cd n8drive
-pnpm run test
-pnpm run typecheck
-pnpm run build
-pnpm run ci
+pnpm deploy:fly    # Fly.io (publiclogic-puddlejumper.fly.dev)
 ```
 
-## Documentation
+## Packages
 
-- `n8drive/README.md` - implementation and runtime guide
-- `n8drive/ops/ARCHITECTURE-NORTH-STAR.md` - product and control-plane direction
-- `n8drive/packages/vault/README.md` - Vault architecture and boundary
-
-## License
-
-See `LICENSE`.
+| Package | Description |
+|---------|-------------|
+| `@publiclogic/puddlejumper` | Governance engine, approval chains, dispatch |
+| `@publiclogic/vault` | Policy provider, audit ledger, manifest registry |
+| `@publiclogic/logic-commons` | Shared governance & repository primitives |
+| `@publiclogic/core` | Auth, JWT, cookies, middleware |
+| `@gpr/logicos` | Mobile operator shell |

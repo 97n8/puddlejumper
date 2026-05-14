@@ -16,6 +16,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/puddlejumper/package.json apps/puddlejumper/
 COPY apps/logic-commons/package.json apps/logic-commons/
 COPY packages/core/package.json packages/core/
+COPY packages/vault/package.json packages/vault/
 
 ENV CI=true
 RUN pnpm install --no-frozen-lockfile
@@ -31,6 +32,7 @@ RUN find . -name "*.tsbuildinfo" -type f -delete
 # Build packages in explicit dependency order (same as CI)
 RUN pnpm --filter @publiclogic/core run build && \
     pnpm --filter @publiclogic/logic-commons run build && \
+    pnpm --filter @publiclogic/vault run build && \
     pnpm --filter @publiclogic/puddlejumper run build
 
 # Rebuild native addons for linux target

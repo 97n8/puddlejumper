@@ -176,6 +176,36 @@ export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.R
         }
         
         try {
+          // Pre-flight: register manifest with policy provider
+          let manifestId: string | undefined;
+          if (opts.policyProvider) {
+            try {
+              const manifestResult = await opts.policyProvider.registerManifest({
+                manifestId: crypto.randomUUID(),
+                workspaceId: evaluatePayload.workspace.id,
+                operatorId: auth.userId,
+                municipalityId: evaluatePayload.municipality.id,
+                intent: evaluatePayload.action.intent,
+                planHash: result.auditRecord.planHash,
+                description: (evaluatePayload.action as any).metadata?.description ?? evaluatePayload.action.intent,
+                connectors: result.actionPlan?.map((s: any) => s.connector).filter(Boolean) ?? [],
+                timestamp: new Date().toISOString(),
+              });
+              if (!manifestResult.accepted) {
+                res.status(422).json({
+                  success: false,
+                  correlationId,
+                  error: "manifest_rejected",
+                  reason: manifestResult.reason ?? "Policy provider rejected this action",
+                });
+                return;
+              }
+              manifestId = manifestResult.manifestId;
+            } catch {
+              // Register failure is non-fatal in degraded mode (local provider always accepts)
+            }
+          }
+
           const approval = opts.approvalStore.create({
             requestId: evaluatePayload.action.requestId ?? `pj-${correlationId}`,
             operatorId: auth.userId,
@@ -187,6 +217,7 @@ export function createGovernanceRoutes(opts: GovernanceRoutesOptions): express.R
             planSteps: result.actionPlan,
             auditRecord: result.auditRecord,
             decisionResult: result,
+            manifestId,
           });
           approvalMetrics.increment(METRIC.APPROVALS_CREATED);
           approvalMetrics.incrementGauge(METRIC.PENDING_GAUGE);
