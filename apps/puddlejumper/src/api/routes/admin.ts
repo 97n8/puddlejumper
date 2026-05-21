@@ -20,6 +20,79 @@ export type AdminRouteOptions = {
   chainStore?: ChainStore;
 };
 
+type AuditScopedAuthContext = {
+  role?: unknown;
+  permissions?: unknown;
+  toolIds?: unknown;
+  auditToolIds?: unknown;
+  allowedTools?: unknown;
+};
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+}
+
+function parseRequestedToolIds(raw: unknown): string[] {
+  const values = Array.isArray(raw) ? raw : typeof raw === "string" ? [raw] : [];
+  return Array.from(
+    new Set(
+      values
+        .flatMap((value) => value.split(","))
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0),
+    ),
+  );
+}
+
+function getScopedToolIds(auth: AuditScopedAuthContext | null): string[] {
+  if (!auth) return [];
+  return Array.from(
+    new Set([
+      ...asStringArray(auth.toolIds),
+      ...asStringArray(auth.auditToolIds),
+      ...asStringArray(auth.allowedTools),
+    ]),
+  );
+}
+
+function hasPermission(auth: AuditScopedAuthContext | null, permission: string): boolean {
+  return asStringArray(auth?.permissions).includes(permission);
+}
+
+function canAccessRequestedTools(
+  auth: AuditScopedAuthContext | null,
+  requestedToolIds: string[],
+  permission: "audit:tool:read" | "audit:tool:write",
+): boolean {
+  if (!auth || requestedToolIds.length === 0) return false;
+  if (auth.role === "admin") return true;
+  if (!hasPermission(auth, permission)) return false;
+  const scopedToolIds = new Set(getScopedToolIds(auth));
+  return requestedToolIds.every((toolId) => scopedToolIds.has(toolId));
+}
+
+function formatAuditReadEvent(event: {
+  event_type: string;
+  actor_id: string | null;
+  target_id: string | null;
+  timestamp: string;
+  metadata: string | null;
+}) {
+  return {
+    event_type: event.event_type,
+    actor_id: event.actor_id,
+    target_id: event.target_id,
+    timestamp: event.timestamp,
+    metadata: event.metadata ? JSON.parse(event.metadata) : null,
+  };
+}
+
+function readScopedAuditEvents(toolIds: string[], after: string | undefined, limit: number) {
+  const events = queryAuditEvents({ tool_id: toolIds, after, limit });
+  return events.map(formatAuditReadEvent);
+}
+
 export function createAdminRoutes(opts: AdminRouteOptions): express.Router {
   const router = express.Router();
   const { approvalStore, chainStore } = opts;
@@ -129,24 +202,57 @@ export function createAdminRoutes(opts: AdminRouteOptions): express.Router {
     res.json({ success: true, correlationId, data: { events, count: events.length } });
   });
 
-  // GET /api/audit/tool/:toolId?after=...&limit=...
-  // Query audit events for a specific tool. Requires admin or owner role.
-  router.get("/audit/tool/:toolId", requireAuthenticated(), (req, res) => {
+  // GET /api/audit?tool=<id>[&tool=<id2>]&after=...&limit=...
+  // Query audit events for one or more scoped tools.
+  router.get("/audit", requireAuthenticated(), (req, res) => {
     const auth = getAuthContext(req);
     const correlationId = getCorrelationId(res);
+    const toolIds = parseRequestedToolIds(req.query.tool);
 
-    if (!auth || (auth.role !== "admin" && auth.role !== "owner")) {
-      res.status(403).json({ success: false, correlationId, error: "Admin access required" });
+    if (toolIds.length === 0) {
+      res.status(400).json({ success: false, correlationId, error: "tool is required" });
       return;
     }
 
-    const { toolId } = req.params;
     const after = typeof req.query.after === "string" ? req.query.after : undefined;
     const limitParam = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 200;
     const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 1000)) : 200;
 
-    const events = queryAuditEvents({ tool_id: toolId, after, limit });
-    res.json({ success: true, correlationId, data: { toolId, events, count: events.length } });
+    if (!canAccessRequestedTools(auth as AuditScopedAuthContext | null, toolIds, "audit:tool:read")) {
+      res.status(403).json({ success: false, correlationId, error: "Tool audit read denied", toolIds });
+      return;
+    }
+
+    const events = readScopedAuditEvents(toolIds, after, limit);
+    res.json({
+      success: true,
+      correlationId,
+      data: { toolIds, events, count: events.length },
+    });
+  });
+
+  // GET /api/audit/tool/:toolId?after=...&limit=...
+  // Compatibility alias for single-tool reads.
+  router.get("/audit/tool/:toolId", requireAuthenticated(), (req, res) => {
+    const auth = getAuthContext(req);
+    const correlationId = getCorrelationId(res);
+    const toolIds = [req.params.toolId];
+
+    const after = typeof req.query.after === "string" ? req.query.after : undefined;
+    const limitParam = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 200;
+    const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 1000)) : 200;
+
+    if (!canAccessRequestedTools(auth as AuditScopedAuthContext | null, toolIds, "audit:tool:read")) {
+      res.status(403).json({ success: false, correlationId, error: "Tool audit read denied", toolIds });
+      return;
+    }
+
+    const events = readScopedAuditEvents(toolIds, after, limit);
+    res.json({
+      success: true,
+      correlationId,
+      data: { toolId: req.params.toolId, events, count: events.length },
+    });
   });
 
   // POST /api/audit/tool — emit a tool event (called by tool backends, not client)
@@ -158,6 +264,11 @@ export function createAdminRoutes(opts: AdminRouteOptions): express.Router {
 
     if (!tool || !action || !actorId) {
       res.status(400).json({ success: false, correlationId, error: "tool, action, and actorId are required" });
+      return;
+    }
+
+    if (!canAccessRequestedTools(auth as AuditScopedAuthContext | null, [tool], "audit:tool:write")) {
+      res.status(403).json({ success: false, correlationId, error: "Tool audit write denied", tool });
       return;
     }
 

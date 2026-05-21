@@ -33,7 +33,7 @@ export type InsertAuditEvent = {
 export type AuditQueryOptions = {
   event_type?: string;
   actor_id?: string;
-  tool_id?: string;
+  tool_id?: string | string[];
   limit?: number;
   after?: string; // ISO date string
 };
@@ -55,11 +55,15 @@ function resolveDataDir(): string {
     || path.resolve(process.cwd(), "data");
 }
 
+function resolveDbPath(): string {
+  return path.join(resolveDataDir(), "audit.db");
+}
+
 function getDb(): Database.Database {
   if (_db) return _db;
   const dir = resolveDataDir();
   fs.mkdirSync(dir, { recursive: true });
-  const dbPath = path.join(dir, "audit.db");
+  const dbPath = resolveDbPath();
   _db = new Database(dbPath);
   _db.pragma("journal_mode = WAL");
   _db.exec(`
@@ -77,6 +81,13 @@ function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_audit_type ON audit_events(event_type);
     CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_events(actor_id);
     CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_events(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_audit_tool ON audit_events(json_extract(metadata, '$.tool'));
+    CREATE TRIGGER IF NOT EXISTS audit_events_no_update
+      BEFORE UPDATE ON audit_events
+      BEGIN SELECT RAISE(ABORT, 'audit_events is append-only'); END;
+    CREATE TRIGGER IF NOT EXISTS audit_events_no_delete
+      BEFORE DELETE ON audit_events
+      BEGIN SELECT RAISE(ABORT, 'audit_events is append-only'); END;
   `);
   return _db;
 }
@@ -84,14 +95,30 @@ function getDb(): Database.Database {
 /** For tests: close the DB and reset so next call re-opens a fresh store. */
 export function resetAuditDb(): void {
   if (_db) {
-    try {
-      _db.exec("DELETE FROM audit_events");
-    } catch {
-      /* table may not exist yet */
-    }
     _db.close();
     _db = null;
   }
+  const dbPath = resolveDbPath();
+  for (const suffix of ["", "-wal", "-shm"]) {
+    try {
+      fs.rmSync(`${dbPath}${suffix}`, { force: true });
+    } catch {
+      /* file may not exist yet */
+    }
+  }
+}
+
+function normalizeToolIds(toolId?: string | string[]): string[] {
+  if (!toolId) return [];
+  const values = Array.isArray(toolId) ? toolId : [toolId];
+  return Array.from(
+    new Set(
+      values
+        .flatMap((value) => value.split(","))
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0),
+    ),
+  );
 }
 
 // ── Operations ──────────────────────────────────────────────────────────────
@@ -132,10 +159,15 @@ export function queryAuditEvents(opts: AuditQueryOptions = {}): AuditEventRow[] 
     conditions.push("actor_id = ?");
     params.push(opts.actor_id);
   }
-  if (opts.tool_id) {
-    // tool_id is stored in the metadata JSON as { tool: "..." }
+  const toolIds = normalizeToolIds(opts.tool_id);
+  if (toolIds.length === 1) {
     conditions.push("json_extract(metadata, '$.tool') = ?");
-    params.push(opts.tool_id);
+    params.push(toolIds[0]);
+  } else if (toolIds.length > 1) {
+    conditions.push(
+      `json_extract(metadata, '$.tool') IN (${toolIds.map(() => "?").join(", ")})`,
+    );
+    params.push(...toolIds);
   }
   if (opts.after) {
     conditions.push("timestamp > ?");
@@ -174,6 +206,6 @@ export function logToolEvent(event: ToolAuditEvent): AuditEventRow {
     target_id: event.resourceId ?? null,
     ip_address: event.ipAddress ?? null,
     request_id: event.requestId ?? null,
-    metadata: { tool: event.tool, action: event.action, ...event.meta },
+    metadata: { ...(event.meta ?? {}), tool: event.tool, action: event.action },
   });
 }

@@ -15,6 +15,11 @@ import crypto from "node:crypto";
 import express from "express";
 import request from "supertest";
 import { signJwt, cookieParserMiddleware, csrfProtection } from "@publiclogic/core";
+import {
+  configureAuditStore,
+  queryAuditEvents,
+  resetAuditDb,
+} from "@publiclogic/logic-commons";
 import { ApprovalStore } from "../src/engine/approvalStore.js";
 import { ChainStore, DEFAULT_TEMPLATE_ID } from "../src/engine/chainStore.js";
 import { approvalMetrics, METRIC } from "../src/engine/approvalMetrics.js";
@@ -36,6 +41,20 @@ let tmpDir: string;
 
 const ADMIN = { sub: "admin-1", name: "Admin", role: "admin", permissions: ["deploy"], tenants: ["t1"], tenantId: "t1" };
 const VIEWER = { sub: "viewer-1", name: "Viewer", role: "viewer", permissions: [], tenants: ["t1"], tenantId: "t1" };
+const AUDIT_SERVICE = {
+  sub: "svc:pl-proxy",
+  name: "PL Proxy",
+  role: "service",
+  permissions: ["audit:tool:read", "audit:tool:write"],
+  toolIds: ["cs-mastersite", "cs-rrc-michigan"],
+};
+const OTHER_AUDIT_SERVICE = {
+  sub: "svc:other",
+  name: "Other Proxy",
+  role: "service",
+  permissions: ["audit:tool:read", "audit:tool:write"],
+  toolIds: ["cs-other"],
+};
 
 async function tokenFor(user: Record<string, unknown>) {
   return signJwt(user, { expiresIn: "1h" });
@@ -108,6 +127,8 @@ function createApproval(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "admin-test-"));
+  configureAuditStore(tmpDir);
+  resetAuditDb();
   approvalStore = new ApprovalStore(path.join(tmpDir, "approvals.db"));
   chainStore = new ChainStore(approvalStore.db);
   registry = new DispatcherRegistry();
@@ -117,6 +138,7 @@ beforeEach(() => {
 
 afterEach(() => {
   approvalStore.close();
+  resetAuditDb();
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
@@ -227,6 +249,95 @@ describe("GET /api/admin/stats", () => {
 
     expect(res.body.data.avgApprovalTimeSec).toBe(120);
     expect(res.body.data.avgDispatchLatencySec).toBe(2);
+  });
+});
+
+describe("tool-scoped audit routes", () => {
+  it("writes tool events for a scoped service token", async () => {
+    const app = buildApp();
+    const token = await tokenFor(AUDIT_SERVICE);
+
+    const res = await request(app)
+      .post("/api/audit/tool")
+      .set({ Authorization: `Bearer ${token}`, "X-PuddleJumper-Request": "true" })
+      .send({
+        tool: "cs-rrc-michigan",
+        action: "casespace_opened",
+        actorId: "proxy-user-1",
+        resourceId: "case-123",
+        meta: { tool: "bad-override", client: "RRC Michigan" },
+      })
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+
+    const events = queryAuditEvents({ tool_id: "cs-rrc-michigan" });
+    expect(events).toHaveLength(1);
+    expect(events[0].event_type).toBe("tool:cs-rrc-michigan:casespace_opened");
+    expect(JSON.parse(events[0].metadata ?? "{}")).toEqual({
+      tool: "cs-rrc-michigan",
+      action: "casespace_opened",
+      client: "RRC Michigan",
+    });
+  });
+
+  it("returns the minimal read shape for scoped tool reads", async () => {
+    const app = buildApp();
+    const token = await tokenFor(AUDIT_SERVICE);
+
+    await request(app)
+      .post("/api/audit/tool")
+      .set({ Authorization: `Bearer ${token}`, "X-PuddleJumper-Request": "true" })
+      .send({
+        tool: "cs-mastersite",
+        action: "CASESPACE_PROVISIONED",
+        actorId: "svc-proxy",
+        resourceId: "cs-rrc-michigan",
+        meta: { client: "RRC Michigan" },
+      })
+      .expect(200);
+
+    const res = await request(app)
+      .get("/api/audit")
+      .query({ tool: ["cs-mastersite", "cs-rrc-michigan"], limit: 10 })
+      .set({ Authorization: `Bearer ${token}`, "X-PuddleJumper-Request": "true" })
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.toolIds).toEqual(["cs-mastersite", "cs-rrc-michigan"]);
+    expect(res.body.data.count).toBe(1);
+    expect(res.body.data.events[0]).toEqual({
+      event_type: "tool:cs-mastersite:CASESPACE_PROVISIONED",
+      actor_id: "svc-proxy",
+      target_id: "cs-rrc-michigan",
+      timestamp: expect.any(String),
+      metadata: {
+        action: "CASESPACE_PROVISIONED",
+        client: "RRC Michigan",
+        tool: "cs-mastersite",
+      },
+    });
+  });
+
+  it("rejects reads and writes outside the token's scoped tool ids", async () => {
+    const app = buildApp();
+    const token = await tokenFor(OTHER_AUDIT_SERVICE);
+
+    await request(app)
+      .post("/api/audit/tool")
+      .set({ Authorization: `Bearer ${token}`, "X-PuddleJumper-Request": "true" })
+      .send({
+        tool: "cs-rrc-michigan",
+        action: "casespace_opened",
+        actorId: "proxy-user-1",
+      })
+      .expect(403);
+
+    await request(app)
+      .get("/api/audit")
+      .query({ tool: "cs-rrc-michigan" })
+      .set({ Authorization: `Bearer ${token}`, "X-PuddleJumper-Request": "true" })
+      .expect(403);
   });
 });
 

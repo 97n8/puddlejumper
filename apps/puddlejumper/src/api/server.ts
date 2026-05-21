@@ -128,6 +128,7 @@ import { initFormKey, createFormKeyRouter, getFormKeyHealth } from "../formkey/i
 import { initWatchLayer, createWatchRouter, scheduleWatchLayer } from "../watchlayer/index.js";
 import { initOrgManager, createOrgManagerRouter } from "../org-manager/index.js";
 import { initFinance, createFinanceRouter } from "../finance/index.js";
+import vaultPayRouter from "../vault-pay/routes.js";
 import { initPRR, createPrrRouter } from "../prr/index.js";
 import { initFiscalDb, createFiscalRoutes } from "../fiscalintel/index.js";
 import { scheduleDailyRegistrySync } from "../townregistry/dailySync.js";
@@ -719,6 +720,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.path.startsWith("/auth/github/")) { next(); return; }
     if (req.path.startsWith("/auth/google/")) { next(); return; }
     if (req.path.startsWith("/auth/microsoft/")) { next(); return; }
+    if (req.path.startsWith("/stripe")) { next(); return; }
     authMiddleware(req, res, next);
   });
   // Normalize auth context: copy tenantId → workspaceId so all route handlers
@@ -744,6 +746,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     if (req.path.startsWith("/documents")) { next(); return; }
     if (req.path.startsWith("/vault-files")) { next(); return; }
     if (req.path.startsWith("/files/drafts")) { next(); return; }
+    if (req.path.startsWith("/stripe")) { next(); return; }
     csrfProtection()(req, res, next);
   });
 
@@ -1024,6 +1027,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/v1/forms", createFormKeyRouter(approvalStore.db)); // public form submissions — no tool gate
   app.use("/api/v1/org", requireToolAccess("admin"), createOrgManagerRouter(approvalStore.db));
   app.use("/api/v1/finance", requireToolAccess("admin"), createFinanceRouter(approvalStore.db));
+  app.use("/api/stripe/webhook", express.raw({type:"application/json"}));
+  app.use("/api/stripe", vaultPayRouter);
+
+  // VAULT Pay — Stripe checkout + webhook (PublicLogic LLC payments)
   app.use("/api/prr", requireToolAccess("admin"), createPrrRouter(approvalStore.db));
   app.use("/api/projects", createProjectRouter(approvalStore.db));
   app.use("/public/prr", prrRateLimit);

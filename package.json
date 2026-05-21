@@ -24,6 +24,7 @@
     "test:core": "turbo run test --filter=@publiclogic/core",
     "deploy:fly": "./scripts/deploy-fly.sh",
     "deploy:vercel": "./scripts/deploy-vercel.sh",
+    "mint:service-jwt": "tsx scripts/mint-service-jwt.ts",
     "db:backup": "tsx apps/puddlejumper/src/api/sqliteMaintenance.ts backup",
     "smoke": "./scripts/smoke-test.sh",
     "ci": "turbo run build typecheck --filter=!@gpr/logicos"

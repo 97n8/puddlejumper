@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
+import Database from "better-sqlite3";
 
 const tmpDir = path.join(os.tmpdir(), `lc-audit-test-${Date.now()}`);
 process.env.CONTROLLED_DATA_DIR = tmpDir;
@@ -9,6 +10,7 @@ process.env.CONTROLLED_DATA_DIR = tmpDir;
 const {
   insertAuditEvent,
   queryAuditEvents,
+  logToolEvent,
   resetAuditDb,
   configureAuditStore,
 } = await import("../src/lib/audit-store.js");
@@ -121,6 +123,30 @@ describe("audit store", () => {
       const events = queryAuditEvents();
       expect(events.length).toBe(2);
     });
+
+    it("filters by a single tool id stored in metadata", () => {
+      logToolEvent({ tool: "cs-rrc-michigan", action: "opened", actorId: "u1" });
+      logToolEvent({ tool: "cs-other", action: "opened", actorId: "u2" });
+
+      const events = queryAuditEvents({ tool_id: "cs-rrc-michigan" });
+
+      expect(events.length).toBe(1);
+      expect(JSON.parse(events[0].metadata ?? "{}").tool).toBe("cs-rrc-michigan");
+    });
+
+    it("filters across multiple tool ids for roll-up reads", () => {
+      logToolEvent({ tool: "cs-mastersite", action: "casespace_provisioned", actorId: "svc" });
+      logToolEvent({ tool: "cs-rrc-michigan", action: "opened", actorId: "svc" });
+      logToolEvent({ tool: "cs-other", action: "opened", actorId: "svc" });
+
+      const events = queryAuditEvents({ tool_id: ["cs-mastersite", "cs-rrc-michigan"] });
+
+      expect(events.length).toBe(2);
+      expect(events.map((event) => JSON.parse(event.metadata ?? "{}").tool)).toEqual([
+        "cs-rrc-michigan",
+        "cs-mastersite",
+      ]);
+    });
   });
 
   it("configureAuditStore overrides data directory", () => {
@@ -132,5 +158,33 @@ describe("audit store", () => {
     resetAuditDb();
     configureAuditStore(tmpDir);
     fs.rm(customDir, { recursive: true, force: true });
+  });
+
+  it("keeps tool as the authoritative metadata scope key", () => {
+    const row = logToolEvent({
+      tool: "cs-rrc-michigan",
+      action: "synced",
+      actorId: "svc-proxy",
+      meta: { tool: "evil-override", action: "spoofed", note: "ok" },
+    });
+
+    expect(JSON.parse(row.metadata ?? "{}")).toEqual({
+      tool: "cs-rrc-michigan",
+      action: "synced",
+      note: "ok",
+    });
+  });
+
+  it("rejects updates and deletes because the audit table is append-only", () => {
+    const row = insertAuditEvent({ event_type: "auth.login", actor_id: "u1" });
+    const dbPath = path.join(tmpDir, "audit.db");
+    const db = new Database(dbPath);
+
+    expect(() => db.prepare("UPDATE audit_events SET event_type = ? WHERE id = ?").run("changed", row.id)).toThrow(
+      /append-only/i,
+    );
+    expect(() => db.prepare("DELETE FROM audit_events WHERE id = ?").run(row.id)).toThrow(/append-only/i);
+
+    db.close();
   });
 });

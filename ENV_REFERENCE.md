@@ -49,6 +49,7 @@
 - Purpose: HS256 JWT verification secret (fallback mode, must be 256-bit minimum).
 - Default: unset.
 - Read in: `n8drive/packages/core/src/auth.ts`.
+- Operational note: the PJ API now uses the same signing material to mint scoped service JWTs for server-to-server audit access via `pnpm mint:service-jwt`. Rotate service tokens by minting a replacement with the same `toolIds`/`permissions` and updating the proxy secret before expiry; emergency revocation requires rotating `JWT_SECRET` and reissuing dependent tokens.
 
 ## `PJ_LOGIN_USERS_JSON`
 - Purpose: Optional JSON array of built-in login users consumed by `/api/login`.

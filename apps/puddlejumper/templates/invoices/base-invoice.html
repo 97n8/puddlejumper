@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice {{INVOICE_ID}} · PublicLogic LLC</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #1A1A1A; --ink-mid: #555; --ink-faint: #999;
+    --rule: #E0DDD8; --surface: #FAFAF8; --white: #FFFFFF;
+    --amber: #B8760A; --amber-bg: #FDF6E7; --amber-rule: #F0D9A0;
+    --green: #2D6A3F; --green-bg: #EDF5EF;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Lora', Georgia, serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+  html { background: var(--surface); color: var(--ink); font-family: var(--sans); font-size: 16px; }
+  body { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 48px 20px 80px; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .page { width: 100%; max-width: 640px; animation: fadeUp .4s ease both; }
+  .hd { display: flex; align-items: center; justify-content: space-between; padding-bottom: 28px; border-bottom: 1px solid var(--rule); margin-bottom: 36px; gap: 16px; flex-wrap: wrap; }
+  .logo-wrap { display: flex; align-items: center; gap: 12px; }
+  .duck { width: 44px; height: 44px; border-radius: 8px; background: var(--ink); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .org-name { font-family: var(--serif); font-size: 17px; font-weight: 600; color: var(--ink); letter-spacing: -.01em; }
+  .org-sub { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
+  .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .04em; border: 1px solid var(--amber-rule); background: var(--amber-bg); color: var(--amber); transition: all .3s; }
+  .status-badge.paid { background: var(--green-bg); color: var(--green); border-color: #B2D4BB; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .inv-block { background: var(--white); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+  .inv-top { padding: 28px 28px 24px; border-bottom: 1px solid var(--rule); }
+  .inv-number { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); letter-spacing: .08em; margin-bottom: 6px; }
+  .inv-title { font-family: var(--serif); font-size: 22px; font-weight: 600; color: var(--ink); margin-bottom: 20px; line-height: 1.3; }
+  .inv-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; }
+  .meta-label { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); letter-spacing: .1em; margin-bottom: 3px; }
+  .meta-val { font-size: 13px; color: var(--ink); font-weight: 500; line-height: 1.4; }
+  .meta-val.mono { font-family: var(--mono); font-size: 12px; }
+  .line-items { padding: 24px 28px; border-bottom: 1px solid var(--rule); }
+  .li-header { display: grid; grid-template-columns: 1fr auto; gap: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--rule); }
+  .li-header span { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--ink-faint); }
+  .li-header span:last-child { text-align: right; }
+  .li-row { display: grid; grid-template-columns: 1fr auto; gap: 16px; padding: 18px 0; align-items: start; }
+  .li-desc-main { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 5px; }
+  .li-desc-sub { font-size: 12px; color: var(--ink-mid); line-height: 1.6; }
+  .li-amount { font-family: var(--mono); font-size: 14px; color: var(--ink); text-align: right; white-space: nowrap; padding-top: 1px; }
+  .inv-total { padding: 20px 28px; display: flex; justify-content: space-between; align-items: center; }
+  .total-label { font-size: 13px; color: var(--ink-mid); }
+  .total-amount { font-family: var(--mono); font-size: 28px; font-weight: 500; color: var(--ink); letter-spacing: -.02em; }
+  .terms-note { display: flex; align-items: flex-start; gap: 10px; background: var(--amber-bg); border: 1px solid var(--amber-rule); border-radius: 8px; padding: 14px 16px; font-size: 12px; color: var(--amber); line-height: 1.6; margin-bottom: 20px; }
+  .terms-icon { flex-shrink: 0; font-size: 15px; margin-top: 1px; }
+  .pay-section { background: var(--white); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+  .pay-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--rule); }
+  .pay-header-title { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 2px; }
+  .pay-header-sub { font-size: 12px; color: var(--ink-faint); }
+  .method-tabs { display: flex; border-bottom: 1px solid var(--rule); }
+  .mtab { flex: 1; padding: 13px 8px; background: none; border: none; border-bottom: 2px solid transparent; font-family: var(--sans); font-size: 12px; font-weight: 500; color: var(--ink-faint); cursor: pointer; transition: all .15s; text-align: center; margin-bottom: -1px; }
+  .mtab:hover { color: var(--ink); }
+  .mtab.active { color: var(--ink); border-bottom-color: var(--ink); }
+  .pay-panel { display: none; padding: 24px; }
+  .pay-panel.active { display: block; }
+  .stripe-btn { width: 100%; padding: 14px 20px; background: var(--ink); color: var(--white); border: none; border-radius: 8px; font-family: var(--sans); font-size: 15px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity .15s, transform .1s; margin-bottom: 12px; }
+  .stripe-btn:hover { opacity: .88; }
+  .stripe-btn:active { transform: scale(.99); }
+  .stripe-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .stripe-secure { text-align: center; font-size: 11px; color: var(--ink-faint); display: flex; align-items: center; justify-content: center; gap: 5px; }
+  .stripe-methods { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--rule); }
+  .method-pill { padding: 4px 10px; border: 1px solid var(--rule); border-radius: 4px; font-size: 11px; font-family: var(--mono); color: var(--ink-mid); background: var(--surface); }
+  .wire-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--rule); gap: 12px; }
+  .wire-row:last-of-type { border-bottom: none; }
+  .wire-label { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); letter-spacing: .06em; flex-shrink: 0; }
+  .wire-val-wrap { display: flex; align-items: center; gap: 8px; }
+  .wire-val { font-family: var(--mono); font-size: 13px; color: var(--ink); text-align: right; }
+  .copy-btn { padding: 3px 9px; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); font-family: var(--mono); font-size: 10px; color: var(--ink-mid); cursor: pointer; transition: all .12s; flex-shrink: 0; }
+  .copy-btn:hover { border-color: var(--ink-mid); color: var(--ink); }
+  .copy-btn.ok { color: var(--green); border-color: #B2D4BB; background: var(--green-bg); }
+  .wire-warn { margin-top: 16px; padding: 12px 14px; background: var(--amber-bg); border: 1px solid var(--amber-rule); border-radius: 6px; font-size: 12px; color: var(--amber); line-height: 1.6; }
+  .ach-copy-block { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 18px; font-family: var(--mono); font-size: 12px; color: var(--ink); line-height: 2; margin-bottom: 14px; }
+  .ach-note { font-size: 12px; color: var(--ink-mid); line-height: 1.7; }
+  .trail-block { background: var(--white); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+  .trail-hd { padding: 16px 20px; border-bottom: 1px solid var(--rule); font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-faint); display: flex; align-items: center; gap: 8px; }
+  .trail-item { display: flex; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--rule); font-size: 12px; animation: fadeUp .25s ease both; }
+  .trail-item:last-child { border-bottom: none; }
+  .trail-ts { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); min-width: 116px; flex-shrink: 0; padding-top: 1px; }
+  .trail-ev { color: var(--ink-mid); line-height: 1.5; }
+  .trail-ev strong { color: var(--ink); font-weight: 500; }
+  .page-footer { margin-top: 36px; text-align: center; font-size: 11px; color: var(--ink-faint); line-height: 1.8; font-family: var(--mono); }
+  @media (max-width: 500px) { body { padding: 24px 16px 60px; } .inv-meta { grid-template-columns: 1fr; } .inv-top, .line-items, .inv-total, .pay-panel { padding-left: 18px; padding-right: 18px; } .total-amount { font-size: 22px; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="hd">
+    <div class="logo-wrap">
+      <div class="duck" aria-hidden="true">🦆</div>
+      <div>
+        <div class="org-name">PublicLogic LLC</div>
+        <div class="org-sub">Governance Infrastructure · Gardner, MA</div>
+      </div>
+    </div>
+    <div class="status-badge" id="statusBadge">
+      <span class="status-dot"></span>
+      <span id="statusText">OPEN · DUE ON RECEIPT</span>
+    </div>
+  </div>
+
+  <div class="inv-block">
+    <div class="inv-top">
+      <div class="inv-number">INVOICE · {{INVOICE_ID}}</div>
+      <div class="inv-title">{{INVOICE_TITLE}}</div>
+      <div class="inv-meta">
+        <div><div class="meta-label">BILL TO</div><div class="meta-val">{{CLIENT_ENTITY}}</div></div>
+        <div><div class="meta-label">ATTENTION</div><div class="meta-val">{{CLIENT_CONTACT}}</div></div>
+        <div><div class="meta-label">ADDRESS</div><div class="meta-val">{{CLIENT_ADDRESS}}</div></div>
+        <div><div class="meta-label">{{CLIENT_REF_LABEL}}</div><div class="meta-val mono">{{CLIENT_REF_ID}}</div></div>
+        <div><div class="meta-label">DATE ISSUED</div><div class="meta-val">{{ISSUED_DATE}}</div></div>
+        <div><div class="meta-label">PAYMENT TERMS</div><div class="meta-val">{{PAYMENT_TERMS}}</div></div>
+      </div>
+    </div>
+
+    <div class="line-items">
+      <div class="li-header"><span>DESCRIPTION</span><span>AMOUNT</span></div>
+      <div class="li-row">
+        <div>
+          <div class="li-desc-main">{{LINE_ITEM_TITLE}}</div>
+          <div class="li-desc-sub">{{LINE_ITEM_DETAIL}}</div>
+        </div>
+        <div class="li-amount">{{AMOUNT_FORMATTED}}</div>
+      </div>
+    </div>
+
+    <div class="inv-total">
+      <div class="total-label">Total due</div>
+      <div class="total-amount">{{AMOUNT_FORMATTED}}</div>
+    </div>
+  </div>
+
+  <div class="terms-note">
+    <span class="terms-icon">⚑</span>
+    <span>{{TERMS_NOTE}}</span>
+  </div>
+
+  <div class="pay-section">
+    <div class="pay-header">
+      <div class="pay-header-title">Pay this invoice</div>
+      <div class="pay-header-sub">Select a payment method below</div>
+    </div>
+
+    <div class="method-tabs" role="tablist">
+      <button class="mtab active" onclick="switchTab('card')" id="tab-card">Card / ACH debit</button>
+      <button class="mtab" onclick="switchTab('wire')" id="tab-wire">Wire transfer</button>
+      <button class="mtab" onclick="switchTab('ach')" id="tab-ach">ACH push</button>
+    </div>
+
+    <div class="pay-panel active" id="panel-card">
+      <button class="stripe-btn" id="payBtn" onclick="handleStripe()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Pay {{AMOUNT_FORMATTED}} securely
+      </button>
+      <div class="stripe-secure">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Secured by Stripe · 256-bit TLS · PCI-DSS Level 1
+      </div>
+      <div class="stripe-methods">
+        <span class="method-pill">Visa</span><span class="method-pill">Mastercard</span><span class="method-pill">Amex</span>
+        <span class="method-pill">Apple Pay</span><span class="method-pill">Google Pay</span><span class="method-pill">ACH debit</span>
+      </div>
+    </div>
+
+    <div class="pay-panel" id="panel-wire">
+      <div class="wire-row"><span class="wire-label">BENEFICIARY</span><div class="wire-val-wrap"><span class="wire-val">PublicLogic LLC</span><button class="copy-btn" onclick="cp(this,'PublicLogic LLC')">copy</button></div></div>
+      <div class="wire-row"><span class="wire-label">BANK</span><div class="wire-val-wrap"><span class="wire-val">GFA Federal Credit Union</span></div></div>
+      <div class="wire-row"><span class="wire-label">ABA ROUTING</span><div class="wire-val-wrap"><span class="wire-val">211383066</span><button class="copy-btn" onclick="cp(this,'211383066')">copy</button></div></div>
+      <div class="wire-row"><span class="wire-label">ACCOUNT #</span><div class="wire-val-wrap"><span class="wire-val" style="color:var(--ink-faint)">Contact info@publiclogic.org</span></div></div>
+      <div class="wire-row"><span class="wire-label">BANK ADDRESS</span><div class="wire-val-wrap"><span class="wire-val" style="text-align:right">229 Parker St<br>Gardner, MA 01440</span></div></div>
+      <div class="wire-row"><span class="wire-label">MEMO / REF</span><div class="wire-val-wrap"><span class="wire-val">{{INVOICE_ID}}</span><button class="copy-btn" onclick="cp(this,'{{INVOICE_ID}}')">copy</button></div></div>
+      <div class="wire-row"><span class="wire-label">AMOUNT</span><div class="wire-val-wrap"><span class="wire-val">{{AMOUNT_FORMATTED}} USD</span></div></div>
+      <div class="wire-warn">Include invoice number <strong>{{INVOICE_ID}}</strong> in the memo line. Email <strong>info@publiclogic.org</strong> after initiating. Domestic wire only — GFA does not process international SWIFT.</div>
+    </div>
+
+    <div class="pay-panel" id="panel-ach">
+      <div class="ach-copy-block">
+        Payee: PublicLogic LLC<br>
+        Routing: 211383066 (GFA FCU)<br>
+        Account: contact info@publiclogic.org<br>
+        Addendum / memo: {{INVOICE_ID}}<br>
+        Amount: {{AMOUNT_FORMATTED}} USD
+      </div>
+      <div class="ach-note">Initiate an ACH credit push from your business banking platform. Include <strong>{{INVOICE_ID}}</strong> in the addendum or memo field. Settlement is 1–2 business days. No processing fee charged to sender. Email <strong>info@publiclogic.org</strong> after initiating.</div>
+    </div>
+  </div>
+
+  <div class="trail-block">
+    <div class="trail-hd">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      ACTIVITY LOG · {{INVOICE_ID}}
+    </div>
+    <div id="trailBody">
+      <div class="trail-item"><span class="trail-ts">{{ISSUED_TIMESTAMP}}</span><span class="trail-ev">Invoice created · <strong>N. Boudreau, PublicLogic LLC</strong></span></div>
+      <div class="trail-item"><span class="trail-ts">{{ISSUED_TIMESTAMP}}</span><span class="trail-ev">Issued to <strong>{{CLIENT_ENTITY}}</strong> · {{AMOUNT_FORMATTED}} · {{PAYMENT_TERMS}}</span></div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    PublicLogic LLC · Gardner, MA 01440 · info@publiclogic.org<br>
+    GFA FCU routing 211383066 · Questions? Contact us before initiating payment.
+  </div>
+
+</div>
+
+<script>
+  function ts() { var n = new Date(); var p = function(x){return String(x).padStart(2,'0');}; return n.getFullYear()+'-'+p(n.getMonth()+1)+'-'+p(n.getDate())+' '+p(n.getHours())+':'+p(n.getMinutes()); }
+  function addTrail(html) { var d = document.createElement('div'); d.className='trail-item'; d.innerHTML='<span class="trail-ts">'+ts()+'</span><span class="trail-ev">'+html+'</span>'; document.getElementById('trailBody').appendChild(d); }
+  function switchTab(name) { ['card','wire','ach'].forEach(function(t){ document.getElementById('tab-'+t).classList.toggle('active', t===name); document.getElementById('panel-'+t).classList.toggle('active', t===name); }); var l={card:'Card / ACH debit',wire:'Wire transfer',ach:'ACH push'}; addTrail('Payment method viewed · <strong>'+l[name]+'</strong>'); }
+  function cp(btn, val) { navigator.clipboard.writeText(val).catch(function(){}); btn.textContent='copied ✓'; btn.classList.add('ok'); setTimeout(function(){btn.textContent='copy'; btn.classList.remove('ok');}, 2000); }
+  async function handleStripe() {
+    var btn = document.getElementById('payBtn');
+    btn.disabled = true; btn.textContent = 'Redirecting to Stripe…';
+    addTrail('Stripe Checkout initiated · <strong>{{AMOUNT_FORMATTED}} · {{INVOICE_ID}}</strong>');
+    try {
+      var res = await fetch('/api/stripe/checkout', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          invoiceId: '{{INVOICE_ID}}',
+          amountCents: {{AMOUNT_CENTS}},
+          description: '{{LINE_ITEM_TITLE}} · {{CLIENT_ENTITY}}',
+          clientName: '{{CLIENT_ENTITY}}',
+          clientEmail: '{{CLIENT_EMAIL}}'
+        })
+      });
+      var data = await res.json();
+      if (data.url) { window.location.href = data.url; }
+      else { throw new Error(data.error || 'No checkout URL returned'); }
+    } catch(e) {
+      addTrail('Checkout error · <strong>'+e.message+'</strong>');
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Pay {{AMOUNT_FORMATTED}} securely';
+    }
+  }
+  setTimeout(function(){ addTrail('Invoice page opened · <strong>{{CLIENT_ENTITY}}</strong>'); }, 600);
+</script>
+</body>
+</html>
