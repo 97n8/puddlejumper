@@ -7,6 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "migrate": "node --import tsx bin/migrate.mjs up",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -22,6 +23,7 @@
     "@types/node": "^20.0.0",
     "@types/supertest": "^6.0.2",
     "supertest": "^7.1.4",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^1.0.0"
   }

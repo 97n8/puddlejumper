@@ -335,8 +335,6 @@ export class PrrStore {
       );
       CREATE INDEX IF NOT EXISTS ix_access_request_notification_request ON access_request_notification(access_request_id);
     `);
-    this.ensureColumn("prr", "public_id", "public_id TEXT");
-    this.db.exec("CREATE UNIQUE INDEX IF NOT EXISTS ix_prr_public_id ON prr(public_id)");
     this.ensureColumn("access_request_notification", "last_attempt_at", "last_attempt_at TEXT");
     this.ensureColumn("access_request_notification", "retry_count", "retry_count INTEGER NOT NULL DEFAULT 0");
     this.ensureColumn("access_request_notification", "next_attempt_at", "next_attempt_at TEXT");

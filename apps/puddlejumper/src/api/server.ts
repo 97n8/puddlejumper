@@ -156,6 +156,7 @@ import { WebhookDispatcher } from "../engine/dispatchers/webhook.js";
 import { SharePointDispatcher } from "../engine/dispatchers/sharepoint.js";
 import { approvalMetrics, METRIC, METRIC_HELP } from "../engine/approvalMetrics.js";
 import { loadConfig, StartupConfigError } from "./startupConfig.js";
+import { runPuddleJumperMigrations } from "./migrations.js";
 import { ensurePersonalWorkspace, getDb, acceptInvitation } from "../engine/workspaceStore.js";
 import { requireToolAccess } from "./middleware/checkWorkspaceRole.js";
 import { KillSwitchStore } from "../ops/killSwitch.js";
@@ -218,16 +219,23 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
   }
   if (!connectorStateSecret) throw new Error("CONNECTOR_STATE_SECRET is required");
-  const prrStore = new PrrStore(prrDbPath);
-  const dogStore = new DogStore(path.join(CONTROLLED_DATA_DIR, "dog.db"));
-  const connectorStore = new ConnectorStore(connectorDbPath);
-  const commonsStore = new CommonsStore(path.join(CONTROLLED_DATA_DIR, "commons.db"));
   const oauthStateDbPath = path.join(CONTROLLED_DATA_DIR, "oauth_state.db");
   const oauthStateStore = new OAuthStateStore(oauthStateDbPath);
   const approvalDbPath = path.resolve(process.env.APPROVAL_DB_PATH ?? DEFAULT_APPROVAL_DB_PATH);
   if (!isPathInsideDirectory(approvalDbPath, CONTROLLED_DATA_DIR)) {
     throw new Error("APPROVAL_DB_PATH must be inside the controlled data directory");
   }
+
+  runPuddleJumperMigrations({
+    dataDir: CONTROLLED_DATA_DIR,
+    prrDbPath,
+    approvalDbPath,
+  });
+
+  const prrStore = new PrrStore(prrDbPath);
+  const dogStore = new DogStore(path.join(CONTROLLED_DATA_DIR, "dog.db"));
+  const connectorStore = new ConnectorStore(connectorDbPath);
+  const commonsStore = new CommonsStore(path.join(CONTROLLED_DATA_DIR, "commons.db"));
   const approvalStore = new ApprovalStore(approvalDbPath);
   const chainStore = new ChainStore(approvalStore.db);
   const killSwitchStore = new KillSwitchStore(approvalStore.db);

@@ -172,8 +172,8 @@ export function getDb(dataDir: string): Database.Database {
         created_at INTEGER NOT NULL,
         last_accessed INTEGER
       );
-      CREATE INDEX idx_casespaces_workspace ON casespaces(workspace_id);
-      CREATE INDEX idx_casespaces_owner ON casespaces(owner_id);
+      CREATE INDEX IF NOT EXISTS idx_casespaces_workspace ON casespaces(workspace_id);
+      CREATE INDEX IF NOT EXISTS idx_casespaces_owner ON casespaces(owner_id);
     `);
   }
 
@@ -501,6 +501,11 @@ export interface CaseSpaceRow {
   file_count: number;
   folder_count: number;
   template_count: number;
+  status?: "active" | "closed";
+  current_responsible_actor_id?: string | null;
+  current_responsible_role?: string | null;
+  current_responsible_position_id?: string | null;
+  last_relay_id?: string | null;
   created_at: number;
   last_accessed?: number;
 }
@@ -513,6 +518,11 @@ function rowToCaseSpace(row: any): CaseSpaceRow {
     connection_ids: row.connection_ids ? JSON.parse(row.connection_ids) : [],
     audit_enabled: Boolean(row.audit_enabled),
     retention_enabled: Boolean(row.retention_enabled),
+    status: row.status ?? 'active',
+    current_responsible_actor_id: row.current_responsible_actor_id ?? null,
+    current_responsible_role: row.current_responsible_role ?? null,
+    current_responsible_position_id: row.current_responsible_position_id ?? null,
+    last_relay_id: row.last_relay_id ?? null,
   };
 }
 
@@ -534,14 +544,20 @@ export function createCaseSpace(dataDir: string, cs: Omit<CaseSpaceRow, 'file_co
   db.prepare(`
     INSERT OR IGNORE INTO casespaces (id, workspace_id, owner_id, name, description, color, icon, type, town,
       vault_module_ids, visibility, members, connection_ids, audit_enabled, retention_enabled,
-      file_count, folder_count, template_count, created_at, last_accessed)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?)
+      file_count, folder_count, template_count, status, current_responsible_actor_id, current_responsible_role,
+      current_responsible_position_id, last_relay_id, created_at, last_accessed)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     cs.id, cs.workspace_id, cs.owner_id, cs.name, cs.description ?? null,
     cs.color ?? null, cs.icon ?? null, cs.type ?? 'custom', cs.town ?? null,
     JSON.stringify(cs.vault_module_ids ?? []), cs.visibility ?? 'organization',
     JSON.stringify(cs.members ?? []), JSON.stringify(cs.connection_ids ?? []),
     cs.audit_enabled ? 1 : 0, cs.retention_enabled ? 1 : 0,
+    cs.status ?? null,
+    cs.current_responsible_actor_id ?? null,
+    cs.current_responsible_role ?? null,
+    cs.current_responsible_position_id ?? null,
+    cs.last_relay_id ?? null,
     cs.created_at, cs.last_accessed ?? null,
   );
   return getCaseSpace(dataDir, cs.id)!;
@@ -562,7 +578,8 @@ export function updateCaseSpace(dataDir: string, id: string, updates: Partial<Om
   db.prepare(`
     UPDATE casespaces SET name=?, description=?, color=?, icon=?, type=?, town=?,
       vault_module_ids=?, visibility=?, members=?, connection_ids=?,
-      audit_enabled=?, retention_enabled=?, file_count=?, folder_count=?, template_count=?, last_accessed=?
+      audit_enabled=?, retention_enabled=?, file_count=?, folder_count=?, template_count=?, status=?,
+      current_responsible_actor_id=?, current_responsible_role=?, current_responsible_position_id=?, last_relay_id=?, last_accessed=?
     WHERE id=?
   `).run(
     next.name, next.description ?? null, next.color ?? null, next.icon ?? null,
@@ -571,6 +588,11 @@ export function updateCaseSpace(dataDir: string, id: string, updates: Partial<Om
     JSON.stringify(next.members ?? []), JSON.stringify(next.connection_ids ?? []),
     next.audit_enabled ? 1 : 0, next.retention_enabled ? 1 : 0,
     next.file_count ?? 0, next.folder_count ?? 0, next.template_count ?? 0,
+    next.status ?? null,
+    next.current_responsible_actor_id ?? null,
+    next.current_responsible_role ?? null,
+    next.current_responsible_position_id ?? null,
+    next.last_relay_id ?? null,
     next.last_accessed ?? null, id,
   );
   return getCaseSpace(dataDir, id);

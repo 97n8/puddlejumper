@@ -82,6 +82,12 @@ function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_events(actor_id);
     CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_events(timestamp);
     CREATE INDEX IF NOT EXISTS idx_audit_tool ON audit_events(json_extract(metadata, '$.tool'));
+    CREATE INDEX IF NOT EXISTS idx_audit_scope ON audit_events(json_extract(metadata, '$.scope'));
+    CREATE INDEX IF NOT EXISTS idx_audit_primitive ON audit_events(json_extract(metadata, '$.primitive'));
+    CREATE INDEX IF NOT EXISTS idx_audit_relay_id ON audit_events(json_extract(metadata, '$.relay_id'));
+    CREATE INDEX IF NOT EXISTS idx_audit_case_space_id ON audit_events(json_extract(metadata, '$.case_space_id'));
+    CREATE INDEX IF NOT EXISTS idx_audit_expires_at ON audit_events(json_extract(metadata, '$.expires_at'));
+    CREATE INDEX IF NOT EXISTS idx_audit_relay_to_position ON audit_events(json_extract(metadata, '$.to.position_id'));
     CREATE TRIGGER IF NOT EXISTS audit_events_no_update
       BEFORE UPDATE ON audit_events
       BEGIN SELECT RAISE(ABORT, 'audit_events is append-only'); END;
@@ -90,6 +96,10 @@ function getDb(): Database.Database {
       BEGIN SELECT RAISE(ABORT, 'audit_events is append-only'); END;
   `);
   return _db;
+}
+
+export function ensureAuditStoreInitialized(): void {
+  void getDb();
 }
 
 /** For tests: close the DB and reset so next call re-opens a fresh store. */

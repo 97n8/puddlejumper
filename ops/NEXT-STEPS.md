@@ -124,6 +124,7 @@ Triggers are listed so the decision to defer can be revisited with evidence.
 | Connector marketplace | 5+ active dispatchers |
 | SQLite → Postgres migration | Sustained >100 writes/sec or multi-region requirement |
 | Rule engine extraction | 3+ municipalities with >30% rule divergence |
+| Relay sender-side audit index (`$.from.position_id`) | Sender-seat relay-out queries become performance-sensitive enough to justify a JSON-path index alongside the V1 recipient-side index |
 
 ## PolicyProvider stubs to revisit
 

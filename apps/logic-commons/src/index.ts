@@ -45,11 +45,22 @@ export {
   logToolEvent,
   resetAuditDb,
   configureAuditStore,
+  ensureAuditStoreInitialized,
   type AuditEventRow,
   type InsertAuditEvent,
   type AuditQueryOptions,
   type ToolAuditEvent,
 } from "./lib/audit-store.js";
+export {
+  runMigrations,
+  markMigrationApplied,
+  type MigrationDatabase,
+  type MigrationApplyMethod,
+  type MigrationHeader,
+  type MigrationRecord,
+  type MigrationTarget,
+  type MigrationRunResult,
+} from "./lib/migrations.js";
 
 // Session lifecycle routes
 export { createSessionRoutes, type SessionRoutesOptions } from "./routes/login.js";
