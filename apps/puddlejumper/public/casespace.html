@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VAULT Pay · PublicLogic LLC</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F5F4F0;
+  --surface:#FFFFFF;
+  --ink:#1C1C1A;
+  --ink-mid:#6B6B65;
+  --ink-faint:#ABABAA;
+  --rule:#E4E2DC;
+  --rule-light:#EFEFEB;
+  --amber:#9E6B0A;
+  --amber-bg:#FBF5E6;
+  --amber-rule:#EDD898;
+  --green:#2A6040;
+  --green-bg:#EBF3EE;
+  --green-rule:#A8CEBC;
+  --red:#8B2E2E;
+  --red-bg:#FBF0F0;
+  --blue:#1A4E7A;
+  --blue-bg:#EBF2FB;
+  --mono:'DM Mono',monospace;
+  --serif:'Instrument Serif',Georgia,serif;
+  --sans:'DM Sans',sans-serif;
+  --radius:6px;
+}
+html{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Layout ── */
+.shell{display:flex;flex:1;min-height:100vh}
+.sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--rule);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.main{flex:1;overflow:auto;padding:40px 48px;max-width:1100px}
+
+/* ── Sidebar ── */
+.sb-logo{padding:24px 20px 20px;border-bottom:1px solid var(--rule)}
+.sb-duck{font-size:22px;margin-bottom:6px}
+.sb-name{font-family:var(--serif);font-size:16px;color:var(--ink);line-height:1.2}
+.sb-sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.06em;margin-top:3px}
+.sb-nav{padding:16px 12px;flex:1}
+.sb-section{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--ink-faint);padding:0 8px;margin-bottom:6px;margin-top:16px}
+.sb-section:first-child{margin-top:0}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius);font-size:13px;color:var(--ink-mid);cursor:pointer;transition:all .12s;border:none;background:none;width:100%;text-align:left;font-family:var(--sans)}
+.nav-item:hover{background:var(--rule-light);color:var(--ink)}
+.nav-item.active{background:var(--ink);color:#fff}
+.nav-item svg{flex-shrink:0;opacity:.7}
+.nav-item.active svg{opacity:1}
+.sb-footer{padding:16px 20px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+
+/* ── Page header ── */
+.page-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:32px;gap:16px;flex-wrap:wrap}
+.page-title{font-family:var(--serif);font-size:28px;font-weight:400;color:var(--ink);line-height:1.2}
+.page-sub{font-size:13px;color:var(--ink-mid);margin-top:4px}
+.hd-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:var(--radius);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:all .12s;border:1px solid transparent;white-space:nowrap}
+.btn-primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn-primary:hover{opacity:.88}
+.btn-ghost{background:transparent;color:var(--ink-mid);border-color:var(--rule)}
+.btn-ghost:hover{border-color:var(--ink-mid);color:var(--ink)}
+.btn-sm{padding:6px 13px;font-size:12px}
+
+/* ── Stat cards ── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:32px}
+.stat-card{background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius);padding:18px 20px}
+.stat-label{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-faint);margin-bottom:8px}
+.stat-val{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--ink)}
+.stat-val.amber{color:var(--amber)}
+.stat-val.green{color:var(--green)}
+.stat-val.red{color:var(--red)}
+
+/* ── Case table ── */
+.case-table-wrap{background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden;margin-bottom:24px}
+.ct-header{display:grid;grid-template-columns:90px 1fr 110px 110px 100px 80px;gap:0;padding:0 20px;border-bottom:1px solid var(--rule)}
+.ct-header span{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-faint);padding:12px 8px}
+.case-row{display:grid;grid-template-columns:90px 1fr 110px 110px 100px 80px;gap:0;padding:0 20px;border-bottom:1px solid var(--rule-light);cursor:pointer;transition:background .1s;align-items:center}
+.case-row:last-child{border-bottom:none}
+.case-row:hover{background:var(--rule-light)}
+.case-row.active-row{background:var(--amber-bg)}
+.cr-cell{padding:14px 8px;font-size:13px;color:var(--ink)}
+.cr-cell.mono{font-family:var(--mono);font-size:12px;color:var(--ink-mid)}
+.cr-cell.client{font-weight:500}
+.cr-cell.amount{font-family:var(--mono);font-size:13px}
+
+/* ── Status badges ── */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-family:var(--mono);font-size:10px;letter-spacing:.04em;border:1px solid}
+.badge-open{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-rule)}
+.badge-paid{background:var(--green-bg);color:var(--green);border-color:var(--green-rule)}
+.badge-archived{background:var(--rule-light);color:var(--ink-faint);border-color:var(--rule)}
+.badge-overdue{background:var(--red-bg);color:var(--red);border-color:#D4ABAB}
+.badge-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+/* ── Case detail panel ── */
+.detail-panel{background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden}
+.dp-header{padding:24px 28px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.dp-title{font-family:var(--serif);font-size:20px;color:var(--ink);margin-bottom:4px}
+.dp-meta-row{display:flex;gap:20px;flex-wrap:wrap;margin-top:4px}
+.dp-meta-item{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+.dp-meta-item strong{color:var(--ink-mid);font-weight:400}
+.dp-body{padding:24px 28px}
+.dp-section{margin-bottom:24px}
+.dp-section-title{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ink-faint);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--rule-light)}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px}
+.dp-field label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--ink-faint);margin-bottom:3px}
+.dp-field span{font-size:13px;color:var(--ink)}
+.dp-field span.mono{font-family:var(--mono);font-size:12px}
+.dp-amount-block{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:var(--bg);border-radius:var(--radius);margin-bottom:20px}
+.dp-amount-label{font-size:13px;color:var(--ink-mid)}
+.dp-amount-val{font-family:var(--mono);font-size:26px;font-weight:500;color:var(--ink)}
+.dp-actions{display:flex;gap:8px;flex-wrap:wrap;padding-top:4px}
+
+/* ── Lifecycle steps ── */
+.lifecycle{display:flex;gap:0;margin-bottom:24px;overflow:hidden;border:1px solid var(--rule);border-radius:var(--radius)}
+.lc-step{flex:1;padding:10px 12px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--ink-faint);background:var(--surface);border-right:1px solid var(--rule);text-align:center;position:relative;display:flex;flex-direction:column;align-items:center;gap:4px}
+.lc-step:last-child{border-right:none}
+.lc-step.done{background:var(--green-bg);color:var(--green)}
+.lc-step.current{background:var(--amber-bg);color:var(--amber)}
+.lc-step svg{margin-bottom:1px}
+
+/* ── Audit trail ── */
+.trail{display:flex;flex-direction:column;gap:0}
+.trail-item{display:flex;gap:14px;padding:10px 0;border-bottom:1px solid var(--rule-light);font-size:12px}
+.trail-item:last-child{border-bottom:none}
+.trail-ts{font-family:var(--mono);font-size:11px;color:var(--ink-faint);min-width:120px;flex-shrink:0;padding-top:1px}
+.trail-ev{color:var(--ink-mid);line-height:1.5}
+.trail-ev strong{color:var(--ink);font-weight:500}
+
+/* ── Views ── */
+.view{display:none}
+.view.active{display:block}
+
+/* ── Empty state ── */
+.empty{text-align:center;padding:48px 20px;color:var(--ink-faint);font-size:13px}
+
+/* ── Modal ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border-radius:10px;padding:28px;width:100%;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.12)}
+.modal-title{font-family:var(--serif);font-size:20px;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--ink-mid);margin-bottom:20px}
+.form-row{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+.form-row label{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-faint)}
+.form-row input,.form-row select,.form-row textarea{padding:9px 12px;border:1px solid var(--rule);border-radius:var(--radius);font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--bg);outline:none;width:100%}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--ink-mid)}
+.form-row textarea{resize:vertical;min-height:72px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+@media(max-width:700px){
+  .sidebar{display:none}
+  .main{padding:24px 20px}
+  .ct-header,.case-row{grid-template-columns:80px 1fr 90px 80px}
+  .ct-header span:nth-child(4),.ct-header span:nth-child(5),.cr-cell:nth-child(4),.cr-cell:nth-child(5){display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-duck">🦆</div>
+      <div class="sb-name">PublicLogic LLC</div>
+      <div class="sb-sub">VAULT PAY // GPR</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section">CASESPACE</div>
+      <button class="nav-item active" onclick="showView('cases')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        All Cases
+      </button>
+      <button class="nav-item" onclick="showView('archive')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        Archive
+      </button>
+      <div class="sb-section">SYSTEM</div>
+      <button class="nav-item" onclick="showView('stripe')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Stripe Config
+      </button>
+    </nav>
+    <div class="sb-footer">EIN 42-2011234<br>GFA FCU · 211383066</div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ── CASES VIEW ── -->
+    <div class="view active" id="view-cases">
+      <div class="page-hd">
+        <div>
+          <div class="page-title">Cases</div>
+          <div class="page-sub">Full cycle · Invoice → Payment → Archive</div>
+        </div>
+        <div class="hd-actions">
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="openNewCase()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New case
+          </button>
+        </div>
+      </div>
+
+      <div class="stats" id="statsRow"></div>
+
+      <div class="case-table-wrap">
+        <div class="ct-header">
+          <span>INVOICE</span>
+          <span>CLIENT</span>
+          <span>ISSUED</span>
+          <span>AMOUNT</span>
+          <span>STATUS</span>
+          <span>CYCLE</span>
+        </div>
+        <div id="caseTableBody"></div>
+      </div>
+
+      <div id="detailPane"></div>
+    </div>
+
+    <!-- ── ARCHIVE VIEW ── -->
+    <div class="view" id="view-archive">
+      <div class="page-hd">
+        <div>
+          <div class="page-title">Archive</div>
+          <div class="page-sub">Closed and paid cases · permanent record</div>
+        </div>
+      </div>
+      <div class="case-table-wrap">
+        <div class="ct-header">
+          <span>INVOICE</span>
+          <span>CLIENT</span>
+          <span>CLOSED</span>
+          <span>AMOUNT</span>
+          <span>STATUS</span>
+          <span>METHOD</span>
+        </div>
+        <div id="archiveTableBody"></div>
+      </div>
+    </div>
+
+    <!-- ── STRIPE CONFIG VIEW ── -->
+    <div class="view" id="view-stripe">
+      <div class="page-hd">
+        <div>
+          <div class="page-title">Stripe Configuration</div>
+          <div class="page-sub">Payment rails · GFA Federal Credit Union</div>
+        </div>
+      </div>
+      <div class="detail-panel">
+        <div class="dp-header">
+          <div>
+            <div class="dp-title">PublicLogic LLC</div>
+            <div class="dp-meta-row">
+              <span class="dp-meta-item">EIN <strong>42-2011234</strong></span>
+              <span class="dp-meta-item">GFA FCU routing <strong>211383066</strong></span>
+            </div>
+          </div>
+          <div id="stripeStatusBadge" class="badge badge-open">
+            <span class="badge-dot"></span> NOT CONFIGURED
+          </div>
+        </div>
+        <div class="dp-body">
+          <div class="dp-section">
+            <div class="dp-section-title">STRIPE ACCOUNT</div>
+            <div class="dp-grid">
+              <div class="dp-field"><label>SECRET KEY (sk_live_...)</label><span id="skDisplay" style="font-family:var(--mono);font-size:12px;color:var(--ink-faint)">Not set</span></div>
+              <div class="dp-field"><label>MODE</label><span id="modeDisplay" style="font-family:var(--mono);font-size:12px">—</span></div>
+              <div class="dp-field"><label>PAYOUT BANK</label><span style="font-family:var(--mono);font-size:12px">GFA Federal Credit Union</span></div>
+              <div class="dp-field"><label>PAYOUT ROUTING</label><span style="font-family:var(--mono);font-size:12px">211383066</span></div>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+              <input id="skInput" placeholder="Paste sk_live_... or sk_test_..." style="flex:1;padding:9px 12px;border:1px solid var(--rule);border-radius:var(--radius);font-family:var(--mono);font-size:12px;background:var(--bg);color:var(--ink);outline:none;min-width:220px">
+              <button class="btn btn-primary btn-sm" onclick="saveStripeKey()">Save key</button>
+            </div>
+          </div>
+          <div class="dp-section">
+            <div class="dp-section-title">WEBHOOK</div>
+            <div class="dp-grid">
+              <div class="dp-field"><label>ENDPOINT</label><span style="font-family:var(--mono);font-size:11px">https://api.publiclogic.org/api/stripe/webhook</span></div>
+              <div class="dp-field"><label>EVENTS</label><span style="font-size:12px">checkout.session.completed · payment_intent.payment_failed</span></div>
+            </div>
+          </div>
+          <div class="dp-section">
+            <div class="dp-section-title">AUDIT TRAIL</div>
+            <div class="trail" id="stripeTrail">
+              <div class="trail-item"><span class="trail-ts">2026-05-20 09:14</span><span class="trail-ev">VAULT Pay initialized · <strong>PublicLogic LLC</strong> · EIN 42-2011234</span></div>
+              <div class="trail-item"><span class="trail-ts">2026-05-20 09:14</span><span class="trail-ev">GFA FCU payout account registered · <strong>routing 211383066</strong></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- New Case Modal -->
+<div class="modal-bg" id="newCaseModal">
+  <div class="modal">
+    <div class="modal-title">New case</div>
+    <div class="modal-sub">Create invoice and open engagement</div>
+    <div class="form-row"><label>CLIENT NAME</label><input id="nc-client" placeholder="Energy Mann & Sunn, Inc."></div>
+    <div class="form-row"><label>CONTACT</label><input id="nc-contact" placeholder="Robert C. McCall Jr."></div>
+    <div class="form-row"><label>ENGAGEMENT</label><input id="nc-engagement" placeholder="VAULT Compliance Engagement — Phase 1"></div>
+    <div class="form-row"><label>AMOUNT ($)</label><input id="nc-amount" type="number" placeholder="25000"></div>
+    <div class="form-row"><label>NOTES</label><textarea id="nc-notes" placeholder="Scope, sites, reference IDs..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="createCase()">Create case</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+var CASES = [
+  {
+    id:'PL-2026-001',
+    client:'Energy Mann & Sunn, Inc.',
+    entity:'EM&S Michigan LTC Network',
+    contact:'Robert C. McCall Jr.',
+    engagement:'VAULT Compliance Engagement — Phase 1',
+    description:'Discovery & Systems Mapping · EGLE pre-submittal · Sites: Flint, Coleman, Lincoln · Lake State Railway · Geocycle feedstock',
+    amount:25000,
+    issued:'2026-05-20',
+    due:'On receipt',
+    status:'open',
+    method:null,
+    paidAt:null,
+    archivedAt:null,
+    stripeSession:null,
+    trail:[
+      {ts:'2026-05-20 09:14',ev:'Case opened · <strong>N. Boudreau, PublicLogic LLC</strong>'},
+      {ts:'2026-05-20 09:14',ev:'Invoice PL-2026-001 issued · <strong>Energy Mann & Sunn, Inc.</strong> · $25,000 · Due on receipt'},
+      {ts:'2026-05-20 09:14',ev:'Engagement letter executed · <strong>Robert C. McCall Jr.</strong> · LARA 900117109'},
+      {ts:'2026-05-20 09:15',ev:'Stripe configured · <strong>VAULT Pay initialized</strong>'},
+    ]
+  }
+];
+var ARCHIVED = [];
+var selectedId = 'PL-2026-001';
+var stripeConfigured = false;
+
+function ts(){
+  var n=new Date();
+  var p=function(x){return String(x).padStart(2,'0')};
+  return n.getFullYear()+'-'+p(n.getMonth()+1)+'-'+p(n.getDate())+' '+p(n.getHours())+':'+p(n.getMinutes());
+}
+
+function fmtAmt(n){return '$'+n.toLocaleString('en-US',{minimumFractionDigits:2})}
+
+function badgeHtml(status){
+  var map={
+    open:'<span class="badge badge-open"><span class="badge-dot"></span>OPEN</span>',
+    paid:'<span class="badge badge-paid"><span class="badge-dot"></span>PAID</span>',
+    archived:'<span class="badge badge-archived">ARCHIVED</span>',
+    overdue:'<span class="badge badge-overdue"><span class="badge-dot"></span>OVERDUE</span>',
+  };
+  return map[status]||'';
+}
+
+function cycleHtml(c){
+  var steps=['ISSUED','SENT','VIEWED','PAID','ARCHIVED'];
+  var idx={open:1,sent:2,viewed:3,paid:4,archived:5}[c.status]||1;
+  // compact for table
+  return '<span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint)">'+idx+'/5</span>';
+}
+
+// ── Render stats ───────────────────────────────────────────────────────────
+function renderStats(){
+  var open=CASES.filter(c=>c.status==='open').reduce((a,c)=>a+c.amount,0);
+  var paid=CASES.filter(c=>c.status==='paid').reduce((a,c)=>a+c.amount,0);
+  var overdue=CASES.filter(c=>c.status==='overdue').reduce((a,c)=>a+c.amount,0);
+  var total=CASES.length+ARCHIVED.length;
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-card"><div class="stat-label">OPEN AR</div><div class="stat-val amber">${fmtAmt(open)}</div></div>
+    <div class="stat-card"><div class="stat-label">COLLECTED</div><div class="stat-val green">${fmtAmt(paid)}</div></div>
+    <div class="stat-card"><div class="stat-label">OVERDUE</div><div class="stat-val red">${fmtAmt(overdue)}</div></div>
+    <div class="stat-card"><div class="stat-label">TOTAL CASES</div><div class="stat-val">${total}</div></div>
+  `;
+}
+
+// ── Render case table ──────────────────────────────────────────────────────
+function renderTable(){
+  var html='';
+  if(CASES.length===0){html='<div class="empty">No open cases.</div>';}
+  CASES.forEach(function(c){
+    html+=`<div class="case-row${selectedId===c.id?' active-row':''}" onclick="selectCase('${c.id}')">
+      <div class="cr-cell mono">${c.id}</div>
+      <div class="cr-cell client">${c.client}</div>
+      <div class="cr-cell mono">${c.issued}</div>
+      <div class="cr-cell amount">${fmtAmt(c.amount)}</div>
+      <div class="cr-cell">${badgeHtml(c.status)}</div>
+      <div class="cr-cell">${cycleHtml(c)}</div>
+    </div>`;
+  });
+  document.getElementById('caseTableBody').innerHTML=html;
+}
+
+// ── Render archive table ───────────────────────────────────────────────────
+function renderArchive(){
+  var html='';
+  if(ARCHIVED.length===0){html='<div class="empty">No archived cases yet.</div>';}
+  ARCHIVED.forEach(function(c){
+    html+=`<div class="case-row">
+      <div class="cr-cell mono">${c.id}</div>
+      <div class="cr-cell client">${c.client}</div>
+      <div class="cr-cell mono">${c.archivedAt||c.paidAt||'—'}</div>
+      <div class="cr-cell amount">${fmtAmt(c.amount)}</div>
+      <div class="cr-cell">${badgeHtml(c.status)}</div>
+      <div class="cr-cell mono" style="font-size:11px">${c.method||'—'}</div>
+    </div>`;
+  });
+  document.getElementById('archiveTableBody').innerHTML=html;
+}
+
+// ── Lifecycle bar ──────────────────────────────────────────────────────────
+function lifecycleHtml(c){
+  var steps=[
+    {key:'issued',label:'ISSUED',icon:'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'},
+    {key:'sent',label:'SENT',icon:'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'},
+    {key:'viewed',label:'VIEWED',icon:'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'},
+    {key:'paid',label:'PAID',icon:'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'},
+    {key:'archived',label:'CLOSED',icon:'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4'},
+  ];
+  var order=['issued','sent','viewed','paid','archived'];
+  var cur=c.status==='open'?'issued':c.status;
+  var curIdx=order.indexOf(cur);
+  return steps.map(function(s,i){
+    var cls=i<curIdx?'done':i===curIdx?'current':'';
+    return `<div class="lc-step ${cls}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${s.icon}"/></svg>
+      ${s.label}
+    </div>`;
+  }).join('');
+}
+
+// ── Render detail pane ─────────────────────────────────────────────────────
+function renderDetail(){
+  var c=CASES.find(function(x){return x.id===selectedId});
+  if(!c){document.getElementById('detailPane').innerHTML='';return;}
+  var trailHtml=c.trail.map(function(t){
+    return `<div class="trail-item"><span class="trail-ts">${t.ts}</span><span class="trail-ev">${t.ev}</span></div>`;
+  }).join('');
+
+  var actionBtns='';
+  if(c.status==='open'||c.status==='sent'){
+    actionBtns+=`<button class="btn btn-primary btn-sm" onclick="sendInvoiceEmail('${c.id}')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      Send invoice
+    </button>`;
+  }
+  if(c.status!=='paid'&&c.status!=='archived'){
+    actionBtns+=`<button class="btn btn-ghost btn-sm" onclick="markPaid('${c.id}','wire')">Mark paid · Wire</button>`;
+    actionBtns+=`<button class="btn btn-ghost btn-sm" onclick="markPaid('${c.id}','ach')">Mark paid · ACH</button>`;
+  }
+  if(c.status==='paid'){
+    actionBtns+=`<button class="btn btn-ghost btn-sm" onclick="archiveCase('${c.id}')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+      Archive case
+    </button>`;
+  }
+
+  document.getElementById('detailPane').innerHTML=`
+    <div class="detail-panel" style="margin-top:16px">
+      <div class="dp-header">
+        <div>
+          <div class="dp-title">${c.client}</div>
+          <div class="dp-meta-row">
+            <span class="dp-meta-item">Invoice <strong>${c.id}</strong></span>
+            <span class="dp-meta-item">Contact <strong>${c.contact}</strong></span>
+            <span class="dp-meta-item">Issued <strong>${c.issued}</strong></span>
+          </div>
+        </div>
+        ${badgeHtml(c.status)}
+      </div>
+      <div class="dp-body">
+        <div class="dp-section">
+          <div class="dp-section-title">LIFECYCLE</div>
+          <div class="lifecycle">${lifecycleHtml(c)}</div>
+        </div>
+        <div class="dp-amount-block">
+          <span class="dp-amount-label">Total due · ${c.due}</span>
+          <span class="dp-amount-val">${fmtAmt(c.amount)}</span>
+        </div>
+        <div class="dp-section">
+          <div class="dp-section-title">ENGAGEMENT</div>
+          <div class="dp-grid">
+            <div class="dp-field"><label>ENGAGEMENT</label><span>${c.engagement}</span></div>
+            <div class="dp-field"><label>DESCRIPTION</label><span style="font-size:12px;color:var(--ink-mid)">${c.description}</span></div>
+            ${c.method?`<div class="dp-field"><label>PAYMENT METHOD</label><span class="mono">${c.method.toUpperCase()}</span></div>`:''}
+            ${c.paidAt?`<div class="dp-field"><label>PAID AT</label><span class="mono">${c.paidAt}</span></div>`:''}
+          </div>
+        </div>
+        <div class="dp-section">
+          <div class="dp-section-title">ACTIONS</div>
+          <div class="dp-actions">${actionBtns}</div>
+        </div>
+        <div class="dp-section">
+          <div class="dp-section-title">AUDIT TRAIL</div>
+          <div class="trail">${trailHtml}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Case actions ───────────────────────────────────────────────────────────
+function selectCase(id){
+  selectedId=id;
+  renderTable();
+  renderDetail();
+}
+
+function markPaid(id,method){
+  var c=CASES.find(function(x){return x.id===id});
+  if(!c)return;
+  var now=ts();
+  c.status='paid';
+  c.method=method;
+  c.paidAt=now;
+  c.trail.push({ts:now,ev:'Payment received · <strong>'+fmtAmt(c.amount)+'</strong> · method: '+method.toUpperCase()});
+  render();
+}
+
+function archiveCase(id){
+  var idx=CASES.findIndex(function(x){return x.id===id});
+  if(idx===-1)return;
+  var c=CASES[idx];
+  var now=ts();
+  c.status='archived';
+  c.archivedAt=now;
+  c.trail.push({ts:now,ev:'Case archived · <strong>PL record closed</strong> · full cycle complete'});
+  ARCHIVED.unshift(c);
+  CASES.splice(idx,1);
+  selectedId=CASES.length?CASES[0].id:null;
+  render();
+  renderArchive();
+}
+
+function sendInvoiceEmail(id){
+  var c=CASES.find(function(x){return x.id===id});
+  if(!c)return;
+  var subject=encodeURIComponent('Invoice '+c.id+' · PublicLogic LLC · '+fmtAmt(c.amount));
+  var body=encodeURIComponent([
+    c.contact.split(' ')[0]+' —',
+    '',
+    'Per our engagement letter, please find your invoice linked below.',
+    '',
+    'Pay here: https://app.publiclogic.org/pay/'+c.id,
+    '',
+    'Wire and ACH instructions are on the page if preferred.',
+    '',
+    'Questions — reach me directly.',
+    '',
+    'Nate Boudreau',
+    'PublicLogic LLC',
+    'info@publiclogic.org'
+  ].join('\n'));
+  window.location.href='mailto:?subject='+subject+'&body='+body;
+  var now=ts();
+  c.status='sent';
+  c.trail.push({ts:now,ev:'Invoice email opened · <strong>'+c.id+'</strong> · mailto drafted'});
+  renderTable();
+  renderDetail();
+}
+
+// ── New case ───────────────────────────────────────────────────────────────
+function openNewCase(){document.getElementById('newCaseModal').classList.add('open')}
+function closeModal(){document.getElementById('newCaseModal').classList.remove('open')}
+
+function createCase(){
+  var client=document.getElementById('nc-client').value.trim();
+  var contact=document.getElementById('nc-contact').value.trim();
+  var engagement=document.getElementById('nc-engagement').value.trim();
+  var amount=parseFloat(document.getElementById('nc-amount').value)||0;
+  var notes=document.getElementById('nc-notes').value.trim();
+  if(!client||!amount){alert('Client and amount required.');return;}
+  var n=new Date();
+  var pad=function(x){return String(x).padStart(2,'0')};
+  var dateStr=n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());
+  var num='PL-'+(n.getFullYear())+'-'+String(CASES.length+ARCHIVED.length+2).padStart(3,'0');
+  var now=ts();
+  var c={
+    id:num,client:client,entity:client,contact:contact||'—',
+    engagement:engagement,description:notes,amount:amount,
+    issued:dateStr,due:'On receipt',status:'open',
+    method:null,paidAt:null,archivedAt:null,stripeSession:null,
+    trail:[
+      {ts:now,ev:'Case opened · <strong>N. Boudreau, PublicLogic LLC</strong>'},
+      {ts:now,ev:'Invoice '+num+' issued · <strong>'+client+'</strong> · '+fmtAmt(amount)+' · Due on receipt'},
+    ]
+  };
+  CASES.unshift(c);
+  selectedId=num;
+  closeModal();
+  ['nc-client','nc-contact','nc-engagement','nc-amount','nc-notes'].forEach(function(id){document.getElementById(id).value='';});
+  render();
+}
+
+// ── Stripe config ──────────────────────────────────────────────────────────
+function saveStripeKey(){
+  var key=document.getElementById('skInput').value.trim();
+  if(!key||(!key.startsWith('sk_live_')&&!key.startsWith('sk_test_'))){
+    alert('Enter a valid Stripe secret key (sk_live_... or sk_test_...)');
+    return;
+  }
+  var isLive=key.startsWith('sk_live_');
+  stripeConfigured=true;
+  document.getElementById('skDisplay').textContent=key.substring(0,12)+'••••••••••••'+key.slice(-4);
+  document.getElementById('modeDisplay').textContent=isLive?'LIVE':'TEST';
+  document.getElementById('modeDisplay').style.color=isLive?'var(--green)':'var(--amber)';
+  document.getElementById('stripeStatusBadge').className='badge '+(isLive?'badge-paid':'badge-open');
+  document.getElementById('stripeStatusBadge').innerHTML='<span class="badge-dot"></span>'+(isLive?'LIVE MODE':'TEST MODE');
+  document.getElementById('skInput').value='';
+  var now=ts();
+  var trail=document.getElementById('stripeTrail');
+  var item=document.createElement('div');
+  item.className='trail-item';
+  item.innerHTML='<span class="trail-ts">'+now+'</span><span class="trail-ev">Stripe key saved · <strong>'+(isLive?'Live mode':'Test mode')+'</strong> · last4 ···'+key.slice(-4)+'</span>';
+  trail.appendChild(item);
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────
+function exportCSV(){
+  var rows=[['Invoice','Client','Issued','Amount','Status','Method','Paid At']];
+  CASES.concat(ARCHIVED).forEach(function(c){
+    rows.push([c.id,c.client,c.issued,c.amount,c.status,c.method||'',c.paidAt||'']);
+  });
+  var csv=rows.map(function(r){return r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob=new Blob([csv],{type:'text/csv'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='publiclogic-cases-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// ── View switching ─────────────────────────────────────────────────────────
+function showView(name){
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active')});
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active')});
+  event.currentTarget.classList.add('active');
+  if(name==='archive')renderArchive();
+}
+
+// ── Master render ──────────────────────────────────────────────────────────
+function render(){
+  renderStats();
+  renderTable();
+  renderDetail();
+}
+
+render();
+</script>
+</body>
+</html>
