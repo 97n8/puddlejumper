@@ -19,6 +19,7 @@
   "dependencies": {
     "@publiclogic/core": "workspace:*",
     "@publiclogic/logic-commons": "workspace:*",
+    "bcryptjs": "^2.4.3",
     "better-sqlite3": "^12.6.2",
     "cookie-parser": "^1.4.7",
     "croner": "^10.0.1",
@@ -42,7 +43,6 @@
     "@types/jsonwebtoken": "^9.0.0",
     "@types/node": "^20.0.0",
     "@types/supertest": "^6.0.2",
-    "bcryptjs": "^2.4.3",
     "supertest": "^7.1.4",
     "vitest": "^1.0.0"
   }

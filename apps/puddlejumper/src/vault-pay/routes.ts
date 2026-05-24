@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type Router } from "express";
 import Stripe from "stripe";
 // VAULT_PAY_DB_INJECTED
 import Database from 'better-sqlite3';
@@ -9,7 +9,7 @@ const db = new Database(
 db.pragma('journal_mode = WAL');
 
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Lazy-init so dotenv.config() in server.ts has time to populate process.env
 // before STRIPE_SECRET_KEY is read.
@@ -18,7 +18,7 @@ function getStripe(): Stripe {
   if (_stripe) return _stripe;
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("STRIPE_SECRET_KEY is not set");
-  _stripe = new Stripe(key, { apiVersion: "2024-04-10" });
+  _stripe = new Stripe(key, { apiVersion: "2026-04-22.dahlia" });
   return _stripe;
 }
 
