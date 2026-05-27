@@ -1,0 +1,61 @@
+/* PuddleJumper design tokens — Master Build Spec v1.1, Part 7. */
+
+@import "tailwindcss";
+
+@theme {
+  /* Surface scale (warm institutional) */
+  --color-bg:   #f5f4f1;
+  --color-s0:   #ffffff;
+  --color-s1:   #faf9f7;
+  --color-s2:   #f0eeea;
+  --color-bd:   #e2dfd9;
+  --color-bd2:  #ccc9c2;
+
+  /* Ink scale */
+  --color-ink:  #1a1916;
+  --color-ink2: #4a4840;
+  --color-ink3: #857f74;
+  --color-ink4: #b5b0a6;
+
+  /* PublicLogic green (primary) */
+  --color-g:     #2e7a50;
+  --color-g-lt:  #f0f7f3;
+  --color-g-bd:  #b8d9c6;
+  --color-g-mid: #4a9b72;
+
+  /* Accent / semantic */
+  --color-amber: #8a6010; /* personal / warning */
+  --color-blue:  #2a4a8a; /* biz / info */
+  --color-red:   #8b2a1a; /* error / urgent */
+
+  /* Type — Spec Part 7 */
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-ui:      "DM Sans", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+
+  /* Layout (Spec Part 8) */
+  --rail-width:    48px;
+  --sidebar-width: 196px;
+  --detail-width:  340px;
+}
+
+@layer base {
+  html, body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+
+  code, pre, .mono {
+    font-family: var(--font-mono);
+  }
+}
