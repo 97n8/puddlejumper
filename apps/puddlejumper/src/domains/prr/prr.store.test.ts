@@ -1,7 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getDb, migrate, type DatabaseHandle } from '@pj/db';
-import { createPRR, getPRR, listPRR, transitionPRR, closePRR } from './prr.store.js';
-import { PJInvalidTransition } from './prr.machine.js';
+import {
+  createPRR,
+  getPRR,
+  listPRR,
+  transitionPRR,
+  closePRR,
+  updateFields,
+} from './prr.store.js';
+import { PJFieldsClosed, PJInvalidTransition } from './prr.machine.js';
+import { PatchFieldsSchema } from './prr.schemas.js';
 
 const TENANT = 't-canon';
 const OTHER_TENANT = 't-other';
@@ -108,5 +116,179 @@ describe('prr.store — canon contract', () => {
     const logged = listPRR(db, TENANT, { state: 'logged' });
     expect(logged.data).toHaveLength(1);
     expect(logged.data[0]!.process_id).toBe(p1.process_id);
+  });
+});
+
+describe('PatchFieldsSchema — strict allowlist', () => {
+  it('accepts a valid checklist patch', () => {
+    const r = PatchFieldsSchema.safeParse({
+      checklist: [{ id: 'a', label: 'Pick precinct', done: true }],
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('rejects an empty patch with fields.empty_patch', () => {
+    const r = PatchFieldsSchema.safeParse({});
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      const codes = r.error.issues.map((i) => i.message);
+      expect(codes).toContain('fields.empty_patch');
+    }
+  });
+
+  it('rejects unknown top-level keys (canon: cannot mutate state via this route)', () => {
+    const r = PatchFieldsSchema.safeParse({ state: 'closed' });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      const unrecognized = r.error.issues.find((i) => i.code === 'unrecognized_keys');
+      expect(unrecognized).toBeTruthy();
+    }
+  });
+
+  it('rejects notes longer than 8000 chars', () => {
+    const r = PatchFieldsSchema.safeParse({ notes: 'x'.repeat(8001) });
+    expect(r.success).toBe(false);
+  });
+
+  it('accepts automation: null (clearing the binding)', () => {
+    const r = PatchFieldsSchema.safeParse({ automation: null });
+    expect(r.success).toBe(true);
+  });
+});
+
+describe('updateFields — Phase 5.1', () => {
+  let db: DatabaseHandle;
+  beforeEach(() => { db = fresh(); });
+
+  function freshChecklist() {
+    return [
+      { id: 'a', label: 'Pick precinct', done: false },
+      { id: 'b', label: 'Knock', done: false },
+    ];
+  }
+
+  it('writes a checklist patch, emits process.fields_updated with before/after diff', () => {
+    const prr = createPRR(db, TENANT, ACTOR, {
+      fields: { subject: 'x', checklist: freshChecklist() },
+    });
+    transitionPRR(db, TENANT, prr.process_id, 'intake_complete', ACTOR);
+
+    const toggled = [
+      { id: 'a', label: 'Pick precinct', done: true },
+      { id: 'b', label: 'Knock', done: false },
+    ];
+    const r = updateFields(db, {
+      tenantId: TENANT,
+      prrId: prr.process_id,
+      actorRef: ACTOR,
+      patch: { checklist: toggled },
+    });
+    expect(r.changed).toEqual(['checklist']);
+    expect(r.process.fields.checklist).toEqual(toggled);
+
+    const events = db
+      .prepare(
+        `SELECT event_subtype, payload_json FROM audit_events
+         WHERE process_id = ? AND event_subtype = 'process.fields_updated'
+         ORDER BY rowid ASC`,
+      )
+      .all(prr.process_id) as Array<{ event_subtype: string; payload_json: string }>;
+    expect(events).toHaveLength(1);
+    const payload = JSON.parse(events[0]!.payload_json) as {
+      changed: string[];
+      before: Record<string, unknown>;
+      after: Record<string, unknown>;
+    };
+    expect(payload.changed).toEqual(['checklist']);
+    expect(payload.before.checklist).toEqual(freshChecklist());
+    expect(payload.after.checklist).toEqual(toggled);
+  });
+
+  it('no-op resubmit returns changed:[] and writes no audit event', () => {
+    const checklist = freshChecklist();
+    const prr = createPRR(db, TENANT, ACTOR, { fields: { checklist } });
+
+    const r1 = updateFields(db, {
+      tenantId: TENANT, prrId: prr.process_id, actorRef: ACTOR,
+      patch: { checklist },
+    });
+    expect(r1.changed).toEqual([]);
+
+    const events = db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM audit_events
+         WHERE process_id = ? AND event_subtype = 'process.fields_updated'`,
+      )
+      .get(prr.process_id) as { n: number };
+    expect(events.n).toBe(0);
+  });
+
+  it('refuses with PJFieldsClosed when the PRR is closed', () => {
+    const prr = createPRR(db, TENANT, ACTOR, { fields: { subject: 'x' } });
+    // Drive through the happy path to 'closed'.
+    transitionPRR(db, TENANT, prr.process_id, 'intake_complete', ACTOR);
+    transitionPRR(db, TENANT, prr.process_id, 'route', ACTOR);
+    transitionPRR(db, TENANT, prr.process_id, 'search_begin', ACTOR);
+    transitionPRR(db, TENANT, prr.process_id, 'search_complete', ACTOR);
+    transitionPRR(db, TENANT, prr.process_id, 'respond', ACTOR);
+    closePRR(db, TENANT, prr.process_id, ACTOR);
+
+    expect(() =>
+      updateFields(db, {
+        tenantId: TENANT, prrId: prr.process_id, actorRef: ACTOR,
+        patch: { notes: 'late edit' },
+      }),
+    ).toThrowError(PJFieldsClosed);
+
+    // No fields_updated event was written.
+    const ev = db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM audit_events
+         WHERE process_id = ? AND event_subtype = 'process.fields_updated'`,
+      )
+      .get(prr.process_id) as { n: number };
+    expect(ev.n).toBe(0);
+  });
+
+  it('wrong tenant cannot see (or mutate) the PRR — surfaces as not-found', () => {
+    const prr = createPRR(db, TENANT, ACTOR, { fields: { subject: 'x' } });
+    expect(() =>
+      updateFields(db, {
+        tenantId: OTHER_TENANT, prrId: prr.process_id, actorRef: ACTOR,
+        patch: { notes: 'cross-tenant attempt' },
+      }),
+    ).toThrowError(PJInvalidTransition);
+  });
+
+  it('merges patch into existing fields without dropping unrelated keys', () => {
+    const prr = createPRR(db, TENANT, ACTOR, {
+      fields: { subject: 'records ledger', requester_email: 'jdoe@example.org' },
+    });
+    const r = updateFields(db, {
+      tenantId: TENANT, prrId: prr.process_id, actorRef: ACTOR,
+      patch: { notes: 'awaiting clarification' },
+    });
+    expect(r.changed).toEqual(['notes']);
+    expect(r.process.fields.subject).toBe('records ledger');
+    expect(r.process.fields.requester_email).toBe('jdoe@example.org');
+    expect(r.process.fields.notes).toBe('awaiting clarification');
+  });
+
+  it('canon audit triggers still ABORT UPDATE on the audit row', () => {
+    const prr = createPRR(db, TENANT, ACTOR, { fields: { checklist: freshChecklist() } });
+    updateFields(db, {
+      tenantId: TENANT, prrId: prr.process_id, actorRef: ACTOR,
+      patch: { checklist: [{ id: 'a', label: 'Pick precinct', done: true }, { id: 'b', label: 'Knock', done: false }] },
+    });
+    const row = db
+      .prepare(
+        `SELECT event_id FROM audit_events
+         WHERE process_id = ? AND event_subtype = 'process.fields_updated'`,
+      )
+      .get(prr.process_id) as { event_id: string };
+    expect(() =>
+      db.prepare(`UPDATE audit_events SET event_subtype = ? WHERE event_id = ?`)
+        .run('tampered', row.event_id),
+    ).toThrowError(/append-only/i);
   });
 });

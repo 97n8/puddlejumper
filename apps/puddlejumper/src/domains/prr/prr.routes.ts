@@ -23,8 +23,15 @@ import {
   getPRR,
   listPRR,
   transitionPRR,
+  updateFields,
 } from './prr.store.js';
-import { PJInvalidTransition, type PrrState, type PrrTrigger } from './prr.machine.js';
+import { PatchFieldsSchema } from './prr.schemas.js';
+import {
+  PJFieldsClosed,
+  PJInvalidTransition,
+  type PrrState,
+  type PrrTrigger,
+} from './prr.machine.js';
 
 const PRR_TRIGGERS: readonly PrrTrigger[] = [
   'intake_complete',
@@ -176,6 +183,58 @@ export function createCanonPrrRouter(opts: CanonPrrRoutesOptions): express.Route
             details: { from: err.from, trigger: err.trigger },
           },
         });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  router.patch('/prr/:id/fields', requireAuthenticated(), (req, res) => {
+    const auth = tenantOrForbidden(req, res);
+    if (!auth) return;
+    const id = String(req.params.id ?? '').trim();
+    if (!id) { badRequest(res, 'Process id required'); return; }
+
+    const parsed = PatchFieldsSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      badRequest(res, 'Invalid fields patch', parsed.error.flatten());
+      return;
+    }
+
+    // Authority gate. can() emits auth.granted/refused — do not double-emit.
+    const permitted = can(db, auth.actorRef, 'process.update_fields', id, auth.tenantId);
+    if (!permitted) {
+      res.status(403).json({
+        ok: false,
+        error: {
+          code: 'auth.refused',
+          message: "actor lacks 'process.update_fields' on this process",
+          details: { action: 'process.update_fields', process_id: id },
+        },
+      });
+      return;
+    }
+
+    try {
+      const { process, changed } = updateFields(db, {
+        tenantId: auth.tenantId,
+        prrId: id,
+        actorRef: auth.actorRef,
+        patch: parsed.data,
+      });
+      res.json({ ok: true, data: { process, changed } });
+    } catch (err) {
+      if (err instanceof PJFieldsClosed) {
+        res.status(409).json({
+          ok: false,
+          error: { code: 'fields.closed', message: err.message, details: { process_id: id } },
+        });
+        return;
+      }
+      if (err instanceof PJInvalidTransition) {
+        // updateFields signals "not found in tenant" via PJInvalidTransition
+        // for consistency with the rest of the store; translate to 404 here.
+        res.status(404).json({ ok: false, error: { code: 'NOT_FOUND', message: 'PRR not found' } });
         return;
       }
       throw err;
