@@ -166,3 +166,28 @@ phase that next touches `apps/logic-commons`.
 
 All five questions in spec Part 14 are resolved and locked. See spec
 sections RESOLVED-1 through RESOLVED-5.
+
+## Deploy state
+
+| Item              | State                                                                                                                                                          |
+|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Merge commit      | `2e3bef8` — `merge: phases 4 + 5 + 5.1 — overlay, platform UI, fields-patch`                                                                                   |
+| Branch deletion   | `claude/funny-sagan-V2hbG` deleted post-merge                                                                                                                  |
+| Ship gate on main | **10 pass / 1 warn / 0 fail** post-merge; web prerenders both routes; canon PRR 36/36                                                                          |
+| Fly deploy        | **Not run from this session.** Container has no `fly` CLI and no network to `api.publiclogic.org`. Operator must run `fly deploy --app publiclogic-puddlejumper` from their machine, then smoke `/health` + `GET /api/prr`. |
+| Vercel deploy     | **Not verified from this session.** Sandbox git remote is a local proxy (`http://127.0.0.1:.../git/...`), not GitHub, so the merge push does not trigger Vercel auto-deploy. Operator must push `main` to the real GitHub remote (or open in Vercel) to trigger the build. |
+
+### Carryovers
+
+Two open items the merge did not close — neither blocks deploy:
+
+1. **`pj-single-v2.html` + `TMPLS` recovery.** Phase 5 honored the
+   class-name vocabulary the prompt cites (`sb-item`, `cv-top`, `pc`,
+   `det-head`) but built visuals from Spec Part 7 tokens directly. The
+   9 templates in `apps/web/lib/templates.ts` and the 5 automation
+   options are reasonable fillers, not the originals. Swap when the
+   real `TMPLS` is in hand.
+2. **Cross-tenant 403-vs-404 precedence not yet in CANON.md.** Phase
+   3 / 5.1 settled on "`can()` gates before existence reveal" (so
+   cross-tenant returns 403 `auth.refused`, not 404). Documented in
+   `prr.routes.test.ts`; lift into the canon doc once it lands.
