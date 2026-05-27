@@ -7,12 +7,14 @@ import { appendAuditEvent, type DatabaseHandle } from '@pj/db';
 import type { Process, PJPaginated } from '@publiclogic/core';
 import {
   INITIAL_STATE,
+  PJFieldsClosed,
   PJInvalidTransition,
   TERMINAL_STATES,
   validateTransition,
   type PrrState,
   type PrrTrigger,
 } from './prr.machine.js';
+import type { PatchFieldsInput } from './prr.schemas.js';
 
 const PROCESS_TYPE = 'PRR' as const;
 const CANON_VERSION = '1.0.0';
@@ -283,3 +285,112 @@ export function closePRR(
 }
 
 export { TERMINAL_STATES };
+
+// ── updateFields (Phase 5.1) ────────────────────────────────────────────────
+
+/** Result of updateFields — `changed` is the list of allowlist keys that
+ *  actually changed (no-op patches return `changed: []` without writing). */
+export interface UpdateFieldsResult {
+  process: Process;
+  changed: string[];
+}
+
+const FIELD_KEYS = ['checklist', 'notes', 'automation'] as const;
+type AllowedField = typeof FIELD_KEYS[number];
+
+/** Stable JSON for change-detection equality (sorted keys, recursive). */
+function stableJson(value: unknown): string {
+  if (value === null || value === undefined) return 'null';
+  if (typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj).sort();
+  const body = keys.map((k) => `${JSON.stringify(k)}:${stableJson(obj[k])}`).join(',');
+  return `{${body}}`;
+}
+
+/**
+ * Apply an allowlisted patch to a PRR's `fields` JSON.
+ *
+ * Behavior:
+ *   - Tenant-scoped lookup. Missing PRR throws (caller maps to 404).
+ *   - Closed PRRs refuse the patch — throws PJFieldsClosed (→ 409).
+ *   - No-op patches (every supplied key equals the current value) return
+ *     `changed: []` without writing or auditing.  Matters because the UI
+ *     re-sends full checklist arrays on every toggle.
+ *   - A real change writes the full new `fields` JSON and emits a single
+ *     `process.fields_updated` audit event with `{ changed, before, after }`
+ *     (before/after include only the keys that actually changed).
+ *   - The UPDATE and the appendAuditEvent commit in one transaction.
+ */
+export function updateFields(
+  db: DatabaseHandle,
+  args: {
+    tenantId: string;
+    prrId: string;
+    actorRef: string;
+    patch: PatchFieldsInput;
+  },
+): UpdateFieldsResult {
+  const { tenantId, prrId, actorRef, patch } = args;
+
+  const existing = getPRR(db, tenantId, prrId);
+  if (!existing) {
+    // Mirrors the convention used elsewhere in this store: surface absence
+    // via a transition-style error so the route handler can branch on it.
+    throw new PJInvalidTransition(
+      INITIAL_STATE,
+      'intake_complete',
+      `PRR '${prrId}' not found in tenant`,
+    );
+  }
+  if (existing.current_state === 'closed') {
+    throw new PJFieldsClosed(prrId);
+  }
+
+  const currentFields = existing.fields ?? {};
+  const before: Record<string, unknown> = {};
+  const after:  Record<string, unknown> = {};
+  const changed: string[] = [];
+
+  for (const key of FIELD_KEYS) {
+    const k: AllowedField = key;
+    if (!(k in patch) || patch[k] === undefined) continue;
+    const cur = currentFields[k];
+    const next = patch[k];
+    if (stableJson(cur) === stableJson(next)) continue;
+    before[k] = cur ?? null;
+    after[k] = next;
+    changed.push(k);
+  }
+
+  if (changed.length === 0) {
+    return { process: existing, changed: [] };
+  }
+
+  const nextFields: Record<string, unknown> = { ...currentFields };
+  for (const k of changed) nextFields[k] = after[k];
+
+  const occurred_at = new Date().toISOString();
+
+  const tx = db.transaction(() => {
+    db.prepare(
+      `UPDATE processes SET fields = ? WHERE process_id = ? AND tenant_id = ?`,
+    ).run(JSON.stringify(nextFields), prrId, tenantId);
+
+    appendAuditEvent(db, {
+      event_family: 'process',
+      event_subtype: 'process.fields_updated',
+      canon_version: CANON_VERSION,
+      deployment_id: deploymentId(),
+      tenant_id: tenantId,
+      process_id: prrId,
+      actor_ref: actorRef,
+      occurred_at,
+      payload: { changed, before, after },
+    });
+  });
+  tx();
+
+  return { process: getPRR(db, tenantId, prrId)!, changed };
+}

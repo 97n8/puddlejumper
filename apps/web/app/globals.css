@@ -1,0 +1,51 @@
+@import "tailwindcss";
+@import "@pj/ui/tokens.css";
+
+/* Tailwind v4 theme block — mirrors @pj/ui tokens so utility classes
+   (bg-*, text-*) generate against the same palette.  The CSS variables
+   from tokens.css remain the source of truth for inline `style={{ ... }}`
+   and direct CSS references. */
+@theme {
+  --color-bg:    #f5f4f1;
+  --color-s0:    #ffffff;
+  --color-s1:    #faf9f7;
+  --color-s2:    #f0eeea;
+  --color-bd:    #e2dfd9;
+  --color-bd2:   #ccc9c2;
+  --color-ink:   #1a1916;
+  --color-ink2:  #4a4840;
+  --color-ink3:  #857f74;
+  --color-ink4:  #b5b0a6;
+  --color-g:     #2e7a50;
+  --color-g-lt:  #f0f7f3;
+  --color-g-bd:  #b8d9c6;
+  --color-g-mid: #4a9b72;
+  --color-amber: #8a6010;
+  --color-blue:  #2a4a8a;
+  --color-red:   #8b2a1a;
+
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-ui:      "DM Sans", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--ui);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--display);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+
+  code, pre, .mono {
+    font-family: var(--mono);
+  }
+}

@@ -101,3 +101,16 @@ export class PJInvalidTransition extends Error {
     this.trigger = trigger;
   }
 }
+
+/**
+ * Thrown by prr.store.updateFields when the PRR is closed.  Closed PRRs
+ * are immutable except via audit append (canon rule 2).  Routes translate
+ * this to HTTP 409.
+ */
+export class PJFieldsClosed extends Error {
+  readonly code = 'fields.closed' as const;
+  constructor(processId: string) {
+    super(`cannot update fields on a closed PRR '${processId}'`);
+    this.name = 'PJFieldsClosed';
+  }
+}
