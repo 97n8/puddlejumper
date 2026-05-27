@@ -81,7 +81,7 @@ Spec canon-reference artifacts that are **still missing** (deferred to later pha
 
 | Phase | Title                | Status        | Notes |
 |-------|----------------------|---------------|-------|
-| 0     | Consolidation        | IN PROGRESS   | ship.sh + canon migrations + core types + STATUS.md done. Typecheck inventory pending. |
+| 0     | Consolidation        | DONE          | ship.sh + canon migrations + core types + STATUS.md + full inventory complete. Canon gate 10/10; one pre-existing test failure inventoried. |
 | 1     | Database + audit     | NOT STARTED   | `@pj/db` package not extracted. Live audit triggers already exist. |
 | 2     | Core objects         | NOT STARTED   | Process CRUD + canon state-machine wiring. |
 | 3     | Org Manager          | NOT STARTED   | `whois/can/assign` canon surfaces. |
@@ -94,9 +94,40 @@ Spec canon-reference artifacts that are **still missing** (deferred to later pha
 
 ## TypeScript / test / build state
 
-To be filled in after running `scripts/ship.sh` end-to-end. Phase 0 mode
-treats typecheck failures as warnings (`PJ_SHIP_SOFT_TYPECHECK=1`) so that
-the canon gate can be enforced before drift is repaired.
+Captured by `PJ_SHIP_SOFT_TYPECHECK=1 ./scripts/ship.sh` after Phase 0.
+
+| Check                              | Result | Notes |
+|------------------------------------|--------|-------|
+| Canon rule 4 — no 'wren'           | PASS   |       |
+| Canon rule 5 — no @vercel/kv       | PASS   |       |
+| Banned deps                        | PASS   |       |
+| Canon migration set present        | PASS   | 001 / 002 / 003 in `pj/canon/migrations/` |
+| Canon rule 2 — audit triggers      | PASS   | defined in `apps/logic-commons/src/lib/audit-store.ts` |
+| STATUS.md present                  | PASS   |       |
+| `turbo typecheck` (excl. RETIRE)   | PASS   | 4 packages clean (`@publiclogic/core`, `@publiclogic/vault`, `@publiclogic/logic-commons`, `@publiclogic/puddlejumper`) |
+| `turbo build` (excl. RETIRE)       | PASS   | same 4 packages build cleanly |
+| `turbo test` (excl. RETIRE)        | FAIL   | one pre-existing failure — see below |
+
+`@gpr/logicos` is RETIRE per spec and is filtered out of all three turbo
+runs (matching the existing `pnpm run ci` script).
+
+### Pre-existing test failure — not Phase 0 scope
+
+`packages/core/test/auth.test.ts` imports `supertest` but the dep is missing
+from `packages/core/package.json` (it is declared in `apps/puddlejumper` and
+`apps/logic-commons`). Vitest reports:
+
+```
+FAIL  test/auth.test.ts
+Error: Failed to load url supertest (resolved id: supertest) in
+       /home/user/puddlejumper/packages/core/test/auth.test.ts
+```
+
+The fix is to add `supertest` + `@types/supertest` to `packages/core`
+devDependencies. Spec Phase 0.1 limits the "obvious" fix list to wren and
+@vercel/kv, so this is inventoried here and deferred to a follow-up cleanup
+(could land alongside Phase 1 `@pj/db` work, when `@publiclogic/core` is
+already being touched).
 
 ## Resolved decisions (formerly open)
 

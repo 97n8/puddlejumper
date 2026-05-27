@@ -120,29 +120,33 @@ else
 fi
 
 if [ "$CANON_ONLY" -eq 0 ]; then
+  # Retired packages (RETIRE in STATUS.md) are excluded from gate runs.
+  # Currently: @gpr/logicos (spec Part 6 — "RETIRING — being replaced").
+  RETIRED_FILTER='--filter=!@gpr/logicos'
+
   hdr "TypeScript typecheck"
-  if pnpm -s run typecheck >/tmp/pj-ship-typecheck.log 2>&1; then
-    pass "pnpm typecheck"
+  if pnpm -s exec turbo run typecheck $RETIRED_FILTER >/tmp/pj-ship-typecheck.log 2>&1; then
+    pass "pnpm typecheck (excludes RETIRE packages)"
   else
     if [ "${PJ_SHIP_SOFT_TYPECHECK:-0}" = "1" ]; then
-      warn "pnpm typecheck failed (soft mode — see /tmp/pj-ship-typecheck.log)"
+      warn "typecheck failed (soft mode — see /tmp/pj-ship-typecheck.log)"
     else
-      fail "pnpm typecheck failed (see /tmp/pj-ship-typecheck.log)"
+      fail "typecheck failed (see /tmp/pj-ship-typecheck.log)"
     fi
   fi
 
   hdr "Tests"
-  if pnpm -s run test >/tmp/pj-ship-test.log 2>&1; then
-    pass "pnpm test"
+  if pnpm -s exec turbo run test $RETIRED_FILTER >/tmp/pj-ship-test.log 2>&1; then
+    pass "pnpm test (excludes RETIRE packages)"
   else
-    fail "pnpm test failed (see /tmp/pj-ship-test.log)"
+    fail "test failed (see /tmp/pj-ship-test.log)"
   fi
 
   hdr "Build"
-  if pnpm -s run build >/tmp/pj-ship-build.log 2>&1; then
-    pass "pnpm build"
+  if pnpm -s exec turbo run build $RETIRED_FILTER >/tmp/pj-ship-build.log 2>&1; then
+    pass "pnpm build (excludes RETIRE packages)"
   else
-    fail "pnpm build failed (see /tmp/pj-ship-build.log)"
+    fail "build failed (see /tmp/pj-ship-build.log)"
   fi
 fi
 
