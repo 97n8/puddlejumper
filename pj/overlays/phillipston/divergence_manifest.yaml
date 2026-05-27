@@ -1,0 +1,82 @@
+# PuddleJumper overlay — Phillipston, MA (Town Clerk).
+# Reference overlay for Single-tier deployments under Massachusetts public
+# records and open meeting law (M.G.L. c.66 §10, c.30A).
+#
+# Canon: invariant.  Overlay: declared here.  Every binding cites a
+# rationale tied to either statute or local convention so a successor
+# operator can reconstruct *why* this deployment exists.
+
+canon_version: "1.0.0"
+deployment_id: "phillipston"
+overlay_name: "phillipston"
+overlay_version: "1.0.0"
+declared_at: "2026-05-27T00:00:00Z"
+declared_by: "nathan.boudreau@publiclogic.org"
+
+bindings:
+  - split_point: SP.STATE.NAMES
+    process_type: PRR
+    value:
+      received:  "Received"
+      logged:    "Logged"
+      assigned:  "Assigned"
+      searching: "Searching"
+      reviewing: "Reviewing"
+      responded: "Responded"
+      closed:    "Closed"
+    rationale: "M.G.L. c.66 §10 standard PRR workflow — Phillipston uses statutory state names verbatim."
+
+  - split_point: SP.STATE.GUARDS
+    process_type: PRR
+    value:
+      response_within_clock:
+        response_clock_business_days: 10
+        extension_grant_business_days: 15
+    rationale: "M.G.L. c.66 §10(b) sets the 10-business-day response clock; §10(c) allows a 15-business-day extension."
+
+  - split_point: SP.ROLE.BINDING
+    value:
+      records_officer:
+        title: "Town Records Officer"
+        actions:
+          - process.read
+          - process.update_fields
+          - process.transition
+          - process.close
+          - audit.read
+          - audit.export
+      administrator:
+        title: "Town Administrator"
+        actions:
+          - process.create
+          - process.read
+          - process.update_fields
+          - process.transition
+          - process.close
+          - process.assign
+          - process.unassign
+          - audit.read
+          - audit.export
+      requestor:
+        title: "Public Records Requestor"
+        actions:
+          - process.read
+    rationale: "Phillipston Town Hall role mapping per Mass DOR municipal record-keeping guidance."
+
+  - split_point: SP.ROLE.ASSIGNMENT
+    process_type: PRR
+    value:
+      records_officer:
+        strategy: named_default
+        identity_ref: "town-records-officer"
+    rationale: "Single Records Officer position at Phillipston; routing is deterministic, not load-balanced."
+
+  - split_point: SP.NOTIFY.CHANNEL
+    value:
+      remind:           gmail_to_self
+      deadline:         google_calendar
+      prompt:           gmail_to_self
+      notify.external:  gmail_draft
+      digest:           gmail_to_self
+      drive.link:       google_drive
+    rationale: "Town Hall runs on Google Workspace; intents route to a single Apps Script adapter."

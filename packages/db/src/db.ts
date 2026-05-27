@@ -26,6 +26,8 @@ const MIGRATION_FILENAMES = [
   '001_schema_init.sql',
   '002_divergence.sql',
   '003_integration.sql',
+  '004_shared_bindings.sql',
+  '005_deployment_status.sql',
 ] as const;
 
 export interface MigrateResult {

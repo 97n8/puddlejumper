@@ -54,8 +54,11 @@ export type LintFailureCode =
   | 'MANIFEST_PARSE_ERROR'
   | 'CANON_VERSION_MISMATCH'
   | 'UNKNOWN_SPLIT_POINT'
+  | 'BINDING_SCHEMA_INVALID'
   | 'INVALID_BINDING_VALUE'
   | 'RATIONALE_MISSING'
+  | 'VALUE_REF_MISSING'
+  | 'VALUE_REF_MALFORMED'
   | 'VALUE_REF_NOT_FOUND'
   | 'ORPHAN_ARTIFACT'
   | 'SIGNATURE_MISSING'
@@ -67,6 +70,8 @@ export interface LintFailure {
   message: string;
   binding_index?: number;
   split_point?: SplitPointId;
+  /** Optional path for file-related failures. */
+  path?: string;
 }
 
 export interface LintWarning {
@@ -75,8 +80,12 @@ export interface LintWarning {
   binding_index?: number;
 }
 
-export interface LintResult {
-  passed: boolean;
-  failures: LintFailure[];
-  warnings: LintWarning[];
-}
+/**
+ * Discriminated lint outcome. Phase 4 contract:
+ * - on success the manifest hash is returned;
+ * - on failure all failures are collected (no short-circuit) and the
+ *   manifest hash may be null if the file couldn't be hashed.
+ */
+export type LintResult =
+  | { ok: true;  manifestHash: string;        warnings: LintWarning[] }
+  | { ok: false; failures: LintFailure[]; manifestHash: string | null; warnings: LintWarning[] };

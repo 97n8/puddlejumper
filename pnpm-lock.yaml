@@ -91,6 +91,9 @@ importers:
       '@pj/org-manager':
         specifier: workspace:*
         version: link:../../packages/org-manager
+      '@pj/split-row':
+        specifier: workspace:*
+        version: link:../../packages/split-row
       '@publiclogic/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -231,6 +234,37 @@ importers:
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.41
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.0.0
+        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.41)(jsdom@28.1.0(@noble/hashes@1.8.0))
+
+  packages/split-row:
+    dependencies:
+      '@pj/db':
+        specifier: workspace:*
+        version: link:../db
+      '@publiclogic/core':
+        specifier: workspace:*
+        version: link:../core
+      better-sqlite3:
+        specifier: ^11.10.0
+        version: 11.10.0
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.1
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.12
+        version: 7.6.13
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.41
@@ -1121,6 +1155,9 @@ packages:
   '@types/http-proxy@1.17.17':
     resolution: {integrity: sha512-ED6LB+Z1AVylNTu7hdzuBqOgMnvG/ld6wGCG8wFnAzKX5uyW2K3WD52v0gnLCTK/VLpXtKckgWuyScYK6cSPaw==}
 
+  '@types/js-yaml@4.0.9':
+    resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
+
   '@types/jsonwebtoken@9.0.10':
     resolution: {integrity: sha512-asx5hIG9Qmf/1oStypjanR7iKTv0gXQ1Ov/jfrX6kS/EO0OFni8orbmGCn0672NHR3kXHwpAwR+B368ZGN/2rA==}
 
@@ -1241,6 +1278,9 @@ packages:
   ansi-styles@5.2.0:
     resolution: {integrity: sha512-Cxwpt2SfTzTtXcfOlzGEee8O+c+MmUgGrNiBcXnuWxuFJHe6a5Hz7qwhwe5OgaSYI0IJvkLqWX1ASG+cJOkEiA==}
     engines: {node: '>=10'}
+
+  argparse@2.0.1:
+    resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
 
   array-flatten@1.1.1:
     resolution: {integrity: sha512-PCVAQswWemu6UdxsDFFX/+gVeYqKAod3D3UVm91jHwynguOwAvYPhx8nNlM++NqRcK6CxxpUafjmhIdKiHibqg==}
@@ -1763,6 +1803,10 @@ packages:
 
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
+
+  js-yaml@4.1.1:
+    resolution: {integrity: sha512-qQKT4zQxXl8lLwBtHMWwaTcGfFOZviOJet3Oy/xmGk2gZH677CJM9EvtfdSkgWcATZhj/55JZ0rmy3myCT5lsA==}
+    hasBin: true
 
   jsdom@28.1.0:
     resolution: {integrity: sha512-0+MoQNYyr2rBHqO1xilltfDjV9G7ymYGlAUazgcDLQaUf8JDHbuGwsxN6U9qWaElZ4w1B2r7yEGIL3GdeW3Rug==}
@@ -3130,6 +3174,8 @@ snapshots:
     dependencies:
       '@types/node': 22.19.11
 
+  '@types/js-yaml@4.0.9': {}
+
   '@types/jsonwebtoken@9.0.10':
     dependencies:
       '@types/ms': 2.1.0
@@ -3287,6 +3333,8 @@ snapshots:
     optional: true
 
   ansi-styles@5.2.0: {}
+
+  argparse@2.0.1: {}
 
   array-flatten@1.1.1: {}
 
@@ -3896,6 +3944,10 @@ snapshots:
   js-tokens@4.0.0: {}
 
   js-tokens@9.0.1: {}
+
+  js-yaml@4.1.1:
+    dependencies:
+      argparse: 2.0.1
 
   jsdom@28.1.0(@noble/hashes@1.8.0):
     dependencies:

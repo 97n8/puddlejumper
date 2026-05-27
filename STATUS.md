@@ -22,7 +22,7 @@ Legend:
 | 6  | SYNCHRON8 is PJ-native. Not n8n / BullMQ.                               | PARTIAL | `apps/puddlejumper/src/syncronate/*` is PJ-native; no n8n / BullMQ deps. Intent dispatch not yet wired. |
 | 7  | AI assists, never decides. Every AI suggestion → human approval.        | SPEC    | Puddles chat is built but the structured-suggestion + confirmation-card gate is Phase 9 work. |
 | 8  | Tenant binding on every query. No cross-tenant leakage.                 | PARTIAL | `getAuthContext()` returns `tenantId`; most stores scope by it. Audit needed (Phase 2). |
-| 9  | Split-Row Runtime Contract holds. Canon invariant; overlays declare.    | SPEC    | Canon types live in `@publiclogic/core` (`types/divergence.ts`); lint + registry are Phase 4. |
+| 9  | Split-Row Runtime Contract holds. Canon invariant; overlays declare.    | LIVE    | `@pj/split-row` provides the boot lint gate + framework registry. Phillipston reference overlay lints clean. Manifest signing (Ed25519) supported. Shared binding registry immutable by DB trigger. |
 | 10 | The "stuff" doesn't matter — PJ emits intents, adapters handle tools.   | SPEC    | Canon types defined (`types/integration.ts`); SYNCHRON8 dispatch is Phase 6. |
 
 ## Packages
@@ -76,6 +76,11 @@ Legend:
 | `packages/org-manager/src/{index,permissions,errors}.ts` | LIVE | Phase 3 — whois / can / assign / deactivateIdentity |
 | `packages/org-manager/test/org-manager.test.ts` | LIVE | Phase 3 — 9/9 passing |
 | `apps/puddlejumper/src/routes/org.routes.ts` | LIVE  | Phase 3 — org HTTP surface |
+| `packages/split-row/src/{lint,registry,canonical-json,index}.ts` | LIVE | Phase 4 — lint + registry + manifest signing |
+| `packages/split-row/test/lint.test.ts` | LIVE | Phase 4 — 9/9 passing |
+| `packages/db/migrations/{004,005}.sql` | LIVE | Phase 4 — shared_bindings + deployment history |
+| `pj/overlays/phillipston/divergence_manifest.yaml` | LIVE | Phase 4 — reference overlay, lint-clean |
+| `apps/puddlejumper/src/routes/overlay.routes.ts` | LIVE | Phase 4 — shared binding registry CRUD |
 
 Spec canon-reference artifacts that are **still missing** (deferred to later phases):
 
@@ -95,7 +100,7 @@ Spec canon-reference artifacts that are **still missing** (deferred to later pha
 | 1     | Database + audit     | DONE          | `@pj/db` extracted to `packages/db/`. WAL + foreign_keys on every connection. Canon triggers verified by `verifyAuditTriggers()` and proven append-only by tests. 8/8 tests pass. |
 | 2     | Core objects         | DONE          | Canon PRR domain at `apps/puddlejumper/src/domains/prr/` (machine + store + routes). Canon audit stream at `apps/puddlejumper/src/routes/audit.routes.ts`. Replaces legacy `routes/prr.ts` and `admin.ts` /audit endpoints. 19/19 new domain tests pass; statutory state machine enforced; every transition appends to `audit_events` via `appendAuditEvent`. |
 | 3     | Org Manager          | DONE          | `@pj/org-manager` extracted to `packages/org-manager/`. `whois` / `can` / `assign` / `deactivateIdentity` with `auth.granted`/`auth.refused` + `role.assigned`/`role.deactivated` emission. Canon PRR `PATCH /:id/state` now gated by `can()` (403 `auth.refused` when denied). `POST /api/org/can` and CRUD on `/api/org/identities` mounted. 9/9 package tests pass. |
-| 4     | Split-Row + overlay  | NOT STARTED   | Lint + manifest loader. |
+| 4     | Split-Row + overlay  | DONE          | `@pj/split-row` at `packages/split-row/`: 8-check lint (collects all failures, never short-circuits) + framework registry (in-memory cache, `divergence.manifest_loaded` / `divergence.manifest_changed` / `divergence.binding_exercised` / `divergence.lint_failed`). Ed25519 manifest signing supported (Part 14 RESOLVED-1). Migration 004 adds `shared_bindings` with the canon `shared_bindings_no_content_update` immutability trigger; migration 005 rebuilds `deployment_manifests` with history (partial unique index for one CURRENT per deployment, prior rows flip to SUPERSEDED per RESOLVED-3). Phillipston reference overlay at `pj/overlays/phillipston/` lints clean. Boot integration in `server.ts`: `OVERLAY_DIR` env var triggers `loadOverlay`; lint failure logs and exits 1. `/api/overlays/bindings` CRUD (admin-only) wired. 9/9 split-row tests pass + 3 new `@pj/db` trigger tests. |
 | 5     | Platform UI          | NOT STARTED   | Port `pj-single-v2.html` to React; depends on `apps/web` scaffold. |
 | 6     | Integration layer    | NOT STARTED   | SYNCHRON8 intent dispatch + adapter webhooks. |
 | 7     | Double               | NOT STARTED   | Two-person shared workspace. |

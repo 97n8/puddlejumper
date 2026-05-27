@@ -104,6 +104,8 @@ import { createConfigRoutes } from "./routes/config.js";
 import { createCanonPrrRouter } from "../domains/prr/index.js";
 import { createCanonAuditRouter } from "../routes/audit.routes.js";
 import { createCanonOrgRouter } from "../routes/org.routes.js";
+import { createCanonOverlayRouter } from "../routes/overlay.routes.js";
+import { loadOverlay } from "@pj/split-row";
 import {
   getDb as getCanonDb,
   migrate as migrateCanonDb,
@@ -269,6 +271,31 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     throw new Error("DB_PATH must be inside the controlled data directory");
   }
   const canonDb = resolveCanonDb(canonDbPath);
+
+  // ── Split-Row overlay boot (Phase 4) ───────────────────────────────────
+  // OVERLAY_DIR points to a directory containing divergence_manifest.yaml.
+  // Lint runs to completion at boot. On failure the server prints the
+  // failure list and exits (canon: no partial loads, no warning mode).
+  const overlayDir = process.env.OVERLAY_DIR;
+  if (overlayDir) {
+    const result = loadOverlay(overlayDir, canonDb);
+    if (!result.ok) {
+      // eslint-disable-next-line no-console
+      console.error("PJ boot failed: overlay lint errors:");
+      for (const f of result.lint.failures) {
+        // eslint-disable-next-line no-console
+        console.error(" ", f.code, JSON.stringify({ message: f.message, path: f.path, split_point: f.split_point }));
+      }
+      process.exit(1);
+    }
+    // eslint-disable-next-line no-console
+    console.info(
+      `PJ overlay loaded: ${result.overlay.overlayName} ${result.overlay.manifestHash.slice(0, 8)}`,
+    );
+  } else {
+    // eslint-disable-next-line no-console
+    console.info("PJ running with no overlay (Single tier)");
+  }
 
   const prrStore = new PrrStore(prrDbPath);
   const dogStore = new DogStore(path.join(CONTROLLED_DATA_DIR, "dog.db"));
@@ -1038,6 +1065,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createCanonAuditRouter({ db: canonDb }));
   // Canon Org Manager (Phase 3) — identities + can() authority gate.
   app.use("/api", createCanonOrgRouter({ db: canonDb }));
+  // Canon overlay registry (Phase 4) — shared_bindings CRUD, admin-gated.
+  app.use("/api", createCanonOverlayRouter({ db: canonDb }));
   app.use("/api", createCommonsRoutes({ commonsStore }));
   app.use("/api", createDogRoutes({ dogStore }));
   app.use("/api", createAccessRoutes({ prrStore }));

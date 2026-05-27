@@ -17,6 +17,8 @@ function freshDb(): DatabaseHandle {
     '001_schema_init.sql',
     '002_divergence.sql',
     '003_integration.sql',
+    '004_shared_bindings.sql',
+    '005_deployment_status.sql',
   ]);
   return db;
 }
@@ -125,6 +127,44 @@ describe('@pj/db — canon contract', () => {
     });
   });
 
+  describe('canon migration 004 — shared_bindings immutability', () => {
+    function seedBinding(): void {
+      db.prepare(
+        `INSERT INTO shared_bindings (
+           binding_id, name, split_point, version, content_yaml, content_hash,
+           published_by, published_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('b1', 'pkg', 'SP.STATE.NAMES', '1.0.0', 'foo: 1\n', 'hashabc', 'tester', '2026-05-27T00:00:00Z');
+    }
+
+    it('refuses UPDATE of content_yaml on an existing binding', () => {
+      seedBinding();
+      expect(() =>
+        db.prepare(`UPDATE shared_bindings SET content_yaml = ? WHERE binding_id = ?`)
+          .run('foo: 2\n', 'b1'),
+      ).toThrowError(/shared_bindings content is immutable/);
+    });
+
+    it('refuses UPDATE of content_hash on an existing binding', () => {
+      seedBinding();
+      expect(() =>
+        db.prepare(`UPDATE shared_bindings SET content_hash = ? WHERE binding_id = ?`)
+          .run('different', 'b1'),
+      ).toThrowError(/shared_bindings content is immutable/);
+    });
+
+    it('allows UPDATE of deprecated_at (deprecation is the only mutation)', () => {
+      seedBinding();
+      expect(() =>
+        db.prepare(`UPDATE shared_bindings SET deprecated_at = ? WHERE binding_id = ?`)
+          .run('2026-06-01T00:00:00Z', 'b1'),
+      ).not.toThrow();
+      const row = db.prepare(`SELECT deprecated_at FROM shared_bindings WHERE binding_id = ?`)
+        .get('b1') as { deprecated_at: string };
+      expect(row.deprecated_at).toBe('2026-06-01T00:00:00Z');
+    });
+  });
+
   describe('migrate idempotency', () => {
     it('skips already-applied migrations on re-run', () => {
       const second = migrate(db);
@@ -133,6 +173,8 @@ describe('@pj/db — canon contract', () => {
         '001_schema_init.sql',
         '002_divergence.sql',
         '003_integration.sql',
+        '004_shared_bindings.sql',
+        '005_deployment_status.sql',
       ]);
     });
 
