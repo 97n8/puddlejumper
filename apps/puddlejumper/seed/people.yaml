@@ -1,0 +1,39 @@
+# PublicLogic personal tenant — who can use PJ.
+#
+# Edit this file, then run:  pnpm --filter @publiclogic/puddlejumper seed
+# Idempotent: re-running is safe.  No duplicates created.
+#
+# To add a person, append an entry under `identities`.
+# To change someone's role, edit the role field — but the seed will WARN
+#   and refuse to mutate.  Use the org-manager API to change roles.
+# To remove access, do NOT just delete from YAML.  Call:
+#   PATCH /api/org/identities/:id/deactivate
+
+tenant:
+  id: publiclogic
+  display_name: PublicLogic
+  tier: single          # single | overlay | network — informational; the
+                        # runtime tier (single/duo/team) is computed from
+                        # active identity count.
+
+identities:
+  - email: nate@publiclogic.org
+    display_name: Nate Boudreau
+    role: administrator
+    seed_process:
+      template_id: governance-task
+      domain: PublicLogic
+      title: Welcome to PJ
+      notes: |
+        First process. Advance it through the state machine to confirm
+        end-to-end wiring. Close it when done.
+
+  - email: allie@publiclogic.org
+    display_name: Allison Weiss Rothschild
+    role: administrator
+    seed_process:
+      template_id: governance-task
+      domain: PublicLogic
+      title: Welcome to PJ
+      notes: |
+        First process. Same as Nate's — independent, in your own view.

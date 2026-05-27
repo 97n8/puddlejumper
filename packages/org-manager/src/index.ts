@@ -9,6 +9,9 @@
 
 import crypto from 'node:crypto';
 import { appendAuditEvent, type DatabaseHandle } from '@pj/db';
+
+// crypto.randomUUID is what we use for identity_id below; this import is
+// shared with the assign() implementation already in this module.
 import type {
   AuditEventSubtype,
   CanonicalAction,
@@ -66,6 +69,105 @@ function rowToIdentity(row: IdentityRow): Identity {
     active: row.active === 1,
     created_at: row.created_at,
     deactivated_at: row.deactivated_at,
+  };
+}
+
+// ── createTenant ────────────────────────────────────────────────────────────
+
+export interface TenantRow {
+  id: string;
+  name: string;
+  canon_version: string;
+  created_at: string;
+}
+
+export interface CreateTenantResult {
+  tenant: TenantRow;
+  created: boolean;
+}
+
+/**
+ * Idempotent tenant upsert.  If a row with `id` already exists this is a
+ * no-op (does not overwrite name; tenant rename is a deliberate API action,
+ * not a seed concern).  Returns `created: true` only on first insert so
+ * callers can emit `tenant.seeded` once per tenant lifetime.
+ */
+export function createTenant(
+  db: DatabaseHandle,
+  args: { id: string; name: string; canonVersion?: string },
+): CreateTenantResult {
+  const existing = db
+    .prepare(`SELECT id, name, canon_version, created_at FROM tenants WHERE id = ?`)
+    .get(args.id) as TenantRow | undefined;
+  if (existing) return { tenant: existing, created: false };
+
+  db.prepare(
+    `INSERT INTO tenants (id, name, canon_version) VALUES (?, ?, ?)`,
+  ).run(args.id, args.name, args.canonVersion ?? CANON_VERSION);
+
+  const row = db
+    .prepare(`SELECT id, name, canon_version, created_at FROM tenants WHERE id = ?`)
+    .get(args.id) as TenantRow;
+  return { tenant: row, created: true };
+}
+
+// ── createIdentity ──────────────────────────────────────────────────────────
+
+export interface CreateIdentityArgs {
+  tenantId: string;
+  kind?: 'person' | 'service' | 'delegation';
+  email?: string;
+  displayName?: string;
+}
+
+export interface CreateIdentityResult {
+  identity: Identity & { email: string | null; display_name: string | null };
+  created: boolean;
+}
+
+/**
+ * Idempotent identity create scoped by `(tenant_id, email)`.  If an active
+ * identity with the same email already exists in the tenant this is a
+ * no-op.  OAuth subjects are NOT set here — they're linked on first login
+ * via the onUserAuthenticated hook in apps/logic-commons.
+ */
+export function createIdentity(
+  db: DatabaseHandle,
+  args: CreateIdentityArgs,
+): CreateIdentityResult {
+  const kind = args.kind ?? 'person';
+  const email = args.email ?? null;
+  const displayName = args.displayName ?? null;
+
+  if (email) {
+    const existing = db
+      .prepare(
+        `SELECT * FROM identities WHERE tenant_id = ? AND email = ?`,
+      )
+      .get(args.tenantId, email) as
+        | (IdentityRow & { email: string | null; display_name: string | null })
+        | undefined;
+    if (existing) {
+      return {
+        identity: { ...rowToIdentity(existing), email: existing.email, display_name: existing.display_name },
+        created: false,
+      };
+    }
+  }
+
+  const identity_id = crypto.randomUUID();
+  db.prepare(
+    `INSERT INTO identities (identity_id, tenant_id, kind, active, email, display_name)
+     VALUES (?, ?, ?, 1, ?, ?)`,
+  ).run(identity_id, args.tenantId, kind, email, displayName);
+
+  const row = db
+    .prepare(`SELECT * FROM identities WHERE identity_id = ?`)
+    .get(identity_id) as IdentityRow & { email: string | null; display_name: string | null };
+
+  return {
+    identity: { ...rowToIdentity(row), email: row.email, display_name: row.display_name },
+    created: true,
   };
 }
 

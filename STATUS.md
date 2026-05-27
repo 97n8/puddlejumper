@@ -177,6 +177,38 @@ sections RESOLVED-1 through RESOLVED-5.
 | Fly deploy        | **Not run from this session.** Container has no `fly` CLI and no network to `api.publiclogic.org`. Operator must run `fly deploy --app publiclogic-puddlejumper` from their machine, then smoke `/health` + `GET /api/prr`. |
 | Vercel deploy     | **Not verified from this session.** Sandbox git remote is a local proxy (`http://127.0.0.1:.../git/...`), not GitHub, so the merge push does not trigger Vercel auto-deploy. Operator must push `main` to the real GitHub remote (or open in Vercel) to trigger the build. |
 
+### Operational — seed
+
+Seed at `apps/puddlejumper/seed/`. YAML-driven (`people.yaml`),
+idempotent, audit-emitting. Adds Nate + Allie as administrators under
+the `publiclogic` tenant. Run via
+`pnpm --filter @publiclogic/puddlejumper seed`. Adding a person is a
+one-line YAML edit + re-run.
+
+- New canon migration: `006_identity_overlay.sql` adds `email`,
+  `display_name`, and `oauth_subjects` columns to `identities` with a
+  partial unique index on `(tenant_id, email) WHERE email IS NOT NULL`.
+- New store exports in `@pj/org-manager`: `createTenant`,
+  `createIdentity` (both idempotent, scoped by `(tenant_id, email)` for
+  identities).
+- Seed emits `tenant.seeded`, `identity.seeded`, `role.seeded`, and the
+  usual `process.created` events through `appendAuditEvent`. No raw SQL.
+- Role mutations via YAML are refused with a `WARN`; deactivation is not
+  a seed concern — use `PATCH /api/org/identities/:id/deactivate`.
+- 5 seed tests cover: fresh DB, idempotent re-run, new identity append,
+  role-change WARN, invalid-YAML rollback. Manual CLI smoke confirmed:
+  first run creates everything, second run shows `[existing]` across
+  the board.
+
+**Open follow-up:** the `onUserAuthenticated` hook in
+`apps/puddlejumper/src/api/server.ts` does NOT look up canon
+`identities` by `(tenant_id, email)`. Email + display_name now exist on
+the canon identity row, but bridging that to OAuth login is
+intentionally deferred — flagged in `seed/README.md`. Until it lands,
+logging in via Google as `nate@publiclogic.org` will not attach the
+seeded canon identity to the session; it uses the legacy `workspace`
+row path.
+
 ### Carryovers
 
 Two open items the merge did not close — neither blocks deploy:

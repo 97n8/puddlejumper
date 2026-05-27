@@ -14,7 +14,8 @@
     "build": "tsc",
     "start": "node dist/api/server.js",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx seed/seed.ts"
   },
   "dependencies": {
     "@pj/db": "workspace:*",
@@ -29,6 +30,7 @@
     "dotenv": "^16.0.0",
     "express": "^4.21.2",
     "http-proxy-middleware": "^3.0.5",
+    "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.3",
     "jszip": "^3.10.1",
     "resend": "^6.9.2",
@@ -43,6 +45,7 @@
     "@types/better-sqlite3": "^7.6.11",
     "@types/cookie-parser": "^1.4.7",
     "@types/express": "^4.17.21",
+    "@types/js-yaml": "^4.0.9",
     "@types/jsonwebtoken": "^9.0.0",
     "@types/node": "^20.0.0",
     "@types/supertest": "^6.0.2",

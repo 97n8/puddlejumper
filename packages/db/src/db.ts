@@ -28,6 +28,7 @@ const MIGRATION_FILENAMES = [
   '003_integration.sql',
   '004_shared_bindings.sql',
   '005_deployment_status.sql',
+  '006_identity_overlay.sql',
 ] as const;
 
 export interface MigrateResult {

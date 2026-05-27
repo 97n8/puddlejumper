@@ -19,6 +19,7 @@ function freshDb(): DatabaseHandle {
     '003_integration.sql',
     '004_shared_bindings.sql',
     '005_deployment_status.sql',
+    '006_identity_overlay.sql',
   ]);
   return db;
 }
@@ -175,6 +176,7 @@ describe('@pj/db — canon contract', () => {
         '003_integration.sql',
         '004_shared_bindings.sql',
         '005_deployment_status.sql',
+        '006_identity_overlay.sql',
       ]);
     });
 
