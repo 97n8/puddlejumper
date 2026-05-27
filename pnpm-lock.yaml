@@ -88,6 +88,9 @@ importers:
       '@pj/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@pj/org-manager':
+        specifier: workspace:*
+        version: link:../../packages/org-manager
       '@publiclogic/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -193,6 +196,31 @@ importers:
 
   packages/db:
     dependencies:
+      '@publiclogic/core':
+        specifier: workspace:*
+        version: link:../core
+      better-sqlite3:
+        specifier: ^11.10.0
+        version: 11.10.0
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.12
+        version: 7.6.13
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.41
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.0.0
+        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.41)(jsdom@28.1.0(@noble/hashes@1.8.0))
+
+  packages/org-manager:
+    dependencies:
+      '@pj/db':
+        specifier: workspace:*
+        version: link:../db
       '@publiclogic/core':
         specifier: workspace:*
         version: link:../core
@@ -3063,7 +3091,7 @@ snapshots:
 
   '@types/better-sqlite3@7.6.13':
     dependencies:
-      '@types/node': 20.19.41
+      '@types/node': 22.19.11
 
   '@types/body-parser@1.19.6':
     dependencies:

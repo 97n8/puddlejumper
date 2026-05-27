@@ -16,6 +16,7 @@ import {
   requireAuthenticated,
 } from '@publiclogic/core';
 import type { DatabaseHandle } from '@pj/db';
+import { can } from '@pj/org-manager';
 import {
   closePRR,
   createPRR,
@@ -146,6 +147,20 @@ export function createCanonPrrRouter(opts: CanonPrrRoutesOptions): express.Route
     const parsed = transitionBodySchema.safeParse(req.body ?? {});
     if (!parsed.success) {
       badRequest(res, 'Invalid trigger', parsed.error.flatten());
+      return;
+    }
+    // Authority gate (Phase 3). can() emits auth.granted/auth.refused for us —
+    // do not append another audit event in this route.
+    const permitted = can(db, auth.actorRef, 'process.transition', id, auth.tenantId);
+    if (!permitted) {
+      res.status(403).json({
+        ok: false,
+        error: {
+          code: 'auth.refused',
+          message: "actor lacks 'process.transition' on this process",
+          details: { action: 'process.transition', process_id: id },
+        },
+      });
       return;
     }
     try {

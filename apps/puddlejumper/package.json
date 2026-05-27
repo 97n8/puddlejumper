@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@pj/db": "workspace:*",
+    "@pj/org-manager": "workspace:*",
     "@publiclogic/core": "workspace:*",
     "@publiclogic/logic-commons": "workspace:*",
     "bcryptjs": "^2.4.3",

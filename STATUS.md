@@ -32,7 +32,7 @@ Legend:
 | `@publiclogic/core`      | `@pj/core`       | PARTIAL | Auth/JWT/cookie/middleware LIVE. Canon types added in Phase 0 (`src/types/*`). Package name still `@publiclogic/*` — rename is a Phase 1+ decision. |
 | `@publiclogic/vault`     | `@pj/vault`      | PARTIAL | Exists as a separate Fly service. No `evaluate()` export against canon `VaultContext`. |
 | `@pj/db`                 | `@pj/db`         | LIVE    | Phase 1: SQLite layer at `packages/db/`. Exports `getDb`, `migrate`, `appendAuditEvent`, `verifyAuditTriggers`. Ships canon migrations `001..003` under `packages/db/migrations/`. 8/8 tests pass (canon triggers refuse UPDATE+DELETE; verifier reports both triggers; migrate idempotent). Existing `apps/logic-commons` multi-DB runner is unchanged and continues to serve the live production DBs. |
-| —                        | `@pj/org-manager`| PARTIAL | Lives at `apps/puddlejumper/src/org-manager/*`. No package extraction. `whois/can/assign` surfaces unclear vs canon. |
+| `@pj/org-manager`        | `@pj/org-manager`| LIVE    | Phase 3: `packages/org-manager/`. Exports `whois`, `can`, `assign` (named_default / round_robin / lookup_table), `deactivateIdentity`. Hardcoded `DEFAULT_PERMISSIONS` per the 8 canon role types; every `can()` appends `auth.granted`/`auth.refused` via `appendAuditEvent`. 9/9 tests pass. Legacy `apps/puddlejumper/src/org-manager/*` left in place (dead code, do not extend). |
 | —                        | `@pj/formkey`    | PARTIAL | Lives at `apps/puddlejumper/src/formkey/*`. No package extraction. |
 | —                        | `@pj/synchron8`  | PARTIAL | Lives at `apps/puddlejumper/src/syncronate/*` (PJ-native). Intent dispatch not yet wired. |
 | —                        | `@pj/archieve`   | PARTIAL | Lives at `apps/puddlejumper/src/archieve/*`. Retention enforcement skeletal. |
@@ -73,6 +73,9 @@ Legend:
 | `apps/puddlejumper/src/domains/prr/`        | LIVE    | Phase 2 — machine + store + routes (canon) |
 | `apps/puddlejumper/src/routes/audit.routes.ts` | LIVE | Phase 2 — canon audit surface |
 | `apps/puddlejumper/src/routes/audit.store.ts` | LIVE  | Phase 2 — tenant-scoped audit queries |
+| `packages/org-manager/src/{index,permissions,errors}.ts` | LIVE | Phase 3 — whois / can / assign / deactivateIdentity |
+| `packages/org-manager/test/org-manager.test.ts` | LIVE | Phase 3 — 9/9 passing |
+| `apps/puddlejumper/src/routes/org.routes.ts` | LIVE  | Phase 3 — org HTTP surface |
 
 Spec canon-reference artifacts that are **still missing** (deferred to later phases):
 
@@ -91,7 +94,7 @@ Spec canon-reference artifacts that are **still missing** (deferred to later pha
 | 0     | Consolidation        | DONE          | ship.sh + canon migrations + core types + STATUS.md + full inventory complete. Canon gate 10/10; one pre-existing test failure inventoried. |
 | 1     | Database + audit     | DONE          | `@pj/db` extracted to `packages/db/`. WAL + foreign_keys on every connection. Canon triggers verified by `verifyAuditTriggers()` and proven append-only by tests. 8/8 tests pass. |
 | 2     | Core objects         | DONE          | Canon PRR domain at `apps/puddlejumper/src/domains/prr/` (machine + store + routes). Canon audit stream at `apps/puddlejumper/src/routes/audit.routes.ts`. Replaces legacy `routes/prr.ts` and `admin.ts` /audit endpoints. 19/19 new domain tests pass; statutory state machine enforced; every transition appends to `audit_events` via `appendAuditEvent`. |
-| 3     | Org Manager          | NOT STARTED   | `whois/can/assign` canon surfaces. |
+| 3     | Org Manager          | DONE          | `@pj/org-manager` extracted to `packages/org-manager/`. `whois` / `can` / `assign` / `deactivateIdentity` with `auth.granted`/`auth.refused` + `role.assigned`/`role.deactivated` emission. Canon PRR `PATCH /:id/state` now gated by `can()` (403 `auth.refused` when denied). `POST /api/org/can` and CRUD on `/api/org/identities` mounted. 9/9 package tests pass. |
 | 4     | Split-Row + overlay  | NOT STARTED   | Lint + manifest loader. |
 | 5     | Platform UI          | NOT STARTED   | Port `pj-single-v2.html` to React; depends on `apps/web` scaffold. |
 | 6     | Integration layer    | NOT STARTED   | SYNCHRON8 intent dispatch + adapter webhooks. |

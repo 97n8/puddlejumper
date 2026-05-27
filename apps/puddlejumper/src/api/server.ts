@@ -103,6 +103,7 @@ import { createConfigRoutes } from "./routes/config.js";
 // Canon PRR domain (Phase 2) — replaces the legacy ./routes/prr.js mount.
 import { createCanonPrrRouter } from "../domains/prr/index.js";
 import { createCanonAuditRouter } from "../routes/audit.routes.js";
+import { createCanonOrgRouter } from "../routes/org.routes.js";
 import {
   getDb as getCanonDb,
   migrate as migrateCanonDb,
@@ -1035,6 +1036,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createCanonPrrRouter({ db: canonDb }));
   // Canon audit stream — replaces /audit endpoints formerly in routes/admin.ts.
   app.use("/api", createCanonAuditRouter({ db: canonDb }));
+  // Canon Org Manager (Phase 3) — identities + can() authority gate.
+  app.use("/api", createCanonOrgRouter({ db: canonDb }));
   app.use("/api", createCommonsRoutes({ commonsStore }));
   app.use("/api", createDogRoutes({ dogStore }));
   app.use("/api", createAccessRoutes({ prrStore }));
