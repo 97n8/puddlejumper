@@ -28,6 +28,8 @@ vitest.config.ts.timestamp-*
 node_modules/
 dist/
 build/
+.turbo/
+.next/
 .vercel
 .env*.local
 
