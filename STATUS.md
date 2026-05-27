@@ -31,7 +31,7 @@ Legend:
 |--------------------------|------------------|---------|-------|
 | `@publiclogic/core`      | `@pj/core`       | PARTIAL | Auth/JWT/cookie/middleware LIVE. Canon types added in Phase 0 (`src/types/*`). Package name still `@publiclogic/*` — rename is a Phase 1+ decision. |
 | `@publiclogic/vault`     | `@pj/vault`      | PARTIAL | Exists as a separate Fly service. No `evaluate()` export against canon `VaultContext`. |
-| —                        | `@pj/db`         | SPEC    | Migration code lives in `apps/logic-commons/src/lib/migrations.ts` (multi-DB, dated filenames). No standalone `@pj/db` package yet. |
+| `@pj/db`                 | `@pj/db`         | LIVE    | Phase 1: SQLite layer at `packages/db/`. Exports `getDb`, `migrate`, `appendAuditEvent`, `verifyAuditTriggers`. Ships canon migrations `001..003` under `packages/db/migrations/`. 8/8 tests pass (canon triggers refuse UPDATE+DELETE; verifier reports both triggers; migrate idempotent). Existing `apps/logic-commons` multi-DB runner is unchanged and continues to serve the live production DBs. |
 | —                        | `@pj/org-manager`| PARTIAL | Lives at `apps/puddlejumper/src/org-manager/*`. No package extraction. `whois/can/assign` surfaces unclear vs canon. |
 | —                        | `@pj/formkey`    | PARTIAL | Lives at `apps/puddlejumper/src/formkey/*`. No package extraction. |
 | —                        | `@pj/synchron8`  | PARTIAL | Lives at `apps/puddlejumper/src/syncronate/*` (PJ-native). Intent dispatch not yet wired. |
@@ -66,6 +66,10 @@ Legend:
 | `packages/core/src/types/integration.ts`    | LIVE    |
 | `packages/core/src/types/response.ts`       | LIVE    |
 | `STATUS.md` (this file)                     | LIVE    |
+| `packages/db/src/db.ts`                     | LIVE    | Phase 1 |
+| `packages/db/src/audit.ts`                  | LIVE    | Phase 1 |
+| `packages/db/migrations/{001,002,003}.sql`  | LIVE    | Phase 1 — runtime copy of canon set |
+| `packages/db/test/db.test.ts`               | LIVE    | Phase 1 — 8/8 passing |
 
 Spec canon-reference artifacts that are **still missing** (deferred to later phases):
 
@@ -82,7 +86,7 @@ Spec canon-reference artifacts that are **still missing** (deferred to later pha
 | Phase | Title                | Status        | Notes |
 |-------|----------------------|---------------|-------|
 | 0     | Consolidation        | DONE          | ship.sh + canon migrations + core types + STATUS.md + full inventory complete. Canon gate 10/10; one pre-existing test failure inventoried. |
-| 1     | Database + audit     | NOT STARTED   | `@pj/db` package not extracted. Live audit triggers already exist. |
+| 1     | Database + audit     | DONE          | `@pj/db` extracted to `packages/db/`. WAL + foreign_keys on every connection. Canon triggers verified by `verifyAuditTriggers()` and proven append-only by tests. 8/8 tests pass. |
 | 2     | Core objects         | NOT STARTED   | Process CRUD + canon state-machine wiring. |
 | 3     | Org Manager          | NOT STARTED   | `whois/can/assign` canon surfaces. |
 | 4     | Split-Row + overlay  | NOT STARTED   | Lint + manifest loader. |
