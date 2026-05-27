@@ -85,6 +85,9 @@ importers:
 
   apps/puddlejumper:
     dependencies:
+      '@pj/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@publiclogic/core':
         specifier: workspace:*
         version: link:../../packages/core

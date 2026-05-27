@@ -252,7 +252,13 @@ describe("GET /api/admin/stats", () => {
   });
 });
 
-describe("tool-scoped audit routes", () => {
+// Phase 2 canon: the tool-scoped /audit endpoints (GET /api/audit?tool=,
+// POST /api/audit/tool, GET /api/audit/tool/:toolId) were removed from
+// admin.ts when the canon audit surface was extracted into
+// src/routes/audit.routes.ts. These tests exercise removed legacy code;
+// they are skipped, not deleted, until the audit-store tool-scoped
+// helper API is either re-homed or formally retired.
+describe.skip("tool-scoped audit routes (legacy — removed in Phase 2)", () => {
   it("writes tool events for a scoped service token", async () => {
     const app = buildApp();
     const token = await tokenFor(AUDIT_SERVICE);

@@ -100,7 +100,28 @@ import { createAuthRoutes } from "./routes/auth.js";
 import { upsertUser, setUserRole, linkEmailToUser, resolveLinkedUser } from "./userStore.js";
 import { findLocalUserById } from "./localUsersStore.js";
 import { createConfigRoutes } from "./routes/config.js";
-import { createPrrRoutes } from "./routes/prr.js";
+// Canon PRR domain (Phase 2) — replaces the legacy ./routes/prr.js mount.
+import { createCanonPrrRouter } from "../domains/prr/index.js";
+import { createCanonAuditRouter } from "../routes/audit.routes.js";
+import {
+  getDb as getCanonDb,
+  migrate as migrateCanonDb,
+  type DatabaseHandle,
+} from "@pj/db";
+
+// Per-process canon DB cache. See `resolveCanonDb` below for why.
+let _canonDbHandle: DatabaseHandle | null = null;
+let _canonDbPathKey: string | null = null;
+function resolveCanonDb(canonDbPath: string): DatabaseHandle {
+  if (_canonDbHandle && _canonDbPathKey === canonDbPath) return _canonDbHandle;
+  if (_canonDbHandle && _canonDbPathKey !== canonDbPath) {
+    try { _canonDbHandle.close(); } catch { /* ignore */ }
+  }
+  _canonDbHandle = getCanonDb(canonDbPath);
+  migrateCanonDb(_canonDbHandle);
+  _canonDbPathKey = canonDbPath;
+  return _canonDbHandle;
+}
 import { createCommonsRoutes } from "./routes/commons.js";
 import { createDogRoutes } from "./routes/dog.js";
 import { createAccessRoutes } from "./routes/access.js";
@@ -231,6 +252,22 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     prrDbPath,
     approvalDbPath,
   });
+
+  // ── Canon @pj/db — single SQLite file backing the canon Process model.
+  // Separate from the legacy multi-DB (prr.db / approvals.db / audit.db)
+  // that PrrStore + co. continue to use.
+  //
+  // Cached per-process so repeated createApp() calls in the same vitest
+  // worker reuse one DB handle (better-sqlite3 doesn't gracefully re-open
+  // the same file from different connections, and migrate() being idempotent
+  // means the first call is enough).
+  const canonDbPath = path.resolve(
+    process.env.DB_PATH ?? path.join(CONTROLLED_DATA_DIR, "pj.db"),
+  );
+  if (!isPathInsideDirectory(canonDbPath, CONTROLLED_DATA_DIR)) {
+    throw new Error("DB_PATH must be inside the controlled data directory");
+  }
+  const canonDb = resolveCanonDb(canonDbPath);
 
   const prrStore = new PrrStore(prrDbPath);
   const dogStore = new DogStore(path.join(CONTROLLED_DATA_DIR, "dog.db"));
@@ -994,7 +1031,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     onUserAuthenticated,
   }));
   app.use("/api", createConfigRoutes({ runtimeContext, runtimeTiles, runtimeCapabilities }));
-  app.use("/api", createPrrRoutes({ prrStore }));
+  // Canon PRR domain — replaces legacy routes/prr.ts (Phase 2).
+  app.use("/api", createCanonPrrRouter({ db: canonDb }));
+  // Canon audit stream — replaces /audit endpoints formerly in routes/admin.ts.
+  app.use("/api", createCanonAuditRouter({ db: canonDb }));
   app.use("/api", createCommonsRoutes({ commonsStore }));
   app.use("/api", createDogRoutes({ dogStore }));
   app.use("/api", createAccessRoutes({ prrStore }));

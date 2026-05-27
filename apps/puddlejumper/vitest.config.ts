@@ -4,12 +4,14 @@ import path from 'node:path';
 export default defineConfig({
   resolve: {
     alias: {
+      '@pj/db': path.resolve(__dirname, '../../packages/db/src/index.ts'),
       '@publiclogic/core': path.resolve(__dirname, '../../packages/core/src/index.ts'),
       '@publiclogic/logic-commons': path.resolve(__dirname, '../logic-commons/src/index.ts'),
     },
   },
   test: {
     globals: false,
-    exclude: ['**/.claude/**', '**/node_modules/**'],
+    // Exclude dist/ so vitest doesn't run each test twice (src + compiled).
+    exclude: ['**/.claude/**', '**/node_modules/**', '**/dist/**'],
   },
 });
