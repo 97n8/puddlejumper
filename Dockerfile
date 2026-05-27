@@ -11,12 +11,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN corepack enable
 RUN corepack prepare pnpm@9 --activate
 
-# Copy package manifests first for better layer caching
+# Copy package manifests first for better layer caching.
+# Every workspace package that apps/puddlejumper transitively depends on
+# must appear here, or `pnpm install` fails to resolve workspace:* deps.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/puddlejumper/package.json apps/puddlejumper/
 COPY apps/logic-commons/package.json apps/logic-commons/
 COPY packages/core/package.json packages/core/
 COPY packages/vault/package.json packages/vault/
+COPY packages/db/package.json packages/db/
+COPY packages/org-manager/package.json packages/org-manager/
+COPY packages/split-row/package.json packages/split-row/
 
 ENV CI=true
 RUN pnpm install --no-frozen-lockfile
@@ -29,8 +34,16 @@ COPY . .
 # Clean stale TypeScript build cache (prevents composite build issues)
 RUN find . -name "*.tsbuildinfo" -type f -delete
 
-# Build packages in explicit dependency order (same as CI)
+# Build packages in explicit dependency order (same as CI).
+# @publiclogic/core types are consumed by @pj/db, @pj/org-manager,
+# @pj/split-row, and apps/puddlejumper.  @pj/db must build before
+# @pj/org-manager and @pj/split-row (both import DatabaseHandle from its
+# dist/).  @publiclogic/logic-commons is independent.  @publiclogic/vault
+# is a sibling service kept in the same image build for parity with CI.
 RUN pnpm --filter @publiclogic/core run build && \
+    pnpm --filter @pj/db run build && \
+    pnpm --filter @pj/org-manager run build && \
+    pnpm --filter @pj/split-row run build && \
     pnpm --filter @publiclogic/logic-commons run build && \
     pnpm --filter @publiclogic/vault run build && \
     pnpm --filter @publiclogic/puddlejumper run build
