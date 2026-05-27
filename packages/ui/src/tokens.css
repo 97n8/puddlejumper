@@ -1,0 +1,45 @@
+/* PuddleJumper design tokens — locked.
+ *
+ * Source: Master Build Spec v1.1, Part 7 (@pj/ui).  These are the canonical
+ * CSS custom property names — do not rename.  Consumers either @import this
+ * file directly (Next.js, Vite) or read packages/ui/src/tokens.ts for the
+ * same values as a typed constant map.
+ *
+ * Layout widths (Spec Part 8): Rail 48 | Sidebar 196 | Canvas 1fr | Detail 340. */
+
+:root {
+  /* Surface scale (warm institutional) */
+  --bg:   #f5f4f1;
+  --s0:   #ffffff;
+  --s1:   #faf9f7;
+  --s2:   #f0eeea;
+  --bd:   #e2dfd9;
+  --bd2:  #ccc9c2;
+
+  /* Ink */
+  --ink:  #1a1916;
+  --ink2: #4a4840;
+  --ink3: #857f74;
+  --ink4: #b5b0a6;
+
+  /* PublicLogic green (primary) */
+  --g:     #2e7a50;
+  --g-lt:  #f0f7f3;
+  --g-bd:  #b8d9c6;
+  --g-mid: #4a9b72;
+
+  /* Domain accents */
+  --amber: #8a6010;  /* personal / warning */
+  --blue:  #2a4a8a;  /* biz / info */
+  --red:   #8b2a1a;  /* error / urgent */
+
+  /* Type */
+  --display: "Cormorant Garamond", Georgia, serif;
+  --ui:      "DM Sans", system-ui, sans-serif;
+  --mono:    "JetBrains Mono", ui-monospace, monospace;
+
+  /* Layout */
+  --rail-w:    48px;
+  --sidebar-w: 196px;
+  --detail-w:  340px;
+}

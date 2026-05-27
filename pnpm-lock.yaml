@@ -171,6 +171,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@pj/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@publiclogic/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -305,6 +308,18 @@ importers:
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.41
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.0.0
+        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.41)(jsdom@28.1.0(@noble/hashes@1.8.0))(lightningcss@1.32.0)
+
+  packages/ui:
+    devDependencies:
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.41

@@ -11,6 +11,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@pj/ui": "workspace:*",
     "@publiclogic/core": "workspace:*",
     "next": "^15.0.3",
     "react": "^19.0.0",
