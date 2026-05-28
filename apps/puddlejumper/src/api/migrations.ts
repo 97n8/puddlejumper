@@ -104,12 +104,82 @@ function prepareTargets(opts: { dataDir: string; prrDbPath: string; approvalDbPa
   ensureLegacyApprovalsSchema(opts.approvalDbPath);
 }
 
+// Out-of-band schema drift was introduced on persistent volumes before the
+// migration tracker was added.  Setting PJ_RECONCILE_MIGRATIONS=1 enables a
+// one-shot detection pass that inserts the corresponding schema_migrations
+// row (apply_method='marked') so the runner skips the migration instead of
+// re-applying its non-idempotent SQL (which would crash on duplicate-column).
+//
+// Each fixture's detect() must be cheap (single PRAGMA) and read-only.  The
+// pass is idempotent: if the migration is already recorded with a matching
+// checksum, markPuddleJumperMigrationApplied returns the existing row.
+type DriftFixture = {
+  database: MigrationDatabase;
+  filename: string;
+  describe: string;
+  detect: (opts: { prrDbPath: string; approvalDbPath: string }) => boolean;
+};
+
+function columnExists(dbPath: string, table: string, column: string): boolean {
+  if (!fs.existsSync(dbPath)) return false;
+  const db = new Database(dbPath, { readonly: true });
+  try {
+    const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    return rows.some((row) => row.name === column);
+  } catch {
+    return false;
+  } finally {
+    db.close();
+  }
+}
+
+const KNOWN_DRIFT_FIXTURES: DriftFixture[] = [
+  {
+    database: "prr",
+    filename: "20260206_add_prr_public_id.sql",
+    describe: "prr.public_id column added out-of-band before tracker existed",
+    detect: (opts) => columnExists(opts.prrDbPath, "prr", "public_id"),
+  },
+  {
+    database: "approvals",
+    filename: "20260524_relay_v1_casespace_fields.sql",
+    describe: "casespaces relay-v1 columns added out-of-band",
+    detect: (opts) =>
+      columnExists(opts.approvalDbPath, "casespaces", "status") ||
+      columnExists(opts.approvalDbPath, "casespaces", "current_responsible_actor_id") ||
+      columnExists(opts.approvalDbPath, "casespaces", "last_relay_id"),
+  },
+];
+
+function reconcileKnownDrift(opts: { dataDir: string; prrDbPath: string; approvalDbPath: string }): void {
+  if (process.env.PJ_RECONCILE_MIGRATIONS !== "1") return;
+  console.log("[migrations] PJ_RECONCILE_MIGRATIONS=1 — drift reconciliation pass");
+  for (const fixture of KNOWN_DRIFT_FIXTURES) {
+    if (!fixture.detect({ prrDbPath: opts.prrDbPath, approvalDbPath: opts.approvalDbPath })) {
+      console.log(`[migrations] reconcile: ${fixture.filename} — no drift; runner will apply normally`);
+      continue;
+    }
+    console.log(`[migrations] reconcile: ${fixture.filename} — drift detected (${fixture.describe})`);
+    const record = markPuddleJumperMigrationApplied({
+      dataDir: opts.dataDir,
+      prrDbPath: opts.prrDbPath,
+      approvalDbPath: opts.approvalDbPath,
+      database: fixture.database,
+      filename: fixture.filename,
+    });
+    console.log(
+      `[migrations] reconcile: ${fixture.filename} — schema_migrations row present (apply_method=${record.apply_method}, applied_at=${record.applied_at})`,
+    );
+  }
+}
+
 export function runPuddleJumperMigrations(opts: {
   dataDir: string;
   prrDbPath: string;
   approvalDbPath: string;
 }) {
   prepareTargets(opts);
+  reconcileKnownDrift(opts);
   return runMigrations({
     migrationsDir: MIGRATIONS_DIR,
     targets: getPuddleJumperMigrationTargets(opts),
