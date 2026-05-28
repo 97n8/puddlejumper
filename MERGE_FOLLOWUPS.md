@@ -26,7 +26,7 @@ Workspace and PJ both depend on the same library at different versions, or both 
 
 Anything in `.github/workflows/` that should be added, consolidated, or removed once the workspace is in the monorepo. Includes parallel jobs, cache reuse, matrix builds, Vercel preview triggers.
 
-- _(filled during merge)_
+- 7 Dependabot PRs on standalone LogicOS at time of merge (PRs #81, #84, #85, #87, #88, #89, #90) were intentionally not merged before the subtree. Equivalent updates will be re-detected by Dependabot against puddlejumper after this PR lands.
 
 ---
 
@@ -34,7 +34,10 @@ Anything in `.github/workflows/` that should be added, consolidated, or removed 
 
 Variables LogicOS expected that PJ doesn't define, or names that overlap and conflict. From the Phase 1 env diff. Each entry: name, what it does, which Vercel project it needs to land in.
 
-- _(filled during merge)_
+- `ANTHROPIC_API_KEY` — Claude API key for workspace AI features. Land in Vercel project for apps/workspace as a secret.
+- `WORKSPACE_GOOGLE_ROOT_FOLDER_ID` — Google Drive root folder for LogicDocs cloud sync. Note: was `LOGICOS_GOOGLE_ROOT_FOLDER_ID` in standalone LogicOS; the rename script will convert it during Phase 3.
+- `PJ_MCP_URL` — URL of PJ's MCP server, called from workspace for AI tool calls. Land in Vercel.
+- `VITE_PJ_API_URL` — Frontend's PJ API endpoint. Vite-prefixed for client-side exposure. Land in Vercel.
 
 ---
 
@@ -42,7 +45,7 @@ Variables LogicOS expected that PJ doesn't define, or names that overlap and con
 
 Things that need to happen during the cutover that aren't part of this PR. Nate handles Vercel by hand — this section is the handoff list.
 
-- _(filled during merge)_
+- Standalone LogicOS Deploy job is currently failing on commit `531231d` (Vercel config issue — today's `VERCEL_TOKEN` refactor did not fully fix it). Do **not** copy the standalone LogicOS Vercel project configuration when setting up the new `apps/workspace` deploy in Phase 6. Treat as clean setup.
 
 ---
 
