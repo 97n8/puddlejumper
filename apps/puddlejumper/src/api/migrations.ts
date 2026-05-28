@@ -14,7 +14,10 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "../../../../");
-const MIGRATIONS_DIR = path.join(REPO_ROOT, "migrations");
+// Production images flatten layout — `../../../../` from /app/dist/api/ clamps
+// to filesystem root, making the dev-default resolve to /migrations (ENOENT).
+// PJ_MIGRATIONS_DIR overrides the lookup; Dockerfile sets it explicitly.
+const MIGRATIONS_DIR = process.env.PJ_MIGRATIONS_DIR ?? path.join(REPO_ROOT, "migrations");
 
 export function getPuddleJumperMigrationTargets(opts: {
   dataDir: string;

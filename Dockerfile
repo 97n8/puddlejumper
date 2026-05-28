@@ -54,6 +54,12 @@ RUN pnpm rebuild better-sqlite3
 # Prune dev deps (keeps runtime deps + native .node binaries)
 RUN pnpm --filter @publiclogic/puddlejumper deploy --prod /prod
 
+# Migrations live at the repo root and are read at runtime by
+# runPuddleJumperMigrations (apps/puddlejumper/src/api/migrations.ts).
+# pnpm deploy doesn't copy them, so the runtime image misses /app/migrations
+# unless we stage them explicitly here.
+RUN cp -r migrations /prod/migrations
+
 # ---------- RUNTIME ----------
 FROM node:20-bookworm-slim
 
@@ -70,6 +76,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENV NODE_ENV=production
 ENV PORT=3002
+ENV PJ_MIGRATIONS_DIR=/app/migrations
 
 EXPOSE 3002
 
