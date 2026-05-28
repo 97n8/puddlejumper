@@ -125,6 +125,59 @@ function resolveCanonDb(canonDbPath: string): DatabaseHandle {
   _canonDbPathKey = canonDbPath;
   return _canonDbHandle;
 }
+
+// ── Canon identity bridge (Me1) ─────────────────────────────────────────────
+// When PJ_CANON_TENANT_ID is set, OAuth logins must resolve to a canon
+// identity in that tenant (matched by lowercased+trimmed email). On miss,
+// the login fails closed — no personal workspace is selected, no session
+// is returned. When the env var is unset, behavior is unchanged.
+
+/**
+ * Look up an active canon identity in `canonTenantId` by email.
+ * Email is lowercased + trimmed for matching only (stored values are
+ * not mutated). Returns null if no row matches.
+ */
+export function resolveCanonIdentityForLogin(
+  canonDb: DatabaseHandle,
+  canonTenantId: string,
+  email: string,
+): { identity_id: string } | null {
+  const normalized = email.toLowerCase().trim();
+  if (!normalized) return null;
+  const row = canonDb
+    .prepare(
+      `SELECT identity_id FROM identities
+        WHERE tenant_id = ? AND active = 1 AND LOWER(email) = ?`,
+    )
+    .get(canonTenantId, normalized) as { identity_id: string } | undefined;
+  return row ?? null;
+}
+
+export type CanonBridgeResult =
+  | { mode: 'unset' }
+  | { mode: 'hit'; canonIdentityId: string; canonTenantId: string }
+  | { mode: 'miss'; canonTenantId: string };
+
+/**
+ * Decide what the canon bridge should do for an OAuth login.
+ *   - `unset`: PJ_CANON_TENANT_ID is empty/undefined; preserve existing
+ *     workspace-only behavior.
+ *   - `hit`:   canon tenant set AND an active identity matches the email.
+ *   - `miss`:  canon tenant set AND no identity matches — caller MUST
+ *     fail closed (throw 403), not fall back to personal workspace.
+ */
+export function applyCanonBridge(
+  canonDb: DatabaseHandle,
+  canonTenantIdEnv: string | undefined,
+  email: string | undefined,
+): CanonBridgeResult {
+  const canonTenantId = canonTenantIdEnv?.trim() ?? '';
+  if (!canonTenantId) return { mode: 'unset' };
+  if (!email || !email.trim()) return { mode: 'miss', canonTenantId };
+  const row = resolveCanonIdentityForLogin(canonDb, canonTenantId, email);
+  if (!row) return { mode: 'miss', canonTenantId };
+  return { mode: 'hit', canonIdentityId: row.identity_id, canonTenantId };
+}
 import { createCommonsRoutes } from "./routes/commons.js";
 import { createDogRoutes } from "./routes/dog.js";
 import { createAccessRoutes } from "./routes/access.js";
@@ -941,6 +994,42 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     }
     // ─────────────────────────────────────────────────────────────────────────
 
+    // ── Canon identity bridge (Me1) ──────────────────────────────────────────
+    // When PJ_CANON_TENANT_ID is set, the session must be backed by a canon
+    // identity in that tenant. Fail closed if not — no workspace is touched,
+    // no session is returned. When the env var is unset, behavior below is
+    // unchanged.
+    const canonBridge = applyCanonBridge(
+      canonDb,
+      process.env.PJ_CANON_TENANT_ID,
+      userInfo.email,
+    );
+    if (canonBridge.mode === 'miss') {
+      const normalizedEmail = (userInfo.email ?? '').toLowerCase().trim() || null;
+      console.error(JSON.stringify({
+        level: 'error',
+        scope: 'auth.canon_bridge',
+        result: 'denied',
+        tenant_id: canonBridge.canonTenantId,
+        email: normalizedEmail,
+        timestamp: new Date().toISOString(),
+      }));
+      throw Object.assign(
+        new Error('Access denied — your identity is not provisioned for this workspace.'),
+        { statusCode: 403 },
+      );
+    }
+    if (canonBridge.mode === 'hit') {
+      console.info(JSON.stringify({
+        level: 'info',
+        scope: 'auth.canon_bridge',
+        result: 'hit',
+        tenant_id: canonBridge.canonTenantId,
+        email: (userInfo.email ?? '').toLowerCase().trim(),
+        timestamp: new Date().toISOString(),
+      }));
+    }
+
     // ── Seed env-defined email links (LINKED_EMAILS=alt:primary,alt2:primary) ──
     const linkedEmailsEnv = (process.env.LINKED_EMAILS ?? '').trim();
     if (linkedEmailsEnv) {
@@ -1013,8 +1102,13 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       }
     }
     
-    // Extend the returned object to include workspaceId and workspaceName
-    return { ...userInfo, role: row.role, tenantId: ws.id, userId: row.sub, workspaceId: ws.id, workspaceName: ws.name } as typeof userInfo & { role: string; tenantId: string; userId: string; workspaceId: string; workspaceName: string };
+    // Extend the returned object to include workspaceId and workspaceName.
+    // When canon bridge HIT, session.tenantId / userId resolve to the canon
+    // tenant + identity_id (overriding the workspace ids). When UNSET,
+    // session uses workspace ids exactly as before (regression-safe).
+    const effectiveTenantId = canonBridge.mode === 'hit' ? canonBridge.canonTenantId : ws.id;
+    const effectiveUserId   = canonBridge.mode === 'hit' ? canonBridge.canonIdentityId : row.sub;
+    return { ...userInfo, role: row.role, tenantId: effectiveTenantId, userId: effectiveUserId, workspaceId: ws.id, workspaceName: ws.name } as typeof userInfo & { role: string; tenantId: string; userId: string; workspaceId: string; workspaceName: string };
   };
   const oauthRouteOpts = { nodeEnv, oauthStateStore, onUserAuthenticated, frontendUrl: (process.env.LOGIC_COMMONS_URL ?? "").trim() || "https://logicos-rho.vercel.app" };
   // Auto-connect connector store when user signs in with any provider
