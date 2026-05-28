@@ -1,4 +1,4 @@
-// LogicOS V1 Mock Data — simulates PuddleJumper responses
+// Workspace V1 Mock Data — simulates PuddleJumper responses
 // Full V1: all 7 process types, 15+ cases, meetings, boards, notes, activity
 
 export interface Org {

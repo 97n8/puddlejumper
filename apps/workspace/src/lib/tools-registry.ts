@@ -1,6 +1,6 @@
 // ── Tools Registry ──────────────────────────────────────────────────────────
 //
-// Canonical list of all tools available in LogicOS.
+// Canonical list of all tools available in Workspace.
 // Used by:
 //   - AccessGate.tsx  — human-readable labels when access is denied
 //   - AdminPanel      — tool assignment UI (which tools to grant per member)
@@ -8,7 +8,7 @@
 //
 // Each tool's *internal* permissions (e.g. editor vs viewer inside Vault)
 // are managed by the tool itself via /api/workspace/members/:id/tool-permissions/:toolId.
-// LogicOS never renders or manages those internal permissions.
+// Workspace never renders or manages those internal permissions.
 
 export type ToolId =
   | 'vault'

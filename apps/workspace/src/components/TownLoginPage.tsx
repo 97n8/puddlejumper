@@ -19,7 +19,7 @@ export function TownLoginPage() {
     setSuccess('')
 
     if (!username.trim()) {
-      setError('Enter the username for your municipal LogicOS demo account.')
+      setError('Enter the username for your municipal Workspace demo account.')
       return
     }
     if (!password) {
@@ -74,10 +74,10 @@ export function TownLoginPage() {
 
               <div className="space-y-3">
                 <h1 className="text-4xl font-black tracking-tight text-slate-900 sm:text-5xl">
-                  LogicOS Town Login
+                  Workspace Town Login
                 </h1>
                 <p className="max-w-xl text-base leading-relaxed text-slate-700 sm:text-lg">
-                  This entry is for towns and cities engaging with LogicOS through a guided demo or active implementation.
+                  This entry is for towns and cities engaging with Workspace through a guided demo or active implementation.
                 </p>
               </div>
 
@@ -95,7 +95,7 @@ export function TownLoginPage() {
                 <div className="surface-panel rounded-2xl p-4">
                   <div className="mb-2 text-sm font-semibold text-slate-800">What happens next</div>
                   <p className="text-sm leading-relaxed text-slate-600">
-                    Sign in with your credentials and LogicOS opens a tailored municipal workspace with pre-populated modules, records, and automation paths.
+                    Sign in with your credentials and Workspace opens a tailored municipal workspace with pre-populated modules, records, and automation paths.
                   </p>
                 </div>
               </div>
@@ -106,7 +106,7 @@ export function TownLoginPage() {
               <div className="space-y-3">
                 <div>
                   <p className="text-sm font-semibold text-slate-800">Continue to your town workspace</p>
-                  <p className="mt-1 text-sm text-slate-500">Use the username and password provided for your municipal LogicOS environment.</p>
+                  <p className="mt-1 text-sm text-slate-500">Use the username and password provided for your municipal Workspace environment.</p>
                 </div>
 
               <form className="space-y-3" onSubmit={handleLogin}>
@@ -149,12 +149,12 @@ export function TownLoginPage() {
                   size="lg"
                   className="w-full rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {submitting ? 'Signing in…' : 'Open LogicOS demo'}
+                  {submitting ? 'Signing in…' : 'Open Workspace demo'}
                 </Button>
               </form>
 
               <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-sm leading-relaxed text-slate-600">
-                This entry point shows how LogicOS can stand up a clean municipal environment fast: tailored modules, pre-populated records, and a direct path into the right operating workspace.
+                This entry point shows how Workspace can stand up a clean municipal environment fast: tailored modules, pre-populated records, and a direct path into the right operating workspace.
               </div>
             </div>
           </section>

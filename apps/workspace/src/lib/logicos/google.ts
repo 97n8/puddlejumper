@@ -1,4 +1,4 @@
-import type { LogicOSRecord } from './schema'
+import type { WorkspaceRecord } from './schema'
 
 const DEFAULT_PJ_BASE = 'https://api.publiclogic.org'
 const GOOGLE_FOLDER_MIME = 'application/vnd.google-apps.folder'
@@ -23,20 +23,20 @@ function pjBase() {
   return (process.env.VITE_PJ_API_URL || DEFAULT_PJ_BASE).replace(/\/$/, '')
 }
 
-function buildFolderName(record: LogicOSRecord) {
+function buildFolderName(record: WorkspaceRecord) {
   // eslint-disable-next-line no-control-regex -- intentional: strips characters Google/Windows paths should not contain
   return `${record.id} - ${record.title}`.replace(/[<>:"/\\|?*\u0000-\u001F]+/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
 export async function createGoogleFolderForRecord(
-  record: LogicOSRecord,
+  record: WorkspaceRecord,
   context: GoogleFolderCreationContext,
 ): Promise<GoogleFolderCreationResult> {
   if (!context.cookieHeader) {
     throw new Error('Google connector requires a PJ session cookie on the request.')
   }
 
-  const parentId = record.googleParentId || process.env.LOGICOS_GOOGLE_ROOT_FOLDER_ID || undefined
+  const parentId = record.googleParentId || process.env.WORKSPACE_GOOGLE_ROOT_FOLDER_ID || undefined
   const params = new URLSearchParams({
     fields: 'id,name,webViewLink',
   })
@@ -48,7 +48,7 @@ export async function createGoogleFolderForRecord(
       'Accept': 'application/json',
       'Cookie': context.cookieHeader,
       'x-puddlejumper-request': 'true',
-      'x-pj-tool': 'logicos-spine',
+      'x-pj-tool': 'workspace-spine',
     },
     body: JSON.stringify({
       name: buildFolderName(record),

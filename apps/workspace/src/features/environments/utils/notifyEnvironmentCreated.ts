@@ -28,7 +28,7 @@ const MODULE_LABELS: Record<string, string> = {
   VAULTRECS:    'Records Management',
 }
 
-const FROM = { address: 'info@publiclogic.org', name: 'LogicOS' }
+const FROM = { address: 'info@publiclogic.org', name: 'Workspace' }
 
 function buildHtml(payload: Required<Pick<EnvironmentCreatedPayload, 'envName' | 'envId' | 'moduleIds' | 'userName'>>): string {
   const { envName, envId, moduleIds, userName } = payload
@@ -41,7 +41,7 @@ function buildHtml(payload: Required<Pick<EnvironmentCreatedPayload, 'envName' |
   return `
 <!DOCTYPE html><html><body style="font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px;">
   <div style="border-bottom:2px solid #e5e7eb;padding-bottom:16px;margin-bottom:24px;">
-    <span style="font-size:13px;font-weight:600;letter-spacing:.05em;color:#6b7280;text-transform:uppercase;">LogicOS</span>
+    <span style="font-size:13px;font-weight:600;letter-spacing:.05em;color:#6b7280;text-transform:uppercase;">Workspace</span>
   </div>
   <p style="margin:0 0 8px;">${greeting}</p>
   <p style="margin:0 0 20px;">Your environment <strong>${envName}</strong> is ready.</p>
@@ -50,7 +50,7 @@ function buildHtml(payload: Required<Pick<EnvironmentCreatedPayload, 'envName' |
     <ul style="margin:0;padding-left:20px;font-size:14px;">${moduleItems}</ul>
   </div>
   <a href="${url}" style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500;">Open ${envName} →</a>
-  <p style="margin:32px 0 0;font-size:12px;color:#9ca3af;">— LogicOS · <a href="https://os.publiclogic.org" style="color:#9ca3af;">os.publiclogic.org</a></p>
+  <p style="margin:32px 0 0;font-size:12px;color:#9ca3af;">— Workspace · <a href="https://os.publiclogic.org" style="color:#9ca3af;">os.publiclogic.org</a></p>
 </body></html>`
 }
 
@@ -78,7 +78,7 @@ export async function notifyEnvironmentCreated(payload: EnvironmentCreatedPayloa
   const { envName, envId, moduleIds = [], userEmail, userName } = payload
   if (!userEmail) return
 
-  const subject = `"${envName}" is ready — LogicOS`
+  const subject = `"${envName}" is ready — Workspace`
   const html = buildHtml({ envName, envId, moduleIds, userName: userName ?? '' })
 
   // Try Microsoft Graph first

@@ -1,5 +1,5 @@
 /**
- * Canonical anchor object types for the LogicOS governance platform.
+ * Canonical anchor object types for the Workspace governance platform.
  *
  * Every captured artifact links to one or more of these anchors.
  * Anchors are the shared context that creates institutional memory —
@@ -45,7 +45,7 @@ export type SourceType =
   | 'chat'             // Teams / Slack (where lawful)
   | 'voicemail'        // Voicemail / call log
   | 'website'          // Website submission / portal
-  | 'manual'           // Entered directly in LogicOS
+  | 'manual'           // Entered directly in Workspace
 
 // ── Document classification ────────────────────────────────────────────────
 

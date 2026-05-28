@@ -4,7 +4,7 @@
 ## Changes
 <!-- Bullet list of the notable changes. -->
 
-## LogicOS architecture checklist
+## Workspace architecture checklist
 - [ ] No direct provider API calls from the browser — all traffic goes through `pjApi`
 - [ ] No tokens stored in `localStorage` / `sessionStorage`
 - [ ] No new legacy service files (`microsoft365.ts`, `google.ts`, etc.) recreated

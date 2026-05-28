@@ -37,7 +37,7 @@ describe('AppsPanel smoke suite', () => {
     expect(screen.getByText(/no apps yet/i)).toBeInTheDocument()
   })
 
-  it('service catalog shows LogicOS services (Vault Forms, VAULT, Automations)', async () => {
+  it('service catalog shows Workspace services (Vault Forms, VAULT, Automations)', async () => {
     const user = userEvent.setup()
     render(<AppsPanel onOpenTool={vi.fn()} />)
     // Click the "New" button in the sidebar (first one)

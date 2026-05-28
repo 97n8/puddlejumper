@@ -45,7 +45,7 @@ export function useVaultExports({
 
     return `${town} — Municipal Operations Summary
 
-${town} is running ${modules.length} active modules on LogicOS, with statute-enforced deadlines and full audit history on every case.
+${town} is running ${modules.length} active modules on Workspace, with statute-enforced deadlines and full audit history on every case.
 
 Current snapshot:
 - ${openCases.length} active case${openCases.length !== 1 ? 's' : ''} across ${modules.length} module${modules.length !== 1 ? 's' : ''}
@@ -55,7 +55,7 @@ Current snapshot:
 Active cases:
 ${lines || '- No open cases at this time.'}
 
-LogicOS handles intake, compliance, notifications, and retention — all in one place.`
+Workspace handles intake, compliance, notifications, and retention — all in one place.`
   }, [modules.length, normalizedCases, town])
 
   const handleCopyExecutiveUpdate = useCallback(async () => {
@@ -65,7 +65,7 @@ LogicOS handles intake, compliance, notifications, and retention — all in one 
       await navigator.clipboard.writeText(content)
       toast.success('Executive update copied — paste it into an email or text.')
     } catch {
-      downloadArtifact(`${slugifyName(town)}-logicos-demo-follow-up.txt`, content, 'text/plain')
+      downloadArtifact(`${slugifyName(town)}-workspace-demo-follow-up.txt`, content, 'text/plain')
       toast.success('Clipboard was blocked, so a ready-to-send follow-up was downloaded instead.')
     } finally {
       setExportBusyId(null)
@@ -105,7 +105,7 @@ LogicOS handles intake, compliance, notifications, and retention — all in one 
       {
         filename: `${slugifyName(town)}-ops-flythrough-${dateStamp}.md`,
         mimeType: 'text/markdown',
-        content: `# ${town} — LogicOS Operations Overview
+        content: `# ${town} — Workspace Operations Overview
 
 ## What's active
 1. Open the approvals queue to see work in motion.

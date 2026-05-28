@@ -1,7 +1,7 @@
-# LogicOS Tree
+# Workspace Tree
 
 ```text
-LogicOS/
+Workspace/
 ├── .github/
 │   ├── workflows/
 │   │   ├── deploy.yml
@@ -17,13 +17,13 @@ LogicOS/
 │   │   └── sync.ts
 │   ├── health/
 │   │   └── anthropic.ts
-│   ├── logicos/
+│   ├── workspace/
 │   │   ├── records/
 │   │   └── intake.ts
 │   └── puddles/
 │       └── chat.ts
 ├── docs/
-│   └── logicos-export.md
+│   └── workspace-export.md
 ├── packages/
 │   ├── archieve/
 │   │   ├── src/
@@ -68,8 +68,8 @@ LogicOS/
 │       └── vite.config.js
 ├── public/
 │   ├── _headers
-│   ├── logicos-linkedin.png
-│   ├── logicos-linkedin.webp
+│   ├── workspace-linkedin.png
+│   ├── workspace-linkedin.webp
 │   ├── robots.txt
 │   ├── sitemap.xml
 │   ├── suzor-proposal.html
@@ -181,7 +181,7 @@ LogicOS/
 │   │   ├── useKV.ts
 │   │   └── useMobileMode.ts
 │   ├── lib/
-│   │   ├── logicos/
+│   │   ├── workspace/
 │   │   ├── anchors.ts
 │   │   ├── api.ts
 │   │   ├── colorContext.tsx
@@ -213,7 +213,7 @@ LogicOS/
 │   │   ├── framework/
 │   │   ├── hooks/
 │   │   ├── lib/
-│   │   ├── logicos/
+│   │   ├── workspace/
 │   │   ├── services/
 │   │   └── setup.ts
 │   ├── App.tsx

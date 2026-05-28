@@ -55,7 +55,7 @@ export function InviteAcceptModal({ token, onAccepted, onDeclined }: InviteAccep
     try {
       const res = await pjApi.workspace.acceptInvitation(token)
       if (res.success) {
-        onAccepted(details?.workspaceName ?? 'LogicOS')
+        onAccepted(details?.workspaceName ?? 'Workspace')
       } else {
         setError('Failed to accept invite. It may have expired.')
         setAccepting(false)
@@ -75,7 +75,7 @@ export function InviteAcceptModal({ token, onAccepted, onDeclined }: InviteAccep
             Workspace Invitation
           </DialogTitle>
           <DialogDescription>
-            You've been invited to join a workspace on LogicOS.
+            You've been invited to join a workspace on Workspace.
           </DialogDescription>
         </DialogHeader>
 

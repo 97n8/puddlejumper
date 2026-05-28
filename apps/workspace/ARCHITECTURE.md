@@ -1,15 +1,15 @@
-# LogicOS Architecture
+# Workspace Architecture
 
 ## Overview
 
-LogicOS is the React + Vite SPA frontend for the PublicLogic platform. It is a **pure
+Workspace is the React + Vite SPA frontend for the PublicLogic platform. It is a **pure
 frontend application** — there is no application server in this repo. All external API
 access (GitHub, Microsoft 365, Google Workspace) is brokered by **PuddleJumper**, a
 separate backend service hosted at `https://api.publiclogic.org`.
 
 ```
 ┌──────────────────┐      session cookie       ┌─────────────────────┐
-│ Browser (LogicOS)│  ─────────────────────▶  │  PuddleJumper (PJ)  │
+│ Browser (Workspace)│  ─────────────────────▶  │  PuddleJumper (PJ)  │
 │   React + Vite   │  ◀─────────────────────  │  Fly.io / Node      │
 └──────────────────┘   JSON over HTTPS         └──────────┬──────────┘
                                                           │ injects stored
@@ -25,7 +25,7 @@ credential the SPA holds.
 
 | Surface  | URL                                          |
 |----------|----------------------------------------------|
-| Frontend | https://logicos-rho.vercel.app (alias: os.publiclogic.org) |
+| Frontend | https://workspace-rho.vercel.app (alias: os.publiclogic.org) |
 | Backend  | https://api.publiclogic.org                  |
 
 ## Repository Layout
@@ -55,7 +55,7 @@ public/                     # Static assets shipped with the build.
 1. User clicks a provider on the LoginPage.
 2. `AuthContext.login(provider)` redirects to `${PJ}/api/auth/${provider}/login`.
 3. PuddleJumper performs the full OAuth dance and sets its session cookie.
-4. PJ redirects back to LogicOS with `?auth=success`.
+4. PJ redirects back to Workspace with `?auth=success`.
 5. `AuthContext` calls `${PJ}/api/me` to hydrate `user`.
 6. `App.tsx` swaps from `LoadingSpinner` → `LoginPage` → app shell.
 
@@ -98,7 +98,7 @@ Major keys:
 3. **No new legacy service files** (`microsoft365.ts`, `google.ts`, `api/` browser
    services were intentionally removed; do not recreate them).
 4. **CORS:** PJ's `CORS_ALLOWED_ORIGINS` must include any new Vercel preview origin.
-5. **OAuth callbacks:** changing the LogicOS URL requires updating the
+5. **OAuth callbacks:** changing the Workspace URL requires updating the
    `LOGIC_COMMONS_URL` Fly secret on PuddleJumper.
 
 For day-to-day contributor guidance, see `.github/copilot-instructions.md`.

@@ -1,11 +1,11 @@
-# LogicOS — Copilot Instructions
+# Workspace — Copilot Instructions
 
 ## What This Repo Is
 
-LogicOS is the React/Vite SPA frontend for the PublicLogic platform. It is a **pure frontend** — no server, no API routes, no backend code. All data access goes through PuddleJumper (the backend).
+Workspace is the React/Vite SPA frontend for the PublicLogic platform. It is a **pure frontend** — no server, no API routes, no backend code. All data access goes through PuddleJumper (the backend).
 
 **Live URLs:**
-- Frontend: https://logicos-rho.vercel.app (also aliased to os.publiclogic.org once DNS is set)
+- Frontend: https://workspace-rho.vercel.app (also aliased to os.publiclogic.org once DNS is set)
 - Backend: https://api.publiclogic.org (PuddleJumper on Fly.io)
 
 **Companion repo:** `~/puddlejumper` — the PuddleJumper backend. Read its `docs/SYSTEMS-MAP.md` for the big picture.
@@ -41,11 +41,11 @@ src/
 
 - `useAuth()` from `src/services/auth/AuthContext.tsx` — provides `user`, `loading`, `login(provider)`, `logout()`
 - `login(provider)` redirects to `{PJ}/api/auth/{provider}/login` — PJ handles the full OAuth flow
-- After OAuth completes, PJ redirects back to LogicOS with `?auth=success`
+- After OAuth completes, PJ redirects back to Workspace with `?auth=success`
 - `AuthContext` calls `/api/me` on PJ to hydrate the user session
 - App.tsx gates render: loading spinner → LoginPage → app
 
-**Never** redirect to an OAuth provider directly from LogicOS. Always go through PuddleJumper.
+**Never** redirect to an OAuth provider directly from Workspace. Always go through PuddleJumper.
 
 ---
 
@@ -147,7 +147,7 @@ Deployed to Vercel automatically. Manual deploy:
 vercel --prod
 ```
 
-Vercel project: `logicos` (team: `publiclogic`)  
+Vercel project: `workspace` (team: `publiclogic`)  
 `vercel.json` configures `outputDirectory: dist` and SPA rewrite (`/* → /index.html`).
 
 ---

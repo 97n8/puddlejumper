@@ -908,7 +908,7 @@ const VAULT_FILES = [
   },
   {
     id: 'V05',
-    name: 'LogicOS Interface Reference',
+    name: 'Workspace Interface Reference',
     type: 'HTML',
     icon: Globe,
     desc: 'Approved stakeholder view design and layout specification for this casespace.',

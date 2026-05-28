@@ -31,7 +31,7 @@ const PROVIDERS = [
     key: 'google',
     label: 'Google Workspace',
     tagline: 'For towns using Google',
-    description: 'Access Google Drive, Gmail, and Google Calendar inside LogicOS.',
+    description: 'Access Google Drive, Gmail, and Google Calendar inside Workspace.',
     unlocks: ['Google Drive file access', 'Gmail inbox integration', 'Google Calendar sync'],
     icon: GoogleLogo,
     color: 'text-red-500',
@@ -91,7 +91,7 @@ export function OnboardingScreen({ onDone, workspaceName }: OnboardingScreenProp
             <span className="text-4xl">🏛️</span>
           </div>
           <h1 className="text-3xl font-black tracking-tight mb-3">
-            Welcome to {workspaceName ?? 'LogicOS'}
+            Welcome to {workspaceName ?? 'Workspace'}
           </h1>
           <p className="text-base text-muted-foreground leading-relaxed mb-2">
             Your municipal operating system — built for records, deadlines, public intake, and internal workflows.
@@ -136,7 +136,7 @@ export function OnboardingScreen({ onDone, workspaceName }: OnboardingScreenProp
           <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">Step 2 of 2 — Connect Accounts</p>
           <h1 className="text-2xl font-black tracking-tight mb-1">Link your existing systems</h1>
           <p className="text-sm text-muted-foreground">
-            LogicOS works with the tools your team already uses. Connect at least one to enable file sync, email, and automation.
+            Workspace works with the tools your team already uses. Connect at least one to enable file sync, email, and automation.
           </p>
         </div>
 

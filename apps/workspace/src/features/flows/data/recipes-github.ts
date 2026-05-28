@@ -35,7 +35,7 @@ export const recipesGithub: Recipe[] = [
       let sha: string | undefined
       try { const ex = await pjApi.github.get(`repos/${cfg.repo}/contents/${cfg.path}`) as { sha?: string }; sha = ex?.sha } catch { /* intentional */ }
       await pjApi.github.put(`repos/${cfg.repo}/contents/${cfg.path}`, {
-        message: cfg.message || 'Update via LogicOS', content: encoded,
+        message: cfg.message || 'Update via Workspace', content: encoded,
         branch: 'main', ...(sha ? { sha } : {}),
       })
       return `Pushed to ${cfg.repo}/${cfg.path}`

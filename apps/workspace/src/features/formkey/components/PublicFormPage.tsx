@@ -246,7 +246,7 @@ export function PublicFormPage() {
 
                 <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Public submissions are stamped and routed through FormKey. If this form was shared with you, you do not need a LogicOS account.
+                    Public submissions are stamped and routed through FormKey. If this form was shared with you, you do not need a Workspace account.
                   </p>
                   <Button onClick={handleSubmit} disabled={submitting || !!error && !form}>
                     {submitting ? 'Submitting…' : 'Submit form'}

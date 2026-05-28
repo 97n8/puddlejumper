@@ -36,7 +36,7 @@ export function CivicEnvironment({ onBack, onLaunch }: CivicEnvironmentProps) {
 
   useEffect(() => {
     if (authLoading) return
-    if (!user) { setPhase('town_select'); setLoadError('Log in to LogicOS to access Civic.'); return }
+    if (!user) { setPhase('town_select'); setLoadError('Log in to Workspace to access Civic.'); return }
 
     civicApi.me()
       .then(async me => {
@@ -152,7 +152,7 @@ export function CivicEnvironment({ onBack, onLaunch }: CivicEnvironmentProps) {
             <h2 className="text-foreground font-bold mb-2">Connection Error</h2>
             <p className="text-muted-foreground text-sm mb-4">{loadError}</p>
             <button onClick={onBack} className="w-full py-2.5 bg-muted hover:bg-muted/80 text-foreground text-sm rounded-xl transition">
-              ← Back to LogicOS
+              ← Back to Workspace
             </button>
           </div>
         </div>
@@ -261,7 +261,7 @@ export function CivicEnvironment({ onBack, onLaunch }: CivicEnvironmentProps) {
               Reconfigure modules &amp; permissions
             </button>
             <button onClick={onBack} className="text-muted-foreground/50 hover:text-muted-foreground text-xs transition text-center w-full py-1">
-              ← Back to LogicOS
+              ← Back to Workspace
             </button>
           </div>
         </div>

@@ -7,8 +7,8 @@ import createIconImportProxy from "@github/spark/vitePhosphorIconProxyPlugin";
 import { resolve } from 'path'
 
 const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
-const base = process.env.LOGICOS_BASE || '/'
-const outDir = process.env.LOGICOS_OUT_DIR || 'dist'
+const base = process.env.WORKSPACE_BASE || '/'
+const outDir = process.env.WORKSPACE_OUT_DIR || 'dist'
 
 // https://vite.dev/config/
 export default defineConfig({

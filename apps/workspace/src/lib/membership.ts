@@ -4,7 +4,7 @@ export const MEMBERSHIP_PLANS: Record<MembershipTier, MembershipPlan> = {
   pj: {
     tier: 'pj',
     name: 'PJ',
-    description: 'Perfect for personal use and trying out LogicOS',
+    description: 'Perfect for personal use and trying out Workspace',
     price: 0,
     billingCycle: 'monthly',
     features: {

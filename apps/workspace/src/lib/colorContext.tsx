@@ -11,7 +11,7 @@ const ColorContext = createContext<ColorContextType | undefined>(undefined)
 const DEFAULT_COLOR = 'oklch(0.65 0.18 155)'
 
 export function ColorProvider({ children }: { children: ReactNode }) {
-  const [shellColor, setShellColor] = useKV<string>('logicos-shell-color', DEFAULT_COLOR)
+  const [shellColor, setShellColor] = useKV<string>('workspace-shell-color', DEFAULT_COLOR)
 
   useEffect(() => {
     const color = shellColor || DEFAULT_COLOR

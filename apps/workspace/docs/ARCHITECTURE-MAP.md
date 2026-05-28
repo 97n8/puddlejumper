@@ -1,4 +1,4 @@
-# LogicOS + PuddleJumper Architecture Map
+# Workspace + PuddleJumper Architecture Map
 
 ```mermaid
 flowchart TD
@@ -13,16 +13,16 @@ flowchart TD
     SQLite["SQLite + better-sqlite3 + WAL"]
   end
 
-  subgraph LogicOS["LogicOS repo"]
-    subgraph Spine["LogicOS spine"]
-      Records["logicos_records"]
+  subgraph Workspace["Workspace repo"]
+    subgraph Spine["Workspace spine"]
+      Records["workspace_records"]
       Audit["audit_events<br/>append-only"]
       Seq["id_sequence"]
-      Routing["logicos_routing"]
+      Routing["workspace_routing"]
     end
 
-    subgraph Modules["LogicOS modules"]
-      Logicos["logicos"]
+    subgraph Modules["Workspace modules"]
+      Workspace["workspace"]
       Commons["logiccommons"]
       Builder["builder"]
       Flows["flows"]
@@ -49,7 +49,7 @@ flowchart TD
   end
 
   Modules --> Spine
-  Logicos --> Records
+  Workspace --> Records
   Commons --> Records
   Builder --> Routing
   Flows --> Routing
@@ -70,12 +70,12 @@ flowchart TD
   Auth -->|civic_actors FK| Records
   Auth -->|actor identity| Audit
 
-  Lock --> LogicOS
+  Lock --> Workspace
   Lock --> PJ
 ```
 
 - **Substrate:** both repos run on SQLite with `better-sqlite3` and WAL, not a hosted KV or external queue/database substrate.
 - **Append-only audit:** `audit_events` is treated as immutable history, with no-update and no-delete triggers enforcing append-only behavior.
-- **Runtime routing:** `logicos_routing` and the civic framework registry decide where work goes at runtime instead of hard-coding destinations into UI state.
+- **Runtime routing:** `workspace_routing` and the civic framework registry decide where work goes at runtime instead of hard-coding destinations into UI state.
 - **AI assist, not decide:** scenario and workflow tooling can draft, classify, and suggest, but human review gates remain explicit in the flow graph and operator workflow.
 - **Municipal data ownership:** records, routing state, and civic actor references stay in municipal-controlled application storage; integrations move data under operator-visible rules rather than taking ownership away.

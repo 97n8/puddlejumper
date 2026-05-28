@@ -832,8 +832,8 @@ export function useVaultSeedEffects({
       {
         id: uuid(), caseNumber: 'FSC-2026-002', moduleId: 'VAULTFISCAL', envId,
         caseType: 'Accounts Payable', createdAt: t(-45), createdBy: 'jkorhonen@logicvillema.gov',
-        subject: { vendorName: 'Municipal Software Group', invoiceNumber: 'MSG-10092', invoiceAmount: '$4,200.00', department: 'IT', description: 'Annual software maintenance — LogicOS FY2026' },
-        scopeDefinition: 'Invoice MSG-10092 — LogicOS Annual Maintenance', scopeVersion: 1, scopeHistory: [],
+        subject: { vendorName: 'Municipal Software Group', invoiceNumber: 'MSG-10092', invoiceAmount: '$4,200.00', department: 'IT', description: 'Annual software maintenance — Workspace FY2026' },
+        scopeDefinition: 'Invoice MSG-10092 — Workspace Annual Maintenance', scopeVersion: 1, scopeHistory: [],
         deadlines: { T30: { key: 'T30', label: 'T30 Payment Due', dueDate: d(-15), status: 'MET' } },
         tollingHistory: [], enforcementFlags: { feesAllowed: true },
         currentStage: 'CLOSED', transitionBlockers: [], closureReason: 'Paid', closedAt: t(-16),

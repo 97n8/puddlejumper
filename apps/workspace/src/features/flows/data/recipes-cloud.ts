@@ -70,7 +70,7 @@ export const recipesCloud: Recipe[] = [
       await pjApi.microsoft.post('me/sendMail', {
         message: {
           subject: `📎 ${file.name}`,
-          body: { contentType: 'HTML', content: `<p>Here's the file you requested:</p><p><a href="${shareUrl}">${file.name}</a></p><p><em>Shared securely via LogicOS. No attachment needed.</em></p>` },
+          body: { contentType: 'HTML', content: `<p>Here's the file you requested:</p><p><a href="${shareUrl}">${file.name}</a></p><p><em>Shared securely via Workspace. No attachment needed.</em></p>` },
           toRecipients: [{ emailAddress: { address: cfg.to } }],
         },
       })

@@ -53,7 +53,7 @@ async function createMcpToolSet(token: string) {
   )
 
   const client = new Client(
-    { name: 'LogicOS Puddles', version: '1.0.0' },
+    { name: 'Workspace Puddles', version: '1.0.0' },
     { capabilities: {} },
   )
 

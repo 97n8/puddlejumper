@@ -1,5 +1,5 @@
 // SYNCHRON8 governance automation constants
-// Mirrors vault-demo patterns, typed for LogicOS
+// Mirrors vault-demo patterns, typed for Workspace
 
 export interface FlowFieldDef {
   key: string

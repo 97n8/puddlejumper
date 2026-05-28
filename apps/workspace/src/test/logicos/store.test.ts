@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createLogicOSRecord, getLogicOSRecord, listLogicOSRecords, patchLogicOSRecord } from '@/lib/logicos/store'
-import type { LogicOSRecord } from '@/lib/logicos/schema'
-import { createLogicOSDatabase } from '@/lib/logicos/sqlite'
+import { createWorkspaceRecord, getWorkspaceRecord, listWorkspaceRecords, patchWorkspaceRecord } from '@/lib/logicos/store'
+import type { WorkspaceRecord } from '@/lib/logicos/schema'
+import { createWorkspaceDatabase } from '@/lib/logicos/sqlite'
 import { mkdtempSync, rmSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
 function withDb() {
-  const dir = mkdtempSync(path.join(os.tmpdir(), 'logicos-store-'))
-  const db = createLogicOSDatabase(path.join(dir, 'logicos.db'))
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'workspace-store-'))
+  const db = createWorkspaceDatabase(path.join(dir, 'workspace.db'))
   return {
     db,
     cleanup() {
@@ -18,17 +18,17 @@ function withDb() {
   }
 }
 
-describe('LogicOS spine store', () => {
+describe('Workspace spine store', () => {
   it('creates a CAM record, generates an ID, and writes back the Google folder link', async () => {
     const { db, cleanup } = withDb()
-    const connectorExecutor = vi.fn(async (record: LogicOSRecord) => ({
+    const connectorExecutor = vi.fn(async (record: WorkspaceRecord) => ({
       provider: 'google' as const,
       primaryLink: `https://drive.google.com/${record.id}`,
       googleLink: `https://drive.google.com/${record.id}`,
       externalId: `folder-${record.id}`,
     }))
 
-    const bundle = await createLogicOSRecord({
+    const bundle = await createWorkspaceRecord({
       title: 'Camera archive',
       area: 'CAM',
       source: 'test',
@@ -58,7 +58,7 @@ describe('LogicOS spine store', () => {
     const { db, cleanup } = withDb()
     const connectorExecutor = vi.fn()
 
-    const bundle = await createLogicOSRecord({
+    const bundle = await createWorkspaceRecord({
       title: 'Policy draft',
       area: 'PL',
       source: 'test',
@@ -83,7 +83,7 @@ describe('LogicOS spine store', () => {
   it('lists and patches records from KV storage', async () => {
     const { db, cleanup } = withDb()
 
-    await createLogicOSRecord({
+    await createWorkspaceRecord({
       title: 'Life archive',
       area: 'LIFE',
       source: 'test',
@@ -92,17 +92,17 @@ describe('LogicOS spine store', () => {
       now: new Date('2026-05-03T19:11:38.000Z'),
       actor: { actorId: null, source: 'test', ip: null, userAgent: null },
       connectorContext: { cookieHeader: 'pj=1' },
-      connectorExecutor: async (record: LogicOSRecord) => ({
+      connectorExecutor: async (record: WorkspaceRecord) => ({
         provider: 'google',
         primaryLink: `https://drive.google.com/${record.id}`,
         googleLink: `https://drive.google.com/${record.id}`,
       }),
     })
 
-    const records = await listLogicOSRecords({ area: 'LIFE' }, db)
+    const records = await listWorkspaceRecords({ area: 'LIFE' }, db)
     expect(records).toHaveLength(1)
 
-    const patched = await patchLogicOSRecord(records[0].id, {
+    const patched = await patchWorkspaceRecord(records[0].id, {
       nextAction: 'Review folder contents',
       notes: 'Imported from webhook',
     }, {
@@ -114,7 +114,7 @@ describe('LogicOS spine store', () => {
     expect(patched?.record.nextAction).toBe('Review folder contents')
     expect(patched?.record.notes).toBe('Imported from webhook')
 
-    const loaded = await getLogicOSRecord(records[0].id, db)
+    const loaded = await getWorkspaceRecord(records[0].id, db)
     expect(loaded?.record.notes).toBe('Imported from webhook')
     cleanup()
   })

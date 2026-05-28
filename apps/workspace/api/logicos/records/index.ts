@@ -1,13 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
-  CreateLogicOSRecordInputSchema,
-  LogicOSListRecordsFiltersSchema,
+  CreateWorkspaceRecordInputSchema,
+  WorkspaceListRecordsFiltersSchema,
 } from '../../../src/lib/logicos/schema'
 import {
-  createLogicOSRecord,
-  getLogicOSActorFromRequest,
-  getLogicOSConnectorContextFromRequest,
-  listLogicOSRecords,
+  createWorkspaceRecord,
+  getWorkspaceActorFromRequest,
+  getWorkspaceConnectorContextFromRequest,
+  listWorkspaceRecords,
 } from '../../../src/lib/logicos/store'
 
 export const config = { maxDuration: 30 }
@@ -15,26 +15,26 @@ export const config = { maxDuration: 30 }
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method === 'POST') {
-      const parsed = CreateLogicOSRecordInputSchema.safeParse(req.body)
+      const parsed = CreateWorkspaceRecordInputSchema.safeParse(req.body)
       if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid record payload', issues: parsed.error.flatten() })
       }
 
-      const bundle = await createLogicOSRecord(parsed.data, {
-        actor: getLogicOSActorFromRequest(req, parsed.data.source ?? 'records_api'),
-        connectorContext: getLogicOSConnectorContextFromRequest(req),
+      const bundle = await createWorkspaceRecord(parsed.data, {
+        actor: getWorkspaceActorFromRequest(req, parsed.data.source ?? 'records_api'),
+        connectorContext: getWorkspaceConnectorContextFromRequest(req),
       })
 
       return res.status(201).json(bundle)
     }
 
     if (req.method === 'GET') {
-      const parsed = LogicOSListRecordsFiltersSchema.safeParse(req.query)
+      const parsed = WorkspaceListRecordsFiltersSchema.safeParse(req.query)
       if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid record filters', issues: parsed.error.flatten() })
       }
 
-      const records = await listLogicOSRecords(parsed.data)
+      const records = await listWorkspaceRecords(parsed.data)
       return res.status(200).json({ records })
     }
 

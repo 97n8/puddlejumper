@@ -1,7 +1,7 @@
 import type { CaseSpace } from './types'
 
 export const SUTTON_TOWN_ENTRY_PATH = '/town'
-export const SUTTON_TOWN_ENTRY_KEY = 'logicos-town-entry'
+export const SUTTON_TOWN_ENTRY_KEY = 'workspace-town-entry'
 export const DEFAULT_SUTTON_ENVIRONMENT_ID = 'vault-sutton'
 
 export type SuttonViewer = {

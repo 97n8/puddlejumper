@@ -254,9 +254,9 @@ export function FileEditor({
     const logicTarget = targets.find(t => t.provider === 'logiccode') as LogicCodeSaveTarget | undefined
 
     const results: Array<SaveResult & { label: string }> = []
-    const providerLabels: Record<string, string> = { github: 'GitHub', microsoft: 'Microsoft 365', google: 'Google Drive', logiccode: 'LogicOS' }
+    const providerLabels: Record<string, string> = { github: 'GitHub', microsoft: 'Microsoft 365', google: 'Google Drive', logiccode: 'Workspace' }
 
-    // Save to LogicOS vault
+    // Save to Workspace vault
     if (logicTarget && PJ) {
       try {
         const res = await fetch(`${PJ}/api/vault-files`, {
@@ -276,10 +276,10 @@ export function FileEditor({
           fileId: json.id,
           errorCode: !res.ok || json.error ? 'SERVER_ERROR' : undefined,
           errorMessage: json.error,
-          timestamp: new Date().toISOString(), idempotencyKey: iKey, retryCount: 0, label: 'LogicOS',
+          timestamp: new Date().toISOString(), idempotencyKey: iKey, retryCount: 0, label: 'Workspace',
         })
       } catch {
-        results.push({ provider: 'logiccode', success: false, errorCode: 'NETWORK_ERROR', errorMessage: 'Network error', timestamp: new Date().toISOString(), idempotencyKey: iKey, retryCount: 0, label: 'LogicOS' })
+        results.push({ provider: 'logiccode', success: false, errorCode: 'NETWORK_ERROR', errorMessage: 'Network error', timestamp: new Date().toISOString(), idempotencyKey: iKey, retryCount: 0, label: 'Workspace' })
       }
     }
 
@@ -619,7 +619,7 @@ export function FileEditor({
                       { key: 'github' as ProviderKey, label: 'GitHub', icon: <GithubLogo size={14} />, status: auth.github.status, hasTarget: !!githubTarget },
                       { key: 'microsoft' as ProviderKey, label: 'Microsoft', icon: <MicrosoftExcelLogo size={14} />, status: auth.microsoft.status, hasTarget: !!microsoftTarget },
                       { key: 'google' as ProviderKey, label: 'Google', icon: <GoogleDriveLogo size={14} />, status: auth.google.status, hasTarget: !!googleTarget },
-                      { key: 'logiccode' as ProviderKey, label: 'LogicOS', icon: <Code size={14} />, status: 'connected' as const, hasTarget: !!logicCodeTarget },
+                      { key: 'logiccode' as ProviderKey, label: 'Workspace', icon: <Code size={14} />, status: 'connected' as const, hasTarget: !!logicCodeTarget },
                     ] as const).map(p => (
                       <TabsTrigger
                         key={p.key}
@@ -746,7 +746,7 @@ export function FileEditor({
                 ) : multiSaveMode ? (
                   <><FloppyDisk size={14} /> {multiSaveSelected.size === 0 ? 'Select providers' : `Save to ${multiSaveSelected.size} provider${multiSaveSelected.size > 1 ? 's' : ''}`}</>
                 ) : (
-                  <><FloppyDisk size={14} /> {activeTargets.length === 0 ? 'Configure destination' : activeTargets.length === 1 ? `Save to ${{ github: 'GitHub', microsoft: 'Microsoft 365', google: 'Google Drive', logiccode: 'LogicOS' }[activeTargets[0].provider] ?? activeTargets[0].provider}` : `Save to ${activeTargets.length} providers`}</>
+                  <><FloppyDisk size={14} /> {activeTargets.length === 0 ? 'Configure destination' : activeTargets.length === 1 ? `Save to ${{ github: 'GitHub', microsoft: 'Microsoft 365', google: 'Google Drive', logiccode: 'Workspace' }[activeTargets[0].provider] ?? activeTargets[0].provider}` : `Save to ${activeTargets.length} providers`}</>
                 )}
               </Button>
             </div>

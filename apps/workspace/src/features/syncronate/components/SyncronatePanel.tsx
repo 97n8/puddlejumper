@@ -903,7 +903,7 @@ export function SyncronatePanel() {
         <img src={synchron8Logo} alt="SYNCHRON8" className="h-7 w-auto"
           style={{ filter: 'drop-shadow(0 0 1px rgba(255,255,255,0.65)) drop-shadow(0 0 10px rgba(74,222,128,0.35))' }} />
         <div className="flex-1">
-          <div className="text-[9px] text-slate-600 uppercase tracking-widest">Data-in pipeline — pulls records from external systems into LogicOS on a schedule</div>
+          <div className="text-[9px] text-slate-600 uppercase tracking-widest">Data-in pipeline — pulls records from external systems into Workspace on a schedule</div>
         </div>
         <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-slate-400" onClick={load}>
           <ArrowClockwise size={13} />Refresh

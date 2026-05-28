@@ -16,7 +16,7 @@ export function BudgetEmbedPage() {
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-emerald-700">Budget workspace</p>
               <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-                LogicOS Budget
+                Workspace Budget
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600 sm:text-base">
                 Embedded budget experience for municipal demos, planning reviews, and working sessions.
@@ -37,7 +37,7 @@ export function BudgetEmbedPage() {
 
         <div className="flex-1 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.10)]">
           <iframe
-            title="LogicOS Budget"
+            title="Workspace Budget"
             src={BUDGET_EMBED_URL}
             className="h-full min-h-[70vh] w-full border-0"
             allow="clipboard-read; clipboard-write"

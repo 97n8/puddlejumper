@@ -121,7 +121,7 @@ export function LoginPage() {
 
                   <div className="space-y-3">
                     <h1 className="text-5xl font-black tracking-tighter text-slate-950 sm:text-6xl">
-                      Logic<span className="text-emerald-600">OS</span>
+                      Work<span className="text-emerald-600">space</span>
                     </h1>
                     <p className="text-2xl font-medium tracking-tight text-slate-900 sm:text-3xl">
                       Govern what holds.
@@ -207,7 +207,7 @@ export function LoginPage() {
                   ) : null}
 
                   <form action={demoRequestAction} method="POST" className="space-y-3">
-                    <input type="hidden" name="_subject" value="LogicOS landing page request" />
+                    <input type="hidden" name="_subject" value="Workspace landing page request" />
                     <input type="hidden" name="_next" value={successRedirectUrl} />
 
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -296,7 +296,7 @@ export function LoginPage() {
               <section className="surface-panel rounded-[32px] p-6 sm:p-7">
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-xl font-semibold text-slate-950">Already working in LogicOS?</h2>
+                    <h2 className="text-xl font-semibold text-slate-950">Already working in Workspace?</h2>
                     <p className="mt-1 text-sm text-slate-600">Sign in with your connected account.</p>
                   </div>
 
@@ -334,7 +334,7 @@ export function LoginPage() {
                   <div className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-xs leading-6 text-slate-500">
                     <span className="inline-flex items-center gap-2 font-semibold text-slate-700">
                       <ShieldCheck size={14} className="text-emerald-700" weight="fill" />
-                      LogicOS is a governance product by PublicLogic — purpose-built for public service teams.
+                      Workspace is a governance product by PublicLogic — purpose-built for public service teams.
                     </span>
                   </div>
                 </div>
@@ -347,7 +347,7 @@ export function LoginPage() {
           <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 text-sm text-slate-600 sm:px-6 lg:flex-row lg:items-start lg:justify-between lg:px-8">
             <div className="space-y-1">
               <div className="text-2xl font-black tracking-tighter text-slate-950">
-                Logic<span className="text-emerald-600">OS</span>
+                Work<span className="text-emerald-600">space</span>
               </div>
               <div>PublicLogic LLC</div>
               <div>Gardner, MA</div>

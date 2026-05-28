@@ -101,7 +101,7 @@ export function SettingsPanel({ onNavigateToAdmin }: SettingsPanelProps = {}) {
   const handleExportData = () => {
     const exportData: Record<string, any> = {}
     Object.keys(localStorage)
-      .filter(k => k.startsWith('logicworkspace-') || k.startsWith('logicos-'))
+      .filter(k => k.startsWith('logicworkspace-') || k.startsWith('workspace-'))
       .forEach(k => {
         try { exportData[k] = JSON.parse(localStorage.getItem(k) ?? 'null') } catch { exportData[k] = null }
       })
@@ -109,7 +109,7 @@ export function SettingsPanel({ onNavigateToAdmin }: SettingsPanelProps = {}) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `logicos-export-${Date.now()}.json`
+    a.download = `workspace-export-${Date.now()}.json`
     a.click()
     URL.revokeObjectURL(url)
     toast.success('Data exported')
@@ -118,14 +118,14 @@ export function SettingsPanel({ onNavigateToAdmin }: SettingsPanelProps = {}) {
   const handleClearAllData = () => {
     if (confirm('This will permanently delete all saved flows, apps, custom settings, and workspace data. This cannot be undone. Continue?')) {
       Object.keys(localStorage)
-        .filter(k => k.startsWith('logicworkspace-') || k.startsWith('logicos-'))
+        .filter(k => k.startsWith('logicworkspace-') || k.startsWith('workspace-'))
         .forEach(k => localStorage.removeItem(k))
       toast.success('All data cleared')
       setTimeout(() => window.location.reload(), 1000)
     }
   }
 
-  const storageKeys = Object.keys(localStorage).filter(k => k.startsWith('logicworkspace-') || k.startsWith('logicos-'))
+  const storageKeys = Object.keys(localStorage).filter(k => k.startsWith('logicworkspace-') || k.startsWith('workspace-'))
   const storageBytes = storageKeys.reduce((acc, k) => acc + (localStorage.getItem(k)?.length ?? 0) * 2, 0)
   const storageFmt = storageBytes > 1024 ? `${(storageBytes / 1024).toFixed(1)} KB` : `${storageBytes} B`
 
@@ -346,7 +346,7 @@ export function SettingsPanel({ onNavigateToAdmin }: SettingsPanelProps = {}) {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="light">Light</SelectItem>
-                            <SelectItem value="dark">Dark (LogicOS Dark)</SelectItem>
+                            <SelectItem value="dark">Dark (Workspace Dark)</SelectItem>
                             <SelectItem value="system">System (follow OS)</SelectItem>
                           </SelectContent>
                         </Select>
@@ -397,7 +397,7 @@ export function SettingsPanel({ onNavigateToAdmin }: SettingsPanelProps = {}) {
                   <Card>
                     <CardHeader>
                       <CardTitle>Connected Providers</CardTitle>
-                      <CardDescription>Link the outside accounts you want LogicOS to use on your behalf</CardDescription>
+                      <CardDescription>Link the outside accounts you want Workspace to use on your behalf</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {connectorLoading ? (
@@ -579,7 +579,7 @@ export function SettingsPanel({ onNavigateToAdmin }: SettingsPanelProps = {}) {
                         <BookOpen size={18} weight="duotone" className="text-primary" />
                         Getting Started
                       </CardTitle>
-                      <CardDescription>New to LogicOS? Start here.</CardDescription>
+                      <CardDescription>New to Workspace? Start here.</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ol className="space-y-3 text-sm">
@@ -637,7 +637,7 @@ export function SettingsPanel({ onNavigateToAdmin }: SettingsPanelProps = {}) {
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">Tools at a Glance</CardTitle>
-                      <CardDescription>Everything you can do in LogicOS — click any tool in the sidebar to open it.</CardDescription>
+                      <CardDescription>Everything you can do in Workspace — click any tool in the sidebar to open it.</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4 text-sm">
@@ -645,15 +645,15 @@ export function SettingsPanel({ onNavigateToAdmin }: SettingsPanelProps = {}) {
                           { icon: <Folders size={15} className="text-amber-500 shrink-0 mt-0.5" />, name: 'Environments', desc: 'Your home base. Every project, department, or org you manage lives here as its own environment — with its own apps, bots, modules, and settings.' },
                           { icon: <Wrench size={15} className="text-sky-500 shrink-0 mt-0.5" />, name: 'LogicDocs', desc: 'Write and design official documents — rich editor, templates, live canvas for HTML/CSS. Save to Vault, OneDrive, or Google Drive in one click.' },
                           { icon: <FileLock size={15} className="text-violet-500 shrink-0 mt-0.5" />, name: 'Vault', desc: 'Secure, governed file storage. Upload, categorize, and officially approve documents. Every version is saved — nothing is ever lost or overwritten without a record.' },
-                          { icon: <ShieldCheck size={15} className="text-emerald-500 shrink-0 mt-0.5" />, name: 'SEAL', desc: 'Digitally sign and lock documents. Anyone can verify a SEAL-stamped document is authentic and untampered — even without a LogicOS account.' },
+                          { icon: <ShieldCheck size={15} className="text-emerald-500 shrink-0 mt-0.5" />, name: 'SEAL', desc: 'Digitally sign and lock documents. Anyone can verify a SEAL-stamped document is authentic and untampered — even without a Workspace account.' },
                           { icon: <Lightning size={15} className="text-yellow-500 shrink-0 mt-0.5" />, name: 'Flows (Syncronate)', desc: 'Automate repetitive work without code. "When a file is approved in Vault, copy it to SharePoint and email the team." 100+ ready flows or build your own.' },
                           { icon: <Megaphone size={15} className="text-emerald-500 shrink-0 mt-0.5" />, name: 'Puddles', desc: 'Operator chat with live PuddleJumper tools. Ask about PRRs, governance, org status, procurement, or system health and get a tenant-scoped answer grounded in live platform data.' },
                           { icon: <FileLock size={15} className="text-rose-500 shrink-0 mt-0.5" />, name: 'FormKey', desc: 'Public-facing intake forms. Anyone can fill them out — no account needed. Submissions are automatically saved, time-stamped, and routed into Vault.' },
                           { icon: <Megaphone size={15} className="text-teal-500 shrink-0 mt-0.5" />, name: 'CivicPulse', desc: 'Turns approved records into plain-English summaries for the public. You review and approve every summary before it goes anywhere.' },
-                          { icon: <Globe size={15} className="text-blue-500 shrink-0 mt-0.5" />, name: 'LogicBridge', desc: 'Connect LogicOS to external software and APIs. Pull data in from legacy systems, push records out, or test live API calls. Built for IT and advanced users.' },
+                          { icon: <Globe size={15} className="text-blue-500 shrink-0 mt-0.5" />, name: 'LogicBridge', desc: 'Connect Workspace to external software and APIs. Pull data in from legacy systems, push records out, or test live API calls. Built for IT and advanced users.' },
                           { icon: <Database size={15} className="text-orange-500 shrink-0 mt-0.5" />, name: 'Syncronate', desc: 'Keep records synchronized across connected systems automatically. Configure once, runs in the background.' },
                           { icon: <ChartBar size={15} className="text-emerald-500 shrink-0 mt-0.5" />, name: 'LogicDash', desc: 'Financial intelligence dashboard. Pull real data from authoritative sources, compare against peers, track trends, and get automatic risk flags.' },
-                          { icon: <Wrench size={15} className="text-amber-500 shrink-0 mt-0.5" />, name: 'LogicBuilder', desc: 'Build custom apps, bots, and automated workflows by combining LogicOS services. No code required for most things — code-friendly for the rest.' },
+                          { icon: <Wrench size={15} className="text-amber-500 shrink-0 mt-0.5" />, name: 'LogicBuilder', desc: 'Build custom apps, bots, and automated workflows by combining Workspace services. No code required for most things — code-friendly for the rest.' },
                           { icon: <ShieldCheck size={15} className="text-slate-500 shrink-0 mt-0.5" />, name: 'Module Builder', desc: 'Configure and publish governance modules for any industry or department — permitting, compliance, HR, grants. Each module defines the rules for that domain.' },
                           { icon: <Database size={15} className="text-rose-400 shrink-0 mt-0.5" />, name: 'Audit Trail', desc: 'A complete, independently verifiable log of every action in the system. See who did what, when, and from where.' },
                           { icon: <UserGear size={15} className="text-gray-500 shrink-0 mt-0.5" />, name: 'Admin', desc: 'Create users, reset passwords, assign tool access, and manage workspace settings. Visible to admins and owners only.' },
@@ -699,15 +699,15 @@ export function SettingsPanel({ onNavigateToAdmin }: SettingsPanelProps = {}) {
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm text-muted-foreground">
                       <p>Go to <strong className="text-foreground">Settings → Connections</strong> to connect your accounts. Each tool only uses the accounts you've explicitly linked — nothing is shared automatically.</p>
-                      <p>You can connect or disconnect any account at any time. Disconnecting doesn't delete any files — it just stops LogicOS from acting on your behalf for that provider.</p>
-                      <p>Your login account (the one you use to sign into LogicOS) is separate from your connected accounts. You can sign in with Microsoft but still connect a different Google account for Flows.</p>
+                      <p>You can connect or disconnect any account at any time. Disconnecting doesn't delete any files — it just stops Workspace from acting on your behalf for that provider.</p>
+                      <p>Your login account (the one you use to sign into Workspace) is separate from your connected accounts. You can sign in with Microsoft but still connect a different Google account for Flows.</p>
                     </CardContent>
                   </Card>
 
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">Backend Modules</CardTitle>
-                      <CardDescription>The services that power LogicOS, listed in the order they start up. All must be healthy for the platform to work correctly.</CardDescription>
+                      <CardDescription>The services that power Workspace, listed in the order they start up. All must be healthy for the platform to work correctly.</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-1 text-sm font-mono">
@@ -775,7 +775,7 @@ export function SettingsPanel({ onNavigateToAdmin }: SettingsPanelProps = {}) {
                       <Separator />
                       <div>
                         <p className="font-medium mb-1">Can the public submit a form without an account?</p>
-                        <p className="text-muted-foreground">Yes — FormKey forms are public-facing. Share the form link and anyone can submit. All submissions are automatically saved, stamped, and routed without requiring a LogicOS account.</p>
+                        <p className="text-muted-foreground">Yes — FormKey forms are public-facing. Share the form link and anyone can submit. All submissions are automatically saved, stamped, and routed without requiring a Workspace account.</p>
                       </div>
                     </CardContent>
                   </Card>

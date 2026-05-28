@@ -127,7 +127,7 @@ function buildLegalNotes(options: {
 }) {
   const townLabel = options.townName ?? 'This municipality'
   const notes = [
-    `${townLabel} permit intake still runs on local charter, zoning/bylaw, board, filing, fee, and posting requirements. LogicOS helps route the work; it does not replace the town's legal authority.`,
+    `${townLabel} permit intake still runs on local charter, zoning/bylaw, board, filing, fee, and posting requirements. Workspace helps route the work; it does not replace the town's legal authority.`,
     'Use this rail as operational guidance. Final sufficiency still depends on notice periods, hearing procedure, quorum, signature, and record-retention rules before anything is issued or enforced.',
     options.legislationCount > 0
       ? 'Beacon Hill items below are informational watch signals. Confirm engrossed text, effective dates, and local adoption requirements before changing forms, fees, or process.'
@@ -428,7 +428,7 @@ export function PublicPermitBridgePage() {
           {activeTab === 'overview' ? (
             <>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <ActionLink href={publicRouteUrl} label="Town front door" detail={`${process.title} inside LogicOS`} tone="dark" />
+                <ActionLink href={publicRouteUrl} label="Town front door" detail={`${process.title} inside Workspace`} tone="dark" />
                 <ActionLink href={embeddedUrl} label="Open exact process" detail={`${process.title} in standalone Permit&Bridge`} />
                 {briefing.profile.website ? (
                   <ActionLink href={briefing.profile.website} label="Town website" detail="Official municipal site" />
@@ -686,7 +686,7 @@ export function PublicPermitBridgePage() {
                       href="/"
                       className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-800"
                     >
-                      Return to LogicOS
+                      Return to Workspace
                     </a>
                   </div>
                 </div>

@@ -1,25 +1,25 @@
 import type Database from 'better-sqlite3'
-import { getLogicOSDatabase } from './sqlite'
-import type { LogicOSArea, LogicOSProvider } from './schema'
+import { getWorkspaceDatabase } from './sqlite'
+import type { WorkspaceArea, WorkspaceProvider } from './schema'
 
-export type LogicOSConnectorMode = 'google-folder' | 'placeholder'
+export type WorkspaceConnectorMode = 'google-folder' | 'placeholder'
 
-export type LogicOSRoute = {
-  provider: LogicOSProvider
-  home: LogicOSProvider
-  connectorMode: LogicOSConnectorMode
+export type WorkspaceRoute = {
+  provider: WorkspaceProvider
+  home: WorkspaceProvider
+  connectorMode: WorkspaceConnectorMode
   reason: string
 }
 
 type RouteInput = {
-  area: LogicOSArea
-  home?: LogicOSProvider | null
+  area: WorkspaceArea
+  home?: WorkspaceProvider | null
 }
 
 type RouteRow = {
-  destination_provider: LogicOSProvider
-  home_provider: LogicOSProvider
-  connector_mode: LogicOSConnectorMode
+  destination_provider: WorkspaceProvider
+  home_provider: WorkspaceProvider
+  connector_mode: WorkspaceConnectorMode
   reason: string
 }
 
@@ -44,17 +44,17 @@ const ROUTE_QUERY = `
   LIMIT 1
 `
 
-export function selectLogicOSRoute(
+export function selectWorkspaceRoute(
   { area, home }: RouteInput,
-  db: Database.Database = getLogicOSDatabase(),
-): LogicOSRoute {
+  db: Database.Database = getWorkspaceDatabase(),
+): WorkspaceRoute {
   const row = db.prepare(ROUTE_QUERY).get({
     area,
     home: home ?? null,
   }) as RouteRow | undefined
 
   if (!row) {
-    throw new Error(`No active LogicOS route configured for area ${area}${home ? ` and home ${home}` : ''}.`)
+    throw new Error(`No active Workspace route configured for area ${area}${home ? ` and home ${home}` : ''}.`)
   }
 
   return {

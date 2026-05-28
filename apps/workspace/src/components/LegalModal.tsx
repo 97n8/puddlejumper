@@ -20,7 +20,7 @@ const TABS: { key: LegalTab; label: string }[] = [
 
 const EFFECTIVE_DATE = 'March 3, 2026'
 const COMPANY = 'PublicLogic, Inc.'
-const PRODUCT = 'LogicOS'
+const PRODUCT = 'Workspace'
 const EMAIL = 'info@publiclogic.org'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -328,12 +328,12 @@ function HowWeWorkContent() {
     <div>
       <p className="text-xs text-white/25 mb-6">{COMPANY} · {PRODUCT}</p>
 
-      <Section title="How LogicOS governs municipal work">
-        <p>LogicOS is built on three interlocking frameworks. Every module, every record, every automated action operates within their constraints. This page explains what they are and why they matter to operators and elected officials.</p>
+      <Section title="How Workspace governs municipal work">
+        <p>Workspace is built on three interlocking frameworks. Every module, every record, every automated action operates within their constraints. This page explains what they are and why they matter to operators and elected officials.</p>
       </Section>
 
       <Section title="VAULT — The governing framework">
-        <p>LogicOS runs on VAULT governance doctrine. Every module, every record, every automated action operates within a defined authority structure. VAULT answers four questions before anything proceeds: What must happen? In what order? By whose authority? With what evidence? Staff see guidance in their browser. The server enforces hard stops that cannot be bypassed.</p>
+        <p>Workspace runs on VAULT governance doctrine. Every module, every record, every automated action operates within a defined authority structure. VAULT answers four questions before anything proceeds: What must happen? In what order? By whose authority? With what evidence? Staff see guidance in their browser. The server enforces hard stops that cannot be bypassed.</p>
       </Section>
 
       <Section title="ARCHIEVE — The record of proof">
@@ -350,10 +350,10 @@ function HowWeWorkContent() {
       </Section>
 
       <Section title="What stays with the town">
-        <p>LogicOS is not a data hostage model. Your records, your cases, your ARCHIEVE bundles — those belong to the town. PublicLogic retains the methodology, the frameworks (VAULT, ARCHIEVE, SEAL), and the intellectual property that makes the system work. At transition, the town takes a complete, portable package. Nothing is lost.</p>
+        <p>Workspace is not a data hostage model. Your records, your cases, your ARCHIEVE bundles — those belong to the town. PublicLogic retains the methodology, the frameworks (VAULT, ARCHIEVE, SEAL), and the intellectual property that makes the system work. At transition, the town takes a complete, portable package. Nothing is lost.</p>
       </Section>
 
-      <Section title="AI in LogicOS">
+      <Section title="AI in Workspace">
         <p>AI assists at every stage but decides at none. Every AI action is logged: the prompt, the model version, the output, and the identity of the user who triggered it. No AI output becomes an official record without explicit human review and approval. This is not a toggle — it is a hard architectural constraint.</p>
       </Section>
     </div>

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { createLogicOSDatabase } from '@/lib/logicos/sqlite'
+import { createWorkspaceDatabase } from '@/lib/logicos/sqlite'
 import { mkdtempSync, rmSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
 function withDb() {
-  const dir = mkdtempSync(path.join(os.tmpdir(), 'logicos-sqlite-'))
-  const db = createLogicOSDatabase(path.join(dir, 'logicos.db'))
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'workspace-sqlite-'))
+  const db = createWorkspaceDatabase(path.join(dir, 'workspace.db'))
   return {
     db,
     cleanup() {
@@ -16,7 +16,7 @@ function withDb() {
   }
 }
 
-describe('LogicOS sqlite migration', () => {
+describe('Workspace sqlite migration', () => {
   it('allows audit_events inserts', () => {
     const { db, cleanup } = withDb()
 

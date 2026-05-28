@@ -51,7 +51,7 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ onNavigateTool }: NotificationCenterProps) {
-  const [notifs, setNotifs] = useKV<AppNotification[]>('logicos-notifications', [])
+  const [notifs, setNotifs] = useKV<AppNotification[]>('workspace-notifications', [])
 
   const unreadCount = useMemo(() => notifs.filter(n => !n.read).length, [notifs])
 

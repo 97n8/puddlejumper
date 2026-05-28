@@ -254,7 +254,7 @@ function generateFormHtml(template: FormTemplate, town: string, docId: string): 
   <!-- Footer -->
   <div style="background:#f8f9fc;border-top:1px solid #e5e7eb;padding:14px 32px;font-size:11px;color:#9ca3af;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">
     <span>Form ID: LGV-FORM-${docId.toUpperCase()}</span>
-    <span>Town of ${town} · Powered by LogicOS</span>
+    <span>Town of ${town} · Powered by Workspace</span>
   </div>
 </div>
 </body>

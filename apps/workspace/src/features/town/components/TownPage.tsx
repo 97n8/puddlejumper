@@ -216,7 +216,7 @@ export function TownPage() {
       <header className="flex items-center justify-between px-1.5">
         <div className="flex items-baseline gap-2.5">
           <span className="font-display font-black text-[28px] leading-none tracking-tight text-foreground">
-            Logic<span className="text-primary">OS</span>
+            Work<span className="text-primary">space</span>
           </span>
           <span className="font-mono text-[9px] tracking-[.12em] uppercase text-muted-foreground">
             Town Portal
@@ -313,7 +313,7 @@ export function TownPage() {
             <div className="tp-rail-core">
               <span className="font-mono text-muted-foreground" style={{ fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase' }}>Powered by</span>
               <span className="font-display font-bold text-foreground text-xl leading-tight">
-                Logic<span className="text-primary">OS</span>
+                Work<span className="text-primary">space</span>
               </span>
               <span className="text-muted-foreground text-xs">One system</span>
             </div>

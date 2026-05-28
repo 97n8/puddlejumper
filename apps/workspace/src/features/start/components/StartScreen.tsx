@@ -235,7 +235,7 @@ export function StartScreen({ onSelectTool, onOpenConnections, onOpenVaultEnv }:
                 One place to see what needs attention, what is connected, and where work is moving.
               </h2>
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                LogicOS now opens with a clearer desk view: priority work, live workspace access, and a tighter operational read on the state of the system.
+                Workspace now opens with a clearer desk view: priority work, live workspace access, and a tighter operational read on the state of the system.
               </p>
             </div>
             <button onClick={() => onOpenConnections()}

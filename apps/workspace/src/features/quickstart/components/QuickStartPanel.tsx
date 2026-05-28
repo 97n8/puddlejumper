@@ -392,7 +392,7 @@ export function QuickStartPanel({ onOpenTool, onOpenConnections }: QuickStartPan
           <div className="flex-1">
             <h1 className="text-3xl font-bold tracking-tight">Something needs a paper trail.</h1>
             <p className="text-base text-muted-foreground mt-1.5 max-w-2xl leading-relaxed">
-              Records go missing. Deadlines get missed. Approvals happen with no audit trail. LogicOS connects your documents, decisions, and workflows — so every action has a permanent, verifiable record and accountability is built in, not retrofitted.
+              Records go missing. Deadlines get missed. Approvals happen with no audit trail. Workspace connects your documents, decisions, and workflows — so every action has a permanent, verifiable record and accountability is built in, not retrofitted.
             </p>
             <div className="flex flex-wrap gap-2 mt-4">
               {[

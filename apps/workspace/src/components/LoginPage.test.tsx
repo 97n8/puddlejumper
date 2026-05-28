@@ -22,7 +22,7 @@ describe('LoginPage', () => {
     render(<LoginPage />)
 
     expect(screen.getAllByText('PublicLogic LLC').length).toBeGreaterThan(0)
-    expect(screen.getByRole('heading', { level: 1, name: /logicos/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /workspace/i })).toBeInTheDocument()
     expect(screen.getByText('Govern what holds.')).toBeInTheDocument()
     expect(screen.getByText('Your town, in your corner.')).toBeInTheDocument()
     expect(screen.getByText('Governance Workspace')).toBeInTheDocument()

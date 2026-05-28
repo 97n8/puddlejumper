@@ -63,7 +63,7 @@ export const Toolbar = memo(function Toolbar({ onOpenConnections, onBack, onNewF
   const { status: connStatus } = useConnectorStatus()
   const { openCloudSave } = useCloudSave()
   const [appearance, setAppearance] = useKV<{ theme: 'light' | 'dark' | 'system'; compactMode: boolean }>(
-    'logicos-appearance',
+    'workspace-appearance',
     { theme: 'system', compactMode: false }
   )
   const { shellColor, setShellColor } = useShellColor()
@@ -140,7 +140,7 @@ export const Toolbar = memo(function Toolbar({ onOpenConnections, onBack, onNewF
         /* Wordmark */
           <button onClick={onBack} className="flex items-center shrink-0 group mr-1.5 z-10 interactive-press" aria-label="Home">
             <span className="text-[21px] font-display font-black tracking-[-0.05em] text-foreground/92 group-hover:text-foreground transition-colors select-none">
-              Logic<span className="bg-gradient-to-br from-emerald-300 via-emerald-500 to-emerald-700 bg-clip-text text-transparent">OS</span>
+              Work<span className="bg-gradient-to-br from-emerald-300 via-emerald-500 to-emerald-700 bg-clip-text text-transparent">space</span>
             </span>
           </button>
         )}
@@ -302,7 +302,7 @@ export const Toolbar = memo(function Toolbar({ onOpenConnections, onBack, onNewF
           )}
           <DropdownMenuSeparator className="my-1.5" />
           <DropdownMenuItem
-            onClick={() => openCloudSave({ provider: 'google', filename: 'logicos-export.md', content: '' })}
+            onClick={() => openCloudSave({ provider: 'google', filename: 'workspace-export.md', content: '' })}
             className="gap-3 py-2.5 px-2.5 rounded-lg cursor-pointer"
           >
             <span className="text-emerald-500 shrink-0"><CloudArrowUp size={16} weight="duotone" /></span>
@@ -344,7 +344,7 @@ export const Toolbar = memo(function Toolbar({ onOpenConnections, onBack, onNewF
       {/* Cloud save quick-action */}
       {user && !isMobile && (
         <button
-          onClick={() => openCloudSave({ provider: 'google', filename: 'logicos-export.md', content: '' })}
+          onClick={() => openCloudSave({ provider: 'google', filename: 'workspace-export.md', content: '' })}
           aria-label="Save to cloud"
           title="Save to cloud"
           className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors relative"

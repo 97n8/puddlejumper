@@ -1,18 +1,18 @@
 import type { VercelRequest } from '@vercel/node'
 import type Database from 'better-sqlite3'
 import {
-  type CreateLogicOSRecordInput,
-  type LogicOSAuditEvent,
-  type LogicOSAuditEventType,
-  type LogicOSListRecordsFilters,
-  type LogicOSRecord,
-  type PatchLogicOSRecordInput,
+  type CreateWorkspaceRecordInput,
+  type WorkspaceAuditEvent,
+  type WorkspaceAuditEventType,
+  type WorkspaceListRecordsFilters,
+  type WorkspaceRecord,
+  type PatchWorkspaceRecordInput,
 } from './schema'
-import { selectLogicOSRoute } from './router'
-import { executeLogicOSConnector, type LogicOSConnectorContext, type LogicOSConnectorSuccess } from './connectors'
-import { getLogicOSDatabase } from './sqlite'
+import { selectWorkspaceRoute } from './router'
+import { executeWorkspaceConnector, type WorkspaceConnectorContext, type WorkspaceConnectorSuccess } from './connectors'
+import { getWorkspaceDatabase } from './sqlite'
 
-type LogicOSActor = {
+type WorkspaceActor = {
   actorId: string | null
   source: string
   ip: string | null
@@ -22,18 +22,18 @@ type LogicOSActor = {
 type MutationContext = {
   db?: Database.Database
   now?: Date
-  actor?: LogicOSActor
-  connectorContext?: LogicOSConnectorContext
+  actor?: WorkspaceActor
+  connectorContext?: WorkspaceConnectorContext
   connectorExecutor?: (
-    record: LogicOSRecord,
-    route: ReturnType<typeof selectLogicOSRoute>,
-    context: LogicOSConnectorContext,
-  ) => Promise<LogicOSConnectorSuccess>
+    record: WorkspaceRecord,
+    route: ReturnType<typeof selectWorkspaceRoute>,
+    context: WorkspaceConnectorContext,
+  ) => Promise<WorkspaceConnectorSuccess>
 }
 
 export type StoredRecordBundle = {
-  record: LogicOSRecord
-  audit: LogicOSAuditEvent[]
+  record: WorkspaceRecord
+  audit: WorkspaceAuditEvent[]
 }
 
 function iso(now: Date) {
@@ -48,19 +48,19 @@ function normalizeOptional(value: string | null | undefined) {
 
 type RecordRow = {
   id: string
-  area: LogicOSRecord['area']
+  area: WorkspaceRecord['area']
   sequence_year: number
   sequence_number: number
   title: string
-  status: LogicOSRecord['status']
+  status: WorkspaceRecord['status']
   created_by_actor_id: string | null
   owner_actor_id: string | null
   collaborator_actor_id: string | null
   owner_label: string | null
   collaborator_label: string | null
-  home_provider: LogicOSRecord['home']
-  destination_provider: LogicOSRecord['destination']
-  connector_mode: LogicOSRecord['connectorMode']
+  home_provider: WorkspaceRecord['home']
+  destination_provider: WorkspaceRecord['destination']
+  connector_mode: WorkspaceRecord['connectorMode']
   primary_link: string | null
   google_link: string | null
   m365_link: string | null
@@ -70,8 +70,8 @@ type RecordRow = {
   notes: string | null
   source: string
   google_parent_id: string | null
-  routing_state: LogicOSRecord['routingState']
-  connector_state: LogicOSRecord['connectorState']
+  routing_state: WorkspaceRecord['routingState']
+  connector_state: WorkspaceRecord['connectorState']
   last_error: string | null
   external_ref: string | null
   created_at: string
@@ -81,7 +81,7 @@ type RecordRow = {
 type AuditRow = {
   id: string
   recordId: string,
-  event_type: LogicOSAuditEvent['type']
+  event_type: WorkspaceAuditEvent['type']
   actor_id: string | null
   actor_source: string
   actor_ip: string | null
@@ -90,7 +90,7 @@ type AuditRow = {
   created_at: string
 }
 
-function mapRecordRow(row: RecordRow): LogicOSRecord {
+function mapRecordRow(row: RecordRow): WorkspaceRecord {
   return {
     id: row.id,
     area: row.area,
@@ -121,7 +121,7 @@ function mapRecordRow(row: RecordRow): LogicOSRecord {
   }
 }
 
-function mapAuditRow(row: AuditRow): LogicOSAuditEvent {
+function mapAuditRow(row: AuditRow): WorkspaceAuditEvent {
   return {
     id: row.id,
     recordId: row.recordId,
@@ -137,7 +137,7 @@ function mapAuditRow(row: AuditRow): LogicOSAuditEvent {
   }
 }
 
-function upsertRecord(db: Database.Database, record: LogicOSRecord, sequenceYear: number, sequenceNumber: number, externalRef: string | null = null) {
+function upsertRecord(db: Database.Database, record: WorkspaceRecord, sequenceYear: number, sequenceNumber: number, externalRef: string | null = null) {
   db.prepare(`
     INSERT INTO logicos_records (
       id,
@@ -260,8 +260,8 @@ function upsertRecord(db: Database.Database, record: LogicOSRecord, sequenceYear
 function insertAuditEvent(
   db: Database.Database,
   recordId: string,
-  type: LogicOSAuditEventType,
-  actor: LogicOSActor,
+  type: WorkspaceAuditEventType,
+  actor: WorkspaceActor,
   detail: Record<string, unknown> | null,
   now: Date,
 ) {
@@ -302,7 +302,7 @@ function insertAuditEvent(
   return eventId
 }
 
-function nextSequence(db: Database.Database, area: LogicOSRecord['area'], year: number) {
+function nextSequence(db: Database.Database, area: WorkspaceRecord['area'], year: number) {
   const select = db.prepare<[{ area: string; sequence_year: number }], { last_value: number }>(`
     SELECT last_value
     FROM id_sequence
@@ -381,8 +381,8 @@ function loadRecordRow(db: Database.Database, id: string) {
 function appendAuditEvent(
   db: Database.Database,
   recordId: string,
-  type: LogicOSAuditEventType,
-  actor: LogicOSActor,
+  type: WorkspaceAuditEventType,
+  actor: WorkspaceActor,
   detail: Record<string, unknown> | null,
   now: Date,
 ) {
@@ -392,7 +392,7 @@ function appendAuditEvent(
 function parseSequenceFromId(id: string) {
   const match = id.match(/^([A-Z]+)-(\d{4})-(\d+)$/)
   if (!match) {
-    throw new Error(`Invalid LogicOS record id: ${id}`)
+    throw new Error(`Invalid Workspace record id: ${id}`)
   }
   return {
     year: Number(match[2]),
@@ -400,7 +400,7 @@ function parseSequenceFromId(id: string) {
   }
 }
 
-function bundleForRecord(db: Database.Database, record: LogicOSRecord): StoredRecordBundle {
+function bundleForRecord(db: Database.Database, record: WorkspaceRecord): StoredRecordBundle {
   return {
     record,
     audit: loadAuditEvents(db, record.id),
@@ -409,15 +409,15 @@ function bundleForRecord(db: Database.Database, record: LogicOSRecord): StoredRe
 
 async function executeRouteLifecycle(
   db: Database.Database,
-  record: LogicOSRecord,
+  record: WorkspaceRecord,
   sequenceYear: number,
   sequenceNumber: number,
-  actor: LogicOSActor,
+  actor: WorkspaceActor,
   now: Date,
-  connectorContext: LogicOSConnectorContext,
+  connectorContext: WorkspaceConnectorContext,
   connectorExecutor: MutationContext['connectorExecutor'],
 ) {
-  const route = selectLogicOSRoute({ area: record.area, home: record.home }, db)
+  const route = selectWorkspaceRoute({ area: record.area, home: record.home }, db)
 
   record.destination = route.provider
   record.home = route.home
@@ -448,7 +448,7 @@ async function executeRouteLifecycle(
   }, now)
 
   try {
-    const result = await (connectorExecutor ?? executeLogicOSConnector)(record, route, connectorContext)
+    const result = await (connectorExecutor ?? executeWorkspaceConnector)(record, route, connectorContext)
     record.primaryLink = result.primaryLink
     record.googleLink = result.googleLink ?? record.googleLink
     record.m365Link = result.m365Link ?? record.m365Link
@@ -479,21 +479,21 @@ async function executeRouteLifecycle(
   return record
 }
 
-function actorFallback(actor?: LogicOSActor): LogicOSActor {
+function actorFallback(actor?: WorkspaceActor): WorkspaceActor {
   return actor ?? {
     actorId: null,
-    source: 'logicos_api',
+    source: 'workspace_api',
     ip: null,
     userAgent: null,
   }
 }
 
-export function getLogicOSActorFromRequest(req: VercelRequest, defaultSource: string): LogicOSActor {
+export function getWorkspaceActorFromRequest(req: VercelRequest, defaultSource: string): WorkspaceActor {
   const forwardedFor = typeof req.headers['x-forwarded-for'] === 'string'
     ? req.headers['x-forwarded-for'].split(',')[0]?.trim() || null
     : null
   const userAgent = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : null
-  const actorId = typeof req.headers['x-logicos-actor-id'] === 'string' ? req.headers['x-logicos-actor-id'].trim() || null : null
+  const actorId = typeof req.headers['x-workspace-actor-id'] === 'string' ? req.headers['x-workspace-actor-id'].trim() || null : null
   return {
     actorId,
     source: defaultSource,
@@ -502,14 +502,14 @@ export function getLogicOSActorFromRequest(req: VercelRequest, defaultSource: st
   }
 }
 
-export function getLogicOSConnectorContextFromRequest(req: VercelRequest): LogicOSConnectorContext {
+export function getWorkspaceConnectorContextFromRequest(req: VercelRequest): WorkspaceConnectorContext {
   return {
     cookieHeader: typeof req.headers.cookie === 'string' ? req.headers.cookie : null,
   }
 }
 
-export async function createLogicOSRecord(input: CreateLogicOSRecordInput, context: MutationContext = {}) {
-  const db = context.db ?? getLogicOSDatabase()
+export async function createWorkspaceRecord(input: CreateWorkspaceRecordInput, context: MutationContext = {}) {
+  const db = context.db ?? getWorkspaceDatabase()
   const now = context.now ?? new Date()
   const actor = actorFallback(context.actor)
   const createdAt = iso(now)
@@ -517,9 +517,9 @@ export async function createLogicOSRecord(input: CreateLogicOSRecordInput, conte
 
   const sequenceNumber = db.transaction(() => nextSequence(db, input.area, year))()
   const id = `${input.area}-${year}-${String(sequenceNumber).padStart(3, '0')}`
-  const initialRoute = selectLogicOSRoute({ area: input.area, home: input.home ?? null }, db)
+  const initialRoute = selectWorkspaceRoute({ area: input.area, home: input.home ?? null }, db)
 
-  const record: LogicOSRecord = {
+  const record: WorkspaceRecord = {
     id,
     title: input.title,
     area: input.area,
@@ -569,7 +569,7 @@ export async function createLogicOSRecord(input: CreateLogicOSRecordInput, conte
   return bundleForRecord(db, hydrated)
 }
 
-export async function listLogicOSRecords(filters: LogicOSListRecordsFilters = {}, db: Database.Database = getLogicOSDatabase()) {
+export async function listWorkspaceRecords(filters: WorkspaceListRecordsFilters = {}, db: Database.Database = getWorkspaceDatabase()) {
   const clauses = ['1 = 1']
   const params: Record<string, unknown> = {}
   if (filters.area) {
@@ -628,14 +628,14 @@ export async function listLogicOSRecords(filters: LogicOSListRecordsFilters = {}
   return rows.map(mapRecordRow)
 }
 
-export async function getLogicOSRecord(id: string, db: Database.Database = getLogicOSDatabase()) {
+export async function getWorkspaceRecord(id: string, db: Database.Database = getWorkspaceDatabase()) {
   const row = loadRecordRow(db, id)
   if (!row) return null
   return bundleForRecord(db, mapRecordRow(row))
 }
 
-export async function patchLogicOSRecord(id: string, patch: PatchLogicOSRecordInput, context: MutationContext = {}) {
-  const db = context.db ?? getLogicOSDatabase()
+export async function patchWorkspaceRecord(id: string, patch: PatchWorkspaceRecordInput, context: MutationContext = {}) {
+  const db = context.db ?? getWorkspaceDatabase()
   const now = context.now ?? new Date()
   const actor = actorFallback(context.actor)
   const currentRow = loadRecordRow(db, id)
@@ -643,7 +643,7 @@ export async function patchLogicOSRecord(id: string, patch: PatchLogicOSRecordIn
   const current = mapRecordRow(currentRow)
   const { year, number } = parseSequenceFromId(id)
 
-  const next: LogicOSRecord = {
+  const next: WorkspaceRecord = {
     ...current,
     ...(patch.title !== undefined ? { title: patch.title } : {}),
     ...(patch.area !== undefined ? { area: patch.area } : {}),
@@ -672,9 +672,9 @@ export async function patchLogicOSRecord(id: string, patch: PatchLogicOSRecordIn
     return bundleForRecord(db, next)
   }
 
-  const reroutable: LogicOSRecord = { ...next }
+  const reroutable: WorkspaceRecord = { ...next }
 
-  const route = selectLogicOSRoute({ area: reroutable.area, home: reroutable.home }, db)
+  const route = selectWorkspaceRoute({ area: reroutable.area, home: reroutable.home }, db)
   const needsGoogleRun = route.connectorMode === 'google-folder'
     && !reroutable.googleLink
 

@@ -154,7 +154,7 @@ export function RepoImportDialog({ open, onOpenChange }: RepoImportDialogProps) 
         targetDriveId: targetProvider === 'microsoft' ? undefined : undefined,
         targetRepo: targetProvider === 'github' ? githubTargetRepo : undefined,
         targetBasePath: targetProvider === 'github' ? (githubBasePath || basePath) : basePath || repoInfo.name,
-        commitMessage: `Import ${repoInfo.fullName} into LogicOS`,
+        commitMessage: `Import ${repoInfo.fullName} into Workspace`,
       })
       setImportProgress(100)
       setResult(res)

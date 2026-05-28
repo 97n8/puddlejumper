@@ -190,7 +190,7 @@ describe('PermitBridge public page', () => {
 
     expect(screen.getByText(/launching permit&bridge/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /open standalone route/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /return to logicos/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /return to workspace/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /town front door/i })).toHaveAttribute('href', '/permitbridge/apply/residential?town=gardner&envId=env-gardner#checklist')
     expect(screen.getByRole('link', { name: /open exact process/i })).toHaveAttribute('href', `${PERMITBRIDGE_APP_ORIGIN}/apply/residential?town=gardner&envId=env-gardner#checklist`)
     expect(await screen.findByRole('link', { name: /town website/i })).toHaveAttribute('href', 'https://www.gardner-ma.gov')

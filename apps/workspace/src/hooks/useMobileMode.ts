@@ -15,7 +15,7 @@ export function useMobileMode(): {
   setViewOverride: (v: ViewMode) => void
   isSmallScreen: boolean
 } {
-  const [viewOverride, setViewOverride] = useKV<ViewMode>('logicos-view-mode', 'auto')
+  const [viewOverride, setViewOverride] = useKV<ViewMode>('workspace-view-mode', 'auto')
   const [isSmallScreen, setIsSmallScreen] = useState(
     () => typeof window !== 'undefined' ? window.innerWidth < 768 : false
   )

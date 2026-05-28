@@ -87,7 +87,7 @@ describe('EnvironmentShell', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Log in to LogicOS to access this environment.')).toBeInTheDocument()
+      expect(screen.getByText('Log in to Workspace to access this environment.')).toBeInTheDocument()
     })
     expect(screen.queryByText('Module content')).not.toBeInTheDocument()
   })

@@ -101,7 +101,7 @@ function WelcomePanel({ onNewApp }: { onNewApp: () => void }) {
       <div>
         <h2 className="text-xl font-bold tracking-tight">Personal Apps</h2>
         <p className="text-sm text-muted-foreground mt-2 max-w-xs leading-relaxed">
-          Compose LogicOS services into a focused workspace built around your role.
+          Compose Workspace services into a focused workspace built around your role.
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl">

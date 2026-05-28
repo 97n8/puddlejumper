@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { selectLogicOSRoute } from '@/lib/logicos/router'
-import { createLogicOSDatabase } from '@/lib/logicos/sqlite'
+import { selectWorkspaceRoute } from '@/lib/logicos/router'
+import { createWorkspaceDatabase } from '@/lib/logicos/sqlite'
 import { mkdtempSync, rmSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-describe('selectLogicOSRoute', () => {
+describe('selectWorkspaceRoute', () => {
   function withDb() {
-    const dir = mkdtempSync(path.join(os.tmpdir(), 'logicos-router-'))
-    const db = createLogicOSDatabase(path.join(dir, 'logicos.db'))
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'workspace-router-'))
+    const db = createWorkspaceDatabase(path.join(dir, 'workspace.db'))
     return {
       db,
       cleanup() {
@@ -20,12 +20,12 @@ describe('selectLogicOSRoute', () => {
 
   it('routes CAM and LIFE to the working Google connector', () => {
     const { db, cleanup } = withDb()
-    expect(selectLogicOSRoute({ area: 'CAM' }, db)).toMatchObject({
+    expect(selectWorkspaceRoute({ area: 'CAM' }, db)).toMatchObject({
       provider: 'google',
       home: 'google',
       connectorMode: 'google-folder',
     })
-    expect(selectLogicOSRoute({ area: 'LIFE' }, db)).toMatchObject({
+    expect(selectWorkspaceRoute({ area: 'LIFE' }, db)).toMatchObject({
       provider: 'google',
       home: 'google',
       connectorMode: 'google-folder',
@@ -35,11 +35,11 @@ describe('selectLogicOSRoute', () => {
 
   it('keeps PL and LAB on placeholder connectors', () => {
     const { db, cleanup } = withDb()
-    expect(selectLogicOSRoute({ area: 'PL' }, db)).toMatchObject({
+    expect(selectWorkspaceRoute({ area: 'PL' }, db)).toMatchObject({
       provider: 'microsoft',
       connectorMode: 'placeholder',
     })
-    expect(selectLogicOSRoute({ area: 'LAB' }, db)).toMatchObject({
+    expect(selectWorkspaceRoute({ area: 'LAB' }, db)).toMatchObject({
       provider: 'github',
       connectorMode: 'placeholder',
     })
@@ -48,12 +48,12 @@ describe('selectLogicOSRoute', () => {
 
   it('lets PI choose a home but still stays placeholder-only', () => {
     const { db, cleanup } = withDb()
-    expect(selectLogicOSRoute({ area: 'PI' }, db)).toMatchObject({
+    expect(selectWorkspaceRoute({ area: 'PI' }, db)).toMatchObject({
       provider: 'microsoft',
       home: 'microsoft',
       connectorMode: 'placeholder',
     })
-    expect(selectLogicOSRoute({ area: 'PI', home: 'google' }, db)).toMatchObject({
+    expect(selectWorkspaceRoute({ area: 'PI', home: 'google' }, db)).toMatchObject({
       provider: 'google',
       home: 'google',
       connectorMode: 'placeholder',

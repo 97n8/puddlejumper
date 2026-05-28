@@ -1,5 +1,5 @@
 /**
- * App.tsx — Root application component for LogicOS.
+ * App.tsx — Root application component for Workspace.
  *
  * Architecture:
  * - Auth gate: renders LoadingSpinner → LoginPage → app shell based on PJ session state
@@ -242,7 +242,7 @@ function hasToolDeny(toolAccess: ToolAccessConfig, toolKey: string): boolean {
 
 function warnLegacyFormkeyFallback(source: 'vault' | 'logicdash') {
   if (!import.meta.env.DEV || typeof window === 'undefined') return
-  const warningKey = 'logicos:legacy-formkey-fallback-warned'
+  const warningKey = 'workspace:legacy-formkey-fallback-warned'
   if (window.sessionStorage.getItem(warningKey) === '1') return
   window.sessionStorage.setItem(warningKey, '1')
   console.warn(
@@ -341,7 +341,7 @@ function App() {
     if (activeTool) setTopSection(sectionForTool(activeTool))
   }, [activeTool])
   const [appearanceSettings] = useKV<{ theme: 'light' | 'dark' | 'system'; compactMode: boolean }>(
-    'logicos-appearance',
+    'workspace-appearance',
     { theme: 'system', compactMode: false }
   )
 

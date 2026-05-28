@@ -1,4 +1,4 @@
-# LogicOS
+# Workspace
 
 A unified, interactive workspace combining four independent tools: **Pen** for live code editing, **Docs** for document creation, **Files** for file management, and **Commons** for GitHub repository operations. Designed to feel like one cohesive operating system where users can flow naturally between tools without barriers.
 

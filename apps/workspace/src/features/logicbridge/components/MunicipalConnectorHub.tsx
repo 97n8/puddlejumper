@@ -1,11 +1,11 @@
 /**
  * MunicipalConnectorHub
  *
- * Visualises LogicOS as the compliance translation layer between a town's
+ * Visualises Workspace as the compliance translation layer between a town's
  * existing systems (Tyler, CivicPlus, GIS) and their cloud storage / retention targets.
  *
  * Left column  — SOURCE SYSTEMS (what the town already has)
- * Center       — LogicOS compliance engine (MA law, audit, retention)
+ * Center       — Workspace compliance engine (MA law, audit, retention)
  * Right column — OUTPUT TARGETS (where governed records land)
  */
 
@@ -60,7 +60,7 @@ export function MunicipalConnectorHub() {
         <div>
           <h2 className="text-base font-bold">Municipal Connector Hub</h2>
           <p className="text-[12px] text-muted-foreground mt-0.5 max-w-xl">
-            LogicOS sits at the center of your municipal technology stack — ingesting from any existing
+            Workspace sits at the center of your municipal technology stack — ingesting from any existing
             system, applying Massachusetts law compliance, and routing governed records to your cloud
             storage and retention targets.
           </p>
@@ -80,7 +80,7 @@ export function MunicipalConnectorHub() {
           ))}
         </div>
 
-        {/* Center: LogicOS engine */}
+        {/* Center: Workspace engine */}
         <div className="flex flex-col items-center gap-2 md:pt-6">
           {/* Arrow left */}
           <div className="hidden md:flex flex-col items-center gap-1 text-muted-foreground/40">
@@ -95,7 +95,7 @@ export function MunicipalConnectorHub() {
           {/* Core engine box */}
           <div className="w-full md:w-48 rounded-2xl border-2 border-indigo-500 bg-indigo-600 text-white p-4 flex flex-col gap-3 shadow-lg">
             <div className="text-center">
-              <div className="text-sm font-black tracking-tight">LogicOS</div>
+              <div className="text-sm font-black tracking-tight">Workspace</div>
               <div className="text-[10px] text-indigo-200 mt-0.5">Compliance Translation Engine</div>
             </div>
             <div className="flex flex-col gap-1">

@@ -20,7 +20,7 @@ Rules:
 
 Stack you're operating on:
 - VAULT (governance framework, patent-pending)
-- LogicOS (municipal operating platform, React/SQLite)
+- Workspace (municipal operating platform, React/SQLite)
 - PuddleJumper (automation engine, Node/Express/Fly.io)
 - ARCHIEVE (append-only audit log)
 - SYNCHRON8 (automation flows)

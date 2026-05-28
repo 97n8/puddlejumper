@@ -1,5 +1,5 @@
 // CivicPulse — Shared TypeScript types
-// LogicOS frontend type definitions for the CivicPulse transparency engine.
+// Workspace frontend type definitions for the CivicPulse transparency engine.
 
 export type ActionType =
   | 'board_vote'

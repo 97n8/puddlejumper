@@ -22,7 +22,7 @@ import "./main.css"
 import "./styles/theme.css"
 import "./index.css"
 
-const STALE_CHUNK_RELOAD_KEY = 'logicos-stale-chunk-reload'
+const STALE_CHUNK_RELOAD_KEY = 'workspace-stale-chunk-reload'
 const ROUTER_BASENAME = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
 
 // Apply persisted theme before first render to avoid flash

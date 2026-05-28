@@ -35,7 +35,7 @@ export function LogicCodeSavePanel({ suggestedFileName, onChange }: LogicCodeSav
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 text-xs text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-3 py-2">
         <CheckCircle size={14} weight="fill" />
-        <span>Saved to your LogicOS workspace</span>
+        <span>Saved to your Workspace workspace</span>
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -46,7 +46,7 @@ export function LogicCodeSavePanel({ suggestedFileName, onChange }: LogicCodeSav
           placeholder="my-file.md"
           className="bg-muted border-border text-sm font-mono"
         />
-        <p className="text-xs text-muted-foreground/60">Stored in your vault — accessible anywhere in LogicOS.</p>
+        <p className="text-xs text-muted-foreground/60">Stored in your vault — accessible anywhere in Workspace.</p>
       </div>
     </div>
   )

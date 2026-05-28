@@ -13,7 +13,7 @@ export const recipesGovernance: Recipe[] = [
     run: async (cfg) => {
       const items = cfg.items.split('\n').filter(Boolean)
       const numbered = items.map((item, i) => `${i + 1}. ${item.trim()}`).join('\n')
-      const text = `AGENDA\n${cfg.body}\n${cfg.date}\n${cfg.location || ''}\n\n${numbered}\n\nPrepared by LogicOS`
+      const text = `AGENDA\n${cfg.body}\n${cfg.date}\n${cfg.location || ''}\n\n${numbered}\n\nPrepared by Workspace`
       await navigator.clipboard.writeText(text)
       return `Agenda built (${items.length} items) — copied to clipboard`
     },

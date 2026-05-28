@@ -346,7 +346,7 @@ return await handler(request, vault, spark, logger);`,
     const res = await spark.http.patch(\`\${base}/permits/\${encodeURIComponent(permitNo)}/status\`, {
       status: request.params?.status,
       notes: request.params?.notes,
-      updatedBy: 'LogicOS-VAULT',
+      updatedBy: 'Workspace-VAULT',
     }, { headers });
     return { status: res.status, body: res.json() };
   }
@@ -761,7 +761,7 @@ function LandingState({ onConnect }: { onConnect: (system: SystemDef) => void })
         </div>
         <h2 className="font-bold text-base">Connect your systems</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          LogicBridge connects LogicOS to your existing municipal software — safely, securely, and without writing code.
+          LogicBridge connects Workspace to your existing municipal software — safely, securely, and without writing code.
         </p>
       </div>
 

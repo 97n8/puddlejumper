@@ -2,7 +2,7 @@
  * SSCB1Page — Standalone project control page for Swansea SC Biochar 1
  *
  * Route: /aed/SSCB1
- * Design: navy topbar / light-grey body matching the SSCB1 LogicOS demo
+ * Design: navy topbar / light-grey body matching the SSCB1 Workspace demo
  * Access: auth-gated (login prompt overlay if not signed in)
  * IP: stakeholder view — curated disclosure, no internal PL methodology
  */
@@ -81,7 +81,7 @@ const VAULT_DOCS = [
   { id: 'V02', name: 'Control Loop Reference', type: 'DOCX', desc: 'Governing process logic — receive, normalize, review, close', seal: 'SEALED', date: 'Apr 2026' },
   { id: 'V03', name: 'Governance & Technical Spec', type: 'DOCX', desc: 'Full system architecture, roles, schema, automation rules', seal: 'SEALED', date: 'Apr 2026' },
   { id: 'V04', name: 'Project Control Workbook', type: 'XLSX', desc: 'Live assumptions, stack, risk register, ITC tracker', seal: 'SEALED', date: 'Apr 2026' },
-  { id: 'V05', name: 'LogicOS Interface Reference', type: 'HTML', desc: 'Approved stakeholder view design and layout spec', seal: 'SEALED', date: 'Apr 2026' },
+  { id: 'V05', name: 'Workspace Interface Reference', type: 'HTML', desc: 'Approved stakeholder view design and layout spec', seal: 'SEALED', date: 'Apr 2026' },
 ]
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ function NavBar({ user, onLogin, onLogout }: { user: PJUser | null; onLogin: () 
           fontFamily: 'system-ui, sans-serif',
         }}>PL</div>
         <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: 500, letterSpacing: '-0.2px' }}>
-          <span style={{ color: C.greenBright, fontWeight: 700 }}>LogicOS</span>
+          <span style={{ color: C.greenBright, fontWeight: 700 }}>Workspace</span>
           {' '}&nbsp;/&nbsp;{' '}
           SSCB1 Control
         </div>

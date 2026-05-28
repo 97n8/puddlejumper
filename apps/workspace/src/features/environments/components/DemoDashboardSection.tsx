@@ -286,7 +286,7 @@ export function DemoDashboardSection({
             <div className="max-w-4xl">
               <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
                 <Sparkle size={14} weight="fill" />
-                LogicOS governance framework
+                Workspace governance framework
               </div>
               <h1 className="text-3xl font-semibold tracking-tight text-foreground">{townName}</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
@@ -895,7 +895,7 @@ export function DemoDashboardSection({
         <section className="rounded-3xl border border-border/80 bg-card/95 p-5">
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Bottom line for town leadership</div>
           <p className="mt-3 max-w-5xl text-sm leading-6 text-muted-foreground">
-            The governed work queue holds the work. LogicOS lets it move outward when you want: into shared files, archives, connected systems, finance software, civic tools, or the website, without handing control back to the silo.
+            The governed work queue holds the work. Workspace lets it move outward when you want: into shared files, archives, connected systems, finance software, civic tools, or the website, without handing control back to the silo.
           </p>
         </section>
       </div>

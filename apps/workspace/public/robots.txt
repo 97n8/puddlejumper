@@ -4,5 +4,5 @@ Disallow: /api/
 
 Sitemap: https://os.publiclogic.org/sitemap.xml
 
-# LogicOS — https://os.publiclogic.org
+# Workspace — https://os.publiclogic.org
 # © 2025–2026 PublicLogic, Inc. All rights reserved.

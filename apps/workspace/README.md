@@ -1,6 +1,6 @@
-# LogicOS
+# Workspace
 
-**Operational software for modern public-sector teams.** LogicOS combines governed workspaces, document tooling, integrations, demos, and builders in one frontend connected to PuddleJumper.
+**Operational software for modern public-sector teams.** Workspace combines governed workspaces, document tooling, integrations, demos, and builders in one frontend connected to PuddleJumper.
 
 ## Features
 

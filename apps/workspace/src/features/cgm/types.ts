@@ -1,5 +1,5 @@
 // ── CGM Types — Capital & Grant Management ────────────────────────────────────
-// LOGICOS-CGM-01 · Part 4 Addendum to Master Build Spec v3.0
+// WORKSPACE-CGM-01 · Part 4 Addendum to Master Build Spec v3.0
 // Governing law: MGL c.44 · MGL c.30B · 2 CFR Part 200 · ARPA Final Rule
 
 export type CgmCaseClassification =

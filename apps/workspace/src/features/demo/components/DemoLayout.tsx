@@ -51,7 +51,7 @@ export function DemoLayout({ page, navigate, children }: DemoLayoutProps) {
               <div className="w-7 h-7 rounded bg-white/20 flex items-center justify-center">
                 <Scale className="w-4 h-4" />
               </div>
-              <span className="text-lg tracking-tight">Logic<span className="opacity-70">OS</span></span>
+              <span className="text-lg tracking-tight">Work<span className="opacity-70">space</span></span>
             </button>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/15 text-white/80 font-mono">DEMO</span>
 

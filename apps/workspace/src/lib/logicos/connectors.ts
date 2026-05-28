@@ -1,13 +1,13 @@
-import type { LogicOSRoute } from './router'
-import type { LogicOSRecord } from './schema'
+import type { WorkspaceRoute } from './router'
+import type { WorkspaceRecord } from './schema'
 import { createGoogleFolderForRecord } from './google'
 
-export type LogicOSConnectorContext = {
+export type WorkspaceConnectorContext = {
   cookieHeader?: string | null
 }
 
-export type LogicOSConnectorSuccess = {
-  provider: LogicOSRecord['destination']
+export type WorkspaceConnectorSuccess = {
+  provider: WorkspaceRecord['destination']
   primaryLink: string
   googleLink?: string
   m365Link?: string
@@ -15,11 +15,11 @@ export type LogicOSConnectorSuccess = {
   externalId?: string
 }
 
-export async function executeLogicOSConnector(
-  record: LogicOSRecord,
-  route: LogicOSRoute,
-  context: LogicOSConnectorContext,
-): Promise<LogicOSConnectorSuccess> {
+export async function executeWorkspaceConnector(
+  record: WorkspaceRecord,
+  route: WorkspaceRoute,
+  context: WorkspaceConnectorContext,
+): Promise<WorkspaceConnectorSuccess> {
   if (route.connectorMode === 'google-folder') {
     const folder = await createGoogleFolderForRecord(record, context)
     return {

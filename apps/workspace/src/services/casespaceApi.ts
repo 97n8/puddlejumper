@@ -71,7 +71,7 @@ async function csApiFetch(path: string, init: RequestInit = {}): Promise<Respons
   return res
 }
 
-// Convert server row → CaseSpace type used by LogicOS
+// Convert server row → CaseSpace type used by Workspace
 function rowToCs(row: Record<string, unknown>): CaseSpace {
   return {
     id: row.id as string,
@@ -190,7 +190,7 @@ export async function logCaseSpaceResolutionFailure({
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      'x-logicos-request': '1',
+      'x-workspace-request': '1',
     },
     body: JSON.stringify({
       requested_id: requestedId,

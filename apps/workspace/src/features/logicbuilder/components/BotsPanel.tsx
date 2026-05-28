@@ -257,7 +257,7 @@ function BotWizard({ editingBot, onSave, onCancel }: {
     { id: 'manual',   label: 'Manual',   desc: 'Run on demand'        },
     { id: 'schedule', label: 'Schedule', desc: 'Cron / time-based'    },
     { id: 'webhook',  label: 'Webhook',  desc: 'HTTP trigger'         },
-    { id: 'event',    label: 'Event',    desc: 'LogicOS event stream' },
+    { id: 'event',    label: 'Event',    desc: 'Workspace event stream' },
   ]
 
   return (

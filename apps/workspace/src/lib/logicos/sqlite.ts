@@ -11,7 +11,7 @@ const MIGRATION_PATH = path.resolve(
 let singleton: Database.Database | null = null
 
 function defaultDatabasePath() {
-  return path.join(process.cwd(), '.data', 'logicos.db')
+  return path.join(process.cwd(), '.data', 'workspace.db')
 }
 
 function applyPragmas(db: Database.Database) {
@@ -26,7 +26,7 @@ function applyMigration(db: Database.Database) {
   db.exec(sql)
 }
 
-export function createLogicOSDatabase(databasePath = defaultDatabasePath()) {
+export function createWorkspaceDatabase(databasePath = defaultDatabasePath()) {
   mkdirSync(path.dirname(databasePath), { recursive: true })
   const db = new Database(databasePath)
   applyPragmas(db)
@@ -34,14 +34,14 @@ export function createLogicOSDatabase(databasePath = defaultDatabasePath()) {
   return db
 }
 
-export function getLogicOSDatabase() {
+export function getWorkspaceDatabase() {
   if (!singleton) {
-    singleton = createLogicOSDatabase()
+    singleton = createWorkspaceDatabase()
   }
   return singleton
 }
 
-export function resetLogicOSDatabaseForTests() {
+export function resetWorkspaceDatabaseForTests() {
   if (singleton) {
     singleton.close()
     singleton = null

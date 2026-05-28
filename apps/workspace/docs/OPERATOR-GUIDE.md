@@ -2,7 +2,7 @@
 
 ## 1. Repo layout
 
-`~/LogicOS` is the frontend and operator workspace. It contains the LogicOS UI under `src/`, repo-local API handlers under `api/`, shared packages under `packages/`, and the SQLite spine implementation under `src/lib/logicos/`. Use `~/LogicOS/docs/TREE.md` for the current depth-3 map.
+`~/Workspace` is the frontend and operator workspace. It contains the Workspace UI under `src/`, repo-local API handlers under `api/`, shared packages under `packages/`, and the SQLite spine implementation under `src/lib/workspace/`. Use `~/Workspace/docs/TREE.md` for the current depth-3 map.
 
 `~/puddlejumper` is the service and deployment repo. The actual application workspace lives under `n8drive/`, with the API app in `n8drive/apps/puddlejumper/`, shared packages in `n8drive/packages/`, and deployment/config material in `n8drive/docs/`, `n8drive/ops/`, and `n8drive/scripts/`. Use `~/puddlejumper/docs/TREE.md` for the current depth-3 map.
 
@@ -11,7 +11,7 @@
 Use these commands first before making changes:
 
 ```bash
-cd ~/LogicOS
+cd ~/Workspace
 git status
 git --no-pager log --oneline -5
 git --no-pager diff --stat
@@ -33,9 +33,9 @@ The architecture lock is there to keep both repos on the approved substrate: SQL
 Check the lock with:
 
 ```bash
-cd ~/LogicOS
+cd ~/Workspace
 grep -E '"(@vercel/kv|pg|redis|ioredis|n8n|bullmq|mongoose|mongodb)"' package.json
-grep -rEn "@vercel/kv|lib/logicos/kv" src/ api/ 2>/dev/null
+grep -rEn "@vercel/kv|lib/workspace/kv" src/ api/ 2>/dev/null
 ```
 
 ```bash
@@ -45,16 +45,16 @@ grep -E '"(@vercel/kv|pg|redis|ioredis|n8n|bullmq|mongoose|mongodb)"' package.js
 
 ## 4. Spine verification
 
-Use the release-gate checks against `src/lib/logicos/migrations/001_logicos_spine.sql`:
+Use the release-gate checks against `src/lib/workspace/migrations/001_workspace_spine.sql`:
 
 ```bash
-cd ~/LogicOS
-SPINE="src/lib/logicos/migrations/001_logicos_spine.sql"
+cd ~/Workspace
+SPINE="src/lib/workspace/migrations/001_workspace_spine.sql"
 grep -q "STRICT" "$SPINE"
-grep -qE "CREATE TABLE.*logicos_records" "$SPINE"
+grep -qE "CREATE TABLE.*workspace_records" "$SPINE"
 grep -qE "CREATE TABLE.*audit_events" "$SPINE"
 grep -qE "CREATE TABLE.*id_sequence" "$SPINE"
-grep -qE "CREATE TABLE.*logicos_routing" "$SPINE"
+grep -qE "CREATE TABLE.*workspace_routing" "$SPINE"
 grep -q "BEFORE UPDATE ON audit_events" "$SPINE"
 grep -q "BEFORE DELETE ON audit_events" "$SPINE"
 grep -q "REFERENCES civic_actors" "$SPINE"
@@ -64,7 +64,7 @@ grep -q "REFERENCES civic_actors" "$SPINE"
 
 Keep commits grouped by concern so review and rollback stay clean. The working split used here is:
 
-1. `logicos: spine`
+1. `workspace: spine`
 2. `truthful-state: hardening`
 3. `flows: ...`
 4. `tests + deps`
@@ -75,10 +75,10 @@ When a follow-up patch lands later, use the same rule: commit the boundary chang
 
 ## 6. Validation gates per repo
 
-LogicOS requires all three gates:
+Workspace requires all three gates:
 
 ```bash
-cd ~/LogicOS
+cd ~/Workspace
 npm run typecheck
 npm test
 npm run build
@@ -99,7 +99,7 @@ Do not push a repo that has not cleared its own full validation gate.
 Validate first, push second, confirm the remote third.
 
 ```bash
-cd ~/LogicOS
+cd ~/Workspace
 npm run typecheck && npm test && npm run build
 git push origin main
 git --no-pager log --oneline origin/main..HEAD
@@ -125,7 +125,7 @@ The release helper is expected to live at `~/bin/ship.sh`. Run it only after bot
 Override repo locations if needed:
 
 ```bash
-LOGICOS_DIR=~/LogicOS PJ_DIR=~/puddlejumper ~/bin/ship.sh
+WORKSPACE_DIR=~/Workspace PJ_DIR=~/puddlejumper ~/bin/ship.sh
 ```
 
 The script is a release gate, not a fixer. If it halts, fix the repo state first and rerun it from the top.
@@ -163,7 +163,7 @@ git push --force-with-lease origin main
 
 ## 10. Where things live
 
-Public-facing LogicOS lives on Vercel under `publiclogic.org`. PuddleJumper services are exposed through Fly and the API host at `api.publiclogic.org`. The PuddleJumper application host is `pj.publiclogic.org`. When you verify a release, check the deployed UI on Vercel, the API behavior on Fly, and the PuddleJumper host together so the operator path is validated end to end.
+Public-facing Workspace lives on Vercel under `publiclogic.org`. PuddleJumper services are exposed through Fly and the API host at `api.publiclogic.org`. The PuddleJumper application host is `pj.publiclogic.org`. When you verify a release, check the deployed UI on Vercel, the API behavior on Fly, and the PuddleJumper host together so the operator path is validated end to end.
 
 ## 11. Test backlog
 

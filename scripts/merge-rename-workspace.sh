@@ -70,7 +70,10 @@ FIND_ARGS+=(
 )
 
 # Collect file list once so we don't rescan.
-mapfile -t FILES < <(find "$TARGET" "${FIND_ARGS[@]}")
+FILES=()
+while IFS= read -r -d '' file; do
+  FILES+=("$file")
+done < <(find "$TARGET" "${FIND_ARGS[@]}" -print0)
 
 if [[ ${#FILES[@]} -eq 0 ]]; then
   echo "No files matched under $TARGET. Nothing to do." >&2
@@ -86,6 +89,11 @@ if [[ "$MODE" == "verify" ]]; then
   echo ""
   ORPHANS=0
   for f in "${FILES[@]}"; do
+    # Keep the internal logicos module/test/API namespace for now. Phase 3 is
+    # user-facing brand cleanup, not a deep internal package/database rename.
+    case "$f" in
+      */src/lib/logicos/*|*/src/test/logicos/*|*/api/logicos/*) continue ;;
+    esac
     # Match any LogicOS variant (PascalCase/lowercase/UPPERCASE/hyphenated)
     # that is NOT part of LogicCommons / LogicDocs / LogicBackend (any case).
     if grep -nEi 'logicos|logic-os' "$f" 2>/dev/null | grep -vEi 'logiccommons|logicdocs|logicbackend' > /tmp/rename_verify_$$ 2>/dev/null; then
@@ -145,6 +153,7 @@ for f in "${FILES[@]}"; do
     -e "s/logic-os/workspace/g" \
     -e "s/LOGIC-OS/WORKSPACE/g" \
     -e "s/logicos/workspace/g" \
+    -e "s/Logicos/Workspace/g" \
     -e "s/LogicOS/Workspace/g" \
     -e "s/LOGICOS/WORKSPACE/g" \
     "$WORK"

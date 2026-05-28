@@ -42,7 +42,7 @@ export function EnvironmentShell({ config, onBack, renderModule, fetchActor, sid
     if (!user) {
       setState({
         status: 'auth_required',
-        message: 'Log in to LogicOS to access this environment.',
+        message: 'Log in to Workspace to access this environment.',
       })
       return
     }
@@ -56,7 +56,7 @@ export function EnvironmentShell({ config, onBack, renderModule, fetchActor, sid
       if (status === 401) {
         setState({
           status: 'auth_required',
-          message: 'Log in to LogicOS to access this environment.',
+          message: 'Log in to Workspace to access this environment.',
         })
         return
       }
@@ -84,7 +84,7 @@ export function EnvironmentShell({ config, onBack, renderModule, fetchActor, sid
     if (!user) {
       setState({
         status: 'auth_required',
-        message: 'Log in to LogicOS to access this environment.',
+        message: 'Log in to Workspace to access this environment.',
       })
       return
     }
@@ -124,7 +124,7 @@ export function EnvironmentShell({ config, onBack, renderModule, fetchActor, sid
           <h2 className="text-foreground font-bold text-lg mb-1">{config.name}</h2>
           <p className="text-muted-foreground text-sm mb-4">{state.message}</p>
           <button onClick={onBack} className="w-full py-2.5 bg-muted hover:bg-muted/80 text-foreground text-sm font-medium rounded-xl transition">
-            ← Back to LogicOS
+            ← Back to Workspace
           </button>
         </div>
       </div>
@@ -139,7 +139,7 @@ export function EnvironmentShell({ config, onBack, renderModule, fetchActor, sid
           <h2 className="text-foreground font-bold text-lg mb-1">{config.name}</h2>
           <p className="text-muted-foreground text-sm mb-4">{state.message}</p>
           <button onClick={onBack} className="w-full py-2.5 bg-muted hover:bg-muted/80 text-foreground text-sm font-medium rounded-xl transition">
-            ← Back to LogicOS
+            ← Back to Workspace
           </button>
         </div>
       </div>
@@ -158,7 +158,7 @@ export function EnvironmentShell({ config, onBack, renderModule, fetchActor, sid
               Retry
             </button>
             <button onClick={onBack} className="w-full py-2.5 bg-muted hover:bg-muted/80 text-foreground text-sm font-medium rounded-xl transition">
-              ← Back to LogicOS
+              ← Back to Workspace
             </button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 /**
- * VAULT Module Catalog — LogicOS
+ * VAULT Module Catalog — Workspace
  *
  * 11 governance module types for PublicLogic VAULT.
  * Connector routing lets each town pick where intake, documents,

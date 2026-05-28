@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in LogicOS or any PublicLogic system,
+If you discover a security vulnerability in Workspace or any PublicLogic system,
 please report it responsibly by emailing:
 
 **info@publiclogic.org**
@@ -14,7 +14,7 @@ vulnerabilities within 30 days. We appreciate responsible disclosure.
 
 ## Scope
 
-This policy covers the LogicOS frontend and its integration with the
+This policy covers the Workspace frontend and its integration with the
 PuddleJumper backend (api.publiclogic.org).
 
   * The location of the affected source code (tag/branch/commit or direct URL)

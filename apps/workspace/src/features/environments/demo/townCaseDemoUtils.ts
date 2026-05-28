@@ -772,7 +772,7 @@ export async function shareArtifactToSelf(townName: string, artifact: DemoArtifa
   try {
     const file = new File([artifact.content], artifact.filename, { type: artifact.mimeType })
     const title = `${townName} demo packet`
-    const text = `Here is the ${artifact.filename} packet generated from the LogicOS demo for ${townName}.`
+    const text = `Here is the ${artifact.filename} packet generated from the Workspace demo for ${townName}.`
 
     if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
       await navigator.share({ title, text, files: [file] })
@@ -782,7 +782,7 @@ export async function shareArtifactToSelf(townName: string, artifact: DemoArtifa
 
     downloadArtifact(artifact.filename, artifact.content, artifact.mimeType)
     const subject = encodeURIComponent(`${townName} demo file: ${artifact.filename}`)
-    const body = encodeURIComponent(`The file "${artifact.filename}" was generated from the LogicOS demo.\n\nIt has been downloaded locally so you can attach or forward it.\n\nIn live use, Logicville can also auto-route this file into Vault, remind the next owner, and log the handoff.`)
+    const body = encodeURIComponent(`The file "${artifact.filename}" was generated from the Workspace demo.\n\nIt has been downloaded locally so you can attach or forward it.\n\nIn live use, Logicville can also auto-route this file into Vault, remind the next owner, and log the handoff.`)
     const recipient = recipientEmail ? encodeURIComponent(recipientEmail) : ''
     window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`
     toast.success(`${fallbackLabel} downloaded and an email draft opened${recipientEmail ? ` for ${recipientEmail}` : ''}.`)
