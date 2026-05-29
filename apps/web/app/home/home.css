@@ -1,0 +1,139 @@
+/* =====================================================================
+   PUDDLEJUMPER · HOME SHELL · scoped styles
+   Ported 1:1 from the canon-locked v1.0 home mockup. Every selector is
+   namespaced under `.pj-home` so these rules cannot collide with the
+   Tailwind base layer or other routes in @pj/web.
+   Brand DNA: Georgia serif for wordmark/H1, system sans for working UI.
+   ===================================================================== */
+
+.pj-home{
+  --bg:#f6f4ed; --card:#fff; --ink:#17211d; --muted:#66736d; --line:#dfe4dc;
+  --green:#2f5d50; --green2:#1f4239; --blue:#315d74; --gold:#b88a3b; --red:#9b3d35;
+  --soft:#fbfaf6; --r:22px; --shadow:0 18px 60px rgba(23,33,29,.10);
+  --serif:Georgia,"Iowan Old Style","Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+
+  margin:0;font-family:var(--sans);color:var(--ink);min-height:100vh;
+  background:
+    radial-gradient(circle at 12% 0%,rgba(184,138,59,.16),transparent 31%),
+    radial-gradient(circle at 95% 6%,rgba(49,93,116,.13),transparent 28%),
+    var(--bg);
+}
+.pj-home *{box-sizing:border-box}
+
+.pj-home .app{min-height:100vh;display:grid;grid-template-columns:264px 1fr 352px}
+
+/* ---------- sidebar ---------- */
+.pj-home .sidebar{border-right:1px solid var(--line);background:rgba(255,255,255,.58);backdrop-filter:blur(14px);padding:22px;display:flex;flex-direction:column}
+.pj-home .brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.pj-home .mark{width:44px;height:44px;border-radius:14px;background:linear-gradient(150deg,var(--green),var(--blue));box-shadow:0 10px 24px rgba(31,66,57,.30);flex:0 0 auto}
+.pj-home .wordmark{font-family:var(--serif);font-weight:700;font-size:1.22rem;letter-spacing:-.02em;line-height:1}
+.pj-home .wordmark small{display:block;font-family:var(--sans);font-weight:800;font-size:.62rem;letter-spacing:.16em;color:var(--green);text-transform:uppercase;margin-top:3px}
+
+/* env block = WHITE-LABEL SWAP POINT */
+.pj-home .env{border:1px solid var(--line);background:rgba(255,255,255,.72);border-radius:18px;padding:13px 14px;margin-bottom:18px}
+.pj-home .env small{display:block;color:var(--muted);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+.pj-home .env .envrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pj-home .env b{font-size:1.04rem;letter-spacing:-.01em}
+.pj-home .env .base{font-size:.66rem;font-weight:900;letter-spacing:.06em;color:var(--green2);background:#eef2ef;border-radius:999px;padding:3px 8px}
+
+.pj-home .navgroup{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800;margin:6px 4px 8px}
+.pj-home .nav{display:grid;gap:6px;margin-bottom:14px}
+.pj-home .nav a{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border-radius:13px;color:var(--muted);text-decoration:none;font-weight:720;font-size:.95rem}
+.pj-home .nav a.active,.pj-home .nav a:hover{background:#fff;color:var(--ink);box-shadow:0 8px 22px rgba(23,33,29,.06)}
+.pj-home .nav a.active{color:var(--green2)}
+.pj-home .badge{background:#eef2ef;color:var(--green2);border-radius:999px;font-size:.72rem;padding:3px 8px;font-weight:900}
+.pj-home .canon{margin-top:auto;color:var(--muted);font-size:.78rem;line-height:1.45;border-top:1px solid var(--line);padding-top:14px}
+.pj-home .canon b{color:var(--green2)}
+
+/* ---------- main ---------- */
+.pj-home .main{padding:26px 30px 44px;overflow:auto}
+.pj-home .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.pj-home .title h1{margin:0;font-family:var(--serif);font-weight:700;font-size:2.5rem;letter-spacing:-.02em;line-height:1.02}
+.pj-home .title p{margin:8px 0 0;color:var(--muted);max-width:46ch}
+.pj-home .toptools{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.pj-home .search{background:#fff;border:1px solid var(--line);border-radius:999px;padding:11px 16px;color:var(--ink);min-width:220px;font:inherit}
+.pj-home .btn{border:1px solid transparent;border-radius:999px;padding:11px 16px;font-weight:850;cursor:pointer;background:#fff;color:var(--ink);font:inherit}
+.pj-home .btn.secondary{border-color:var(--line)}
+.pj-home .btn.primary{background:var(--green);color:#fff;box-shadow:0 14px 30px rgba(47,93,80,.26)}
+
+/* spine strip */
+.pj-home .spine{border:1px solid var(--line);background:linear-gradient(180deg,#fff,var(--soft));border-radius:18px;padding:13px 16px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.pj-home .spine .lab{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:850}
+.pj-home .spine .chain{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-weight:800;font-size:.84rem;color:var(--green2)}
+.pj-home .spine .node{background:#eef2ef;border-radius:9px;padding:5px 9px}
+.pj-home .spine .arr{color:var(--gold);font-weight:900}
+
+.pj-home .grid{display:grid;grid-template-columns:1.25fr .9fr;gap:18px}
+.pj-home .card{background:rgba(255,255,255,.82);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 10px 34px rgba(23,33,29,.06);margin-bottom:18px;opacity:0;transform:translateY(10px);animation:pjrise .5s ease forwards}
+.pj-home .card:nth-child(2){animation-delay:.06s}.pj-home .card:nth-child(3){animation-delay:.12s}
+@keyframes pjrise{to{opacity:1;transform:none}}
+.pj-home .card h2{margin:0;padding:18px 18px 0;font-size:1.16rem;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
+.pj-home .card h2 .dot{width:9px;height:9px;border-radius:50%;background:var(--gold)}
+.pj-home .sub{color:var(--muted);font-size:.9rem;padding:4px 18px 14px;line-height:1.4}
+.pj-home .gov-note{margin:0 18px 14px;background:#fffaf0;border:1px solid #ecd9a8;border-radius:14px;padding:11px 13px;font-size:.86rem;color:#6f521c;line-height:1.45}
+.pj-home .gov-note b{color:var(--green2)}
+
+.pj-home .list{display:grid;gap:10px;padding:0 14px 16px}
+.pj-home .item{background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:13px;display:grid;gap:6px}
+.pj-home .row{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.pj-home .item b{font-size:.97rem}.pj-home .item span{color:var(--muted);font-size:.87rem;line-height:1.4}
+.pj-home .gate{border-color:#e0c074;background:#fffaf0}
+.pj-home .gateline{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:4px}
+.pj-home .stamp{font-size:.78rem;color:#7b581d}
+.pj-home .approve{border:1px solid var(--green);background:var(--green);color:#fff;border-radius:999px;padding:7px 14px;font-weight:850;font-size:.82rem;cursor:pointer}
+
+/* state tags map to real runtime states */
+.pj-home .tag{font-size:.72rem;font-weight:900;border-radius:999px;padding:4px 9px;white-space:nowrap;background:#eef2ef;color:var(--green2)}
+.pj-home .tag.need{background:#f7efdf;color:#7b581d}
+.pj-home .tag.wait{background:#f1ece2;color:#6c5a36}
+.pj-home .tag.draft{background:#e6eef2;color:#244e63}
+.pj-home .tag.judg{background:#f6e9e7;color:var(--red)}
+.pj-home .tag.ready{background:#e7f0ea;color:var(--green2)}
+
+.pj-home .spaces{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:0 14px 16px}
+.pj-home .space{min-height:122px;border:1px solid var(--line);border-radius:18px;padding:15px;background:linear-gradient(180deg,#fff,var(--soft));display:flex;flex-direction:column;justify-content:space-between}
+.pj-home .space small{color:var(--muted)}
+.pj-home .pills{display:flex;gap:7px;flex-wrap:wrap}
+.pj-home .pill{font-size:.72rem;padding:4px 8px;border-radius:999px;background:#eef2ef;color:var(--green2);font-weight:850}
+.pj-home .statechain{font-size:.7rem;color:var(--muted);font-weight:700;letter-spacing:.01em}
+.pj-home .statechain em{font-style:normal;color:var(--green2);background:#e7f0ea;border-radius:6px;padding:1px 5px}
+
+.pj-home .actions-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px;padding:0 14px 16px}
+.pj-home .action{border:1px solid var(--line);background:#fff;border-radius:16px;padding:13px;text-align:left;min-height:78px;cursor:pointer;font:inherit;color:var(--ink)}
+.pj-home .action b{display:block;font-size:.95rem}
+.pj-home .action small{font-weight:800;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase}
+.pj-home .action .safe{color:var(--green)}
+.pj-home .action.gated{border-color:#e0c074;background:#fffaf0}
+.pj-home .action.gated small{color:#7b581d}
+
+/* ---------- right rail (Capture = front door) ---------- */
+.pj-home .right{border-left:1px solid var(--line);background:rgba(255,255,255,.48);backdrop-filter:blur(14px);padding:26px 22px;overflow:auto}
+.pj-home .capture{background:#101916;color:#fff;border-radius:26px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.pj-home .capture h2{margin:0 0 6px;font-family:var(--serif);font-size:1.4rem;letter-spacing:-.01em}
+.pj-home .capture p{margin:0 0 15px;color:rgba(255,255,255,.66);font-size:.9rem;line-height:1.45}
+.pj-home .capturebox{border:1px dashed rgba(255,255,255,.24);background:rgba(255,255,255,.06);border-radius:18px;padding:14px;color:rgba(255,255,255,.9);min-height:78px;font-size:.92rem}
+.pj-home .capgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.pj-home .capgrid button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);color:#fff;border-radius:14px;padding:10px;font-weight:800;cursor:pointer;font:inherit}
+.pj-home .panel{background:rgba(255,255,255,.82);border:1px solid var(--line);border-radius:22px;margin-bottom:14px}
+.pj-home .panel h3{margin:0;padding:15px 16px 4px;font-size:1.02rem;display:flex;align-items:center;gap:8px}
+.pj-home .panel .ph{font-size:.78rem;color:var(--muted);padding:0 16px 8px;line-height:1.4}
+.pj-home .mini-list{padding:6px 12px 14px;display:grid;gap:8px}
+.pj-home .linkrow{display:flex;justify-content:space-between;align-items:center;background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:.9rem}
+.pj-home .linkrow b{font-size:.84rem;color:var(--green2)}
+
+/* ---------- responsive: Capture must survive the collapse ---------- */
+@media(max-width:1180px){
+  .pj-home .app{grid-template-columns:230px 1fr}
+  .pj-home .right{grid-column:1 / -1;border-left:0;border-top:1px solid var(--line);padding-top:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-items:start}
+  .pj-home .capture{margin:0}
+}
+@media(max-width:860px){
+  .pj-home .app{grid-template-columns:1fr}
+  .pj-home .sidebar{display:none}
+  .pj-home .main{padding:20px}
+  .pj-home .grid{grid-template-columns:1fr}
+  .pj-home .spaces,.pj-home .actions-grid{grid-template-columns:1fr}
+  .pj-home .right{grid-template-columns:1fr}
+  .pj-home .spine .chain{font-size:.78rem}
+}
