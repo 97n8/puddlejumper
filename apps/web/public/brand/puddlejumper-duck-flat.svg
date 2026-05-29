@@ -1,0 +1,9 @@
+<!-- GENERATED FROM branding/mascot/puddlejumper-duck-flat.svg. DO NOT EDIT DIRECTLY. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" role="img" aria-label="Puddles the duck in a plane">
+  <path d="M54 156c78-56 180-64 300-24l-36 44H92z" fill="#16489E"/>
+  <path d="M132 132c22-32 59-45 108-38l-16 52h-88z" fill="#DDEBFF"/>
+  <circle cx="182" cy="108" r="28" fill="#F4A81D"/>
+  <path d="M207 108l34 12-34 13z" fill="#F26A1B"/>
+  <circle cx="174" cy="100" r="4" fill="#17211D"/>
+  <path d="M116 174c40 24 102 28 184 12" fill="none" stroke="#2EA82F" stroke-width="16" stroke-linecap="round"/>
+</svg>
