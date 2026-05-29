@@ -8,9 +8,9 @@
     .by  { font-weight: 500; }
   </style>
   <text class="wm" x="300" y="96" text-anchor="middle">
-    <tspan fill="#16489e">Puddle</tspan><tspan fill="#2ea82f">Jumper</tspan>
+    <tspan fill="#315d74">Puddle</tspan><tspan fill="#2f5d50">Jumper</tspan>
   </text>
   <text class="tag" x="300" y="150" text-anchor="middle">
-    <tspan class="by" fill="#6e7b86">by </tspan><tspan fill="#16489e">Public</tspan><tspan fill="#2ea82f">Logic</tspan>
+    <tspan class="by" fill="#6e7b86">by </tspan><tspan fill="#315d74">Public</tspan><tspan fill="#2f5d50">Logic</tspan>
   </text>
 </svg>

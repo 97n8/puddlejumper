@@ -31,7 +31,8 @@ const MAP = [
   ['wordmark/puddlejumper-wordmark-reverse.svg', 'public/brand/puddlejumper-wordmark-reverse.svg'],
   ['lockup/puddlejumper-horizontal.svg', 'public/brand/puddlejumper-horizontal.svg'],
   ['lockup/puddlejumper-stacked.svg', 'public/brand/puddlejumper-stacked.svg'],
-  ['mascot/puddlejumper-duck-flat.svg', 'public/brand/puddlejumper-duck-flat.svg'],
+  // NOTE: the hero mascot is a provided asset (see branding/mascot/README.md);
+  // add its mapping here once the rendered file lands in branding/mascot/.
 ]
 
 const banner = (rel) =>

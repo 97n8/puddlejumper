@@ -1,24 +1,19 @@
 {
   "$name": "PuddleJumper brand tokens",
-  "$note": "Palette sampled from the PuddleJumper · by PublicLogic master logo.",
+  "$note": "CANON = the locked /home shell palette (forest green + deep teal-navy). Reviewed shell values, not sampled/invented. One green, one navy.",
   "color": {
     "core": {
-      "navy":  { "value": "#16489e", "use": "\"Puddle\" / \"Public\" / plane body" },
-      "green": { "value": "#2ea82f", "use": "\"Jumper\" / \"Logic\" / accent stripe" },
-      "ink":   { "value": "#17211d", "use": "near-black text / monochrome mark" },
-      "gray":  { "value": "#6e7b86", "use": "\"by\" tagline" },
-      "paper": { "value": "#ffffff" }
+      "green": { "value": "#2f5d50", "use": "forest — primary (shell --green)" },
+      "navy":  { "value": "#315d74", "use": "deep teal-navy — secondary/accent (shell --blue)" }
     },
-    "mascot": {
-      "duck":   { "value": "#5bb531" },
-      "gold":   { "value": "#f4a81d", "use": "beak" },
-      "orange": { "value": "#f26a1b", "use": "scarf" },
-      "cap":    { "value": "#7a4a24" },
-      "capDark":{ "value": "#5e3a1c", "use": "goggles strap" }
+    "neutral": {
+      "ink":   { "value": "#17211d", "use": "text / monochrome mark" },
+      "gold":  { "value": "#b88a3b", "use": "beak / fine accents" },
+      "paper": { "value": "#fbfaf6", "use": "surfaces" },
+      "bg":    { "value": "#f6f4ed", "use": "app background" }
     },
     "tint": {
-      "navy10":  { "value": "#e7eef8" },
-      "green10": { "value": "#e9f6e9" }
+      "green10": { "value": "#eef2ef" }
     }
   },
   "type": {

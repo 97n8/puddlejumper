@@ -53,9 +53,9 @@ export const metadata: Metadata = {
   },
 };
 
-// Brand navy drives the browser theme color (address bar / PWA chrome).
+// Brand forest green (canon shell --green) drives the browser theme color.
 export const viewport: Viewport = {
-  themeColor: '#16489e',
+  themeColor: '#2f5d50',
 };
 
 export default function RootLayout({

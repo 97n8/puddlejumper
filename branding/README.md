@@ -29,32 +29,35 @@ branding/
 │   ├── puddlejumper-horizontal.svg   # mark + wordmark + tagline
 │   └── puddlejumper-stacked.svg      # mark over wordmark + tagline
 └── mascot/
-    ├── puddlejumper-duck-flat.svg    # simplified FLAT vector mascot
-    └── README.md                     # where to drop the master raster
+    └── README.md                     # where the provided hero mascot is dropped
 ```
 
 ## Two expressions, one system
 
 - **Mascot (marketing / hero):** the detailed aviator-duck-in-a-plane
-  illustration. This is a raster master — add it at
-  `mascot/puddlejumper-mascot.png` (see `mascot/README.md`). A simplified flat
-  **vector** interpretation ships as `mascot/puddlejumper-duck-flat.svg`.
-- **App mark (product UI / favicon):** the simple duck mark in `mark/`. This is
-  the mark already used by the `/home` shell in `apps/web`, recolored to the
-  brand navy→green. Use this anywhere the mascot would be too detailed.
+  illustration — a provided/rendered asset. Drop it under `mascot/` per
+  `mascot/README.md`, then add a mapping in `scripts/sync-brand.mjs`. No
+  generated stand-in ships, because an unrendered vector trace can't be trusted.
+- **App mark (product UI / favicon):** the forest-green roundel duck in `mark/`
+  — the exact glyph used by the `/home` shell in `apps/web`. Use this anywhere
+  the mascot would be too detailed (favicon, nav, small sizes).
 
 ## Palette
 
+Canon = the locked `/home` shell palette (forest green + teal-navy). These are
+the reviewed shell values — not sampled from an image, not invented.
+
 | Token | Hex | Use |
 |-------|-----|-----|
-| Navy   | `#16489E` | "Puddle" / "Public" / plane body / primary |
-| Green  | `#2EA82F` | "Jumper" / "Logic" / accent stripe |
-| Ink    | `#17211D` | body text / monochrome mark |
-| Gray   | `#6E7B86` | the "by" in the tagline |
-| Scarf  | `#F26A1B` | mascot scarf accent |
-| Beak   | `#F4A81D` | mascot beak accent |
+| Green | `#2F5D50` | primary — wordmark "Jumper", mark gradient start |
+| Navy  | `#315D74` | secondary/accent — wordmark "Puddle", mark gradient end |
+| Ink   | `#17211D` | body text / monochrome mark |
+| Gold  | `#B88A3B` | beak / fine accents |
+| Paper | `#F6F4ED` | surfaces / background |
+| Gray  | `#6E7B86` | the "by" in the tagline |
 
-Full set (incl. duck body / cap / tints) in `tokens/brand-tokens.{css,json}`.
+Full set in `tokens/brand-tokens.{css,json}` (one green, one navy — the source
+of truth for `scripts/sync-brand.mjs`).
 
 ## Typography
 
