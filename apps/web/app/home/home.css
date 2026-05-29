@@ -26,7 +26,9 @@
 /* ---------- sidebar ---------- */
 .pj-home .sidebar{border-right:1px solid var(--line);background:rgba(255,255,255,.58);backdrop-filter:blur(14px);padding:22px;display:flex;flex-direction:column}
 .pj-home .brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
-.pj-home .mark{width:44px;height:44px;border-radius:14px;background:linear-gradient(150deg,var(--green),var(--blue));box-shadow:0 10px 24px rgba(31,66,57,.30);flex:0 0 auto}
+/* .mark renders the brand-synced SVG (which carries its own navy→green field);
+   keep the rounded clip + lift, drop the legacy gradient background. */
+.pj-home .mark{width:44px;height:44px;border-radius:14px;background:transparent;box-shadow:0 10px 24px rgba(31,66,57,.30);flex:0 0 auto;display:block;object-fit:cover}
 .pj-home .wordmark{font-family:var(--serif);font-weight:700;font-size:1.22rem;letter-spacing:-.02em;line-height:1}
 .pj-home .wordmark small{display:block;font-family:var(--sans);font-weight:800;font-size:.62rem;letter-spacing:.16em;color:var(--green);text-transform:uppercase;margin-top:3px}
 

@@ -20,7 +20,8 @@ import {
 import { env } from './home.data'
 
 export const metadata: Metadata = {
-  title: `${env.instance} · PuddleJumper Home`,
+  // Absolute so the root layout's "%s · PuddleJumper" template doesn't double-apply.
+  title: { absolute: `${env.instance} · PuddleJumper Home` },
   description: 'Governed continuity — gates where judgment is required, append-only proof for everything else.',
 }
 

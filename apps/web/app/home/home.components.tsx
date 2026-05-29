@@ -19,25 +19,12 @@ import {
   connections,
 } from './home.data'
 
-/** Original duck mark (no third-party IP) — calm surface, machinery beneath. */
+/** App mark — sourced from the canonical brand kit (branding/mark via
+ *  scripts/sync-brand.mjs → /brand/puddlejumper-mark.svg) so the home logo
+ *  stays in lockstep with the brand and can't drift again. */
 export function DuckMark() {
-  return (
-    <svg className="mark" viewBox="0 0 44 44" role="img" aria-label="PuddleJumper">
-      <defs>
-        <linearGradient id="pjg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#2f5d50" />
-          <stop offset="1" stopColor="#315d74" />
-        </linearGradient>
-      </defs>
-      <rect width="44" height="44" rx="14" fill="url(#pjg)" />
-      <path d="M7 31 Q22 27 37 31" stroke="rgba(255,255,255,.30)" strokeWidth="2" fill="none" strokeLinecap="round" />
-      <circle cx="26.5" cy="17.5" r="6" fill="#fbfaf6" />
-      <circle cx="28.2" cy="16.6" r="1.3" fill="#17211d" />
-      <path d="M32 18 l5 1.4 -5 1.8 z" fill="#b88a3b" />
-      <path d="M14 25 Q15 17 23 18 q5 .6 6 5 -3 3 -9 3 -5 0 -6 -1 z" fill="#fbfaf6" />
-      <path d="M16 25 q6 2 11 .4" stroke="rgba(23,33,29,.18)" strokeWidth="1.2" fill="none" />
-    </svg>
-  )
+  // eslint-disable-next-line @next/next/no-img-element -- static brand SVG, no optimization needed
+  return <img className="mark" src="/brand/puddlejumper-mark.svg" alt="PuddleJumper" width={44} height={44} />
 }
 
 /** WHITE-LABEL SWAP POINT — instance name + (source-only) base chip. */
