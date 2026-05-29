@@ -1,0 +1,1 @@
+export { VaultModuleMaker } from './components'

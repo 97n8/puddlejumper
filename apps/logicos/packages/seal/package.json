@@ -1,0 +1,6 @@
+{
+  "name": "seal",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "dependencies": {}
+}
