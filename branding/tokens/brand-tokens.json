@@ -1,0 +1,28 @@
+{
+  "$name": "PuddleJumper brand tokens",
+  "$note": "Palette sampled from the PuddleJumper · by PublicLogic master logo.",
+  "color": {
+    "core": {
+      "navy":  { "value": "#16489e", "use": "\"Puddle\" / \"Public\" / plane body" },
+      "green": { "value": "#2ea82f", "use": "\"Jumper\" / \"Logic\" / accent stripe" },
+      "ink":   { "value": "#17211d", "use": "near-black text / monochrome mark" },
+      "gray":  { "value": "#6e7b86", "use": "\"by\" tagline" },
+      "paper": { "value": "#ffffff" }
+    },
+    "mascot": {
+      "duck":   { "value": "#5bb531" },
+      "gold":   { "value": "#f4a81d", "use": "beak" },
+      "orange": { "value": "#f26a1b", "use": "scarf" },
+      "cap":    { "value": "#7a4a24" },
+      "capDark":{ "value": "#5e3a1c", "use": "goggles strap" }
+    },
+    "tint": {
+      "navy10":  { "value": "#e7eef8" },
+      "green10": { "value": "#e9f6e9" }
+    }
+  },
+  "type": {
+    "wordmark": { "value": "heavy italic rounded sans (outline in production)" },
+    "tagline":  { "value": "\"by\" — gray italic; \"PublicLogic\" — bold" }
+  }
+}

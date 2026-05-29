@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 150" role="img" aria-label="PuddleJumper palette">
+  <style>
+    .h { font-family:system-ui,sans-serif; font-weight:700; font-size:13px; fill:#17211d; }
+    .x { font-family:"JetBrains Mono",monospace; font-size:11px; fill:#66736d; }
+  </style>
+  <g>
+    <rect x="10"  y="10" width="100" height="80" rx="12" fill="#16489e"/>
+    <text class="h" x="10" y="112">Navy</text><text class="x" x="10" y="130">#16489E</text>
+
+    <rect x="122" y="10" width="100" height="80" rx="12" fill="#2ea82f"/>
+    <text class="h" x="122" y="112">Green</text><text class="x" x="122" y="130">#2EA82F</text>
+
+    <rect x="234" y="10" width="100" height="80" rx="12" fill="#17211d"/>
+    <text class="h" x="234" y="112">Ink</text><text class="x" x="234" y="130">#17211D</text>
+
+    <rect x="346" y="10" width="100" height="80" rx="12" fill="#6e7b86"/>
+    <text class="h" x="346" y="112">Gray</text><text class="x" x="346" y="130">#6E7B86</text>
+
+    <rect x="458" y="10" width="100" height="80" rx="12" fill="#f26a1b"/>
+    <text class="h" x="458" y="112">Scarf</text><text class="x" x="458" y="130">#F26A1B</text>
+
+    <rect x="570" y="10" width="100" height="80" rx="12" fill="#f4a81d"/>
+    <text class="h" x="570" y="112">Beak</text><text class="x" x="570" y="130">#F4A81D</text>
+  </g>
+</svg>

@@ -1,0 +1,21 @@
+/* PuddleJumper — brand color tokens (source of truth for the logo kit).
+   Palette sampled from the PuddleJumper · by PublicLogic master logo. */
+:root {
+  /* Core */
+  --pj-navy:   #16489e; /* "Puddle" / "Public" / plane body */
+  --pj-green:  #2ea82f; /* "Jumper" / "Logic" / accent stripe */
+  --pj-ink:    #17211d; /* near-black text / mono mark */
+  --pj-gray:   #6e7b86; /* "by" tagline */
+  --pj-paper:  #ffffff;
+
+  /* Mascot accents */
+  --pj-duck:   #5bb531; /* duck body */
+  --pj-gold:   #f4a81d; /* beak */
+  --pj-orange: #f26a1b; /* scarf */
+  --pj-cap:    #7a4a24; /* aviator cap */
+  --pj-cap-dk: #5e3a1c; /* goggles strap */
+
+  /* Tints */
+  --pj-navy-10: #e7eef8;
+  --pj-green-10:#e9f6e9;
+}
