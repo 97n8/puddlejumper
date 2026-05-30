@@ -61,6 +61,12 @@ export interface PipelineInput {
    */
   module?: string;
   environment?: string;
+  /**
+   * CaseSpace the run acts within. Required to persist honest action state
+   * (C6); when omitted the runner falls back to the generated process_id so
+   * the state rows are still well-formed.
+   */
+  case_space_id?: string;
   /** Authenticated actor reference (auth is NOT implemented in C1). */
   actor_ref?: string | null;
   /** Raw item payload that entered at INPUT. Opaque in C1. */

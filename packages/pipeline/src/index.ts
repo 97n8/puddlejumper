@@ -48,3 +48,11 @@ export type {
   ActionDecision,
   VaultDecision,
 } from './vault.js';
+
+export { persistDecision, resolveHold, PJHoldNotResolvable } from './state.js';
+export type {
+  PersistScope,
+  PersistResult,
+  ActionStateOutcome,
+  ResolveHoldResult,
+} from './state.js';

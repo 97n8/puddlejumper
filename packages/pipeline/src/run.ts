@@ -22,6 +22,7 @@ import {
 import { findActiveRulePack, type RulePack } from './rulepack.js';
 import { enrichItem, type EnrichmentResult } from './enrichment.js';
 import { decideVault, type VaultDecision } from './vault.js';
+import { persistDecision, type PersistResult } from './state.js';
 
 /** Canon version stamped onto C1 proof events. */
 const CANON_VERSION = '1.0.0';
@@ -48,6 +49,12 @@ export interface PipelineResult {
    * written. Unknown/no pack yields a safe no_op set.
    */
   vault: VaultDecision;
+  /**
+   * Honest persisted action state for this run (C6). `allowed` →
+   * attempted, `approval_required` → pending + a holds row, `denied` →
+   * failed, `no_op` → recorded only. Persisted, NOT executed.
+   */
+  state: PersistResult;
   /** `true` when every stage was non-terminal (always true in C1). */
   ok: boolean;
   /** Ordered per-stage results. */
@@ -96,6 +103,23 @@ export function runPipeline(
     rule_pack_id,
   };
 
+  // STATE_UPDATE_OR_HOLD (C6): persist verdicts as honest action state.
+  // Pending verdicts also create holds. Persisted, not executed. Falls back
+  // to the process_id as the CaseSpace key when none was supplied so the
+  // NOT NULL state columns stay well-formed.
+  const state = persistDecision(
+    db,
+    {
+      tenant_id: input.tenant_id,
+      deployment_id: input.deployment_id,
+      case_space_id: input.case_space_id ?? ctx.process_id,
+      module: input.module ?? input.pack,
+      process_id: ctx.process_id,
+      actor_ref: input.actor_ref ?? null,
+    },
+    vault,
+  );
+
   const stages = buildStages();
   const results: StageResult[] = [];
 
@@ -131,6 +155,15 @@ export function runPipeline(
         summary: vault.summary,
         decisions: vault.decisions,
       },
+      state: {
+        summary: state.summary,
+        outcomes: state.outcomes.map((o) => ({
+          action: o.action,
+          state: o.state,
+          verdict: o.verdict,
+          hold_id: o.hold_id,
+        })),
+      },
       ok,
       stages: PIPELINE_STAGES,
       results: results.map((r) => ({
@@ -147,6 +180,7 @@ export function runPipeline(
     rule_pack_id: ctx.rule_pack_id ?? null,
     enrichment,
     vault,
+    state,
     ok,
     stages: results,
     proof_event_id: proof.event_id,
