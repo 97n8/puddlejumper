@@ -15,6 +15,23 @@ export { checkAccess, openAccessEvaluator } from './access.js';
 export type { AccessRequest, AccessResult, AccessEvaluator } from './access.js';
 
 export {
+  generateOutput,
+  seedOutputTemplate,
+  findOutputTemplate,
+  GUEST_ARRIVAL_BRIEF,
+  TIMESHEET_REVIEW_SUMMARY,
+  EXPENSE_RECEIPT_REVIEW_PACKET,
+} from './output.js';
+export type {
+  TemplateBinding,
+  TemplateBody,
+  SeedTemplateInput,
+  OutputScope,
+  RenderedField,
+  OutputResult,
+} from './output.js';
+
+export {
   PIPELINE_STAGES,
   buildStages,
 } from './stages.js';

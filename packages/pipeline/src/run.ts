@@ -33,6 +33,7 @@ import {
   type AccessEvaluator,
   type AccessResult,
 } from './access.js';
+import { generateOutput, type OutputResult } from './output.js';
 
 /** Canon version stamped onto C1 proof events. */
 const CANON_VERSION = '1.0.0';
@@ -93,6 +94,13 @@ export interface PipelineResult {
    * no state row or hold is written before the access gate passes.
    */
   state: PersistResult | null;
+  /**
+   * FormKey output (C8). The trusted output generated from the pack's
+   * template, with a generated_outputs row written. `null` when the run
+   * stopped early or the pack names no output template. A missing required
+   * binding yields status 'failed' (fail-safe), never a blank document.
+   */
+  output: OutputResult | null;
   /** `true` when every stage was non-terminal. `false` on early stop. */
   ok: boolean;
   /** Ordered per-stage results. */
@@ -159,6 +167,7 @@ export function runPipeline(
       enrichment: null,
       vault: null,
       state: null,
+      output: null,
       ok: false,
       stages: [],
       proof_event_id: proof.event_id,
@@ -207,6 +216,7 @@ export function runPipeline(
       enrichment: null,
       vault: null,
       state: null,
+      output: null,
       ok: false,
       stages: [],
       proof_event_id: proof.event_id,
@@ -241,6 +251,28 @@ export function runPipeline(
     },
     vault,
   );
+
+  // FORMKEY_OUTPUT (C8): generate the pack's trusted output from its active
+  // template, writing a generated_outputs row. Skipped (null) when the pack
+  // names no output_template. A missing required binding fails safely.
+  const templateName =
+    typeof resolvedPack?.content?.output_template === 'string'
+      ? (resolvedPack.content.output_template as string)
+      : null;
+  const output =
+    templateName !== null
+      ? generateOutput(
+          db,
+          {
+            tenant_id: input.tenant_id,
+            case_space_id: input.case_space_id ?? ctx.process_id,
+            process_id: ctx.process_id,
+          },
+          templateName,
+          input.module ?? input.pack,
+          enrichment,
+        )
+      : null;
 
   const stages = buildStages();
   const results: StageResult[] = [];
@@ -282,6 +314,17 @@ export function runPipeline(
           hold_id: o.hold_id,
         })),
       },
+      output: output
+        ? {
+            // 'output_generated' is the canon proof token for a generated
+            // output; 'output_failed' marks a fail-safe (missing binding).
+            outcome: output.status === 'generated' ? 'output_generated' : 'output_failed',
+            output_id: output.output_id,
+            template_id: output.template_id,
+            status: output.status,
+            missing_required: output.missing_required,
+          }
+        : null,
       ok,
       stages: PIPELINE_STAGES,
       results: results.map((r) => ({
@@ -303,6 +346,7 @@ export function runPipeline(
     enrichment,
     vault,
     state,
+    output,
     ok,
     stages: results,
     proof_event_id: proof.event_id,
