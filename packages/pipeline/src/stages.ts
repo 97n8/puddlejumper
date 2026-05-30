@@ -7,9 +7,20 @@
 // (run.ts) walks them in order and writes ONE audit event proving it ran.
 
 /**
- * The fourteen canon pipeline stages, in execution order. This list is the
- * literal spine from Issue #99. Stage names are stable identifiers used in
- * the Recordstream payload so a later phase can prove which stages ran.
+ * The fourteen canon pipeline stages. This list is the literal spine from
+ * Issue #99 and preserves the spec's canonical ORDER as a stable, documented
+ * reference (the stage names are stable identifiers used in the Recordstream
+ * payload).
+ *
+ * NOTE — list order vs. runtime order: the spec lists `ACCESS_GATE` before
+ * `SUBSTANCE_CHECK`, but `runPipeline()` (C7) deliberately evaluates the
+ * substance check FIRST, so a non-substantive input is discarded cheaply
+ * (with proof) before any authority work. This divergence is intentional and
+ * kept on purpose: this constant documents the canonical spec spine, while
+ * the run's proof event records the ACTUAL runtime order via `stopped_at`
+ * and the per-stage `results` — so the proof always reflects what truly
+ * happened, not just the nominal list. Do not "fix" one to match the other
+ * without revisiting the C7 design decision.
  */
 export const PIPELINE_STAGES = [
   'AUTH',
