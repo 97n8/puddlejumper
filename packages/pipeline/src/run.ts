@@ -270,6 +270,7 @@ export function runPipeline(
           },
           templateName,
           input.module ?? input.pack,
+          input.environment ?? input.pack,
           enrichment,
         )
       : null;

@@ -57,10 +57,16 @@ function seedAllTemplates(db: DatabaseHandle): void {
 }
 
 function outputsCount(db: DatabaseHandle, status?: string): number {
-  const sql = status
-    ? `SELECT COUNT(*) AS n FROM generated_outputs WHERE status = '${status}'`
-    : `SELECT COUNT(*) AS n FROM generated_outputs`;
-  return (db.prepare(sql).get() as { n: number }).n;
+  if (status) {
+    return (
+      db
+        .prepare(`SELECT COUNT(*) AS n FROM generated_outputs WHERE status = ?`)
+        .get(status) as { n: number }
+    ).n;
+  }
+  return (
+    db.prepare(`SELECT COUNT(*) AS n FROM generated_outputs`).get() as { n: number }
+  ).n;
 }
 
 describe('@pj/pipeline — C8 FormKey output engine', () => {
@@ -148,6 +154,7 @@ describe('@pj/pipeline — C8 FormKey output engine', () => {
       { tenant_id: TENANT, case_space_id: 'cs-x', process_id: 'p-x' },
       'broken_brief',
       'guestops',
+      'stay',
       enrichment,
     );
 
@@ -164,6 +171,7 @@ describe('@pj/pipeline — C8 FormKey output engine', () => {
       { tenant_id: TENANT, case_space_id: 'cs-y', process_id: 'p-y' },
       'no_such_template',
       'guestops',
+      'stay',
       enrichment,
     );
     expect(out.status).toBe('failed');

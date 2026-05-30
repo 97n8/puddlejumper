@@ -116,7 +116,14 @@ function readAmount(item: unknown, enrichment: EnrichmentResult): number | null 
  *   2. action whose `needs` exceeds the ceiling → approval_required (capped).
  *   3. amount-gated action at/over `approval_threshold` → approval_required.
  *   4. otherwise → allowed.
- * Unknown / no pack → every notional action is a safe no_op (nothing to do).
+ *
+ * Pack handling:
+ *   - Unknown `packId` (no known action surface) → a single safe no_op
+ *     (nothing to decide).
+ *   - Known `packId` but `pack` is null (no active rule pack resolved) → the
+ *     action surface is still evaluated, but with the safest-floor ceiling
+ *     ('suggest') and no pack rules, so anything above that floor becomes
+ *     approval_required rather than allowed. Never a silent allow.
  */
 export function decideVault(
   pack: RulePack | null,

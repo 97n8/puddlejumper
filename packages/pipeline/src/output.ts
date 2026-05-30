@@ -44,7 +44,7 @@ export interface SeedTemplateInput {
 
 /**
  * Seed one active output template. Idempotent-friendly for tests: returns the
- * existing active template for (tenant, module, name) if present.
+ * existing active template for (tenant, module, environment, name) if present.
  */
 export function seedOutputTemplate(
   db: DatabaseHandle,
@@ -53,9 +53,9 @@ export function seedOutputTemplate(
   const existing = db
     .prepare(
       `SELECT template_id FROM output_templates
-       WHERE tenant_id = ? AND module = ? AND name = ? AND is_active = 1`,
+       WHERE tenant_id = ? AND module = ? AND environment = ? AND name = ? AND is_active = 1`,
     )
-    .get(input.tenant_id, input.module, input.name) as
+    .get(input.tenant_id, input.module, input.environment, input.name) as
     | { template_id: string }
     | undefined;
   if (existing) return existing.template_id;
@@ -77,19 +77,20 @@ export function seedOutputTemplate(
   return templateId;
 }
 
-/** Look up the active output template by name for a scope. */
+/** Look up the active output template by name for a (tenant, module, environment) scope. */
 export function findOutputTemplate(
   db: DatabaseHandle,
   tenant_id: string,
   module: string,
+  environment: string,
   name: string,
 ): { template_id: string; body: TemplateBody } | null {
   const row = db
     .prepare(
       `SELECT template_id, body_json FROM output_templates
-       WHERE tenant_id = ? AND module = ? AND name = ? AND is_active = 1`,
+       WHERE tenant_id = ? AND module = ? AND environment = ? AND name = ? AND is_active = 1`,
     )
-    .get(tenant_id, module, name) as
+    .get(tenant_id, module, environment, name) as
     | { template_id: string; body_json: string }
     | undefined;
   if (!row) return null;
@@ -164,9 +165,16 @@ export function generateOutput(
   scope: OutputScope,
   templateName: string,
   module: string,
+  environment: string,
   enrichment: EnrichmentResult,
 ): OutputResult {
-  const template = findOutputTemplate(db, scope.tenant_id, module, templateName);
+  const template = findOutputTemplate(
+    db,
+    scope.tenant_id,
+    module,
+    environment,
+    templateName,
+  );
 
   // Missing template → fail safely with proof-able state.
   if (!template) {
