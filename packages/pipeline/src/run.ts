@@ -19,6 +19,7 @@ import {
   type PipelineInput,
   type StageResult,
 } from './stages.js';
+import { findActiveRulePack } from './rulepack.js';
 
 /** Canon version stamped onto C1 proof events. */
 const CANON_VERSION = '1.0.0';
@@ -28,6 +29,11 @@ export interface PipelineResult {
   process_id: string;
   /** Triad pack id this run executed. */
   pack: string;
+  /**
+   * Resolved active rule pack id for the run's scope (C3), or `null` when
+   * no scope was supplied or no active pack governs it. Carried, not enforced.
+   */
+  rule_pack_id: string | null;
   /** `true` when every stage was non-terminal (always true in C1). */
   ok: boolean;
   /** Ordered per-stage results. */
@@ -46,10 +52,24 @@ export function runPipeline(
   db: DatabaseHandle,
   input: PipelineInput,
 ): PipelineResult {
+  // Resolve the active rule pack for the scope, if one was supplied. C3
+  // "resolve, don't enforce": a missing pack is a normal branch (null), not
+  // an error — VAULT verdicts and holds come later. The C2 unique index
+  // guarantees at most one active pack per scope.
+  const rule_pack_id =
+    input.module && input.environment
+      ? (findActiveRulePack(db, {
+          tenant_id: input.tenant_id,
+          module: input.module,
+          environment: input.environment,
+        })?.rule_pack_id ?? null)
+      : null;
+
   const ctx: PipelineContext = {
     ...input,
     canon_version: CANON_VERSION,
     process_id: crypto.randomUUID(),
+    rule_pack_id,
   };
 
   const stages = buildStages();
@@ -80,6 +100,7 @@ export function runPipeline(
     actor_ref: ctx.actor_ref ?? null,
     payload: {
       pack: ctx.pack,
+      rule_pack_id: ctx.rule_pack_id ?? null,
       ok,
       stages: PIPELINE_STAGES,
       results: results.map((r) => ({
@@ -93,6 +114,7 @@ export function runPipeline(
   return {
     process_id: ctx.process_id,
     pack: ctx.pack,
+    rule_pack_id: ctx.rule_pack_id ?? null,
     ok,
     stages: results,
     proof_event_id: proof.event_id,

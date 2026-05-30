@@ -17,3 +17,17 @@ export type {
   PipelineInput,
   PipelineContext,
 } from './stages.js';
+
+export {
+  resolveActiveRulePack,
+  findActiveRulePack,
+  seedRulePack,
+  seedGuestopsStay,
+  GUESTOPS_STAY,
+  PJRulePackNotFound,
+} from './rulepack.js';
+export type {
+  RulePack,
+  RulePackScope,
+  SeedRulePackInput,
+} from './rulepack.js';
