@@ -3,7 +3,16 @@
 // one Recordstream/audit proof per run via @pj/db's appendAuditEvent.
 
 export { runPipeline } from './run.js';
-export type { PipelineResult } from './run.js';
+export type { PipelineResult, RunOptions, StopStage } from './run.js';
+
+export {
+  checkSubstance,
+  defaultSubstanceChecker,
+} from './substance.js';
+export type { SubstanceResult, SubstanceChecker } from './substance.js';
+
+export { checkAccess, openAccessEvaluator } from './access.js';
+export type { AccessRequest, AccessResult, AccessEvaluator } from './access.js';
 
 export {
   PIPELINE_STAGES,

@@ -133,6 +133,7 @@ describe('@pj/pipeline — C3 rule pack resolver', () => {
       deployment_id: 'dpl_test',
       module: GUESTOPS_STAY.module,
       environment: GUESTOPS_STAY.environment,
+      item: { id: 'res-1' },
     });
     expect(result.ok).toBe(true);
     expect(result.rule_pack_id).toBeNull();

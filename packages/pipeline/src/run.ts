@@ -23,9 +23,30 @@ import { findActiveRulePack, type RulePack } from './rulepack.js';
 import { enrichItem, type EnrichmentResult } from './enrichment.js';
 import { decideVault, type VaultDecision } from './vault.js';
 import { persistDecision, type PersistResult } from './state.js';
+import {
+  checkSubstance,
+  type SubstanceChecker,
+  type SubstanceResult,
+} from './substance.js';
+import {
+  checkAccess,
+  type AccessEvaluator,
+  type AccessResult,
+} from './access.js';
 
 /** Canon version stamped onto C1 proof events. */
 const CANON_VERSION = '1.0.0';
+
+/** Optional injected gates for a run (C7). Defaults are pure + permissive. */
+export interface RunOptions {
+  /** SUBSTANCE_CHECK evaluator. Default: {@link defaultSubstanceChecker}. */
+  substanceChecker?: SubstanceChecker;
+  /** ACCESS_GATE evaluator. Default: open gate. */
+  accessEvaluator?: AccessEvaluator;
+}
+
+/** Where the run stopped, if it stopped early (C7). `null` = ran to completion. */
+export type StopStage = 'SUBSTANCE_CHECK' | 'ACCESS_GATE' | null;
 
 export interface PipelineResult {
   /** Per-run process id (also the audit `process_id`). */
@@ -38,24 +59,41 @@ export interface PipelineResult {
    */
   rule_pack_id: string | null;
   /**
-   * Deterministic mock enrichment facts for this run (C4). Always present;
-   * an unknown pack yields an empty anchor set, never a failure. NOT sourced
-   * from real connectors.
+   * SUBSTANCE_CHECK verdict (C7). A non-substantive item stops the run early
+   * with a recorded no_op — never a silent discard.
    */
-  enrichment: EnrichmentResult;
+  substance: SubstanceResult;
   /**
-   * VAULT per-action verdicts for this run (C5), capped by the pack's
-   * autonomy ceiling. Decided, NOT executed — no action runs, no hold row is
-   * written. Unknown/no pack yields a safe no_op set.
+   * ACCESS_GATE verdict (C7). Evaluated before VAULT/state; a denied actor
+   * stops the run early with a recorded denial — before any state/hold write.
    */
-  vault: VaultDecision;
+  access: AccessResult;
   /**
-   * Honest persisted action state for this run (C6). `allowed` →
-   * attempted, `approval_required` → pending + a holds row, `denied` →
-   * failed, `no_op` → recorded only. Persisted, NOT executed.
+   * Where the run stopped early, or `null` when it ran to completion. When
+   * set, `vault`/`state` are `null` (those stages never ran).
    */
-  state: PersistResult;
-  /** `true` when every stage was non-terminal (always true in C1). */
+  stopped_at: StopStage;
+  /**
+   * Terminal outcome of the run: `no_op` (non-substantive), `denied` (access
+   * refused), or `completed` (reached the end of the spine).
+   */
+  outcome: 'no_op' | 'denied' | 'completed';
+  /**
+   * Deterministic mock enrichment facts for this run (C4). `null` when the
+   * run stopped before enrichment (non-substantive input).
+   */
+  enrichment: EnrichmentResult | null;
+  /**
+   * VAULT per-action verdicts (C5), capped by the pack's autonomy ceiling.
+   * `null` when the run stopped early (substance/access). Decided, NOT executed.
+   */
+  vault: VaultDecision | null;
+  /**
+   * Honest persisted action state (C6). `null` when the run stopped early —
+   * no state row or hold is written before the access gate passes.
+   */
+  state: PersistResult | null;
+  /** `true` when every stage was non-terminal. `false` on early stop. */
   ok: boolean;
   /** Ordered per-stage results. */
   stages: StageResult[];
@@ -72,11 +110,13 @@ export interface PipelineResult {
 export function runPipeline(
   db: DatabaseHandle,
   input: PipelineInput,
+  options: RunOptions = {},
 ): PipelineResult {
+  const process_id = crypto.randomUUID();
+
   // Resolve the active rule pack for the scope, if one was supplied. C3
   // "resolve, don't enforce": a missing pack is a normal branch (null), not
-  // an error — VAULT verdicts and holds come later. The C2 unique index
-  // guarantees at most one active pack per scope.
+  // an error. The C2 unique index guarantees at most one active pack per scope.
   const resolvedPack: RulePack | null =
     input.module && input.environment
       ? findActiveRulePack(db, {
@@ -87,26 +127,108 @@ export function runPipeline(
       : null;
   const rule_pack_id = resolvedPack?.rule_pack_id ?? null;
 
-  // API_ENRICHMENT (C4): deterministic mock enrichment by pack. Total — an
-  // unknown pack returns an empty anchor set, never a failure. No real
-  // connectors, no network, no auth. The result is carried, not enforced.
+  // ── SUBSTANCE_CHECK (C7): no silent discard ────────────────────────────────
+  // A non-substantive input stops the run early with a recorded no_op proof —
+  // before enrichment, VAULT, or any state/hold write.
+  const substance = checkSubstance(input.item, options.substanceChecker);
+  if (!substance.substantive) {
+    const proof = appendAuditEvent(db, {
+      event_family: 'system',
+      event_subtype: 'pipeline.no_op',
+      canon_version: CANON_VERSION,
+      deployment_id: input.deployment_id,
+      tenant_id: input.tenant_id,
+      process_id,
+      actor_ref: input.actor_ref ?? null,
+      payload: {
+        pack: input.pack,
+        rule_pack_id,
+        outcome: 'no_op',
+        stopped_at: 'SUBSTANCE_CHECK',
+        substance,
+      },
+    }) as AuditEvent;
+    return {
+      process_id,
+      pack: input.pack,
+      rule_pack_id,
+      substance,
+      access: { granted: false, reason: 'not evaluated: stopped at substance check' },
+      stopped_at: 'SUBSTANCE_CHECK',
+      outcome: 'no_op',
+      enrichment: null,
+      vault: null,
+      state: null,
+      ok: false,
+      stages: [],
+      proof_event_id: proof.event_id,
+    };
+  }
+
+  // ── ACCESS_GATE (C7): authority before state ───────────────────────────────
+  // Evaluated BEFORE VAULT verdicts and state/holds. A denied actor stops the
+  // run with a recorded denial — nothing is decided or persisted.
+  const access = checkAccess(
+    {
+      tenant_id: input.tenant_id,
+      actor_ref: input.actor_ref ?? null,
+      pack: input.pack,
+      module: input.module,
+      environment: input.environment,
+      case_space_id: input.case_space_id,
+    },
+    options.accessEvaluator,
+  );
+  if (!access.granted) {
+    const proof = appendAuditEvent(db, {
+      event_family: 'auth',
+      event_subtype: 'auth.refused',
+      canon_version: CANON_VERSION,
+      deployment_id: input.deployment_id,
+      tenant_id: input.tenant_id,
+      process_id,
+      actor_ref: input.actor_ref ?? null,
+      payload: {
+        pack: input.pack,
+        rule_pack_id,
+        outcome: 'denied',
+        stopped_at: 'ACCESS_GATE',
+        access,
+      },
+    }) as AuditEvent;
+    return {
+      process_id,
+      pack: input.pack,
+      rule_pack_id,
+      substance,
+      access,
+      stopped_at: 'ACCESS_GATE',
+      outcome: 'denied',
+      enrichment: null,
+      vault: null,
+      state: null,
+      ok: false,
+      stages: [],
+      proof_event_id: proof.event_id,
+    };
+  }
+
+  // ── Access granted: continue through C4 → C5 → C6 (existing behavior) ──────
+
+  // API_ENRICHMENT (C4): deterministic mock enrichment by pack.
   const enrichment = enrichItem(input.pack, input.item);
 
-  // VAULT_SCHEMA_RESOLVE / verdict (C5): decide per-action verdicts from the
-  // pack content, capped by the autonomy ceiling. Decided, not executed.
+  // VAULT verdict (C5): per-action verdicts capped by the autonomy ceiling.
   const vault = decideVault(resolvedPack, input.pack, input.item, enrichment);
 
   const ctx: PipelineContext = {
     ...input,
     canon_version: CANON_VERSION,
-    process_id: crypto.randomUUID(),
+    process_id,
     rule_pack_id,
   };
 
   // STATE_UPDATE_OR_HOLD (C6): persist verdicts as honest action state.
-  // Pending verdicts also create holds. Persisted, not executed. Falls back
-  // to the process_id as the CaseSpace key when none was supplied so the
-  // NOT NULL state columns stay well-formed.
   const state = persistDecision(
     db,
     {
@@ -122,9 +244,6 @@ export function runPipeline(
 
   const stages = buildStages();
   const results: StageResult[] = [];
-
-  // Synchronous spine: each stage runs in order. In C1 no stage is terminal,
-  // so the loop always completes. Later phases stop early on denied/held/failed.
   for (const stage of stages) {
     results.push(stage(ctx));
   }
@@ -133,11 +252,7 @@ export function runPipeline(
     (r) => r.outcome !== 'denied' && r.outcome !== 'failed',
   );
 
-  // One proof event for the whole run. Recordstream is threaded conceptually
-  // through every stage, but C1 writes a single `system`-family event that
-  // proves the spine executed and records each stage's outcome. The
-  // overlay-style subtype `pipeline.run` resolves to a string at runtime
-  // (canon allows overlay-registered subtypes).
+  // One proof event for the completed run.
   const proof = appendAuditEvent(db, {
     event_family: 'system',
     event_subtype: 'pipeline.run',
@@ -149,6 +264,9 @@ export function runPipeline(
     payload: {
       pack: ctx.pack,
       rule_pack_id: ctx.rule_pack_id ?? null,
+      outcome: 'completed',
+      substance,
+      access,
       enrichment: enrichment.summary,
       vault: {
         ceiling: vault.ceiling,
@@ -178,6 +296,10 @@ export function runPipeline(
     process_id: ctx.process_id,
     pack: ctx.pack,
     rule_pack_id: ctx.rule_pack_id ?? null,
+    substance,
+    access,
+    stopped_at: null,
+    outcome: 'completed',
     enrichment,
     vault,
     state,

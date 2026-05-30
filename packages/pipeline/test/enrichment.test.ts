@@ -110,7 +110,8 @@ describe('@pj/pipeline — C4 enrichment seed layer', () => {
           pack,
           tenant_id: TENANT,
           deployment_id: DEPLOYMENT,
-        }).enrichment.summary.count,
+          item: { id: 'seed-1' },
+        }).enrichment?.summary.count,
     );
     expect(counts).toEqual([5, 4, 5]);
   });

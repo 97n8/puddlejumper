@@ -77,6 +77,7 @@ describe('@pj/pipeline — C1 skeleton', () => {
         pack,
         tenant_id: TENANT,
         deployment_id: DEPLOYMENT,
+        item: { id: 'seed-1' },
       });
       expect(result.ok).toBe(true);
       expect(result.pack).toBe(pack);
