@@ -184,29 +184,92 @@ export const GUESTOPS_STAY = {
 } as const;
 
 /**
- * Seed the active `guestops.stay` rule pack for a tenant. Idempotent-friendly
- * for tests: if an active pack already exists for the scope, returns it
- * instead of inserting a duplicate (which the unique index would refuse).
+ * Canon scope + content for `timedesk.muni` (Issue #99). Descriptive only —
+ * seeded so enrichment/resolution can run by scope; NOT enforced in C4.
  */
-export function seedGuestopsStay(
+export const TIMEDESK_MUNI = {
+  module: 'timedesk',
+  environment: 'muni',
+  pack: 'timedesk.muni',
+  version: '1',
+  content: {
+    input: 'timesheet',
+    enrichment: ['employee', 'department', 'pay-period'],
+    autonomy_ceiling: 'suggest',
+    output_template: 'timesheet_review_summary',
+    retention_class: 'statutory-payroll',
+  },
+} as const;
+
+/**
+ * Canon scope + content for `finance.biz` (Issue #99). Descriptive only —
+ * seeded so enrichment/resolution can run by scope; NOT enforced in C4.
+ * Note: no auto-money movement is part of this pack's eventual law.
+ */
+export const FINANCE_BIZ = {
+  module: 'finance',
+  environment: 'biz',
+  pack: 'finance.biz',
+  version: '1',
+  content: {
+    input: 'bank-transaction',
+    enrichment: ['vendor', 'invoice', 'receipt', 'tax-category'],
+    autonomy_ceiling: 'suggest',
+    output_template: 'expense_receipt_review_packet',
+    retention_class: 'business-finance-tax',
+    no_auto_money_movement: true,
+  },
+} as const;
+
+/** Shape shared by the triad pack definitions above. */
+interface TriadPackDef {
+  module: string;
+  environment: string;
+  pack: string;
+  version: string;
+  content: Record<string, unknown>;
+}
+
+/**
+ * Seed one active triad rule pack for a tenant. Idempotent-friendly for tests:
+ * if an active pack already exists for the scope, returns it instead of
+ * inserting a duplicate (which the C2 unique index would refuse).
+ */
+export function seedTriadPack(
   db: DatabaseHandle,
   tenant_id: string,
+  def: TriadPackDef,
 ): RulePack {
   const existing = findActiveRulePack(db, {
     tenant_id,
-    module: GUESTOPS_STAY.module,
-    environment: GUESTOPS_STAY.environment,
+    module: def.module,
+    environment: def.environment,
   });
   if (existing) {
     return existing;
   }
   return seedRulePack(db, {
     tenant_id,
-    module: GUESTOPS_STAY.module,
-    environment: GUESTOPS_STAY.environment,
-    pack: GUESTOPS_STAY.pack,
-    version: GUESTOPS_STAY.version,
+    module: def.module,
+    environment: def.environment,
+    pack: def.pack,
+    version: def.version,
     is_active: true,
-    content: { ...GUESTOPS_STAY.content },
+    content: { ...def.content },
   });
+}
+
+/** Seed the active `guestops.stay` rule pack for a tenant (idempotent). */
+export function seedGuestopsStay(db: DatabaseHandle, tenant_id: string): RulePack {
+  return seedTriadPack(db, tenant_id, GUESTOPS_STAY);
+}
+
+/** Seed the active `timedesk.muni` rule pack for a tenant (idempotent). */
+export function seedTimedeskMuni(db: DatabaseHandle, tenant_id: string): RulePack {
+  return seedTriadPack(db, tenant_id, TIMEDESK_MUNI);
+}
+
+/** Seed the active `finance.biz` rule pack for a tenant (idempotent). */
+export function seedFinanceBiz(db: DatabaseHandle, tenant_id: string): RulePack {
+  return seedTriadPack(db, tenant_id, FINANCE_BIZ);
 }

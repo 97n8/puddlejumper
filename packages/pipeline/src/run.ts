@@ -20,6 +20,7 @@ import {
   type StageResult,
 } from './stages.js';
 import { findActiveRulePack } from './rulepack.js';
+import { enrichItem, type EnrichmentResult } from './enrichment.js';
 
 /** Canon version stamped onto C1 proof events. */
 const CANON_VERSION = '1.0.0';
@@ -34,6 +35,12 @@ export interface PipelineResult {
    * no scope was supplied or no active pack governs it. Carried, not enforced.
    */
   rule_pack_id: string | null;
+  /**
+   * Deterministic mock enrichment facts for this run (C4). Always present;
+   * an unknown pack yields an empty anchor set, never a failure. NOT sourced
+   * from real connectors.
+   */
+  enrichment: EnrichmentResult;
   /** `true` when every stage was non-terminal (always true in C1). */
   ok: boolean;
   /** Ordered per-stage results. */
@@ -64,6 +71,11 @@ export function runPipeline(
           environment: input.environment,
         })?.rule_pack_id ?? null)
       : null;
+
+  // API_ENRICHMENT (C4): deterministic mock enrichment by pack. Total — an
+  // unknown pack returns an empty anchor set, never a failure. No real
+  // connectors, no network, no auth. The result is carried, not enforced.
+  const enrichment = enrichItem(input.pack, input.item);
 
   const ctx: PipelineContext = {
     ...input,
@@ -101,6 +113,7 @@ export function runPipeline(
     payload: {
       pack: ctx.pack,
       rule_pack_id: ctx.rule_pack_id ?? null,
+      enrichment: enrichment.summary,
       ok,
       stages: PIPELINE_STAGES,
       results: results.map((r) => ({
@@ -115,6 +128,7 @@ export function runPipeline(
     process_id: ctx.process_id,
     pack: ctx.pack,
     rule_pack_id: ctx.rule_pack_id ?? null,
+    enrichment,
     ok,
     stages: results,
     proof_event_id: proof.event_id,

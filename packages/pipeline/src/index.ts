@@ -22,8 +22,13 @@ export {
   resolveActiveRulePack,
   findActiveRulePack,
   seedRulePack,
+  seedTriadPack,
   seedGuestopsStay,
+  seedTimedeskMuni,
+  seedFinanceBiz,
   GUESTOPS_STAY,
+  TIMEDESK_MUNI,
+  FINANCE_BIZ,
   PJRulePackNotFound,
 } from './rulepack.js';
 export type {
@@ -31,3 +36,6 @@ export type {
   RulePackScope,
   SeedRulePackInput,
 } from './rulepack.js';
+
+export { enrichItem, ENRICHED_PACKS } from './enrichment.js';
+export type { EnrichmentAnchor, EnrichmentResult } from './enrichment.js';
