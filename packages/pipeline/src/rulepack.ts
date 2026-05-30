@@ -214,10 +214,11 @@ export const FINANCE_BIZ = {
   content: {
     input: 'bank-transaction',
     enrichment: ['vendor', 'invoice', 'receipt', 'tax-category'],
-    autonomy_ceiling: 'suggest',
+    autonomy_ceiling: 'help_manage',
     output_template: 'expense_receipt_review_packet',
     retention_class: 'business-finance-tax',
     no_auto_money_movement: true,
+    approval_threshold: 1000,
   },
 } as const;
 

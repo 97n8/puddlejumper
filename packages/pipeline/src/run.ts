@@ -19,8 +19,9 @@ import {
   type PipelineInput,
   type StageResult,
 } from './stages.js';
-import { findActiveRulePack } from './rulepack.js';
+import { findActiveRulePack, type RulePack } from './rulepack.js';
 import { enrichItem, type EnrichmentResult } from './enrichment.js';
+import { decideVault, type VaultDecision } from './vault.js';
 
 /** Canon version stamped onto C1 proof events. */
 const CANON_VERSION = '1.0.0';
@@ -41,6 +42,12 @@ export interface PipelineResult {
    * from real connectors.
    */
   enrichment: EnrichmentResult;
+  /**
+   * VAULT per-action verdicts for this run (C5), capped by the pack's
+   * autonomy ceiling. Decided, NOT executed — no action runs, no hold row is
+   * written. Unknown/no pack yields a safe no_op set.
+   */
+  vault: VaultDecision;
   /** `true` when every stage was non-terminal (always true in C1). */
   ok: boolean;
   /** Ordered per-stage results. */
@@ -63,19 +70,24 @@ export function runPipeline(
   // "resolve, don't enforce": a missing pack is a normal branch (null), not
   // an error — VAULT verdicts and holds come later. The C2 unique index
   // guarantees at most one active pack per scope.
-  const rule_pack_id =
+  const resolvedPack: RulePack | null =
     input.module && input.environment
-      ? (findActiveRulePack(db, {
+      ? findActiveRulePack(db, {
           tenant_id: input.tenant_id,
           module: input.module,
           environment: input.environment,
-        })?.rule_pack_id ?? null)
+        })
       : null;
+  const rule_pack_id = resolvedPack?.rule_pack_id ?? null;
 
   // API_ENRICHMENT (C4): deterministic mock enrichment by pack. Total — an
   // unknown pack returns an empty anchor set, never a failure. No real
   // connectors, no network, no auth. The result is carried, not enforced.
   const enrichment = enrichItem(input.pack, input.item);
+
+  // VAULT_SCHEMA_RESOLVE / verdict (C5): decide per-action verdicts from the
+  // pack content, capped by the autonomy ceiling. Decided, not executed.
+  const vault = decideVault(resolvedPack, input.pack, input.item, enrichment);
 
   const ctx: PipelineContext = {
     ...input,
@@ -114,6 +126,11 @@ export function runPipeline(
       pack: ctx.pack,
       rule_pack_id: ctx.rule_pack_id ?? null,
       enrichment: enrichment.summary,
+      vault: {
+        ceiling: vault.ceiling,
+        summary: vault.summary,
+        decisions: vault.decisions,
+      },
       ok,
       stages: PIPELINE_STAGES,
       results: results.map((r) => ({
@@ -129,6 +146,7 @@ export function runPipeline(
     pack: ctx.pack,
     rule_pack_id: ctx.rule_pack_id ?? null,
     enrichment,
+    vault,
     ok,
     stages: results,
     proof_event_id: proof.event_id,

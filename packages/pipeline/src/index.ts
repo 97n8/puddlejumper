@@ -39,3 +39,12 @@ export type {
 
 export { enrichItem, ENRICHED_PACKS } from './enrichment.js';
 export type { EnrichmentAnchor, EnrichmentResult } from './enrichment.js';
+
+export { decideVault, AUTONOMY_LADDER } from './vault.js';
+export type {
+  AutonomyLevel,
+  ActionVerdict,
+  ActionSpec,
+  ActionDecision,
+  VaultDecision,
+} from './vault.js';
