@@ -85,6 +85,9 @@ importers:
 
   apps/puddlejumper:
     dependencies:
+      '@pj/casespace-view':
+        specifier: workspace:*
+        version: link:../../packages/casespace-view
       '@pj/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -144,6 +147,9 @@ importers:
         specifier: ^6.0.2
         version: 6.0.2
     devDependencies:
+      '@pj/pipeline':
+        specifier: workspace:*
+        version: link:../../packages/pipeline
       '@types/bcryptjs':
         specifier: ^2.4.4
         version: 2.4.6

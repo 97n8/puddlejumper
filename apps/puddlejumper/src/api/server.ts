@@ -105,6 +105,7 @@ import { createCanonPrrRouter } from "../domains/prr/index.js";
 import { createCanonAuditRouter } from "../routes/audit.routes.js";
 import { createCanonOrgRouter } from "../routes/org.routes.js";
 import { createCanonOverlayRouter } from "../routes/overlay.routes.js";
+import { createCanonCaseSpaceRouter } from "../routes/casespace.routes.js";
 import { loadOverlay } from "@pj/split-row";
 import {
   getDb as getCanonDb,
@@ -1161,6 +1162,8 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createCanonOrgRouter({ db: canonDb }));
   // Canon overlay registry (Phase 4) — shared_bindings CRUD, admin-gated.
   app.use("/api", createCanonOverlayRouter({ db: canonDb }));
+  // Canon CaseSpace view (Visibility Layer #101) — read-only projection.
+  app.use("/api", createCanonCaseSpaceRouter({ db: canonDb }));
   app.use("/api", createCommonsRoutes({ commonsStore }));
   app.use("/api", createDogRoutes({ dogStore }));
   app.use("/api", createAccessRoutes({ prrStore }));
