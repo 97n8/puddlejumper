@@ -218,6 +218,31 @@ importers:
         specifier: ^1.0.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.41)(jsdom@28.1.0(@noble/hashes@1.8.0))(lightningcss@1.32.0)
 
+  packages/casespace-view:
+    dependencies:
+      '@pj/db':
+        specifier: workspace:*
+        version: link:../db
+      better-sqlite3:
+        specifier: ^11.10.0
+        version: 11.10.0
+    devDependencies:
+      '@pj/pipeline':
+        specifier: workspace:*
+        version: link:../pipeline
+      '@types/better-sqlite3':
+        specifier: ^7.6.12
+        version: 7.6.13
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.41
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.0.0
+        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.41)(jsdom@28.1.0(@noble/hashes@1.8.0))(lightningcss@1.32.0)
+
   packages/core:
     dependencies:
       cookie:
@@ -5518,7 +5543,7 @@ snapshots:
   vite@5.4.21(@types/node@20.19.41)(lightningcss@1.32.0):
     dependencies:
       esbuild: 0.21.5
-      postcss: 8.5.6
+      postcss: 8.5.15
       rollup: 4.57.1
     optionalDependencies:
       '@types/node': 20.19.41
@@ -5528,7 +5553,7 @@ snapshots:
   vite@5.4.21(@types/node@22.19.11)(lightningcss@1.32.0):
     dependencies:
       esbuild: 0.21.5
-      postcss: 8.5.6
+      postcss: 8.5.15
       rollup: 4.57.1
     optionalDependencies:
       '@types/node': 22.19.11
