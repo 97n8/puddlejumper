@@ -20,6 +20,7 @@ function freshDb(): DatabaseHandle {
     '004_shared_bindings.sql',
     '005_deployment_status.sql',
     '006_identity_overlay.sql',
+    '007_pipeline_schema.sql',
   ]);
   return db;
 }
@@ -177,6 +178,7 @@ describe('@pj/db — canon contract', () => {
         '004_shared_bindings.sql',
         '005_deployment_status.sql',
         '006_identity_overlay.sql',
+        '007_pipeline_schema.sql',
       ]);
     });
 
