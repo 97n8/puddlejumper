@@ -1,8 +1,16 @@
 // Solutions (Build Sequence step 3). Routing page, not a service catalog.
 // Six cards max; each routes to Contact with a hidden topic field.
 
+import type { Metadata } from 'next';
 import { Hero, Cta } from '../../../components/site/Bits';
 import { BRAND, SOLUTIONS } from '../../../lib/site-content';
+
+export const metadata: Metadata = {
+  title: 'Solutions',
+  description:
+    'Route by what needs to hold together: policy, data, training, ' +
+    'leadership, workflows, or continuity.',
+};
 
 export default function Solutions() {
   return (

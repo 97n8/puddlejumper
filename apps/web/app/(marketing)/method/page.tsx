@@ -1,8 +1,16 @@
 // Method (Build Sequence step 6). Principles FIRST; canon lower on the page.
 // Never lead Method with pond/heron/mascot/canon (Builder Clarifications).
 
+import type { Metadata } from 'next';
 import { Hero } from '../../../components/site/Bits';
 import { BRAND, METHOD } from '../../../lib/site-content';
+
+export const metadata: Metadata = {
+  title: 'Method',
+  description:
+    'The operating principles behind PublicLogic — starting with one rule: a ' +
+    'system should not require heroics to function.',
+};
 
 export default function Method() {
   return (

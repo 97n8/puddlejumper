@@ -1,8 +1,14 @@
 // Products / Login (Build Sequence step 4). Access doors only.
 // PuddleJumper login + Permit&Bridge coming soon. No FORM/VAULT explanation.
 
+import type { Metadata } from 'next';
 import { Hero, Cta } from '../../../components/site/Bits';
 import { PRODUCTS } from '../../../lib/site-content';
+
+export const metadata: Metadata = {
+  title: 'Products',
+  description: 'Log in to PuddleJumper. Permit&Bridge coming soon.',
+};
 
 export default function Products() {
   return (

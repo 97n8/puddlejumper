@@ -1,8 +1,16 @@
 // About (Build Sequence step 7). Nate + Allie are CO-EQUAL method owners.
 // Allie is not a training footnote (Builder Clarifications).
 
+import type { Metadata } from 'next';
 import { Hero, Cta } from '../../../components/site/Bits';
 import { BRAND, ABOUT } from '../../../lib/site-content';
+
+export const metadata: Metadata = {
+  title: 'About',
+  description:
+    'PublicLogic is built by Nathan R. Boudreau and Dr. Allison Weiss ' +
+    'Rothschild — governance and behavioral systems, in one operating test.',
+};
 
 export default function About() {
   return (

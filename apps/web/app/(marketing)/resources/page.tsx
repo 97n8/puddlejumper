@@ -1,8 +1,16 @@
 // Resources (Build Sequence step 5). Give away the lens, not the machine.
 // Each lane has one safe free resource; no internal IP exposed.
 
+import type { Metadata } from 'next';
 import { Hero, Cta } from '../../../components/site/Bits';
 import { BRAND, RESOURCES } from '../../../lib/site-content';
+
+export const metadata: Metadata = {
+  title: 'Resources',
+  description:
+    'Free checklists, briefs, and starter worksheets that help you see where ' +
+    'the system is strained.',
+};
 
 export default function Resources() {
   return (

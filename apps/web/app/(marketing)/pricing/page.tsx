@@ -2,8 +2,16 @@
 // work (diagnostics/builds/retainers) is request-based — keep serious work
 // protected. Custom quote math stays internal (not on this page).
 
+import type { Metadata } from 'next';
 import { Hero, Cta } from '../../../components/site/Bits';
 import { PRICING } from '../../../lib/site-content';
+
+export const metadata: Metadata = {
+  title: 'Pricing',
+  description:
+    'CaseSpaces from $19/month. Projects, diagnostics, and full builds are ' +
+    'scoped on request.',
+};
 
 export default function Pricing() {
   return (
