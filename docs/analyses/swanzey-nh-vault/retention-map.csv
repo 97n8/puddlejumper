@@ -1,0 +1,13 @@
+rsa_33a_category,min_retention,vault_retention_class,sealed,disposable,proof_on_dispose,source_tag
+Town-meeting minutes,Permanent,permanent,true,false,n/a,R
+Minutes of all public bodies,Permanent,permanent,true,false,n/a,R
+Assessors invoices,Permanent,permanent,true,false,n/a,R
+Legal actions against the municipality,Permanent,permanent,true,false,n/a,R
+PELRB actions and decisions,Permanent,permanent,true,false,n/a,R
+Labor union negotiations,Permanent,permanent,true,false,n/a,R
+Property inventories,5 years,custom:5y,false,true,required,R
+Abatement records,5 years,custom:5y,false,true,required,R
+Time cards,4 years,custom:4y,false,true,required,R
+Transitory correspondence,Retain as needed,1-year,false,true,required,R
+Building permits (closed),per schedule,7-year,false,true,required,M
+Right-to-Know request log,tied to record produced,permanent,true,false,n/a,M

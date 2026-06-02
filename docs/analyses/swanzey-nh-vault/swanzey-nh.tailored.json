@@ -1,0 +1,71 @@
+{
+  "$schema": "https://publiclogic.org/schemas/vault-tailored-v1.json",
+  "tailoredId": "tailored-swanzey-nh-rtk.intake.v1-1.0.0",
+  "formKey": "rtk.intake.v1",
+  "tenantId": "swanzey-nh",
+  "version": "1.0.0",
+  "createdAt": "2026-06-02T00:00:00Z",
+  "createdBy": "architecture@publiclogic.org",
+  "_demonstration": true,
+  "_note": "Demonstration instance over public data. Carries NO real legal signoff and authorizes nothing. Mirrors VAULT-CORE-SPEC v0.1.0 Tailored Piece (Piece 10) shape; statutory binding swapped M.G.L. -> NH RSA.",
+  "legalSignoff": {
+    "signedBy": "PENDING-town-counsel@swanzeynh.gov",
+    "signedAt": null,
+    "documentRef": "UNSIGNED-demonstration-2026-06-02"
+  },
+  "enforcementMode": "tailored",
+  "localLegalPosture": {
+    "jurisdiction": "Swanzey, NH",
+    "governingLaw": [
+      "RSA 91-A (Right-to-Know)",
+      "RSA 33-A:3-a (Disposition of Municipal Records)",
+      "RSA 41 (Selectmen / town officers)",
+      "RSA 40:13 (SB2 official ballot town meeting)",
+      "RSA 76 (assessment / abatement appeals)"
+    ],
+    "governmentForm": "SB2 official-ballot town meeting (adopted 2005); 3-member elected Board of Selectmen; Town Administrator as chief administrative officer",
+    "notes": "NH RSA 91-A mandates a 5-BUSINESS-DAY response window, replacing the 10-day MA Core default. Deliberative session first Tuesday of February; ballot vote second Tuesday of March."
+  },
+  "slaOverrides": {
+    "acknowledgmentDays": 5,
+    "acknowledgmentBasis": "business",
+    "resolutionDays": 20,
+    "_coreDefaults": { "acknowledgmentDays": 10, "resolutionDays": 30 }
+  },
+  "roleMappings": [
+    { "coreRole": "governing_body", "localTitle": "Board of Selectmen", "localEmail": "selectmen@swanzeynh.gov", "canDelegate": false },
+    { "coreRole": "dept_head", "localTitle": "Town Administrator", "localEmail": "administrator@swanzeynh.gov", "canDelegate": true },
+    { "coreRole": "clerk", "localTitle": "Town Clerk / Tax Collector", "localEmail": "clerk@swanzeynh.gov", "canDelegate": true },
+    { "coreRole": "legal", "localTitle": "Town Counsel", "localEmail": "counsel@swanzeynh.gov", "canDelegate": false },
+    { "coreRole": "assessor", "localTitle": "Assessing", "localEmail": "assessing@swanzeynh.gov", "canDelegate": true }
+  ],
+  "autonomyCeiling": "help_manage",
+  "hardRails": {
+    "no_auto_money_movement": true,
+    "approval_threshold": { "currency": "USD", "amount": 0, "_meaning": "any amount-gated action escalates; town pays only on a selectmen-signed manorder" },
+    "legislative_actions_denied": true
+  },
+  "encryptionPolicy": {
+    "atRestAlgorithm": "AES-256-GCM",
+    "keyProvider": "vauly",
+    "keyEscrowRequired": true,
+    "keyRotationDays": 90
+  },
+  "retentionPolicy": {
+    "authority": "RSA 33-A:3-a",
+    "defaultClass": "1-year",
+    "bindings": [
+      { "category": "Town-meeting & public-body minutes", "retentionClass": "permanent", "sealed": true },
+      { "category": "Assessors invoices; legal actions vs. municipality", "retentionClass": "permanent", "sealed": true },
+      { "category": "Property inventories; abatement records", "retentionClass": "custom:5y", "sealed": false },
+      { "category": "Time cards", "retentionClass": "custom:4y", "sealed": false },
+      { "category": "Transitory correspondence", "retentionClass": "1-year", "sealed": false }
+    ],
+    "deleteBeforeExpiry": "forbidden"
+  },
+  "connectorOverrides": {
+    "notify": "email",
+    "recordsOfRequest": "append-only-ledger"
+  },
+  "auditOnChange": true
+}

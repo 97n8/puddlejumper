@@ -1,0 +1,11 @@
+formKey,process,owning_dept,natural_autonomy,recommended_ceiling,vault_verdict,moves_money,amount_gated,est_annual_volume,volume_tag,retention_class,notes
+rtk.intake.v1,RSA 91-A Right-to-Know request,Town Administrator / Clerk,help_manage,help_manage,allowed,false,false,140,M,permanent,5-business-day statutory clock; redaction stays human
+dog.license.v1,Dog license issue/renew,Town Clerk,run_routine,run_routine,allowed,false,false,2000,M,custom:3y,deterministic + reversible; refunds denied
+vehicle.reg.v1,Motor-vehicle registration,Town Clerk,run_routine,run_routine,allowed,false,true,3500,M,custom:3y,fee handled by state system; no auto refund
+permit.building.v1,Building permit intake,Planning & Econ Dev,help_manage,help_manage,approval_required,false,false,300,M,7-year,completeness + routing only; grant/deny human
+permit.driveway.v1,Driveway permit,Public Works,help_manage,help_manage,approval_required,false,false,100,M,7-year,route to DPW approver
+abatement.intake.v1,Tax abatement / exemption,Assessing,suggest,suggest,approval_required,false,false,120,M,custom:5y,RSA 76 appeal exposure; recommendation only
+recycling.sticker.v1,Recycling-center / cemetery service,Public Works,run_routine,run_routine,allowed,false,false,500,M,1-year,reversible service issuance
+board.agenda.v1,Board/committee agenda + minutes,Town Administrator,help_manage,help_manage,approval_required,false,false,90,M,permanent,minutes are permanent-retention public records
+warrant.article.v1,Warrant-article drafting,Board of Selectmen / voters,suggest,suggest,denied,false,false,40,M,permanent,legislative authority is the voters'; never auto-authorized
+finance.manorder.v1,Accounts-payable / manifest order,Finance / Selectmen,suggest,suggest,denied,true,true,1200,M,7-year,no_auto_money_movement hard rail; always denied
