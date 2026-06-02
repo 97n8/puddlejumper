@@ -191,8 +191,8 @@ export const METHOD = {
   hero: {
     headline: 'How PublicLogic builds systems that stick.',
     body:
-      'The method starts with a simple rule: a system should not require ' +
-      'heroics to function.',
+      'Six principles that keep work usable, recordable, teachable, and ready ' +
+      'to carry forward — even under pressure.',
   },
   principles: [
     { name: 'No-Hero Systems', copy: 'A system should not require heroics to function.' },
