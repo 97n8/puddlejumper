@@ -1,0 +1,26 @@
+year,article,topic,amount,yes,no,pct_yes,threshold,result,note,source
+2015,3,Capital/borrowing (3/5 required),,578,294,66.3,3/5,PASS,Cleared supermajority,annual_report
+2015,op,Operating budget,6262426,673,206,76.6,majority,PASS,Strong support era,annual_report
+2016,op,Operating budget,6210799,670,311,68.3,majority,PASS,,annual_report
+2016,12,Petition/other (failed),,443,550,44.6,majority,FAIL,Voters reject,annual_report
+2023,op,Operating budget,7961500,388,236,62.2,majority,PASS,,annual_report
+2023,7,Fire Stations Capital Reserve,300000,365,268,57.7,majority,PASS,Closest money margin - fire contested,annual_report
+2023,4,Capital reserve deposit,272000,470,178,72.5,majority,PASS,Reserves pass easily,annual_report
+2023,5,Capital reserve deposit,590000,494,141,77.8,majority,PASS,,annual_report
+2023,6,Capital reserve deposit,261976,528,112,82.5,majority,PASS,,annual_report
+2023,10,All-Veterans tax credit,,569,67,89.5,majority,PASS,Near-unanimous,annual_report
+2024,op,Operating budget,8370000,738,530,58.3,majority,PASS,Support eroding,annual_report
+2024,x,Bond/revolving (3/5 required),,702,582,54.7,3/5,FAIL,Supermajority wall,annual_report
+2024,y,Capital (3/5 required),,821,448,64.7,3/5,PASS,,annual_report
+2025,7,Operating budget,8939036,800,596,57.3,majority,PASS,Lowest budget margin on record,annual_report
+2025,4,Water/infrastructure appropriation,3500000,864,529,62.0,3/5,PASS,Large - West Swanzey water program,annual_report
+2025,5,Water/infrastructure appropriation,6400000,,,,3/5,PASS,Very large - utility acquisition/build,annual_report
+2025,6,Comprehensive study (100% principal forgiveness),100000,998,406,71.1,majority,PASS,DWSRF-funded study,annual_report
+2025,11,West Swanzey TIF District,,,,,majority,PASS,RSA 162-K value capture,annual_report
+2025,12,Acquire West Swanzey water assets (RSA 38:4),,822,553,59.8,majority,PASS,Town takes utility ownership,annual_report
+2025,13,Ambulance Expendable Trust deposit,100000,1060,350,75.2,majority,PASS,EMS cost pressure,annual_report
+2025,15,Increase Select Board 3 to 5 members,,740,653,53.1,majority,PASS,Governance restructure,annual_report
+2025,16,Add second polling location (petition),,673,727,48.1,majority,FAIL,Voters decline,annual_report
+2026,3,Public Works Facility (3/5 required),1200000,681,485,58.4,3/5,FAIL,Failed twice incl recount,news
+2026,SB2,Repeal SB2 / return to floor meeting,,345,809,29.9,majority,FAIL,Voters keep SB2,news
+2026,op,Operating budget,8939036,,,,majority,PASS,~6.8% increase,news

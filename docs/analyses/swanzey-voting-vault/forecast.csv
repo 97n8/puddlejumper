@@ -1,0 +1,11 @@
+metric,year,low,base,high,basis
+operating_budget,2025,8939036,8939036,8939036,actual voted
+operating_budget,2026,9341293,9475378,9609464,"low 4.5% / base 6.0% / high 7.5% off real recent CAGR (~6.7%)"
+operating_budget,2027,9761651,10043901,10330174,compounding
+operating_budget,2028,10200925,10646535,11104937,base crosses $10M
+operating_budget,2029,10659966,11285327,11937807,compounding
+operating_budget,2030,11139664,11962447,12832143,base ~$12M by 2030
+budget_support_pct,2026,54,56,58,"trend from 76.6%(2015)->57.3%(2025); ~ -1 to -2 pts/yr"
+budget_support_pct,2028,50,53,56,approaching 50% cliff
+budget_support_pct,2030,47,51,55,"budget-failure risk elevated (but default ~= proposed, so low fiscal impact)"
+default_gap_pct,2026,0.3,0.6,1.0,"default ~= proposed; the 'vote no to save' lever stays gone"
