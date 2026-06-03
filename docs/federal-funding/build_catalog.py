@@ -1,0 +1,404 @@
+#!/usr/bin/env python3
+"""
+Generates federal_mechanism_catalog.csv for the PublicLogic federal funding
+architecture. Each row is one funding mechanism with citation-grade identifiers,
+a date-stamped 2026 status, a confidence tag, and a primary-source URL.
+
+Confidence legend:
+  CONFIRMED-LIVE - 2026 status verified from a primary/authoritative source this session.
+  IN-FLUX        - exists but authorization, appropriation, or administration is unsettled.
+  CANDIDATE      - plausible/usable but the specific 2026 figures or status were NOT
+                   independently re-verified this session; treat as a research lead.
+  DEAD           - terminated; do not present as live.
+
+Cost-treatment route (how PublicLogic's non-contingent fee rides, per 2 CFR 200.459):
+  ADMIN     - grant-administration / management & admin cost line of the award.
+  SOFT      - project soft cost (planning, design, A&E-adjacent professional service).
+  COMPLIANCE- compliance-infrastructure / monitoring cost inside money the client controls.
+  (many mechanisms support more than one route)
+
+NOTE: "date_verified" = 2026-06-03 means a source was checked this session. Rows marked
+CANDIDATE with date_verified "2026-01 (recall)" were NOT re-verified and are flagged as such
+per the no-fabrication standard. Assistance Listing numbers are the post-CFDA identifiers on
+SAM.gov; confirm the live listing before relying on any number.
+"""
+import csv, os
+
+HEADERS = [
+    "domain", "name", "assistance_listing", "authorizing_statute",
+    "controlling_cfr_irc", "agency", "formula_or_competitive",
+    "entitlement_or_discretionary", "pass_through_path", "eligible_uses",
+    "match_cost_share", "period_of_performance", "cost_treatment_route",
+    "status_2026", "confidence", "source_url", "date_verified",
+]
+
+ROWS = [
+    # ---------------- TAX CREDITS AS FEDERAL FUNDING (bedrock) ----------------
+    ["Tax credit / capital", "New Markets Tax Credit (NMTC)", "21.020",
+     "IRC s.45D; made permanent by OBBBA (P.L.119-21, 2025)", "IRC s.45D; 26 CFR 1.45D-1",
+     "CDFI Fund (Treasury)", "Competitive", "Discretionary (allocation to CDEs)",
+     "Treasury CDFI Fund -> Community Development Entity (CDE) -> Qualified Active Low-Income Community Business",
+     "Equity investment in low-income community businesses/real estate; 39% credit over 7 yrs",
+     "None (private capital; tax-exempt sponsor uses leverage loan)", "7-year compliance period",
+     "COMPLIANCE", "Made PERMANENT under OBBBA (was set to expire 12/31/2025); ~$5B annual allocation authority",
+     "CONFIRMED-LIVE", "https://www.novoco.com/notes-from-novogradac/final-reconciliation-bill-permanently-expands-lihtc-nmtc-and-oz-incentive-but-does-not-include-htc-provisions", "2026-06-03"],
+
+    ["Tax credit / carbon", "Carbon Oxide Sequestration Credit (Section 45Q)", "N/A (IRC credit)",
+     "IRC s.45Q; amended by IRA (2022) and OBBBA (2025)", "IRC s.45Q; 26 CFR 1.45Q",
+     "IRS / Treasury", "N/A (statutory credit)", "Statutory (not appropriated)",
+     "Direct to taxpayer; tax-exempt entity via elective pay s.6417 or transfer s.6418",
+     "Carbon capture/utilization/geologic storage equipment; credit per metric ton CO2",
+     "None", "12-year credit period from placed-in-service",
+     "COMPLIANCE", "PRESERVED & STRENGTHENED by OBBBA: EOR/utilization rate raised to $85/ton (parity with storage) for equipment placed in service after 7/4/2025; FEOC limits apply to tax years beginning after enactment (SFEs ineligible; FIEs +2 yrs); transfers barred to SFEs",
+     "CONFIRMED-LIVE", "https://payneinstitute.mines.edu/keeping-up-with-carbon-key-changes-for-45q-tax-credits-under-one-big-beautiful-bill-act-and-possible-impacts/", "2026-06-03"],
+
+    ["Tax credit / monetization", "Elective (Direct) Pay", "N/A (IRC mechanism)",
+     "IRA 2022 s.13801; preserved under OBBBA", "IRC s.6417; final regs T.D. 9988",
+     "IRS / Treasury", "N/A", "Statutory",
+     "Direct to applicable (tax-exempt/governmental) entity as a payment",
+     "Lets tax-exempt clients monetize 45Q/48E/45Y/etc. as a cash refund rather than a credit",
+     "None", "Per underlying credit", "COMPLIANCE",
+     "RETAINED for nonprofits/state-local govts under OBBBA; domestic-content phase-downs and FEOC limits tighten from 2026; closing windows on wind/solar (48E/45Y) underlying credits",
+     "CONFIRMED-LIVE", "https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions", "2026-06-03"],
+
+    ["Tax credit / monetization", "Transferability of Credits", "N/A (IRC mechanism)",
+     "IRA 2022 s.13801; preserved under OBBBA", "IRC s.6418",
+     "IRS / Treasury", "N/A", "Statutory", "Sale of credit to unrelated taxpayer for cash",
+     "Monetize credits a tax-exempt entity cannot use directly; alternative/complement to elective pay",
+     "None", "Per underlying credit", "COMPLIANCE",
+     "RETAINED under OBBBA; 45Q credits may NOT be transferred to Specified Foreign Entities; FEOC narrows transferee pool from 2026",
+     "CONFIRMED-LIVE", "https://www.novoco.com/notes-from-novogradac/managing-the-interim-feoc-guidance-irs-notice-2026-15-addresses-material-assistance-for-sections-45y-48e-and-45x-deferring-on-broader-pfe-status-guidance", "2026-06-03"],
+
+    ["Tax credit / housing", "Low-Income Housing Tax Credit (LIHTC)", "N/A (IRC credit)",
+     "IRC s.42; expanded by OBBBA (2025)", "IRC s.42; 26 CFR 1.42",
+     "IRS / state HFAs (in MA: MassHousing/DHCD-EOHLC)", "Competitive (9%) / by-right (4%/bond)",
+     "Discretionary allocation (9%); volume-cap driven (4%)",
+     "Treasury -> state HFA -> developer/owner",
+     "Acquisition/rehab/new construction of affordable rental housing",
+     "None (equity); layered with soft debt", "15-yr compliance + 15-yr extended use",
+     "COMPLIANCE", "EXPANDED by OBBBA: 9% state ceiling permanently +12%; 4% bond-financing threshold permanently lowered 50%->25% (more 4% deals viable) for buildings placed in service after 12/31/2025",
+     "CONFIRMED-LIVE", "https://www.nixonpeabody.com/insights/alerts/2025/07/16/low-income-housing-and-community-development-tax-credits-in-the-big-beautiful-bill", "2026-06-03"],
+
+    ["Tax credit / historic", "Historic Rehabilitation Tax Credit (HTC)", "N/A (IRC credit)",
+     "IRC s.47", "IRC s.47; 26 CFR 1.47", "IRS / NPS (certification)",
+     "N/A (certified credit)", "Statutory",
+     "Direct to owner; ratably over 5 yrs", "20% credit for certified rehab of historic buildings",
+     "None", "5-year ratable claim period", "COMPLIANCE",
+     "UNCHANGED at federal level by OBBBA (HTC Growth & Opportunity Act provisions NOT included); remains 20% / 5-yr",
+     "CONFIRMED-LIVE", "https://www.novoco.com/notes-from-novogradac/final-reconciliation-bill-permanently-expands-lihtc-nmtc-and-oz-incentive-but-does-not-include-htc-provisions", "2026-06-03"],
+
+    ["Tax credit / energy (sunsetting)", "Clean Electricity ITC / PTC (48E / 45Y)", "N/A (IRC credit)",
+     "IRC s.48E, s.45Y; curtailed by OBBBA", "IRC s.48E, s.45Y",
+     "IRS / Treasury", "N/A", "Statutory",
+     "Direct/elective pay/transfer", "Investment/production credit for clean electricity facilities",
+     "None", "Per credit", "COMPLIANCE",
+     "CLOSING WINDOW: OBBBA terminates wind/solar 48E/45Y for facilities placed in service after 12/31/2027; full credit only if construction begins before 7/4/2026; FEOC material-assistance (MACR) applies to construction starting 2026 (40% facilities / 55% storage threshold). IRS Notice 2026-15 (2/12/2026) interim guidance",
+     "IN-FLUX", "https://www.novoco.com/periodicals/articles/obbba-and-the-clean-energy-race-against-the-clock", "2026-06-03"],
+
+    # ---------------- WATER (bedrock / IIJA + annual approp) ----------------
+    ["Water", "Clean Water State Revolving Fund (CWSRF)", "66.458",
+     "Clean Water Act Title VI (s.601 et seq.); IIJA supplemental", "33 U.S.C. 1381; 40 CFR 35 subpart K",
+     "EPA -> state CWSRF programs", "Formula (cap grant to states) then state RLF",
+     "Discretionary appropriation + IIJA advance approp", "EPA -> state -> local borrower (loan)",
+     "Wastewater, stormwater, nonpoint source, water-quality portions of brownfield/site cleanup",
+     "State match 20% on cap grant; subsidy varies (principal forgiveness for disadvantaged)",
+     "Project life (loan term up to 30-40 yrs)", "SOFT (planning/design) / COMPLIANCE",
+     "FUNDED FY2026: P.L.119-74 provides ~$3.04B EPA water infrastructure (= FY2025 level); EPA announced ~$7.2B total CWSRF+DWSRF allotments (annual approp + IIJA)",
+     "CONFIRMED-LIVE", "https://www.congress.gov/crs-product/IF13177", "2026-06-03"],
+
+    ["Water", "Drinking Water State Revolving Fund (DWSRF)", "66.468",
+     "Safe Drinking Water Act s.1452; IIJA supplemental", "42 U.S.C. 300j-12; 40 CFR 35 subpart L",
+     "EPA -> state DWSRF programs", "Formula (cap grant) then state RLF",
+     "Discretionary appropriation + IIJA advance approp", "EPA -> state -> public water system",
+     "Drinking water infrastructure, lead service line replacement, treatment, source water",
+     "State match 20%; principal forgiveness for disadvantaged communities",
+     "Project life", "SOFT / COMPLIANCE",
+     "FUNDED FY2026 (see CWSRF; combined ~$7.2B allotments announced)",
+     "CONFIRMED-LIVE", "https://www.epa.gov/dwsrf", "2026-06-03"],
+
+    ["Water / environmental", "Brownfields Assessment, RLF & Cleanup Grants", "66.818",
+     "CERCLA s.104(k); BUILD Act (2018)", "42 U.S.C. 9604(k)",
+     "EPA OBLR -> recipients", "Competitive", "Discretionary",
+     "EPA -> municipality/quasi-public/nonprofit",
+     "Brownfield site assessment, cleanup, revolving loan funds, area-wide planning",
+     "20% cost share on cleanup (may be hardship-waived)", "3-5 yr cooperative agreement",
+     "SOFT / COMPLIANCE", "Recurring annual competitive program; pairs with CWSRF for water-quality remediation; verify current NOFO cycle on grants.gov",
+     "CONFIRMED-LIVE", "https://www.epa.gov/cwsrf/clean-water-state-revolving-fund-cwsrf-contaminated-sites", "2026-06-03"],
+
+    ["Water (rural)", "USDA Rural Water & Waste Disposal (RD)", "10.760",
+     "Consolidated Farm and Rural Development Act s.306", "7 U.S.C. 1926; 7 CFR 1780",
+     "USDA Rural Development", "Application-driven (not strictly competitive)", "Discretionary",
+     "USDA RD -> rural community (pop. <=10,000)",
+     "Water/wastewater systems in rural areas; loans + grants",
+     "Grant share varies by median household income", "Project life",
+     "SOFT / COMPLIANCE", "Standing RD program; verify FY2026 allocation and rural eligibility",
+     "CANDIDATE", "https://www.rd.usda.gov/programs-services/water-environmental-programs", "2026-01 (recall)"],
+
+    # ---------------- RESILIENCE / HAZARD MITIGATION (volatile + statutory) ----------------
+    ["Resilience", "FEMA Building Resilient Infrastructure & Communities (BRIC)", "97.047",
+     "Stafford Act s.203 (as amended by DRRA 2018 s.1234)", "42 U.S.C. 5133; 44 CFR 201, 206",
+     "FEMA -> state -> subapplicant", "Competitive (national + state/territory set-aside)",
+     "Discretionary (funded from Disaster Relief Fund set-aside)",
+     "FEMA -> state emergency mgmt agency -> local subapplicant",
+     "Pre-disaster hazard mitigation: infrastructure hardening, codes, mitigation planning",
+     "25% non-federal (10% for small/impoverished communities)", "Multi-year (period of performance per award)",
+     "ADMIN / SOFT / COMPLIANCE",
+     "RESTORED: terminated 4/4/2025; court permanently enjoined termination 12/11/2025; enforcement order 3/6/2026; FEMA issued joint FY2024-2025 BRIC NOFO 3/25/2026 with ~$1B available. Treat as reopening but politically fragile",
+     "IN-FLUX", "https://coastalreview.org/2026/03/federal-judge-orders-fema-to-restore-bric-program/", "2026-06-03"],
+
+    ["Resilience", "FEMA Hazard Mitigation Grant Program (HMGP)", "97.039",
+     "Stafford Act s.404", "42 U.S.C. 5170c; 44 CFR 206 subpart N",
+     "FEMA -> state -> subapplicant", "Formula (post-declaration, % of disaster costs)",
+     "Statutory-triggered by Presidential disaster declaration (mandatory funding)",
+     "FEMA -> state -> local subapplicant",
+     "Post-disaster mitigation tied to a declared disaster; hardening, buyouts, planning",
+     "25% non-federal", "Per award period of performance", "ADMIN / SOFT / COMPLIANCE",
+     "STATUTORY and recurring: funded automatically as a percentage of declared-disaster costs; more durable than BRIC because it is not a discretionary competitive line",
+     "CONFIRMED-LIVE", "https://www.fema.gov/grants/mitigation/hazard-mitigation", "2026-01 (recall)"],
+
+    ["Resilience", "FEMA Flood Mitigation Assistance (FMA)", "97.029",
+     "National Flood Insurance Act s.1366", "42 U.S.C. 4104c; 44 CFR 79",
+     "FEMA -> state -> subapplicant", "Competitive", "Discretionary (NFIF-funded)",
+     "FEMA -> state -> local subapplicant", "Flood mitigation for NFIP-insured properties; buyouts, elevation",
+     "25-100% federal depending on repetitive-loss status", "Per award",
+     "ADMIN / SOFT", "Recurring; funded from National Flood Insurance Fund; verify FY2026 NOFO",
+     "CANDIDATE", "https://www.fema.gov/grants/mitigation/floods", "2026-01 (recall)"],
+
+    ["Resilience", "FEMA Safeguarding Tomorrow Revolving Loan Fund", "97.052",
+     "STORM Act (2021)", "42 U.S.C. 5135",
+     "FEMA -> state -> local borrower", "Competitive (capitalization grant) then RLF",
+     "Discretionary", "FEMA -> state RLF -> local borrower",
+     "Low-interest loans for hazard mitigation projects", "10% state match on cap grant",
+     "Revolving", "SOFT / COMPLIANCE", "Newer RLF model; verify FY2026 capitalization NOFO",
+     "CANDIDATE", "https://www.fema.gov/grants/safeguarding-tomorrow-rlf", "2026-01 (recall)"],
+
+    # ---------------- CYBER (volatile) ----------------
+    ["Cyber", "State and Local Cybersecurity Grant Program (SLCGP)", "97.137",
+     "Homeland Security Act s.2218; State and Local Cybersecurity Improvement Act (IIJA Div.G)", "6 U.S.C. 665g",
+     "FEMA/CISA -> state (SAA) -> local", "Formula + competitive elements",
+     "Discretionary (IIJA 4-yr authorization expired)",
+     "FEMA -> State Administrative Agency -> local subrecipient (>=80% pass-through; >=25% to rural)",
+     "Cybersecurity planning, governance, MFA, .gov migration, training",
+     "Increasing local match (10/20/30/40% over the 4 yrs)", "Per award",
+     "ADMIN / COMPLIANCE",
+     "IN-FLUX: original IIJA authorization expired 9/30/2025; CR extended authorization to 1/30/2026, FY2026 approp extended authorization to 9/30/2026 but provided NO new money for new grants. PILLAR Act (H.R.5078) passed House 11/17/2025 (reauth through FY2035); Senate S.3251 in committee; NOT signed into law as of 6/3/2026. Prior-year/IIJA carryover NOFOs still flowing at state level",
+     "IN-FLUX", "https://statetechmagazine.com/article/2025/11/congress-revives-state-and-local-cyber-grants-funding-remains-unclear", "2026-06-03"],
+
+    # ---------------- BROADBAND (one DEAD, one IN-FLUX) ----------------
+    ["Broadband", "Broadband Equity, Access, and Deployment (BEAD)", "11.041",
+     "IIJA s.60102 (2021)", "47 U.S.C. 1702",
+     "NTIA -> state broadband office", "Formula (to states) then competitive subgrants",
+     "Discretionary (IIJA advance appropriation, $42.45B)",
+     "NTIA -> state broadband office -> subgrantee (ISP/local)",
+     "Last-mile broadband deployment, mapping, adoption (priority: unserved/underserved)",
+     "25% non-federal (waivable for high-cost)", "Per award",
+     "SOFT / COMPLIANCE", "RESTRUCTURED in 2025 ('Benefit of the Bargain' / tech-neutral round); funds obligated to states but local subgrant timing shifted; verify state office round status",
+     "IN-FLUX", "https://www.internetforall.gov/program/broadband-equity-access-and-deployment-bead-program", "2026-01 (recall)"],
+
+    ["Broadband", "Digital Equity Act programs (Planning/Capacity/Competitive)", "11.032 / 11.033",
+     "IIJA s.60304-60305 (2021)", "47 U.S.C. 1723-1724",
+     "NTIA", "Formula + competitive", "Discretionary (IIJA advance approp)",
+     "NTIA -> state / nonprofit", "Digital inclusion, device access, digital literacy",
+     "Varies", "N/A", "N/A",
+     "DEAD: $2.75B program terminated 5/9/2025 (Administration deemed it unconstitutional). DO NOT present as live or budget against it",
+     "DEAD", "https://www.ntia.gov/category/digital-equity-act-programs", "2026-01 (recall)"],
+
+    ["Broadband (rural)", "USDA ReConnect Program", "10.787",
+     "Consolidated Appropriations Act 2018; Farm bill authorities", "7 CFR 1740",
+     "USDA Rural Utilities Service", "Competitive", "Discretionary",
+     "USDA RUS -> rural provider/municipality", "Rural broadband construction (loans/grants/combo)",
+     "Varies by funding category", "Per award", "SOFT / COMPLIANCE",
+     "Standing RD broadband vehicle; verify FY2026 funding round and rules",
+     "CANDIDATE", "https://www.usda.gov/reconnect", "2026-01 (recall)"],
+
+    # ---------------- ECONOMIC DEVELOPMENT / CAPITAL ----------------
+    ["Economic development", "EDA Public Works & Economic Adjustment Assistance", "11.300 / 11.307",
+     "Public Works and Economic Development Act of 1965 (PWEDA)", "42 U.S.C. 3121 et seq.; 13 CFR 305/307",
+     "EDA -> recipient", "Competitive", "Discretionary",
+     "EDA -> local/regional government, EDD, nonprofit",
+     "Public infrastructure for job creation, economic recovery, planning",
+     "Typically 20-50% (lower in distressed areas)", "Per award (often 3-5 yrs)",
+     "SOFT / COMPLIANCE", "Standing program; PWEDA reauthorization and annual approp drive levels; verify FY2026 NOFOs and any reorganization",
+     "CANDIDATE", "https://www.eda.gov/funding/programs", "2026-01 (recall)"],
+
+    ["Economic development / housing", "Community Development Block Grant (State / Small Cities)", "14.228",
+     "Housing and Community Development Act of 1974 Title I", "42 U.S.C. 5301; 24 CFR 570 subpart I",
+     "HUD -> state -> local (non-entitlement)", "Formula (to states) then state competition",
+     "Discretionary annual appropriation", "HUD -> state -> non-entitlement local government",
+     "Infrastructure, housing, public facilities, economic development (>=70% to low/mod income)",
+     "No fixed match (state-set)", "Per award", "ADMIN / SOFT / COMPLIANCE",
+     "Long-standing formula block grant; annual appropriation drives level; CDBG admin is an allowable cost line (up to 20% planning+admin cap). Verify FY2026 enacted level",
+     "CANDIDATE", "https://www.hud.gov/program_offices/comm_planning/cdbg", "2026-01 (recall)"],
+
+    ["Economic development (rural)", "USDA Community Facilities Direct/Guaranteed Loans & Grants", "10.766",
+     "Consolidated Farm and Rural Development Act", "7 U.S.C. 1926; 7 CFR 3570",
+     "USDA Rural Development", "Application-driven", "Discretionary",
+     "USDA RD -> rural public body/nonprofit (pop. <=20,000)",
+     "Essential community facilities: public safety, health, municipal buildings",
+     "Grant share by MHI; loans at favorable rates", "Project life",
+     "SOFT / COMPLIANCE", "Standing RD program; verify FY2026 allocation",
+     "CANDIDATE", "https://www.rd.usda.gov/programs-services/community-facilities", "2026-01 (recall)"],
+
+    ["Transportation", "USDOT RAISE Discretionary Grants", "20.933",
+     "IIJA (annual approp); BUILD/TIGER lineage", "23 U.S.C.; annual approp act",
+     "USDOT -> recipient", "Competitive", "Discretionary",
+     "USDOT -> state/local/regional", "Surface transportation capital + planning (road, transit, multimodal)",
+     "20% (waivable in some areas)", "Per award", "SOFT / COMPLIANCE",
+     "Recurring competitive program; administration priorities shift criteria; verify FY2026 NOFO",
+     "CANDIDATE", "https://www.transportation.gov/RAISEgrants", "2026-01 (recall)"],
+
+    ["Transportation / safety", "Safe Streets and Roads for All (SS4A)", "20.939",
+     "IIJA s.24112 (2021)", "23 U.S.C.; IIJA",
+     "USDOT -> recipient", "Competitive", "Discretionary (IIJA advance approp through FY2026)",
+     "USDOT -> local/regional/Tribal", "Safety action plans + implementation",
+     "20% non-federal", "Per award", "SOFT / COMPLIANCE",
+     "IIJA funding authorized through FY2026; planning grants are a low-cost entry; verify remaining-year NOFO",
+     "CANDIDATE", "https://www.transportation.gov/grants/SS4A", "2026-01 (recall)"],
+
+    # ---------------- ENERGY / EFFICIENCY ----------------
+    ["Energy", "Energy Efficiency and Conservation Block Grant (EECBG)", "81.128",
+     "EISA 2007 Title V subtitle E; IIJA refunded", "42 U.S.C. 17152",
+     "DOE -> entitlement/competitive recipients", "Formula (entitlement communities) + competitive",
+     "Discretionary (IIJA appropriation)", "DOE -> state/local",
+     "Local energy efficiency, building codes, transportation, renewables",
+     "Varies", "Per award", "SOFT / COMPLIANCE",
+     "IIJA refunded EECBG; allocations made to states/locals; verify remaining balances and FY2026 posture under current DOE priorities",
+     "CANDIDATE", "https://www.energy.gov/scep/energy-efficiency-and-conservation-block-grant-program", "2026-01 (recall)"],
+
+    # ---------------- RECORDS / DIGITAL GOVERNMENT ----------------
+    ["Records / archives", "NHPRC Records & Access Grants", "89.003",
+     "44 U.S.C. 2504 (National Archives)", "44 U.S.C. 2504; 2 CFR 200",
+     "NARA / NHPRC", "Competitive", "Discretionary",
+     "NHPRC -> state/local/nonprofit archives", "Preservation, digitization, electronic records, access",
+     "50% cost share typical", "1-3 yr", "SOFT / COMPLIANCE",
+     "Small standing grants program; relevant to records-stewardship work; verify FY2026 cycle and any approp change",
+     "CANDIDATE", "https://www.archives.gov/nhprc", "2026-01 (recall)"],
+
+    ["Records / libraries", "IMLS Grants to States (LSTA)", "45.310",
+     "Museum and Library Services Act; LSTA", "20 U.S.C. 9121 et seq.",
+     "IMLS -> state library agency", "Formula", "Discretionary annual appropriation",
+     "IMLS -> state library administrative agency -> local libraries",
+     "Library services, digital access, data, capacity", "1/3 state match",
+     "Per award", "ADMIN / SOFT",
+     "IN-FLUX: IMLS was targeted for reduction by 2025 executive action and litigation; verify FY2026 enacted status before relying on it",
+     "IN-FLUX", "https://www.imls.gov/grants/grants-state", "2026-01 (recall)"],
+
+    # ---------------- BEHAVIORAL HEALTH / HUMAN SERVICES / WORKFORCE ----------------
+    ["Behavioral health", "Community Mental Health Services Block Grant (MHBG)", "93.958",
+     "PHS Act Title XIX-B s.1911; 988/crisis set-asides", "42 U.S.C. 300x; 42 CFR 96",
+     "SAMHSA -> state mental health authority", "Formula", "Discretionary annual appropriation",
+     "SAMHSA -> state -> local providers", "Community mental health services for adults/children with SMI/SED; crisis set-aside",
+     "Maintenance-of-effort; no cash match", "Federal fiscal year + carryover",
+     "ADMIN / COMPLIANCE", "Recurring formula block grant; supports Rothschild-side behavioral-systems work; verify FY2026 allotment and set-aside percentages",
+     "CANDIDATE", "https://www.samhsa.gov/grants/block-grants/mhbg", "2026-01 (recall)"],
+
+    ["Behavioral health", "Substance Use Prevention, Treatment & Recovery Services Block Grant (SUBG/SABG)", "93.959",
+     "PHS Act s.1921", "42 U.S.C. 300x-21; 42 CFR 96",
+     "SAMHSA -> state SUD authority", "Formula", "Discretionary annual appropriation",
+     "SAMHSA -> state -> local providers", "SUD prevention/treatment/recovery; 20% prevention set-aside",
+     "Maintenance-of-effort", "FFY + carryover", "ADMIN / COMPLIANCE",
+     "Recurring formula block grant; verify FY2026 allotment",
+     "CANDIDATE", "https://www.samhsa.gov/grants/block-grants/subg", "2026-01 (recall)"],
+
+    ["Behavioral health", "Certified Community Behavioral Health Clinic (CCBHC)", "93.829 / 93.696",
+     "PAMA 2014 s.223; Bipartisan Safer Communities Act (expansion)", "Medicaid s.1905; SAMHSA grants",
+     "CMS (Medicaid demo) / SAMHSA (grants)", "Demonstration + competitive grants",
+     "Medicaid match is statutory entitlement; SAMHSA grants discretionary",
+     "CMS/SAMHSA -> state/clinic", "Comprehensive behavioral health via prospective payment",
+     "Medicaid FMAP applies", "Demo period / grant period", "ADMIN / COMPLIANCE",
+     "Expanding state Medicaid demonstration model; durable through Medicaid entitlement leg; verify state participation",
+     "CANDIDATE", "https://www.samhsa.gov/certified-community-behavioral-health-clinics", "2026-01 (recall)"],
+
+    ["Workforce", "WIOA Adult / Dislocated Worker / Youth", "17.258 / 17.278 / 17.259",
+     "Workforce Innovation and Opportunity Act (2014)", "29 U.S.C. 3101 et seq.; 20 CFR 680-688",
+     "DOL/ETA -> state -> local workforce board", "Formula", "Discretionary annual appropriation",
+     "DOL -> state -> local workforce development board -> provider",
+     "Job training, employment services, sector partnerships",
+     "No cash match (some leveraging)", "PY (program year) + carryover",
+     "ADMIN / COMPLIANCE", "Long-standing formula workforce funding; WIOA reauthorization pending but program operates under continuing authority/approp; verify FY2026 allotment",
+     "CANDIDATE", "https://www.dol.gov/agencies/eta/wioa", "2026-01 (recall)"],
+
+    ["Human services (entitlement)", "Medicaid (Title XIX) administrative match", "93.778",
+     "Social Security Act Title XIX", "42 U.S.C. 1396 et seq.; 42 CFR 433",
+     "CMS -> state Medicaid agency", "Open-ended formula (FMAP)", "ENTITLEMENT (mandatory)",
+     "CMS -> state -> providers/contractors", "Medical assistance + 50% administrative match for systems/admin",
+     "State share per FMAP (admin generally 50/50)", "Continuous",
+     "ADMIN / COMPLIANCE", "ENTITLEMENT - the most administration-resilient federal funding leg; 50% admin match can fund eligible systems/compliance work; OBBBA introduced work requirements/cost shifts - verify state-specific impacts",
+     "CONFIRMED-LIVE", "https://www.medicaid.gov/", "2026-01 (recall)"],
+
+    # ---------------- ARPA WIND-DOWN ----------------
+    ["Fiscal recovery (closing)", "ARPA State & Local Fiscal Recovery Funds (SLFRF)", "21.027",
+     "American Rescue Plan Act 2021 s.9901", "42 U.S.C. 802-803; 31 CFR 35 (Final Rule)",
+     "Treasury -> state/local (direct + via state to NEUs)", "Formula (one-time)", "One-time appropriation",
+     "Treasury -> recipient (counties/metro cities direct; NEUs via state)",
+     "Broad: govt services, water/sewer/broadband, revenue replacement, public health",
+     "None", "Obligate by 12/31/2024 (passed); EXPEND by 12/31/2026; closeout report 4/30/2027",
+     "ADMIN / SOFT", "CLOSING: no new obligations allowed (deadline passed 12/31/2024); must fully expend already-obligated funds by 12/31/2026 or return to Treasury; admin/closeout costs eligible. Use to fund Steward work that finishes before 12/31/2026",
+     "IN-FLUX", "https://canons.sog.unc.edu/2026/01/2026-the-final-countdown-has-begun-for-arp-slfrf/", "2026-06-03"],
+
+    # ---------------- MASSACHUSETTS STATE / OWN-SOURCE LAYER (not federal; bedrock for MA clients) ----------------
+    ["MA state", "Community Compact IT Grant Program", "N/A (MA state)",
+     "MA Community Compact Cabinet (EO of the Governor)", "Commonwealth program (no CFR)",
+     "EOAF / A&F (Commonwealth of MA)", "Competitive", "State discretionary appropriation",
+     "Commonwealth -> municipality", "One-time IT capital: infrastructure, software, planning/design/training",
+     "No local match required", "Complete within 18 months of award",
+     "SOFT", "CONFIRMED-LIVE: FY2026 round $200K cap; ~$5M total; applications 1/5/2026-2/5/2026; multi-community/regional joint apps encouraged; not-previously-funded municipalities eligible",
+     "CONFIRMED-LIVE", "https://www.mass.gov/community-compact-it-grant-program", "2026-06-03"],
+
+    ["MA state", "Community One Stop for Growth (MassWorks / Community Planning / Brownfields)", "N/A (MA state)",
+     "Various MA economic development authorizations", "Commonwealth program",
+     "EOED (Commonwealth of MA)", "Competitive (single portal)", "State discretionary appropriation",
+     "Commonwealth -> municipality/quasi-public",
+     "Single application portal for MassWorks infrastructure, Community Planning Grant, site readiness, brownfields",
+     "Varies by program", "Per award", "SOFT / COMPLIANCE",
+     "Standing MA capital portal; Community Planning Grant is a low-cost planning entry; verify annual round dates",
+     "CANDIDATE", "https://www.mass.gov/community-one-stop-for-growth", "2026-01 (recall)"],
+
+    ["MA state", "Municipal Vulnerability Preparedness (MVP)", "N/A (MA state)",
+     "MA EEA program (GWSA-aligned)", "Commonwealth program",
+     "EEA (Commonwealth of MA)", "Competitive + designation", "State discretionary appropriation",
+     "Commonwealth -> municipality", "Climate resilience planning (MVP Planning) + action grants (MVP Action)",
+     "Local match on action grants (often 25%)", "Per award",
+     "SOFT / COMPLIANCE", "Standing MA resilience program; MVP Planning is a low-cost entry that can seed BRIC/HMGP capital; verify annual round",
+     "CANDIDATE", "https://www.mass.gov/municipal-vulnerability-preparedness-mvp-program", "2026-01 (recall)"],
+
+    ["MA state", "Efficiency & Regionalization Grant Program", "N/A (MA state)",
+     "MA Community Compact Cabinet", "Commonwealth program",
+     "EOAF / A&F (Commonwealth of MA)", "Competitive", "State discretionary appropriation",
+     "Commonwealth -> municipality/regional entity", "Cost-saving regionalization, shared services, efficiency studies",
+     "Varies", "Per award", "SOFT", "Standing MA program supporting regional/shared-service stewardship; verify FY2026 round",
+     "CANDIDATE", "https://www.mass.gov/efficiency-and-regionalization-grant-program", "2026-01 (recall)"],
+
+    ["MA state", "Municipal technical-assistance vehicles (MTTA / TARPA - client-provided)", "N/A (MA state)",
+     "Commonwealth technical-assistance authorities", "Commonwealth program",
+     "Commonwealth of MA (agency per program)", "Application/TA", "State discretionary",
+     "Commonwealth -> municipality", "Targeted technical assistance / regional planning support",
+     "Varies", "Per engagement", "SOFT",
+     "CLIENT-PROVIDED context anchors; specific program figures NOT independently verified this session - confirm exact program names, sponsors, and terms before relying on them",
+     "CANDIDATE", "https://www.mass.gov/", "2026-01 (recall)"],
+
+    ["Own-source", "Municipal own-source revenue (tax levy / enterprise / capital)", "N/A",
+     "Local authority under MA G.L. (e.g., c.44 capital, c.59 levy, Prop 2 1/2)", "Local",
+     "Municipality", "N/A", "Statutory local authority (most durable)",
+     "Municipal general fund / enterprise fund / capital plan",
+     "Funds the Steward/Continue tail after federal money ends; operating-budget retainer line",
+     "N/A", "Annual + multi-year capital plan", "ADMIN / SOFT / COMPLIANCE",
+     "THE SUSTAINABILITY TEST: own-source absorbs the volatile layer's loss and carries the stewardship cost forward; fully administration-proof",
+     "CONFIRMED-LIVE", "https://www.mass.gov/lists/property-tax-information", "2026-01 (recall)"],
+]
+
+
+def main():
+    here = os.path.dirname(os.path.abspath(__file__))
+    out = os.path.join(here, "federal_mechanism_catalog.csv")
+    with open(out, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(HEADERS)
+        for r in ROWS:
+            assert len(r) == len(HEADERS), f"row width {len(r)} != {len(HEADERS)}: {r[1]}"
+            w.writerow(r)
+    print(f"wrote {out} with {len(ROWS)} mechanisms")
+
+
+if __name__ == "__main__":
+    main()
