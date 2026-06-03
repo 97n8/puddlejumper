@@ -144,6 +144,13 @@ inputs = [
     ("q45_rate",  "B: Section 45Q rate (utilization/EOR)",        85, "$/ton","OBBBA raised to $85/ton, placed-in-service after 7/4/2025"),
     ("q45_years", "B: 45Q credit period",                          12, "yrs","statutory 12-yr period"),
     ("directpay", "B: elective (direct) pay share of 45Q",       1.00, "of credit","tax-exempt sponsor monetizes via IRC 6417"),
+    # Grant-writing-hours engagement (org working with PublicLogic)
+    ("gw_prin",   "GW: Principal (Boudreau) hourly rate",         185, "$/hr","governance/systems; MPA/MCPPO"),
+    ("gw_anal",   "GW: Analyst hourly rate",                       110, "$/hr","grant analyst / budget build"),
+    ("gw_sme",    "GW: Behavioral/org SME (Rothschild) rate",      165, "$/hr","sustainability/behavioral-systems narrative"),
+    ("gw_fixed",  "GW: agreed fixed fee, writing block (non-contingent)", 12500, "$","fixed-fee, owed regardless of award (2 CFR 200.459 bars contingent fees)"),
+    ("gw_winprob","GW: client's expected win probability",        0.45, "prob","planning assumption only; fee is NOT contingent on it"),
+    ("gw_award",  "GW: target award size (if won)",            750000, "$","illustrative federal capital award being pursued"),
 ]
 start_row = wi.max_row + 1
 keymap = {}  # key -> cell ref of the Value column
@@ -490,6 +497,144 @@ for line in notes_p:
     rp += 1
 for col, w in zip("ABCDE", [42, 16, 40, 14, 16]):
     wp.column_dimensions[col].width = w
+
+# ---------------------------------------------------- GRANT-WRITING HOURS ------
+# An org working with PublicLogic buys grant-writing hours. This sheet "shows the
+# work": every task line is Hours x Rate = Line cost (live formula), and -- crucially --
+# each line carries the CORRECT funding route under the cost principles.
+#
+# THE RULE (2 CFR 200.460): grant-writing / proposal preparation costs are INDIRECT
+# (F&A) costs and may NOT be charged directly to the federal award being sought
+# (whether or not it is won). They ride on the org's own-source / unrestricted /
+# F&A pool. PublicLogic's writing fee is FIXED and NON-CONTINGENT (2 CFR 200.459(b)
+# bars contingent fees) -- it is owed whether or not the grant is awarded.
+# Once the grant is WON, grant-ADMINISTRATION hours (a different activity) become an
+# allowable charge to that award's admin line. This sheet shows the route flip.
+wg = wb.create_sheet("GrantWriting_Hours")
+title(wg, "Grant-writing hours -- an org working with PublicLogic (the work, shown line by line)",
+      "Hours x rate = line cost (live formulas). Funding route per line follows the cost principles: "
+      "writing = proposal cost (2 CFR 200.460, indirect/own-source, non-contingent); post-award = "
+      "allowable grant-admin on the won award. Not legal/accounting advice.")
+hr = 4
+gw_cols = ["Phase", "Task (the work)", "Role", "Hours", "Rate $/hr", "Line cost",
+           "Deliverable", "Funding route / allowability"]
+for j, h in enumerate(gw_cols, start=1):
+    wg.cell(row=hr, column=j, value=h)
+style_header(wg, hr, len(gw_cols))
+
+# (phase, task, role_key, hours, deliverable, route)
+PROP = "Proposal cost - 2 CFR 200.460: indirect/F&A or org own-source; NON-FederalAward; non-contingent"
+ADMIN_WON = "ALLOWABLE on the WON award as grant-administration (200.413 / program admin line)"
+gw_rows = [
+    ("1. Discover/eligibility", "Review Stewardship Map; confirm Assistance Listing eligibility", "gw_prin", 4, "Eligibility memo", PROP),
+    ("1. Discover/eligibility", "SAM.gov / UEI registration check; portal setup", "gw_anal", 3, "Registration confirmed", PROP),
+    ("2. Narrative", "Need statement & problem analysis", "gw_prin", 8, "Need statement", PROP),
+    ("2. Narrative", "Project design & logic model", "gw_prin", 10, "Project narrative", PROP),
+    ("2. Narrative", "Behavioral/organizational sustainability section", "gw_sme", 6, "Sustainability narrative", PROP),
+    ("3. Budget", "Budget build (cost principles, MTDC, 15% de minimis)", "gw_anal", 8, "SF-424A budget", PROP),
+    ("3. Budget", "Match/cost-share strategy & budget narrative", "gw_prin", 5, "Budget narrative", PROP),
+    ("4. Attachments/compliance", "SF-424 family, certifications, reps & certs", "gw_anal", 6, "Forms package", PROP),
+    ("4. Attachments/compliance", "Letters of support, MOUs, env-review coordination", "gw_anal", 6, "Attachments", PROP),
+    ("5. Review/submit", "Internal review & responsiveness check", "gw_prin", 4, "Reviewed package", PROP),
+    ("5. Review/submit", "Portal submission (grants.gov / state e-grants)", "gw_anal", 2, "Submission receipt", PROP),
+    ("6. Post-award (if won)", "Award setup, drawdown & subrecipient-monitoring setup", "gw_prin", 8, "Grants-mgmt setup", ADMIN_WON),
+    ("6. Post-award (if won)", "Compliance calendar & reporting cadence", "gw_anal", 10, "Compliance plan", ADMIN_WON),
+]
+rr = hr + 1
+write_first = rr
+for phase, task, rolekey, hours, deliv, route in gw_rows:
+    wg.cell(row=rr, column=1, value=phase)
+    wg.cell(row=rr, column=2, value=task).alignment = WRAP
+    role_label = {"gw_prin": "Principal", "gw_anal": "Analyst", "gw_sme": "Behav/org SME"}[rolekey]
+    wg.cell(row=rr, column=3, value=role_label)
+    hc = wg.cell(row=rr, column=4, value=hours); hc.alignment = RIGHT
+    rc = wg.cell(row=rr, column=5, value=f"={K(rolekey)}"); rc.number_format = MONEY
+    lc = wg.cell(row=rr, column=6, value=f"=D{rr}*E{rr}"); lc.number_format = MONEY  # the work, shown
+    wg.cell(row=rr, column=7, value=deliv).alignment = WRAP
+    wg.cell(row=rr, column=8, value=route).alignment = WRAP
+    for j in range(1, len(gw_cols) + 1):
+        wg.cell(row=rr, column=j).border = BORDER
+    rr += 1
+write_last = rr - 1
+# split totals: writing (phases 1-5) vs post-award (phase 6)
+post_start = write_first + 11  # first phase-6 row
+# Writing subtotal
+wg.cell(row=rr, column=2, value="WRITING subtotal (proposal cost - own-source / F&A, non-contingent)").font = SUB
+hsum = wg.cell(row=rr, column=4, value=f"=SUM(D{write_first}:D{post_start-1})"); hsum.font = Font(bold=True)
+csum = wg.cell(row=rr, column=6, value=f"=SUM(F{write_first}:F{post_start-1})")
+csum.number_format = MONEY; csum.fill = TOTAL_FILL; csum.font = Font(bold=True)
+writing_tot_row = rr
+rr += 1
+# Post-award subtotal
+wg.cell(row=rr, column=2, value="POST-AWARD subtotal (allowable grant-admin on the WON award)").font = SUB
+hsum2 = wg.cell(row=rr, column=4, value=f"=SUM(D{post_start}:D{write_last})"); hsum2.font = Font(bold=True)
+csum2 = wg.cell(row=rr, column=6, value=f"=SUM(F{post_start}:F{write_last})")
+csum2.number_format = MONEY; csum2.fill = TOTAL_FILL; csum2.font = Font(bold=True)
+post_tot_row = rr
+rr += 1
+# Grand total hours/cost (time & materials)
+wg.cell(row=rr, column=2, value="ENGAGEMENT TOTAL (time & materials reference)").font = SUB
+ht = wg.cell(row=rr, column=4, value=f"=D{writing_tot_row}+D{post_tot_row}"); ht.font = Font(bold=True)
+ct = wg.cell(row=rr, column=6, value=f"=F{writing_tot_row}+F{post_tot_row}")
+ct.number_format = MONEY; ct.fill = TOTAL_FILL; ct.font = Font(bold=True)
+tm_row = rr
+rr += 2
+
+# Fixed-fee reconciliation block (the non-contingent writing block)
+wg.cell(row=rr, column=1, value="FIXED-FEE RECONCILIATION (writing block)").font = SUB
+rr += 1
+recon = [
+    ("Agreed fixed fee for the writing block (non-contingent)", f"={K('gw_fixed')}", MONEY),
+    ("Time & materials value of writing hours (from above)", f"=F{writing_tot_row}", MONEY),
+    ("Fixed-fee variance vs. T&M (org's certainty premium / discount)", f"={K('gw_fixed')}-F{writing_tot_row}", MONEY),
+    ("Writing hours (from above)", f"=D{writing_tot_row}", '#,##0.0'),
+    ("Effective blended rate on the fixed fee", f"={K('gw_fixed')}/D{writing_tot_row}", '#,##0'),
+]
+for label, formula, fmt in recon:
+    wg.cell(row=rr, column=2, value=label).alignment = WRAP
+    c = wg.cell(row=rr, column=6, value=formula); c.number_format = fmt
+    rr += 1
+rr += 1
+# Why non-contingent matters: contingent-fee illustration (what PublicLogic does NOT do)
+wg.cell(row=rr, column=1, value="WHY NON-CONTINGENT (what PublicLogic does NOT do)").font = SUB
+rr += 1
+contra = [
+    ("Target award if won (illustrative)", f"={K('gw_award')}", MONEY),
+    ("Client's expected win probability (planning only)", f"={K('gw_winprob')}", PCT),
+    ("A contingent 'X% of award' fee would be barred by 2 CFR 200.459(b).", None, None),
+    ("PublicLogic charges the FIXED writing fee regardless of outcome -> allowable professional service.", None, None),
+    ("Expected-value of award to the org (context, not a fee basis)", f"={K('gw_award')}*{K('gw_winprob')}", MONEY),
+]
+for label, formula, fmt in contra:
+    cl = wg.cell(row=rr, column=2, value=label); cl.alignment = WRAP
+    if formula is None:
+        cl.font = NOTE
+    else:
+        c = wg.cell(row=rr, column=6, value=formula); c.number_format = fmt
+    rr += 1
+rr += 1
+# Allowability footnotes
+notes_g = [
+    "FUNDING-ROUTE NOTES (subject to the funding source, approved budget, and cost principles; not legal/accounting advice)",
+    "  * 2 CFR 200.460 -- Proposal costs (preparing bids/proposals/applications, successful OR unsuccessful) are normally",
+    "    treated as INDIRECT (F&A) costs and allocated to current activities; they are NOT directly chargeable to the",
+    "    federal award being sought. The org pays the writing fee from own-source / unrestricted funds or its F&A pool.",
+    "  * 2 CFR 200.459(b) -- professional-service costs are allowable; CONTINGENT fees are a factor against allowability.",
+    "    PublicLogic's writing fee is fixed and NON-CONTINGENT, which is what keeps it an allowable professional service.",
+    "  * 2 CFR 200.458 -- Pre-award costs are allowable only with prior written approval and only if necessary for the",
+    "    award; a 90-day-before-award window is typical. Post-award, grant-ADMINISTRATION (a different activity from",
+    "    writing) is allowable on the won award (200.413 direct admin / program admin line, e.g., CDBG's planning+admin).",
+    "  * Where an org has a capacity-building or planning grant (or foundation/own-source capacity funds), some writing",
+    "    support may be an allowable activity of THAT award -- never of the prospective award it is being written for.",
+    "  * Hours and rates here are illustrative planning assumptions, not quotes. Edit them on the Inputs sheet.",
+]
+for line in notes_g:
+    c = wg.cell(row=rr, column=1, value=line)
+    c.font = SUB if line.startswith("FUNDING-ROUTE NOTES") else NOTE
+    rr += 1
+for col, w in zip("ABCDEFGH", [22, 46, 14, 8, 10, 12, 22, 50]):
+    wg.column_dimensions[col].width = w
+wg.freeze_panes = "A5"
 
 # freeze header rows
 for s in (wa, wb2):

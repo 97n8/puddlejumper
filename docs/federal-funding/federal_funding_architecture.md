@@ -70,11 +70,22 @@ the **de minimis indirect rate of up to 15% of Modified Total Direct Cost (MTDC)
 *Implication for PublicLogic:* most of its fee rides as a **direct** professional-service cost (§200.459), not as
 indirect, so the de minimis rate mainly affects the *client's* overhead recovery, not PublicLogic's fee allowability.
 
-**Procurement standards (§§200.317–.327).** When a pass-through entity (the client) buys PublicLogic's services with
-federal money, it must follow the federal procurement standards: documented procurement, competition, cost/price
-analysis for larger buys, and the §200.318 conflict-of-interest rules. PublicLogic should expect and welcome a
-documented, competitive procurement — it is the client's compliance, and PublicLogic's compliance work can help
-build it.
+**Procurement standards (§§200.317–.327) — and the real sole-source pathway.** When a pass-through entity (the
+client) buys PublicLogic's services with federal money, it must follow the federal procurement standards: documented
+procurement, competition or a documented noncompetitive basis, cost/price analysis for larger buys (§200.324), and
+the §200.318(c)/§200.319 conflict-of-interest rules. In practice PublicLogic's engagements are awarded **sole-source**
+on a **unique-and-specialized-expertise** basis: the established precedent is the **MGL c.30B §7** justification used
+for the Town of Shrewsbury (FY26 Municipal Fiber, $123K implementation) and the Town of Sutton, built on three
+independent grounds — (1) governance architecture (VAULT modules mapped to MGL authority) purpose-built for the
+specific town, (2) an integrated municipal-policy + custom-code + CFIR/behavioral-systems capability not available as
+a single market offering, and (3) non-replicable institutional knowledge of the town's operations. **When the money
+is federal, c.30B §7 alone is not sufficient** — those same three grounds must be restated to satisfy **2 CFR
+§200.320(c)(2) "single source,"** a §200.324/§200.404 cost-reasonableness showing must be added, and the **§200.319(b)
+organizational-conflict** rule must be mitigated (because PublicLogic also helps write the application — the fee is
+**non-contingent**, the determination is made independently by the Town Manager, and the award is single-source so
+there is no competition to bias). The full bridge — including a fillable federal determination — is in
+[`sole_source_federal_overlay.md`](./sole_source_federal_overlay.md). The decision rule: **own-source/state money →
+c.30B §7 alone; federal money → c.30B §7 + the 2 CFR §200.320(c) overlay.**
 
 **Subrecipient vs. contractor (§200.331) — which one is PublicLogic?** This is determinative for how PublicLogic is
 treated. A **subrecipient** carries out a part of the federal program (makes eligibility/programmatic decisions, is

@@ -10,8 +10,10 @@ Services Model. Verification date for time-sensitive findings: **2026-06-03**. N
 |---|---|
 | [`federal_funding_architecture.md`](./federal_funding_architecture.md) | The narrative (Parts 1–3): Uniform Guidance walked end-to-end, the program catalog by domain, tax credits as federal funding, the bedrock-vs-volatile thesis, braiding/blending, the multi-year stack, administration-proofing, PublicLogic's own revenue architecture, and the cycle at federal scale with two worked examples. |
 | [`federal_mechanism_catalog.csv`](./federal_mechanism_catalog.csv) | 39 mechanisms, each with Assistance Listing #, statute, controlling CFR/IRC, formula/competitive, entitlement/discretionary, pass-through path, eligible uses, match, period of performance, cost-treatment route, 2026 status, confidence tag, source URL, and date verified. |
-| [`multiyear_funding_stack.xlsx`](./multiyear_funding_stack.xlsx) | The 5–10 year stack model with two worked examples. **All totals are live formulas**; assumptions live in the `Inputs` sheet; zero formula errors. |
+| [`multiyear_funding_stack.xlsx`](./multiyear_funding_stack.xlsx) | The 5–10 year stack model with two worked examples **plus a `GrantWriting_Hours` sheet** that itemizes an org's grant-writing engagement (Hours × Rate, live formulas). **All totals are live formulas**; assumptions live in the `Inputs` sheet; zero formula errors. |
 | [`funding_volatility_register.md`](./funding_volatility_register.md) | The volatile (competitive-discretionary) programs: what could kill each, early-warning signals, and the bedrock source that absorbs the loss. |
+| [`grant_writing_hours.md`](./grant_writing_hours.md) | The grant-writing-hours route for an org working with PublicLogic: how the hours are treated under **2 CFR §200.460** (proposal cost — own-source/F&A, non-contingent) and the route flip to allowable grant-administration on the won award. |
+| [`sole_source_federal_overlay.md`](./sole_source_federal_overlay.md) | The **federal overlay** on PublicLogic's existing **MGL c.30B §7** sole-source justification (Shrewsbury/Sutton): how to satisfy **2 CFR §200.320(c)(2)** single-source, §200.324 cost/price analysis, and §200.319(b) conflict mitigation when **federal** funds pay. Includes a fillable determination. |
 
 ## Reproducing the generated artifacts
 
