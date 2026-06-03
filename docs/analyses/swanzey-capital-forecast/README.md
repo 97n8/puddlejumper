@@ -22,6 +22,7 @@ Street, the West Swanzey water system, and the Town Hall ADA project — and **f
 | [`project-inventory.csv`](./project-inventory.csv) | Every project: cost, driver, funding path, local share |
 | [`funding-stack.csv`](./funding-stack.csv) | The layered financing per project (aid → SRF → grants → reserve → bond) |
 | [`ten-year-plan.csv`](./ten-year-plan.csv) | Year-by-year reserve deposits and net-new tax-rate impact |
+| [`presentation/`](./presentation/) | **Deliberative-session deck** (Marp slides + speaker notes) and **DRA-compliant model warrant articles** |
 
 ## The one idea
 
