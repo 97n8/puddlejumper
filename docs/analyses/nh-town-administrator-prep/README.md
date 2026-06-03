@@ -31,6 +31,7 @@ in their head.
 | [`statutory-crosswalk.csv`](./statutory-crosswalk.csv) | The RSA citations a TA must own, by domain |
 | [`flashcards.md`](./flashcards.md) | Rapid-recall flashcards (statutes, forms, numbers) |
 | [`first-100-days.md`](./first-100-days.md) | A structured onboarding / listening-tour plan |
+| [`lab/`](./lab/) | **Budget-modeling lab** — mock MS-636, default-budget worksheet (RSA 40:13 IX), tax-rate model, and 6 guided exercises with a full answer key |
 
 ## A note on authority and accuracy
 

@@ -1,0 +1,34 @@
+account,function_group,purpose,py_actual_fy2024,cy_appropriated_fy2025,ey_dept_request_fy2026,ey_board_recommended_fy2026,notes
+4130,General Government,Executive,240000,245000,255000,255000,"Selectboard, town administrator, admin staff"
+4140,General Government,Election/Registration/Vitals,170000,175000,185000,185000,"Town clerk election & vital records"
+4150,General Government,Financial Administration,340000,348000,395000,380000,"Bookkeeping, audit, tax collection support; board trimmed 15k"
+4153,General Government,Legal Expenses,70000,78000,80000,80000,"Town counsel retainer + litigation reserve"
+4155,General Government,Personnel Administration,42000,43000,45000,45000,"Benefits admin, training"
+4191,General Government,Planning & Zoning,158000,162000,170000,170000,"Land use board support (RSA 672-677)"
+4194,General Government,General Government Buildings,292000,300000,330000,317000,"Town hall, facilities; ADA stairwell access ongoing"
+4195,General Government,Cemeteries,68000,70000,72000,72000,
+4196,General Government,Insurance (not elsewhere),215000,222000,240000,240000,"Primex property/liability + WC (RSA 281-A)"
+4199,General Government,Other General Government,26000,27000,28000,28000,
+4210,Public Safety,Police,1548000,1560000,1760000,1720000,"CBA step+COLA negotiated (RSA 273-A); board trimmed 40k"
+4215,Public Safety,Ambulance/EMS,470000,491000,575000,565000,"Contract escalation cited as a FY26 driver"
+4220,Public Safety,Fire,838000,855000,935000,900000,"Three stations; board trimmed 35k"
+4240,Public Safety,Building Inspection,91000,94000,98000,98000,
+4290,Public Safety,Emergency Management,28000,30000,32000,32000,"EOP/EOC (RSA 21-P)"
+4311,Highways & Streets,Highway Administration,374000,382000,400000,400000,
+4312,Highways & Streets,Highways & Streets,1438000,1470000,1610000,1560000,"Winter ops, paving; board trimmed 50k"
+4313,Highways & Streets,Bridges,58000,62000,65000,65000,"Christian Hill Rd bridge study pending"
+4316,Highways & Streets,Street Lighting,44000,45000,46000,46000,
+4323,Sanitation,Solid Waste Collection,236000,242000,250000,250000,
+4324,Sanitation,Solid Waste Disposal,398000,410000,430000,430000,"Disposal contract escalator (RSA 149-M)"
+4411,Health,Health Agencies/Pest Control,19000,20000,21000,21000,
+4414,Health,Animal Control,17000,18000,19000,19000,
+4445,Welfare,Direct Assistance,79000,82000,99000,90000,"General assistance (RSA 165); demand-driven; board trimmed 9k"
+4520,Culture & Recreation,Parks & Recreation,228000,233000,258000,245000,"Brown Field; board trimmed 13k"
+4550,Culture & Recreation,Library,258000,262000,290000,275000,"Board trimmed 15k"
+4583,Culture & Recreation,Patriotic Purposes,12000,12000,13000,13000,
+4611,Conservation,Conservation Commission,33000,35000,36000,36000,
+4711,Debt Service,Principal - Long-Term Bonds/Notes,250000,250000,255000,255000,"Existing bond amortization (RSA 33)"
+4721,Debt Service,Interest - Long-Term Bonds/Notes,74000,72000,68000,68000,"Interest declines as principal paid down"
+4723,Debt Service,Interest - Tax Anticipation Notes,12000,15000,15000,15000,"Cash-flow TAN"
+4902,Capital Outlay,Machinery/Vehicles/Equipment,58000,60000,65000,65000,"Recurring small-equipment replacement"
+TOTAL,,Operating Budget Total,8184000,8370000,9140000,8940000,"EY recommended = +6.8% over CY (matches Swanzey FY26)"

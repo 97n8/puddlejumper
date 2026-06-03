@@ -1,0 +1,22 @@
+line,component,amount,effect,note
+1,Operating budget (ensuing recommended),8940000,add,From MS-636 total
+2,Special & individual warrant articles,350000,add,"Capital reserve deposits, special articles (RSA 32:3 VI)"
+3,GROSS APPROPRIATIONS,9290000,subtotal,1 + 2
+4,LESS estimated revenues (non-property-tax),-3600000,subtract,"Motor vehicle permits, M&R distribution, highway block grant, fees, interest (MS-434)"
+5,LESS voted use of fund balance to reduce taxes,-400000,subtract,Board-applied unassigned fund balance
+6,Net town appropriations to be raised by taxes,5290000,subtotal,3 - 4 - 5
+7,ADD overlay (abatement reserve),90000,add,RSA 76:6 cushion for abatements/uncollected
+8,ADD war service credits,120000,add,RSA 72:28 veterans credits added to commitment
+9,NET MUNICIPAL PROPERTY TAX TO RAISE,5500000,result,6 + 7 + 8
+10,Total local assessed valuation,978600000,divisor,Town-wide taxable value (MS-1)
+11,Valuation in thousands,978600,divisor,Line 10 / 1000
+12,MUNICIPAL TAX RATE (per $1000),5.62,rate,Line 9 / Line 11 -> 5,500,000 / 978,600 = 5.62
+13,County rate (set by DRA),2.28,reference,Cheshire County apportionment
+14,State education rate (SWEPT),1.25,reference,RSA 76:3
+15,Local education rate,11.03,reference,School district appropriations
+16,TOTAL TAX RATE (per $1000),20.18,result,12 + 13 + 14 + 15 (matches Swanzey FY25)
+17,Median assessed home value,300000,reference,For impact illustration
+18,Total annual tax on median home,6054,result,300 x 20.18
+19,Municipal portion on median home,1686,result,300 x 5.62
+20,Rate impact of +$100k tax-funded appropriation,0.102,sensitivity,100000 / 978600 = $0.102 per $1000
+21,Median-home impact of +$100k appropriation,30.66,sensitivity,300 x 0.102

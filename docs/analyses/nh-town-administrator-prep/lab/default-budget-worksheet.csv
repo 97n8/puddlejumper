@@ -1,0 +1,16 @@
+step,line_item,account,amount,effect,category,note
+1,Prior-year (FY2025) appropriations - operating budget,TOTAL,8370000,base,RSA 40:13 IX base,"Start from the appropriations voted last year, NOT this year's proposal"
+2,LESS one-time: revaluation/contract services,4150,-32000,subtract,one-time appropriation,"Non-recurring; removed per RSA 40:13 IX"
+3,LESS one-time: fire SCBA/turnout gear purchase,4220,-40000,subtract,one-time appropriation,Non-recurring equipment
+4,LESS one-time: culvert/drainage project,4312,-85000,subtract,one-time appropriation,Non-recurring capital-in-operating
+5,LESS one-time: records digitization,4194,-25000,subtract,one-time appropriation,Non-recurring project
+6,LESS one-time: equipment (single vehicle),4902,-23000,subtract,one-time appropriation,Non-recurring
+7,Subtotal after removing one-time items,,8165000,running,subtotal,8370000 - 205000
+8,ADD contractual: Police CBA step + COLA,4210,48000,add,previously-approved obligation,"Already-negotiated CBA (RSA 273-A) = obligation, allowed"
+9,ADD contractual: NHRS employer rate increase,multiple,36000,add,obligation by law,"Non-discretionary employer rate (RSA 100-A)"
+10,ADD contractual: health insurance increase,4155,52000,add,previously-approved obligation,Contractual renewal increase
+11,ADD contractual: solid waste disposal escalator,4324,14000,add,previously-approved obligation,Contract CPI escalator
+12,ADD: scheduled debt service change,4711/4721,9000,add,debt obligation,Net of principal up / interest down per amortization
+13,DEFAULT BUDGET TOTAL,,8324000,result,RSA 40:13 IX default,"8165000 + 159000 = 8,324,000"
+14,Proposed operating budget (for comparison),TOTAL,8940000,reference,proposed,Ensuing-year board recommended
+15,Difference (proposed minus default),,616000,reference,delta,"If the operating article FAILS, town runs on the default and loses this 616,000 of new/expanded spending"
