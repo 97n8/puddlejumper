@@ -1,0 +1,46 @@
+domain,rsa_or_form,title,why_the_TA_must_know_it,verify
+Authority,RSA 37,Town or Village District Managers,"Defines the statutory town-manager office and its delegated powers; the ceiling of what a board delegates",gencourt.state.nh.us
+Authority,RSA 41,Choice and Duties of Town Officers,"Source of select-board authority (41:8 prudential affairs; 41:9); basis for the administrator role and many officer duties",gencourt.state.nh.us
+Authority,RSA 41:46-a,Appointment of administrative officials,"Board authority to appoint administrative staff",gencourt.state.nh.us
+Authority,RSA 669-670,Town Elections / Officers,"Which officials are elected vs appointed; terms",gencourt.state.nh.us
+Meeting,RSA 39,Town Meetings,"Calling/warning meetings; petitioned articles (39:3)",gencourt.state.nh.us
+Meeting,RSA 40,Procedure / Moderator,"Meeting procedure; moderator authority (40:4)",gencourt.state.nh.us
+Meeting,RSA 40:13,Official Ballot (SB2),"Two-session structure; default budget (IX); budget hearing (II-a)",gencourt.state.nh.us
+Budget,RSA 32,Municipal Budget Law,"Appropriation by purpose; expenditure limits (32:8); transfers (32:10); lapse (32:7); emergency (32:11)",gencourt.state.nh.us
+Budget,RSA 32:14-24,Municipal Budget Committee,"Official budget committee; MS-737 preparation and certification",gencourt.state.nh.us
+Budget,RSA 31:95,Posting of budget,"Budget must be posted with the warrant",gencourt.state.nh.us
+Budget,MS-636,Proposed Budget (no budget committee),"The proposed budget form for non-committee towns",revenue.nh.gov
+Budget,MS-737,Budget (with budget committee),"Committee-prepared budget; filed within 20 days of meeting",revenue.nh.gov
+Budget,MS-232,Appropriations as Voted,"Filed within 20 days post-meeting; DRA verifies against minutes",revenue.nh.gov
+Finance,RSA 33,Municipal Finance Act,"Borrowing/bonds; 3/5 vote for long-term debt",gencourt.state.nh.us
+Finance,RSA 34,Capital Reserve Funds (counties),"Reserve fund mechanics",gencourt.state.nh.us
+Finance,RSA 35,Capital Reserve Funds (towns/districts),"Saving for capital via voter-appropriated reserves",gencourt.state.nh.us
+Finance,RSA 31:19-a,Expendable trust funds,"Flexible reserves for specified municipal purposes",gencourt.state.nh.us
+Finance,RSA 31:22,Trustees of Trust Funds,"Custody of reserves/trusts; coordination on appropriations",gencourt.state.nh.us
+Taxation,RSA 21-J,Department of Revenue Administration,"Equalization ratio; DRA authority over the rate",gencourt.state.nh.us
+Taxation,RSA 72,Exemptions and Credits,"Elderly/disabled exemptions; veterans' credits affect the rate",gencourt.state.nh.us
+Taxation,RSA 75,Appraisal of Taxable Property,"Assessment standards; reval cycles",gencourt.state.nh.us
+Taxation,RSA 76,Apportionment/Assessment/Abatement,"Rate setting; overlay (76:6); abatements; semi-annual billing (76:15-a)",gencourt.state.nh.us
+Taxation,RSA 76:3,State Education Property Tax (SWEPT),"The state education component of the rate",gencourt.state.nh.us
+Taxation,RSA 80,Collection of Taxes,"Liens, tax deeding, collection process",gencourt.state.nh.us
+Taxation,MS-1,Summary of Valuation,"Due Sept 1; basis for the rate",revenue.nh.gov
+Taxation,MS-535,Financial Report,"Year-end financial reporting to DRA",revenue.nh.gov
+Taxation,MS-434,Revised Estimated Revenues,"Updated revenue estimates for rate setting",revenue.nh.gov
+Records,RSA 91-A,Right-to-Know Law,"5-business-day response; open meetings; nonpublic sessions (91-A:3)",gencourt.state.nh.us
+Records,RSA 33-A,Disposition of Municipal Records,"156-category retention schedule (33-A:3-a); no early deletion",gencourt.state.nh.us
+Personnel,RSA 273-A,Public Employee Labor Relations,"Collective bargaining; PELRB; status-quo doctrine",gencourt.state.nh.us
+Personnel,RSA 100-A,NH Retirement System,"Group I/II; employer rates as a non-discretionary budget driver",gencourt.state.nh.us
+Personnel,RSA 281-A,Workers' Compensation,"Coverage obligation; risk-pool relationship",gencourt.state.nh.us
+PublicWorks,RSA 231,Highways,"Road classification (I-VI); layout/discontinuance; scenic roads (231:157); driveways",gencourt.state.nh.us
+PublicWorks,RSA 149-M,Solid Waste Management,"Transfer station/recycling obligations",gencourt.state.nh.us
+LandUse,RSA 672-677,Planning and Zoning,"Master plan (674:1); zoning; subdivision/site plan; CIP (674:5-8)",gencourt.state.nh.us
+LandUse,RSA 673,Local Land Use Boards,"Composition, alternates, conflicts of interest",gencourt.state.nh.us
+LandUse,RSA 674:5-8,Capital Improvement Program,"Authorizes the 6+-year CIP that disciplines capital spending",gencourt.state.nh.us
+EconDev,RSA 162-K,Tax Increment Financing Districts,"TIF as an economic-development financing tool",gencourt.state.nh.us
+EconDev,RSA 79-E,Community Revitalization Tax Relief,"Incentive for downtown/village rehabilitation",gencourt.state.nh.us
+Welfare,RSA 165,Aid to Assisted Persons,"Mandatory local general assistance; written guidelines required",gencourt.state.nh.us
+Emergency,RSA 21-P,Safety / Emergency Management,"Local EOP/EOC; NIMS; FEMA public assistance after disasters",gencourt.state.nh.us
+PublicSafety,RSA 154,Fire Departments,"Fire service organization and authority",gencourt.state.nh.us
+PublicSafety,RSA 105,Police Officers,"Police authority and oversight",gencourt.state.nh.us
+Ethics,RSA 31:39-a,Code of Ethics,"Local ethics codes; conflict-of-interest recusal",gencourt.state.nh.us
+Liability,RSA 31:104-105,Indemnification of Officials,"Town indemnification of officers acting within scope",gencourt.state.nh.us
