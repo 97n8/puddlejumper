@@ -1,0 +1,11 @@
+year,pw_facility_crf,bridge_crf,roads_crf,hwy_equip_crf,fire_apparatus_crf,facilities_crf,tech_crf,total_tax_funded_capital,capital_rate_component,already_in_base,net_new_rate_impact,net_new_on_300k_home,outside_funds_event
+2027,150000,50000,100000,90000,70000,40000,20000,520000,0.53,0.41,0.12,36,"Stand up reserves; water AM grant ($75k); DWSRF pre-application"
+2028,250000,50000,100000,90000,70000,40000,20000,620000,0.63,0.41,0.22,66,"CDBG for ADA ($125k); roads block grant; Lower Winchester phase 1"
+2029,250000,50000,100000,90000,70000,40000,20000,620000,0.63,0.41,0.22,66,"DWSRF water construction (1% loan, rate-funded); ADA complete"
+2030,300000,25000,100000,90000,70000,40000,20000,645000,0.66,0.41,0.25,75,"Bridge aid award ($800k state); Lower Winchester complete"
+2031,250000,25000,100000,90000,70000,40000,20000,595000,0.61,0.41,0.20,60,"Public Works Facility BUILT (pay-go, no bond); bridge town-share funded"
+2032,0,25000,100000,90000,70000,40000,20000,345000,0.35,0.41,-0.06,-18,"Backlog cleared; capital burden now BELOW today"
+2033,0,25000,100000,90000,70000,40000,20000,345000,0.35,0.41,-0.06,-18,"Steady-state CIP; reserves fund next-cycle replacements"
+2034,0,25000,100000,90000,70000,40000,20000,345000,0.35,0.41,-0.06,-18,"Christian Hill Bridge constructed (80% state aid)"
+2035,0,25000,100000,90000,70000,40000,20000,345000,0.35,0.41,-0.06,-18,"Steady-state"
+2036,0,25000,100000,90000,70000,40000,20000,345000,0.35,0.41,-0.06,-18,"Steady-state; no surprise capital, no spikes"

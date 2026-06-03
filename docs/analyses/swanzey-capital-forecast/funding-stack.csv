@@ -1,0 +1,7 @@
+project,total_cost,state_federal_aid,srf_loan_via_rates,grants,principal_forgiveness,local_capital_reserve,local_bond,local_tax_share,local_share_pct,statute_tool,vote_threshold
+Public Works Facility,1200000,0,0,0,0,1200000,0,1200000,100%,RSA 35 capital reserve,Majority (deposits)
+Christian Hill Road Bridge,1000000,800000,0,0,0,200000,0,200000,20%,RSA 234 bridge aid + RSA 35,Majority (deposits)
+Lower Winchester Street,750000,270000,0,0,0,480000,0,480000,64%,Highway block grant + RSA 35,Majority (deposits)
+West Swanzey Water System,2075000,0,1600000,75000,400000,0,0,0,0%,NHDES DWSRF + AM grant,Water-rate / SRF (not property tax)
+Town Hall ADA Stairwell,250000,0,0,125000,0,125000,0,125000,50%,CDBG + RSA 35,Majority (deposits)
+TOTAL (one-time backlog),5275000,1070000,1600000,200000,400000,2005000,0,2005000,38%,Layered,Zero 3/5 bond votes required
