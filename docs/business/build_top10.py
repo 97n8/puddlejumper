@@ -256,6 +256,44 @@ for col, w in zip("ABCDE", [4, 40, 30, 38, 46]):
     wa.column_dimensions[col].width = w
 wa.freeze_panes = "B5"
 
+# --------------------------------------------------- MUNICIPAL BEDROCK --------
+wm = wb.create_sheet("Municipal_Bedrock")
+title(wm, "Municipal bedrock (MA) — context, scored the same way",
+      "The own-source/grant-funded MA municipal layer that runs even if the competitive layer disappears. "
+      "Same six criteria & weights as Top10. These are the stable counterweight to the business deals.")
+mh = ["Opportunity", "Town / source", "REV", "PROB", "RECUR", "STRAT", "SPEED", "RISKADJ", "Composite", "Rank"]
+hrow = 4
+for j, h in enumerate(mh, start=1):
+    wm.cell(row=hrow, column=j, value=h)
+style_header(wm, hrow, len(mh))
+muni = [
+    ("Sutton TIF / VAULT Diagnostic ($475M district)", "Sutton (Compact grant)", 3, 5, 4, 5, 5, 5),
+    ("Shrewsbury Municipal Fiber -> retainer", "Shrewsbury (c.30B s.7)", 4, 4, 4, 5, 4, 4),
+    ("Millbury MS4 stormwater (replicable module)", "Millbury", 3, 3, 5, 5, 3, 5),
+    ("Fitchburg CIP (RFP 26-092, submitted)", "Fitchburg (competitive)", 4, 3, 3, 5, 3, 4),
+    ("MBI BEAD broadband RFQ (2026-MBI-08)", "MA Broadband Institute", 4, 3, 3, 4, 3, 4),
+    ("Phillipston website + Memorial Building", "Phillipston", 2, 5, 3, 3, 5, 4),
+    ("Gardner home-turf engagement (target)", "Gardner (campaign flag)", 3, 2, 3, 4, 2, 3),
+]
+first = hrow + 1
+for i, (name, src, *sc) in enumerate(muni):
+    rr = first + i
+    wm.cell(row=rr, column=1, value=name).alignment = WRAP
+    wm.cell(row=rr, column=2, value=src).alignment = WRAP
+    for k, v in enumerate(sc):
+        c = wm.cell(row=rr, column=3 + k, value=v); c.alignment = CENTER; c.border = BORDER; c.fill = INPUT_FILL
+    comp = (f"=C{rr}*{wkey['REV']}+D{rr}*{wkey['PROB']}+E{rr}*{wkey['RECUR']}"
+            f"+F{rr}*{wkey['STRAT']}+G{rr}*{wkey['SPEED']}+H{rr}*{wkey['RISKADJ']}")
+    cc = wm.cell(row=rr, column=9, value=comp); cc.number_format = NUM2; cc.fill = TOTAL_FILL; cc.font = Font(bold=True)
+last = first + len(muni) - 1
+for i in range(len(muni)):
+    rr = first + i
+    rk = wm.cell(row=rr, column=10, value=f"=RANK(I{rr},$I${first}:$I${last},0)")
+    rk.alignment = CENTER; rk.font = Font(bold=True, color="1F4E5F")
+for col, w in zip("ABCDEFGHIJ", [42, 24, 8, 8, 8, 8, 8, 9, 11, 7]):
+    wm.column_dimensions[col].width = w
+wm.freeze_panes = "C5"
+
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Top10_Opportunities.xlsx")
 wb.save(out)
 print("wrote", out)
