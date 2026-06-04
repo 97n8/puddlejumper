@@ -1,12 +1,16 @@
-meeting_year,operating_budget,default_budget,op_yoy_pct,default_minus_proposed,op_budget_vote_yes,op_budget_vote_no,budget_support_pct,source
-2015,6262426,6067144,,-195282,673,206,76.6,annual_report
-2016,6210799,6222738,-0.8,11939,670,311,68.3,annual_report
-2017,6210799,6302525,0.0,91726,,,,annual_report
-2018,6452435,6122397,3.9,-330038,,,,annual_report
-2019,6303000,6072735,-2.3,-230265,,,,annual_report
-2020,6716500,6439109,6.6,-277391,,,,annual_report
-2021,6902500,6680348,2.8,-222152,,,,annual_report
-2022,7425000,6864706,7.6,-560294,,,,annual_report
-2023,7961500,7468834,7.2,-492666,388,236,62.2,annual_report
-2024,8370000,7935699,5.1,-434301,738,530,58.3,annual_report
-2025,8939036,8891785,6.8,-47251,800,596,57.3,annual_report
+meeting_year,operating_budget_proposed,default_budget,op_yoy_pct,proposed_minus_default,op_vote_yes,op_vote_no,support_pct,note,source
+2012,5747885,5705757,,42128,616,153,80.1,,annual_report
+2013,5824380,5812387,1.3,11993,436,131,76.9,,annual_report
+2014,5888782,5821465,1.1,67317,495,118,80.8,,annual_report
+2015,6012393,5852076,2.1,160317,673,206,76.6,,annual_report
+2016,6262426,6067144,4.2,195282,670,311,68.3,,annual_report
+2017,6210799,6222738,-0.8,-11939,352,168,67.7,default exceeded proposal,annual_report
+2018,6210799,6302525,0.0,-91726,,,,default exceeded proposal; tally not machine-readable,annual_report
+2019,6452435,6122397,3.9,330038,606,309,66.2,,annual_report
+2020,6303000,6072735,-2.3,230265,,,,adopted amended to 6330000; tally not machine-readable,annual_report
+2021,6716500,6439109,6.6,277391,637,460,58.1,,annual_report
+2022,6902500,6864706,2.8,37794,751,262,74.1,,annual_report
+2023,7425000,7468834,7.6,-43834,388,236,62.2,default exceeded proposal,annual_report
+2024,7961500,7935699,7.2,25801,738,530,58.3,,annual_report
+2025,8370000,7935699,5.1,434301,800,596,57.3,as-voted (results section),annual_report
+2026,8939036,8891785,6.8,47251,,,,adopted per news; ballot tally not yet in an annual report,news

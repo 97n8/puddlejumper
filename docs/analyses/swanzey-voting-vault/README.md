@@ -1,3 +1,10 @@
+> **Correction note (data integrity).** A later review found the original budget series was keyed to
+> the *report* year and used the *warrant (proposed)* figure, which sits one year ahead of the
+> as-voted result. `budget-series.csv` has been corrected to **town-meeting year** (verified against
+> as-voted results for 2020/2023/2025). Some prose in `WORKBOOK.md` below still uses the old labels;
+> the **canonical, corrected analysis lives in `../swanzey-financial-review/`** (the Office package).
+> The trend and magnitudes are unchanged; only year labels shifted (+1).
+
 # Swanzey Voting VAULT — 11 Years of Ballots, Elections, Patterns & Forecast
 
 A VAULT workbook built from the **real record**: every Town of Swanzey official-ballot town meeting and
