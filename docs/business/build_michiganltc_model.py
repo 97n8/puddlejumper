@@ -88,7 +88,15 @@ inputs=[
  ("d7_rin","D7 RIN value (CONTINGENT)",9204480,"$/yr","signed Model 3 [RFS registration required]"),
  ("z45_rd","Section 45Z value - RD (CONTINGENT)",2399040,"$/yr","signed Model 3 [eligibility + tax counsel]"),
  ("z45_saf","Section 45Z value - SAF (CONTINGENT)",4026960,"$/yr","signed Model 3 [eligibility + tax counsel]"),
- ("opex","Annual operating cost (ex-credits, steady state)",5381149,"$/yr","implied from signed model (rev-EBITDA) [CONFIRM build-up]"),
+ # opex (bottom-up) — labor from the uploaded WasteWerx staffing pro forma; rest editable
+ ("labor_fl","Site labor — total loaded, 62 FTE (FL basis)",5522400,"$/yr","WasteWerx Staffing Pro Forma (uploaded); FL market"),
+ ("mi_adj","Michigan labor adjustment factor",1.05,"x","FL->MI cost-of-living [CONFIRM]"),
+ ("feedstock","Net feedstock cost (negative if tipping-fee positive)",0,"$/yr","[CONFIRM — tires may carry tipping fees]"),
+ ("utilities","Utilities / energy (net of syngas self-supply)",1200000,"$/yr","ESTIMATE [CONFIRM]"),
+ ("maint","Maintenance materials + contract maintenance",500000,"$/yr","ESTIMATE [CONFIRM]"),
+ ("insurance","Insurance (industrial)",400000,"$/yr","ESTIMATE [CONFIRM]"),
+ ("contracted","Contracted svcs (security/janitorial/IT/3rd-party MRV verification)",350000,"$/yr","NOT in staffing pro forma — budget separately [CONFIRM]"),
+ ("ga","G&A / SG&A (corporate alloc, legal, accounting, software)",750000,"$/yr","ESTIMATE [CONFIRM]"),
  # capital
  ("raise_site","Project raise per site",15000000,"$","sponsor-directed headline"),
  ("build","Use of funds: build / core plant",8000000,"$","rough verbal"),
@@ -109,12 +117,51 @@ for i,(key,lab,val,unit,note) in enumerate(inputs):
     wi.cell(row=rr,column=1,value=key).font=Font(bold=True,color="888888",size=9)
     wi.cell(row=rr,column=2,value=lab)
     c=wi.cell(row=rr,column=3,value=val); c.fill=INFILL; c.border=BORDER
-    c.number_format='0.00' if isinstance(val,float) and val<=1 else (M if isinstance(val,(int,float)) and val>=1000 else '0')
+    c.number_format='0.00' if isinstance(val,float) else (M if isinstance(val,(int,float)) and val>=1000 else '0')
     wi.cell(row=rr,column=4,value=unit); wi.cell(row=rr,column=5,value=note).font=NOTE
     k[key]=f"Inputs!$C${rr}"
 for col,w in zip("ABCDE",[12,46,14,12,52]): wi.column_dimensions[col].width=w
 
 def K(key): return k[key]
+
+# ---------------- OPEX BUILD-UP ----------------
+wo=wb.create_sheet("Opex_BuildUp")
+T(wo,"Annual operating cost — bottom-up (per site, steady state)",
+  "KEY FINDING: site labor ALONE exceeds the signed model's entire implied opex. Green = known, orange = estimate to confirm.")
+H(wo,4,["Cost line","Amount $/yr","Status"])
+opx=[
+ ("Site labor — loaded, 62 FTE (MI-adjusted)", f"={K('labor_fl')}*{K('mi_adj')}","KNOWN — WasteWerx staffing pro forma"),
+ ("WasteWerx production royalty (recurring)", f"={K('ww_royalty')}","KNOWN — signed model"),
+ ("WasteWerx monitoring fees (recurring)", f"={K('ww_monitor')}","KNOWN — signed model"),
+ ("Net feedstock cost", f"={K('feedstock')}","[CONFIRM — may be tipping-fee positive]"),
+ ("Utilities / energy (net of syngas self-supply)", f"={K('utilities')}","ESTIMATE [CONFIRM]"),
+ ("Maintenance materials + contract maintenance", f"={K('maint')}","ESTIMATE [CONFIRM]"),
+ ("Insurance (industrial)", f"={K('insurance')}","ESTIMATE [CONFIRM]"),
+ ("Contracted services (security/janitorial/IT/3rd-party MRV)", f"={K('contracted')}","NOT in staffing pro forma [CONFIRM]"),
+ ("G&A / SG&A", f"={K('ga')}","ESTIMATE [CONFIRM]"),
+]
+r=5
+for lab,f,st in opx:
+    wo.cell(row=r,column=1,value=lab).alignment=WRAP
+    c=wo.cell(row=r,column=2,value=f); c.number_format=M
+    c.fill=BASEFILL if st.startswith("KNOWN") else UPFILL
+    wo.cell(row=r,column=3,value=st).alignment=WRAP
+    for cc in range(1,4): wo.cell(row=r,column=cc).border=BORDER
+    r+=1
+last=r-1
+wo.cell(row=r,column=1,value="TOTAL ANNUAL OPEX (bottom-up)").font=BOLD
+tc=wo.cell(row=r,column=2,value=f"=SUM(B5:B{last})"); tc.number_format=M; tc.font=BOLD; tc.fill=BASEFILL
+OPEX_ROW=r
+implied = 35581680-30200531  # signed-model implied opex
+wo.cell(row=r+2,column=1,value="Signed model's IMPLIED opex (rev - EBITDA)").alignment=WRAP
+wo.cell(row=r+2,column=2,value=implied).number_format=M
+wo.cell(row=r+3,column=1,value="Understatement baked into signed EBITDA (bottom-up - implied)").font=BOLD
+us=wo.cell(row=r+3,column=2,value=f"=B{OPEX_ROW}-B{r+2}"); us.number_format=M; us.fill=UPFILL; us.font=BOLD
+wo.cell(row=r+5,column=1,value="Labor ALONE (MI-adjusted)").font=BOLD
+la=wo.cell(row=r+5,column=2,value=f"={K('labor_fl')}*{K('mi_adj')}"); la.number_format=M; la.font=BOLD
+wo.cell(row=r+6,column=1,value="-> exceeds the signed model's entire implied opex above. Signed EBITDA overstates margin.").font=Font(bold=True,color="7A1F1F")
+for col,w in zip("ABC",[54,16,46]): wo.column_dimensions[col].width=w
+OPEX_CELL=f"Opex_BuildUp!$B${OPEX_ROW}"
 
 # ---------------- PER SITE ----------------
 ws=wb.create_sheet("Per_Site")
@@ -156,7 +203,7 @@ r=16
 for lab,rev,tag,creds in scen:
     ws.cell(row=r,column=1,value=lab).alignment=WRAP
     rc=ws.cell(row=r,column=2,value=rev); rc.number_format=M
-    oc=ws.cell(row=r,column=3,value=f"={K('opex')}"); oc.number_format=M
+    oc=ws.cell(row=r,column=3,value=f"={OPEX_CELL}"); oc.number_format=M
     ec=ws.cell(row=r,column=4,value=f"=B{r}-C{r}"); ec.number_format=M; ec.font=BOLD
     ec.fill=BASEFILL if tag=="BASE" else UPFILL
     ws.cell(row=r,column=5,value=creds).alignment=CTR
@@ -248,7 +295,11 @@ items=[
  "  * Section 45Z (RD + SAF): requires eligibility determination + tax counsel; rate assumption [CONFIRM].",
  "  * SAF/kerosene product classification [CONFIRM] — drives both fuel revenue and 45Z.",
  "  * Carbon black: included in base as a real product; price + offtake [CONFIRM]. (Signed model excluded it.)",
- "  * Operating cost ($5.38M) is implied (rev - EBITDA) from the signed model; obtain the line-item build-up [CONFIRM].",
+ "  * OPEX IS UNDERSTATED IN THE SIGNED MODEL. The uploaded WasteWerx staffing pro forma shows 62 FTE / $5.52M loaded",
+ "    labor alone — more than the signed model's entire implied opex ($5.38M). Bottom-up opex (Opex_BuildUp sheet) is",
+ "    materially higher; utilities/maintenance/insurance/contracted/G&A are estimates [CONFIRM with WasteWerx].",
+ "  * Contracted services (security, janitorial, IT/MSP, certified 3rd-party MRV verification) are explicitly NOT in the",
+ "    staffing pro forma and must be budgeted separately. Labor figure is FL market; add 5-10% for Michigan.",
  "",
  "CAPITAL",
  "  * Sponsor use-of-funds (~$16M) exceeds the $15M/site raise by ~$1M — confirm which line absorbs it.",
