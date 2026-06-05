@@ -90,7 +90,8 @@ inputs=[
  ("z45_saf","Section 45Z value - SAF (CONTINGENT)",4026960,"$/yr","signed Model 3 [eligibility + tax counsel]"),
  # opex (bottom-up) — labor from the uploaded WasteWerx staffing pro forma; rest editable
  ("labor_fl","Site labor — total loaded, 62 FTE (FL basis)",5522400,"$/yr","WasteWerx Staffing Pro Forma (uploaded); FL market"),
- ("mi_adj","Michigan labor adjustment factor",1.05,"x","FL->MI cost-of-living [CONFIRM]"),
+ ("mi_adj","Michigan labor adjustment factor",1.05,"x","FL->MI cost-of-living [Robert to set]"),
+ ("xtrain","Cross-training / headcount efficiency factor",1.00,"x","WasteWerx (V.Tizio 5/27): staffing is WORST-CASE; cross-training reduces it [set <1.0]"),
  ("feedstock","Net feedstock cost (negative if tipping-fee positive)",0,"$/yr","[CONFIRM — tires may carry tipping fees]"),
  ("utilities","Utilities / energy (net of syngas self-supply)",1200000,"$/yr","ESTIMATE [CONFIRM]"),
  ("maint","Maintenance materials + contract maintenance",500000,"$/yr","ESTIMATE [CONFIRM]"),
@@ -130,7 +131,7 @@ T(wo,"Annual operating cost — bottom-up (per site, steady state)",
   "KEY FINDING: site labor ALONE exceeds the signed model's entire implied opex. Green = known, orange = estimate to confirm.")
 H(wo,4,["Cost line","Amount $/yr","Status"])
 opx=[
- ("Site labor — loaded, 62 FTE (MI-adjusted)", f"={K('labor_fl')}*{K('mi_adj')}","KNOWN — WasteWerx staffing pro forma"),
+ ("Site labor — loaded (62 FTE worst-case x MI-adj x cross-training)", f"={K('labor_fl')}*{K('mi_adj')}*{K('xtrain')}","WORST-CASE per WasteWerx (V.Tizio); benefits/MI rates need actuals [Robert]"),
  ("WasteWerx production royalty (recurring)", f"={K('ww_royalty')}","KNOWN — signed model"),
  ("WasteWerx monitoring fees (recurring)", f"={K('ww_monitor')}","KNOWN — signed model"),
  ("Net feedstock cost", f"={K('feedstock')}","[CONFIRM — may be tipping-fee positive]"),
@@ -157,9 +158,11 @@ wo.cell(row=r+2,column=1,value="Signed model's IMPLIED opex (rev - EBITDA)").ali
 wo.cell(row=r+2,column=2,value=implied).number_format=M
 wo.cell(row=r+3,column=1,value="Understatement baked into signed EBITDA (bottom-up - implied)").font=BOLD
 us=wo.cell(row=r+3,column=2,value=f"=B{OPEX_ROW}-B{r+2}"); us.number_format=M; us.fill=UPFILL; us.font=BOLD
-wo.cell(row=r+5,column=1,value="Labor ALONE (MI-adjusted)").font=BOLD
-la=wo.cell(row=r+5,column=2,value=f"={K('labor_fl')}*{K('mi_adj')}"); la.number_format=M; la.font=BOLD
-wo.cell(row=r+6,column=1,value="-> exceeds the signed model's entire implied opex above. Signed EBITDA overstates margin.").font=Font(bold=True,color="7A1F1F")
+wo.cell(row=r+5,column=1,value="Labor ALONE (MI-adj x cross-training)").font=BOLD
+la=wo.cell(row=r+5,column=2,value=f"={K('labor_fl')}*{K('mi_adj')}*{K('xtrain')}"); la.number_format=M; la.font=BOLD
+wo.cell(row=r+6,column=1,value="-> at worst-case staffing, labor alone exceeds the signed model's entire implied opex. Signed EBITDA overstates margin.").font=Font(bold=True,color="7A1F1F")
+wo.cell(row=r+8,column=1,value="WasteWerx (V. Tizio, 5/27/26): staffing is intentional worst-case 'overkill'; cross-trained roles will reduce headcount;").font=NOTE
+wo.cell(row=r+9,column=1,value="health insurance & benefits need actuals; salaries are FL market — Robert to adjust to Michigan pay rates. Flex via xtrain + mi_adj inputs.").font=NOTE
 for col,w in zip("ABC",[54,16,46]): wo.column_dimensions[col].width=w
 OPEX_CELL=f"Opex_BuildUp!$B${OPEX_ROW}"
 
@@ -299,7 +302,9 @@ items=[
  "    labor alone — more than the signed model's entire implied opex ($5.38M). Bottom-up opex (Opex_BuildUp sheet) is",
  "    materially higher; utilities/maintenance/insurance/contracted/G&A are estimates [CONFIRM with WasteWerx].",
  "  * Contracted services (security, janitorial, IT/MSP, certified 3rd-party MRV verification) are explicitly NOT in the",
- "    staffing pro forma and must be budgeted separately. Labor figure is FL market; add 5-10% for Michigan.",
+ "    staffing pro forma and must be budgeted separately. Labor is intentional WORST-CASE per WasteWerx (V. Tizio,",
+ "    5/27/26): cross-training reduces headcount (set xtrain<1.0), salaries are FL market (set mi_adj for Michigan),",
+ "    and health-insurance/benefits actuals are still pending — net labor could move down (cross-training) or up (MI+benefits).",
  "",
  "CAPITAL",
  "  * Sponsor use-of-funds (~$16M) exceeds the $15M/site raise by ~$1M — confirm which line absorbs it.",
