@@ -83,6 +83,7 @@ tab("01 Source Register","01 — Source Register",
  ["SRC-016","University of Arizona Support (Dr. Cuello)","07_PARTNERS_AND_ROLES","Support letter","2026-02-10","Dr. Joel Cuello","ON FILE","Community / workforce","ACS aquaponic programming"],
  ["SRC-017","Acadia Capital validation (Walton)","04_FINANCE/09_Investor_Readiness","Advisory validation","2026-05-08","Brien Walton","ON FILE","Investor readiness","Named governance the critical success factor"],
  ["SRC-018","ERR Feedstock Supply (Dort Hwy)","02_SITES/03_Flint/Source","Supply terms","2026-05","ERR Inc.","ON FILE","Feedstock / finance","10-yr, 40,000 t/yr at $25/ton tipping"],
+ ["SRC-019","WasteWerx Brochure (IP-Protected)","07_PARTNERS_AND_ROLES/05_WasteWerx","Technology brochure","2026","WasteWerx","ON FILE — CONFIDENTIAL","Technology / partner packet","IP-protected version; partner-facing only; do NOT publish proprietary specs/reactor photos (NDA 5/18)"],
  ],
  [10,30,30,14,11,16,20,22,40],
  "Most important tab. If a number, claim, role, cost, site fact, or public sentence matters, it points to a Source ID.")
