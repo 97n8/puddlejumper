@@ -82,12 +82,8 @@ inputs=[
  ("cb_yield","Carbon black yield",0.45,"of feedstock","WasteWerx model"),
  ("oil_price","Pyrolysis oil price (conservative/market)",500,"$/MT","market-grounded base [CONFIRM contract]"),
  ("cb_price","Carbon black price",750,"$/MT","[CONFIRM market price + offtake]"),
- ("rd_rev","Upgraded fuel: Renewable diesel revenue",4798080,"$/yr","signed Model 3 [requires distillation+offtake]"),
- ("saf_rev","Upgraded fuel: SAF/kerosene revenue",10355040,"$/yr","signed Model 3 [CONFIRM product classification]"),
- ("d4_rin","D4 RIN value (CONTINGENT)",4798080,"$/yr","signed Model 3 [RFS registration required]"),
- ("d7_rin","D7 RIN value (CONTINGENT)",9204480,"$/yr","signed Model 3 [RFS registration required]"),
- ("z45_rd","Section 45Z value - RD (CONTINGENT)",2399040,"$/yr","signed Model 3 [eligibility + tax counsel]"),
- ("z45_saf","Section 45Z value - SAF (CONTINGENT)",4026960,"$/yr","signed Model 3 [eligibility + tax counsel]"),
+ ("fuel_base","WasteWerx fuel revenue (distilled RD+SAF, base)",22181680,"$/yr","CONFIRMED: $35,581,680 total minus ~$13.4M credits (13_Financial_Reconciliation)"),
+ ("credits","RIN + Section 45Z (CONTINGENT)",13400000,"$/yr","CONFIRMED contingent: '$13.4M+/yr requires EPA RFS registration — NOT guaranteed'"),
  # opex (bottom-up) — labor from the uploaded WasteWerx staffing pro forma; rest editable
  ("labor_fl","Site labor — total loaded, 62 FTE (FL basis)",5522400,"$/yr","WasteWerx Staffing Pro Forma (uploaded); FL market"),
  ("mi_adj","Michigan labor adjustment factor",1.05,"x","FL->MI cost-of-living [Robert to set]"),
@@ -182,14 +178,9 @@ H(ws,4,["Revenue line","Amount $/yr","Category","Status / caveat"])
 oil_q=f"({K('tpd')}*{K('days')}*{K('oil_yield')})"
 cb_q=f"({K('tpd')}*{K('days')}*{K('cb_yield')})"
 rows=[
- ("Pyrolysis oil — raw, market price", f"={oil_q}*{K('oil_price')}","BASE (conservative)","Market-grounded; most defensible"),
- ("Carbon black", f"={cb_q}*{K('cb_price')}","BASE","CONFLICT: $0 in executed WasteWerx model (Disc.#14); deck-era $750/MT; needs offtake"),
- ("Renewable diesel (upgraded fuel)", f"={K('rd_rev')}","BASE (upgraded)","Split NOT in canonical workbook (blended $35.58M only); needs WasteWerx Model 3 + offtake"),
- ("SAF / kerosene (upgraded fuel)", f"={K('saf_rev')}","BASE (upgraded)","Split unsourced (blended line only); [CONFIRM classification + offtake]"),
- ("D4 RIN", f"={K('d4_rin')}","CONTINGENT UPSIDE","Split unsourced + contingent: RFS registration required (Disc.#16) — NOT secured"),
- ("D7 RIN", f"={K('d7_rin')}","CONTINGENT UPSIDE","Split unsourced + contingent: RFS registration required — NOT secured"),
- ("Section 45Z — RD", f"={K('z45_rd')}","CONTINGENT UPSIDE","Split unsourced + contingent: 45Z qualification + tax counsel — NOT secured"),
- ("Section 45Z — SAF", f"={K('z45_saf')}","CONTINGENT UPSIDE","Split unsourced + contingent: 45Z qualification + tax counsel — NOT secured"),
+ ("WasteWerx fuel (distilled RD+SAF)", f"={K('fuel_base')}","BASE","CONFIRMED: $35.58M total minus ~$13.4M credits (13_Financial_Reconciliation)"),
+ ("Carbon black (deck-era; additive?)", f"={cb_q}*{K('cb_price')}","ADD'L (contingent)","$0 in executed WasteWerx pro forma — confirm if additive + offtake before use"),
+ ("RIN + Section 45Z (credits)", f"={K('credits')}","CONTINGENT UPSIDE","CONFIRMED contingent: ~$13.4M+; requires EPA RFS registration — NOT guaranteed"),
 ]
 r=5
 for lab,f,cat,st in rows:
@@ -204,10 +195,10 @@ for lab,f,cat,st in rows:
 ws.cell(row=14,column=1,value="SCENARIO SUMMARY (per site)").font=Font(bold=True,size=11,color="1F4E5F")
 H(ws,15,["Scenario","Revenue $/yr","Opex $/yr","EBITDA $/yr","Credits in headline?"])
 scen=[
- ("Base — Conservative (raw oil + carbon black)","=B5+B6","BASE","No"),
- ("Base — Upgraded (RD + SAF + carbon black)","=B7+B8+B6","BASE","No"),
- ("Signed headline (RD + SAF + credits, no carbon black)","=B7+B8+B9+B10+B11+B12","SIGNED","YES — ~$20.4M credit-dependent"),
- ("Full stack (upgraded fuel + carbon black + credits)","=B6+B7+B8+B9+B10+B11+B12","FULL","YES"),
+ ("Base — WasteWerx fuel only (no credits, no CB)","=B5","BASE","No — most defensible"),
+ ("Base + carbon black (if additive)","=B5+B6","BASE","No (CB itself contingent)"),
+ ("WasteWerx confirmed headline (fuel + credits, no CB)","=B5+B7","SIGNED","YES — ~$13.4M credit-dependent"),
+ ("Full stack (fuel + carbon black + credits)","=B5+B6+B7","FULL","YES"),
 ]
 r=16
 for lab,rev,tag,creds in scen:
@@ -221,7 +212,7 @@ for lab,rev,tag,creds in scen:
     r+=1
 # credit-dependency callout
 ws.cell(row=21,column=1,value="Contingent credit value at risk in headline (RIN + 45Z)").font=BOLD
-cd=ws.cell(row=21,column=2,value="=B9+B10+B11+B12"); cd.number_format=M; cd.fill=UPFILL; cd.font=BOLD
+cd=ws.cell(row=21,column=2,value="=B7"); cd.number_format=M; cd.fill=UPFILL; cd.font=BOLD
 ws.cell(row=21,column=3,value="<- this much of the signed headline is NOT secured").font=NOTE
 
 # capital bridge
@@ -307,8 +298,11 @@ items=[
  "  * Carbon black: included in base as a real product; price + offtake [CONFIRM]. (Signed model excluded it.)",
  "  * OPEX IS NOW SOURCED (bottom-up ~$14.2M/site) from the WasteWerx staffing pro forma + deck Operating Savings tab +",
  "    WasteWerx Model 3 terms — vs the signed model's implied $5.38M. Understatement ~$8.85M.",
+ "  * THE $30.2M EBITDA IS WASTEWERX-SCOPE: it sits on WasteWerx's confirmed $5.38M opex (fees + minimal ops) which OMITS the",
+ "    customer's full 62-FTE site labor (~$5.5M) and feedstock (~$1-3.7M). On the customer's all-in opex (~$14.2M) the SAME",
+ "    $35.58M revenue yields ~$21.35M EBITDA, not $30.2M. (The deck's own reconciled model shows ~$11.2M expenses / ~$5.66M net income.)",
  "  * Royalty corrected to STEADY-STATE: $0.60/gal x 4,467,600 gal = ~$2.68M/yr ($995k in the capital bridge is Yr1 partial). Monitoring $420k/yr.",
- "  * FEEDSTOCK $3.72M (tires, deck) is the BIGGEST swing — co-location with ERR/Geocycle may cut it materially. [CONFIRM]",
+ "  * FEEDSTOCK is a CONFIRMED swing: deck $200/ton landed = $3.72M vs Dort Hwy agreement $25/ton tipping = ~$1M. Resolve with Robert. [CONFIRM]",
  "  * REVENUE SPLIT NOT IN CANONICAL WORKBOOK: executed pro forma shows only blended 'Fuel+RIN+§45Z' = $35.58M; the RD/SAF/RIN/45Z",
  "    line items trace to the investor doc, not a source — need the underlying WasteWerx Model 3 to verify the split.",
  "  * CARBON BLACK = $0 in executed WasteWerx model (Disc.#14) but $10.1M in the deck; base case includes it on the DECK assumption — confirm.",
