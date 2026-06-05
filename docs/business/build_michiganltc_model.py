@@ -92,12 +92,17 @@ inputs=[
  ("labor_fl","Site labor — total loaded, 62 FTE (FL basis)",5522400,"$/yr","WasteWerx Staffing Pro Forma (uploaded); FL market"),
  ("mi_adj","Michigan labor adjustment factor",1.05,"x","FL->MI cost-of-living [Robert to set]"),
  ("xtrain","Cross-training / headcount efficiency factor",1.00,"x","WasteWerx (V.Tizio 5/27): staffing is WORST-CASE; cross-training reduces it [set <1.0]"),
- ("feedstock","Net feedstock cost (negative if tipping-fee positive)",0,"$/yr","[CONFIRM — tires may carry tipping fees]"),
- ("utilities","Utilities / energy (net of syngas self-supply)",1200000,"$/yr","ESTIMATE [CONFIRM]"),
- ("maint","Maintenance materials + contract maintenance",500000,"$/yr","ESTIMATE [CONFIRM]"),
- ("insurance","Insurance (industrial)",400000,"$/yr","ESTIMATE [CONFIRM]"),
- ("contracted","Contracted svcs (security/janitorial/IT/3rd-party MRV verification)",350000,"$/yr","NOT in staffing pro forma — budget separately [CONFIRM]"),
- ("ga","G&A / SG&A (corporate alloc, legal, accounting, software)",750000,"$/yr","ESTIMATE [CONFIRM]"),
+ ("feedstock","Feedstock cost (tires) — co-location may reduce",3720000,"$/yr","deck Operating Savings tab; co-loc w/ ERR/Geocycle may cut this — BIGGEST swing"),
+ ("royalty_gal","WasteWerx production royalty rate",0.60,"$/gal","WasteWerx Model 3 (executed)"),
+ ("annual_gal","Annual fuel output (85% util)",4467600,"gal/yr","WasteWerx Model 3"),
+ ("monitor_mo","WasteWerx monitoring fee",35000,"$/mo","WasteWerx Model 3 (CPI-indexed)"),
+ ("utilities","Utilities (electric+water+fees)",96960,"$/yr","deck Operating Savings tab"),
+ ("maint","Maintenance + parts",42000,"$/yr","deck Operating Savings tab [low for plant scale — confirm]"),
+ ("insurance","Insurance",78000,"$/yr","deck Operating Savings tab"),
+ ("property_tax","Property tax",168000,"$/yr","deck Operating Savings tab"),
+ ("security","Security",360000,"$/yr","deck Operating Savings tab"),
+ ("legal_acct","Legal + accounting (with PublicLogic)",750000,"$/yr","deck Operating Savings tab (revised)"),
+ ("pl_gov","PublicLogic governance retainer",120000,"$/yr","deck ($10k/mo)"),
  # capital
  ("raise_site","Project raise per site",15000000,"$","sponsor-directed headline"),
  ("build","Use of funds: build / core plant",8000000,"$","rough verbal"),
@@ -132,20 +137,22 @@ T(wo,"Annual operating cost — bottom-up (per site, steady state)",
 H(wo,4,["Cost line","Amount $/yr","Status"])
 opx=[
  ("Site labor — loaded (62 FTE worst-case x MI-adj x cross-training)", f"={K('labor_fl')}*{K('mi_adj')}*{K('xtrain')}","WORST-CASE per WasteWerx (V.Tizio); benefits/MI rates need actuals [Robert]"),
- ("WasteWerx production royalty (recurring)", f"={K('ww_royalty')}","KNOWN — signed model"),
- ("WasteWerx monitoring fees (recurring)", f"={K('ww_monitor')}","KNOWN — signed model"),
- ("Net feedstock cost", f"={K('feedstock')}","[CONFIRM — may be tipping-fee positive]"),
- ("Utilities / energy (net of syngas self-supply)", f"={K('utilities')}","ESTIMATE [CONFIRM]"),
- ("Maintenance materials + contract maintenance", f"={K('maint')}","ESTIMATE [CONFIRM]"),
- ("Insurance (industrial)", f"={K('insurance')}","ESTIMATE [CONFIRM]"),
- ("Contracted services (security/janitorial/IT/3rd-party MRV)", f"={K('contracted')}","NOT in staffing pro forma [CONFIRM]"),
- ("G&A / SG&A", f"={K('ga')}","ESTIMATE [CONFIRM]"),
+ ("WasteWerx royalty (steady-state, $0.60/gal x output)", f"={K('royalty_gal')}*{K('annual_gal')}","WasteWerx Model 3 — capital-bridge uses Yr1 partial"),
+ ("WasteWerx monitoring ($35k/mo x 12)", f"={K('monitor_mo')}*12","WasteWerx Model 3"),
+ ("Feedstock cost (tires)", f"={K('feedstock')}","deck; co-loc w/ ERR/Geocycle may reduce — BIGGEST swing"),
+ ("Utilities (electric+water+fees)", f"={K('utilities')}","deck Operating Savings tab"),
+ ("Maintenance + parts", f"={K('maint')}","deck [low for scale — confirm]"),
+ ("Insurance", f"={K('insurance')}","deck Operating Savings tab"),
+ ("Property tax", f"={K('property_tax')}","deck Operating Savings tab"),
+ ("Security", f"={K('security')}","deck Operating Savings tab"),
+ ("Legal + accounting (with PublicLogic)", f"={K('legal_acct')}","deck Operating Savings tab (revised)"),
+ ("PublicLogic governance retainer", f"={K('pl_gov')}","deck ($10k/mo)"),
 ]
 r=5
 for lab,f,st in opx:
     wo.cell(row=r,column=1,value=lab).alignment=WRAP
     c=wo.cell(row=r,column=2,value=f); c.number_format=M
-    c.fill=BASEFILL if st.startswith("KNOWN") else UPFILL
+    c.fill=UPFILL if "swing" in st else BASEFILL
     wo.cell(row=r,column=3,value=st).alignment=WRAP
     for cc in range(1,4): wo.cell(row=r,column=cc).border=BORDER
     r+=1
@@ -176,13 +183,13 @@ oil_q=f"({K('tpd')}*{K('days')}*{K('oil_yield')})"
 cb_q=f"({K('tpd')}*{K('days')}*{K('cb_yield')})"
 rows=[
  ("Pyrolysis oil — raw, market price", f"={oil_q}*{K('oil_price')}","BASE (conservative)","Market-grounded; most defensible"),
- ("Carbon black", f"={cb_q}*{K('cb_price')}","BASE","Real saleable product; excluded from signed model [CONFIRM price/offtake]"),
- ("Renewable diesel (upgraded fuel)", f"={K('rd_rev')}","BASE (upgraded)","Requires distillation refinery + offtake MOU"),
- ("SAF / kerosene (upgraded fuel)", f"={K('saf_rev')}","BASE (upgraded)","Requires distillation + offtake; [CONFIRM classification]"),
- ("D4 RIN", f"={K('d4_rin')}","CONTINGENT UPSIDE","RFS pathway registration required — NOT secured"),
- ("D7 RIN", f"={K('d7_rin')}","CONTINGENT UPSIDE","RFS pathway registration required — NOT secured"),
- ("Section 45Z — RD", f"={K('z45_rd')}","CONTINGENT UPSIDE","Eligibility + tax counsel required — NOT secured"),
- ("Section 45Z — SAF", f"={K('z45_saf')}","CONTINGENT UPSIDE","Eligibility + tax counsel required — NOT secured"),
+ ("Carbon black", f"={cb_q}*{K('cb_price')}","BASE","CONFLICT: $0 in executed WasteWerx model (Disc.#14); deck-era $750/MT; needs offtake"),
+ ("Renewable diesel (upgraded fuel)", f"={K('rd_rev')}","BASE (upgraded)","Split NOT in canonical workbook (blended $35.58M only); needs WasteWerx Model 3 + offtake"),
+ ("SAF / kerosene (upgraded fuel)", f"={K('saf_rev')}","BASE (upgraded)","Split unsourced (blended line only); [CONFIRM classification + offtake]"),
+ ("D4 RIN", f"={K('d4_rin')}","CONTINGENT UPSIDE","Split unsourced + contingent: RFS registration required (Disc.#16) — NOT secured"),
+ ("D7 RIN", f"={K('d7_rin')}","CONTINGENT UPSIDE","Split unsourced + contingent: RFS registration required — NOT secured"),
+ ("Section 45Z — RD", f"={K('z45_rd')}","CONTINGENT UPSIDE","Split unsourced + contingent: 45Z qualification + tax counsel — NOT secured"),
+ ("Section 45Z — SAF", f"={K('z45_saf')}","CONTINGENT UPSIDE","Split unsourced + contingent: 45Z qualification + tax counsel — NOT secured"),
 ]
 r=5
 for lab,f,cat,st in rows:
@@ -298,13 +305,14 @@ items=[
  "  * Section 45Z (RD + SAF): requires eligibility determination + tax counsel; rate assumption [CONFIRM].",
  "  * SAF/kerosene product classification [CONFIRM] — drives both fuel revenue and 45Z.",
  "  * Carbon black: included in base as a real product; price + offtake [CONFIRM]. (Signed model excluded it.)",
- "  * OPEX IS UNDERSTATED IN THE SIGNED MODEL. The uploaded WasteWerx staffing pro forma shows 62 FTE / $5.52M loaded",
- "    labor alone — more than the signed model's entire implied opex ($5.38M). Bottom-up opex (Opex_BuildUp sheet) is",
- "    materially higher; utilities/maintenance/insurance/contracted/G&A are estimates [CONFIRM with WasteWerx].",
- "  * Contracted services (security, janitorial, IT/MSP, certified 3rd-party MRV verification) are explicitly NOT in the",
- "    staffing pro forma and must be budgeted separately. Labor is intentional WORST-CASE per WasteWerx (V. Tizio,",
- "    5/27/26): cross-training reduces headcount (set xtrain<1.0), salaries are FL market (set mi_adj for Michigan),",
- "    and health-insurance/benefits actuals are still pending — net labor could move down (cross-training) or up (MI+benefits).",
+ "  * OPEX IS NOW SOURCED (bottom-up ~$14.2M/site) from the WasteWerx staffing pro forma + deck Operating Savings tab +",
+ "    WasteWerx Model 3 terms — vs the signed model's implied $5.38M. Understatement ~$8.85M.",
+ "  * Royalty corrected to STEADY-STATE: $0.60/gal x 4,467,600 gal = ~$2.68M/yr ($995k in the capital bridge is Yr1 partial). Monitoring $420k/yr.",
+ "  * FEEDSTOCK $3.72M (tires, deck) is the BIGGEST swing — co-location with ERR/Geocycle may cut it materially. [CONFIRM]",
+ "  * REVENUE SPLIT NOT IN CANONICAL WORKBOOK: executed pro forma shows only blended 'Fuel+RIN+§45Z' = $35.58M; the RD/SAF/RIN/45Z",
+ "    line items trace to the investor doc, not a source — need the underlying WasteWerx Model 3 to verify the split.",
+ "  * CARBON BLACK = $0 in executed WasteWerx model (Disc.#14) but $10.1M in the deck; base case includes it on the DECK assumption — confirm.",
+ "    Labor is worst-case (V. Tizio 5/27): set xtrain (cross-training) + mi_adj (Michigan); benefits actuals pending.",
  "",
  "CAPITAL",
  "  * Sponsor use-of-funds (~$16M) exceeds the $15M/site raise by ~$1M — confirm which line absorbs it.",
