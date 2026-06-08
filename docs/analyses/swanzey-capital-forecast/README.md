@@ -17,6 +17,7 @@ Street, the West Swanzey water system, and the Town Hall ADA project — and **f
 
 | File | What it is |
 |---|---|
+| [`Swanzey Capital Workbook.xlsx`](./Swanzey%20Capital%20Workbook.xlsx) | **Live Excel model** — Summary, Projects/funding stack, Reserve Ladder, 10-Year Plan (editable deposits → auto tax impact), Bridge-Aid calculator, Assumptions |
 | [`CAPITAL-FORECAST.md`](./CAPITAL-FORECAST.md) | The book — thesis, backlog, funding stack, 10-year glide path, warrant strategy, board recommendation |
 | [`financing-playbook.md`](./financing-playbook.md) | The NH capital-finance toolkit (RSA 35 reserves, RSA 234 bridge aid, DWSRF, RSA 33/35-A bonding, block grants, CDBG) |
 | [`project-inventory.csv`](./project-inventory.csv) | Every project: cost, driver, funding path, local share |
