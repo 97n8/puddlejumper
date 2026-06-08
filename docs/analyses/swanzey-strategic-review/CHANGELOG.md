@@ -4,6 +4,11 @@ Versioning: the version lives in the filename (`Swanzey Strategic Review vX.Y.pd
 adds an entry here; git history holds the full record. Bump **minor** (v0.1 → v0.2) for edits/cuts,
 **major** (v1.0) when the board adopts a version.
 
+## v0.1 — 2026-06-04 (two-page summary added)
+- Added `Swanzey Review — 2-Page Summary v0.1.pdf/.docx`: the full review distilled into five tables
+  (by-the-numbers, the pattern, what-we'd-do-differently, the financing math, the 12-month plan) plus
+  the one-paragraph ask. Board-ready leave-behind; same data and thesis as the full review.
+
 ## v0.1 — 2026-06-04 (working draft)
 - Initial ~11-page strategic review for the Swanzey Board of Selectmen.
 - **Thesis:** the town leads with *restraint*; restraint built deep voter trust for a decade and is now
