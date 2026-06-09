@@ -1,248 +1,250 @@
 #!/usr/bin/env python3
 """
-PublicLogic — Capabilities Workbook (institutional positioning + working BD tool).
-From the Business Development & Market Positioning Workbook v2.0. Styled to the firm
-palette. A real working set: service catalog, signature offerings (editable scope/fee),
-the Nathan+Allie model, transfer assets, a target-market pipeline (editable status/owner/
-next-step), lessons learned, and positioning/messaging.
+PublicLogic — Capabilities Workbook (FINAL, internal strategy for Nathan & Allie).
+Grounded, humble, honest. Reveals the company that already exists (Hubbardston, Sutton,
+Phillipston, Gardiner, Michigan LTC). No hype. Answers the 10 strategy questions.
 """
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import os
 
-SLATE="1A1D20"; GREEN="0F4C3A"; GOLD="A9772F"; CREAM="F5F4F0"; CREAMW="ECEAE3"; GREENL="E3EAE5"
+SLATE="1A1D20"; GREEN="0F4C3A"; GOLD="A9772F"; MUTEC="6B6660"
 HDR=Font(bold=True,color="FFFFFF",size=11); HFILL=PatternFill("solid",fgColor=SLATE)
 GHFILL=PatternFill("solid",fgColor=GREEN); TITLE=Font(bold=True,size=15,color=SLATE)
-SUB=Font(italic=True,size=9,color="6B6660"); GLD=Font(bold=True,size=10,color=GOLD)
-SEC=Font(bold=True,size=12,color=GREEN); BOLD=Font(bold=True)
-CFILL=PatternFill("solid",fgColor=CREAMW); GFILL=PatternFill("solid",fgColor=GREENL); IFILL=PatternFill("solid",fgColor="FFF2CC")
+SUB=Font(italic=True,size=9,color=MUTEC); SEC=Font(bold=True,size=12,color=GREEN)
+GLD=Font(bold=True,size=11,color=GOLD); BOLD=Font(bold=True); BODY=Font(size=11,color=SLATE)
+CFILL=PatternFill("solid",fgColor="ECEAE3"); GFILL=PatternFill("solid",fgColor="E3EAE5"); IFILL=PatternFill("solid",fgColor="FFF2CC")
 THIN=Side(style="thin",color="CCCCCC"); B=Border(left=THIN,right=THIN,top=THIN,bottom=THIN)
-WRAP=Alignment(wrap_text=True,vertical="top"); CTR=Alignment(horizontal="center",vertical="center")
+WRAP=Alignment(wrap_text=True,vertical="top"); MID=Alignment(wrap_text=True,vertical="center")
 
 wb=openpyxl.Workbook()
-def hrow(ws,r,cols,fill=HFILL,start=1):
-    for i,c in enumerate(cols):
-        x=ws.cell(row=r,column=start+i,value=c); x.font=HDR; x.fill=fill; x.border=B; x.alignment=Alignment(wrap_text=True,vertical="center")
-def tab(name,title,sub=None):
+def newtab(name,title,sub=None):
     ws=wb.create_sheet(name); ws["A1"]=title; ws["A1"].font=TITLE
     if sub: ws["A2"]=sub; ws["A2"].font=SUB
     return ws
-def table(ws,top,headers,rows,widths,fill=HFILL,editable_cols=()):
-    hrow(ws,top,headers,fill)
+def blocks(ws,start,rows,h=34,w=(20,104)):
+    r=start
+    for k,v in rows:
+        a=ws.cell(row=r,column=1,value=k); a.font=HDR; a.fill=GHFILL; a.border=B; a.alignment=MID
+        c=ws.cell(row=r,column=2,value=v); c.alignment=WRAP; c.border=B; c.fill=CFILL; c.font=BODY
+        ws.row_dimensions[r].height=h; r+=1
+    ws.column_dimensions["A"].width=w[0]; ws.column_dimensions["B"].width=w[1]
+    return r
+def lines(ws,start,items,col=1,width=110):
+    r=start
+    for it in items:
+        c=ws.cell(row=r,column=col,value=it); c.alignment=WRAP; c.font=BODY; r+=1
+    ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width=width
+    return r
+def htable(ws,top,headers,rows,widths,fill=HFILL,editable=()):
+    for i,hh in enumerate(headers):
+        c=ws.cell(row=top,column=i+1,value=hh); c.font=HDR; c.fill=fill; c.border=B; c.alignment=MID
     for ri,row in enumerate(rows):
         for ci,val in enumerate(row):
-            c=ws.cell(row=top+1+ri,column=ci+1,value=val); c.border=B; c.alignment=WRAP
-            if ci in editable_cols: c.fill=IFILL
+            c=ws.cell(row=top+1+ri,column=ci+1,value=val); c.border=B; c.alignment=WRAP; c.font=BODY
+            if ci in editable: c.fill=IFILL
     for i,w in enumerate(widths): ws.column_dimensions[openpyxl.utils.get_column_letter(i+1)].width=w
     ws.freeze_panes=f"A{top+1}"
 
-# ---- COVER / POSITIONING ----
-ws=wb.active; ws.title="Positioning"
-ws["A1"]="PUBLICLOGIC — Capabilities Workbook"; ws["A1"].font=Font(bold=True,size=16,color=SLATE)
-ws["A2"]="Institutional Stewardship through Project Delivery  ·  v2.0  ·  June 2026"; ws["A2"].font=Font(size=11,bold=True,color=GOLD)
-blocks=[
- ("NORTH STAR","Every system should make it easier for the next person to do the right thing."),
- ("WHY WE'RE DIFFERENT","Most systems manage work. PublicLogic helps steward what has to survive the work."),
- ("WHAT WE ARE","PublicLogic applies Institutional Stewardship to help communities, public-sector organizations, and community-serving institutions move important projects from planning to implementation."),
- ("THE DISTINCTION","Implementation is the service. Institutional Stewardship is the method. The market buys project delivery; PublicLogic delivers Institutional Stewardship. Both are true; neither is sacrificed for the other."),
- ("CLIENTS BUY / WE DELIVER","Clients buy funding, progress, capacity, and execution. PublicLogic delivers Institutional Stewardship. That is not a contradiction — it is the business model."),
- ("WHAT WE ARE NOT","Not a grant-writing firm. Not an AI consulting firm. Not a traditional planning firm. We don't produce reports or plans that sit on shelves."),
- ("POSITIONING STATEMENT","PublicLogic helps communities, public-sector organizations, and community-serving institutions move important projects from planning to implementation. We do this through Institutional Stewardship — preserving, governing, transferring, and operationalizing the knowledge required for long-term success."),
- ("INSTITUTIONAL STEWARDSHIP (definition)","The deliberate practice of preserving, governing, transferring, and operationalizing organizational knowledge so critical functions remain durable across turnover, changing priorities, and organizational change."),
- ("IN PLAIN TERMS","Stewardship — caring for what must outlast any one person.   Continuity — the work keeps running through turnover.   Institutional memory — the organization remembers how and why.   Transfer — every engagement leaves reusable capability.   Why plans fail — capacity stops keeping pace with complexity."),
- ("SUCCESS STANDARD","A successful engagement reduces future dependency. The organization becomes more capable; the process more durable; the knowledge more accessible."),
-]
-r=4
-for k,v in blocks:
-    ws.cell(row=r,column=1,value=k).font=HDR; ws.cell(row=r,column=1).fill=GHFILL; ws.cell(row=r,column=1).border=B; ws.cell(row=r,column=1).alignment=Alignment(wrap_text=True,vertical="center")
-    c=ws.cell(row=r,column=2,value=v); c.alignment=WRAP; c.border=B; c.fill=CFILL
-    r+=1
-ws.column_dimensions["A"].width=24; ws.column_dimensions["B"].width=104
-for rr in range(4,r): ws.row_dimensions[rr].height=42
-# How We Work — the method
-mr=r+1
-ws.cell(row=mr,column=1,value="HOW WE WORK").font=SEC
-ws.cell(row=mr,column=2,value="Map   →   Embed   →   Encode   →   Sustain").font=Font(bold=True,size=12,color=GOLD)
-steps=[("Map","Surface how the work actually happens — roles, knowledge, dependencies, risks."),
- ("Embed","Put the right structure into the live workflow, alongside the people who do the work."),
- ("Encode","Capture the knowledge and rules so they outlast any individual."),
- ("Sustain","Monitor adoption and transfer ownership so it runs without us.")]
-for i,(st,d) in enumerate(steps):
-    rr=mr+1+i
-    a=ws.cell(row=rr,column=1,value=st); a.font=Font(bold=True,color=GOLD); a.border=B; a.fill=GFILL; a.alignment=Alignment(vertical="center")
-    c=ws.cell(row=rr,column=2,value=d); c.alignment=WRAP; c.border=B
-
-# ---- SERVICE CATALOG ----
-ws=tab("Service Catalog","Core Service Lines","Three services, one discipline. Stewardship objective shown per line.")
-table(ws,4,
- ["Service","Purpose","Common Engagements","Deliverables","Stewardship Objective"],
- [
- ["Project Development","Transform ideas, priorities, and challenges into actionable projects.","Strategic initiatives · capital projects · community development · housing · infrastructure · program development","Project Charter · Scope Definition · Stakeholder Map · Readiness Assessment · Action Roadmap","Create clarity before resources are committed."],
- ["Funding Strategy","Identify, organize, and pursue sustainable funding opportunities.","Grant development · capital planning · funding roadmaps · partnership development · revenue strategy","Funding Scan · Funding Roadmap · Application Support · Capital Strategy · Partner Coordination","Align funding with long-term organizational capacity."],
- ["Implementation Support","Move projects from planning into execution.","Strategic-plan implementation · capital project coordination · program launch · community engagement · readiness","Implementation Framework · Accountability Structure · Progress Tracking · Facilitation · Stakeholder Coordination","Ensure important work survives beyond its initial champions."],
- ["Capacity Support","Provide the institutional capacity to carry the work — directly.","Interim / fractional support · special-project support · administrative capacity · program coordination  (Swanzey · Hubbardston · Sutton · Michigan LTC)","Embedded Capacity Plan · Role / Coverage Map · Coordination Cadence · Continuity Handoff","Hold the Chair so critical functions stay covered through turnover and transition."],
- ],
- [22,34,40,40,40])
-ws.cell(row=10,column=1,value="Implementation Support vs Capacity Support — which one?").font=SEC
-ws.cell(row=11,column=1,value="Implementation Support = we help YOUR team execute — facilitation, accountability, coordination; the work stays theirs (e.g., Shrewsbury). Capacity Support = PublicLogic steps IN and holds the role or function directly — interim / fractional; we carry it until it transfers back (e.g., Swanzey). Same stewardship discipline; different level of who holds the Chair.").font=Font(size=11,color=SLATE)
-ws.cell(row=11,column=1).alignment=WRAP; ws.merge_cells("A11:E12")
-
-# ---- SIGNATURE OFFERINGS (editable scope/fee) ----
-ws=tab("Signature Offerings","Signature Offerings","Three ways to start. Yellow = fill in scope, duration, and fee per engagement.")
-table(ws,4,
- ["Offering","Purpose","Output","Transfer Asset Created","Scope (typical)","Duration (typical)","Fee (typical)"],
- [
- ["Project Development Sprint","Move an idea into an actionable project.","Project Development Roadmap","CaseSpace + reusable Charter/Scope template","Map + charter + roadmap, one initiative","4–6 weeks","$18K–$35K (fixed)"],
- ["Funding Strategy Sprint","Identify realistic funding pathways and readiness requirements.","Funding Roadmap","Reusable funding scan + roadmap workbook","Funding scan + roadmap + readiness","3–5 weeks","$15K–$28K (fixed)"],
- ["Implementation Support Partnership","Provide coordination and stewardship capacity through implementation.","Implementation Framework + Accountability Structure","VAULT continuity record + accountability structure","Coordination + accountability through delivery","6–18 months","$6.5K–$15K / month"],
- ["Capacity Support Engagement","Provide interim / fractional capacity to carry a function or special project.","Embedded Capacity Plan + Continuity Handoff","Role/Coverage Map + Continuity Handoff","Interim role / special-project capacity","Ongoing / fractional","Day rate or $4K–$12K / month"],
- ],
- [30,34,30,30,30,16,18],editable_cols=(4,5,6))
-ws.cell(row=10,column=1,value="Typical ranges to anchor a sales conversation — confirm per engagement. All fees are fixed-fee or retainer and non-contingent. Where federal/grant funds pay, the fee rides as an allowable professional-service cost.").font=Font(italic=True,size=9,color="6B6660")
-ws.cell(row=10,column=1).alignment=WRAP; ws.merge_cells("A10:G11")
-
-# ---- THE MODEL ----
-ws=tab("The Model","The Nathan + Allie Model","Institutional systems and human systems are interdependent — projects fail when either is ignored.")
-table(ws,4,
- ["","Nathan — Institutional Systems","Allie — Human Systems"],
- [
- ["Expertise","Municipal administration · finance · capital planning · procurement · grants · economic development · governance · project delivery","Organizational readiness · stakeholder engagement · leadership development · program design · evaluation · behavioral systems · change management"],
- ["Experience","Town Administrator · City Councilor · Town Clerk · Consultant","Clinical leadership · organizational consulting · program development · workforce systems"],
- ["The pairing","Most firms understand systems OR people.","PublicLogic is designed to understand both."],
- ],
- [16,52,52])
-
-# ---- TRANSFER ASSETS ----
-ws=tab("Transfer Assets","Transfer Assets","A core principle of stewardship: every engagement creates reusable organizational assets.")
-table(ws,4,
- ["Asset","What it is","Leaves the client with"],
- [
- ["LogicCommons","Shared frameworks, templates, and operational resources.","Reusable standards"],
- ["Workbooks","Structured implementation and planning guides.","Repeatable process"],
- ["CaseSpaces","Project-specific operating environments.","A governed record"],
- ["PuddleJumper","Process architecture and workflow infrastructure.","Operating continuity"],
- ["VAULT","Knowledge preservation and continuity framework.","Durability across turnover"],
- ],
- [18,56,30])
-
-# ---- PROOF (evidence of stewardship) ----
-ws=tab("Proof","Proof — Evidence of Stewardship","Stewardship is provable, not just stated. Five kinds of proof, each tied to a real engagement.")
-table(ws,4,
- ["Proof","What it demonstrates to a buyer","How we show it","Example"],
- [
- ["Continuity proof","A function survives when the person who ran it leaves.","Successor test + VAULT modules mapped to authority and stop-rules.","Sutton TIF — the 30-day successor test the town would otherwise fail."],
- ["Record proof","Every claim, number, and decision traces to a source.","CaseSpace + Source Register: source file → workbook row → output.","Michigan LTC corridor record — line-for-line traceability."],
- ["Readiness proof","The organization can absorb and sustain the change.","Readiness Assessment + the Map deliverable before any build.","Pre-build assessment that sequences what the org can actually carry."],
- ["Adoption proof","Staff actually use the system — not just receive it.","CFIR-structured adoption monitoring through implementation.","Shrewsbury — human-systems support so the build is used, not shelved."],
- ["Outcome proof","The work moved forward and got funded.","Funded applications + delivered projects, documented.","Shrewsbury fiber, Sutton — funding secured and projects implemented."],
- ],
- [18,40,42,44])
-
-# ---- TARGET MARKETS / PIPELINE (decision tool, ranked) ----
-ws=tab("Pipeline & Flow","Target Pipeline & Engagement Flow","Decision tool. Revenue/Probability are ILLUSTRATIVE placeholders to show ranking — replace with your figures. Weighted Value = Revenue x Probability; sort descending to rank.")
-heads=["Pursue","Segment","Target","Authority to Buy","Relationship","Revenue Potential ($)","Probability","Weighted Value ($)","Next Action"]
-piperows=[
- ["NOW","Regional Planning Agencies","CMRPC","Yes — active contracts & pipelines","Developing",60000,0.45,""],
- ["NOW","Regional Planning Agencies","MRPC","Yes — active pipelines","Developing",50000,0.40,""],
- ["Qualify","Regional Planning Agencies","MVPC","Yes — project pipelines","Cold",50000,0.25,""],
- ["Later","Regional Planning Agencies","Strafford RPC","Yes","Cold",40000,0.15,""],
- ["NOW","Engineering Firms","Fuss & O'Neill","Yes — buys as sub/teaming","Cold",40000,0.30,""],
- ["Qualify","Engineering Firms","Weston & Sampson","Yes — teaming","Cold",40000,0.20,""],
- ["Later","Engineering Firms","Tighe & Bond","Yes — teaming","Cold",35000,0.15,""],
- ["Later","Engineering Firms","BETA","Yes — teaming","Cold",35000,0.15,""],
- ["Qualify","Municipal Consulting","Community Paradigm (+ similar)","Yes — subcontract","Cold",30000,0.25,""],
- ["NOW","Municipalities","Direct (by relationship)","Yes — direct budget","Warm — existing (Sutton/Shrewsbury/Phillipston)",35000,0.60,""],
- ["NOW","Existing Network","Warm relationships","Varies","Strong — warmest, shortest cycle",25000,0.65,""],
-]
-hrow(ws,4,heads)
-for i,row in enumerate(piperows):
-    rr=5+i
-    pursue,seg,tgt,auth,rel,rev,prob,nxt=row
-    cells=[pursue,seg,tgt,auth,rel,rev,prob,None,nxt]
-    for ci,val in enumerate(cells):
-        if ci==7: continue  # weighted column = formula
-        c=ws.cell(row=rr,column=ci+1,value=val); c.border=B; c.alignment=WRAP
-        if ci in (0,3,4,5,6,8): c.fill=IFILL  # editable: pursue, authority, relationship, revenue, probability, next action
-    ws.cell(row=rr,column=6).number_format='#,##0'   # F revenue
-    ws.cell(row=rr,column=7).number_format='0%'      # G probability
-    wv=ws.cell(row=rr,column=8,value=f"=IF(AND(ISNUMBER(F{rr}),ISNUMBER(G{rr})),F{rr}*G{rr},0)")
-    wv.number_format='#,##0'; wv.border=B; wv.font=BOLD; wv.fill=GFILL
-    pc=ws.cell(row=rr,column=1); pc.font=Font(bold=True,color=GREEN) if pursue=="NOW" else Font(size=10,color="6B6660")
-for col,w in zip("ABCDEFGHI",[10,22,24,26,30,16,11,16,26]): ws.column_dimensions[col].width=w
-ws.freeze_panes="C5"
-nr=5+len(piperows)+1
-ws.cell(row=nr,column=1,value="First-pass focus (June): pursue NOW = CMRPC · MRPC · one lead engineering firm (Fuss & O'Neill) · the warm municipal & existing-network relationships. Qualify the rest through the engagement flow; don't chase 'Later' yet. Replace the illustrative Revenue/Probability with real figures, then sort by Weighted Value and commit to the top 5.").font=Font(italic=True,size=9,color=GREEN)
-ws.cell(row=nr,column=1).alignment=WRAP; ws.merge_cells(f"A{nr}:I{nr+1}")
-ws.cell(row=nr+2,column=1,value="BD principle: don't convince organizations they have a hidden problem — help them solve a known one. Lead with capacity, funding, progress, execution. Warmest relationships first (shortest sales cycle).").font=Font(italic=True,size=9,color="6B6660")
-ws.cell(row=nr+2,column=1).alignment=WRAP; ws.merge_cells(f"A{nr+2}:I{nr+3}")
-# Engagement Flow — the repeatable sales motion
-fr=nr+5
-ws.cell(row=fr,column=1,value="ENGAGEMENT FLOW").font=SEC
-ws.cell(row=fr,column=2,value="Signal → Fit → Map → Build → Sustain → Prove").font=Font(bold=True,size=12,color=GOLD)
-flow=[("Signal","A known trigger: turnover, a stalled project, a funding deadline, a capacity gap."),
- ("Fit","Confirm authority, budget, and that it is a known problem we solve."),
- ("Map","A paid scoping engagement — diagnosis + roadmap (the entry move)."),
- ("Build","Deliver the project, funding, implementation, or capacity work."),
- ("Sustain","Transfer ownership; optional capacity / retainer so it runs without us."),
- ("Prove","Capture the evidence (Proof tab) — which becomes the next Signal.")]
-for i,(st,d) in enumerate(flow):
-    rr=fr+1+i
-    a=ws.cell(row=rr,column=1,value=st); a.font=Font(bold=True,color=GOLD); a.border=B; a.fill=GFILL
-    c=ws.cell(row=rr,column=2,value=d); c.alignment=WRAP; c.border=B
-    ws.merge_cells(f"B{rr}:I{rr}")
-
-# ---- LESSONS LEARNED ----
-ws=tab("Lessons Learned","Lessons Learned · AI for Impact","People buy outcomes. The methodology matters, but outcomes drive the purchasing decision.")
-table(ws,4,
- ["What we thought they wanted","What they actually want"],
- [
- ["AI","Capacity"],
- ["Innovation","Funding"],
- ["Readiness","Progress"],
- ["Transformation","Execution"],
- ],
- [40,40])
-ws.cell(row=10,column=1,value="Key insight: lead with the known problem, not a hidden one. The method (Institutional Stewardship) is how we deliver — outcomes are why they buy.").font=SEC
-ws.cell(row=10,column=1).alignment=WRAP; ws.merge_cells("A10:B11")
-
-# ---- THE PROMISE ----
-ws=tab("The Promise","The PublicLogic Promise",None)
-proms=[
- "PublicLogic is not in the business of producing reports.",
- "PublicLogic is not in the business of producing plans that sit on shelves.",
- "PublicLogic is in the business of helping organizations move important work forward — while ensuring the knowledge, systems, and structures required to sustain that work remain intact.",
- "",
- "Internal strategic principle:",
- "The market buys project delivery. PublicLogic delivers Institutional Stewardship. Both statements are true. Neither should be sacrificed for the other.",
-]
-r=4
-for p in proms:
-    c=ws.cell(row=r,column=1,value=p)
-    c.font=SEC if p.endswith("principle:") else (Font(size=13,color=SLATE) if p else Font())
-    c.alignment=WRAP; r+=1
-ws.column_dimensions["A"].width=110
-for rr in range(4,r): ws.row_dimensions[rr].height=30
-
-# ---- START HERE (the one-page summary; placed first) ----
-ws=wb.create_sheet("Start Here")
-ws["A1"]="PUBLICLOGIC — Start Here"; ws["A1"].font=Font(bold=True,size=16,color=SLATE)
-ws["A2"]="The whole workbook on one page. Depth is in the tabs that follow — only if you want it."; ws["A2"].font=SUB
-sh=[
+# ===== START HERE =====
+ws=wb.active; ws.title="Start Here"
+ws["A1"]="PublicLogic — Internal Strategy & Business Development"; ws["A1"].font=Font(bold=True,size=16,color=SLATE)
+ws["A2"]="For Nathan & Allie. What we are, what we sell, who we serve, how we grow. One line each here; the rest is in the tabs."; ws["A2"].font=SUB
+blocks(ws,4,[
  ("North Star","Every system should make it easier for the next person to do the right thing."),
  ("The bridge","Implementation is the service. Institutional Stewardship is the method."),
- ("Why different","Most systems manage work. PublicLogic helps steward what has to survive the work."),
- ("What we do","Project Development · Funding Strategy · Implementation Support · Capacity Support."),
- ("We prove it","Continuity · record · readiness · adoption · outcome (see Proof)."),
- ("How to start","Signal → Fit → Map → Build → Sustain → Prove. Begin with a paid Map."),
- ("Where to look","Positioning · Service Catalog · Signature Offerings (pricing) · Proof · Pipeline & Flow."),
+ ("The equation","Good Work + Stewardship = Work That Lasts."),
+ ("1 · Why we exist","Good work keeps failing when knowledge, ownership, or continuity disappears. We've watched it happen, and we built the practices to stop it."),
+ ("2 · The problem","Capacity stops keeping pace with complexity. The 'Chair' — the place where a function lives — ends up depending on one person."),
+ ("3 · What clients buy","Projects moved forward. Funding found and won. A role or function covered."),
+ ("4 · What we deliver","The same — plus the stewardship that makes it survive turnover."),
+ ("5 · What makes us different","Most systems manage work. PublicLogic helps steward what has to survive the work."),
+ ("6 · What we sell","Stewardship Map (the safe first step) → Sprints (Project · Funding · Permit & Bridge) → Implementation & Capacity Support."),
+ ("7 · Who first","Our existing municipal network, regional planning agencies, engineering firms, municipal consulting firms."),
+ ("8 · How it compounds","Every engagement leaves reusable knowledge, templates, and proof. We get stronger; clients get less dependent."),
+ ("9 · Nathan + Allie","Institutional systems + human systems = the intersection. The work fails when either side is ignored."),
+ ("10 · Next 12 months","A handful of warm wins, the Map as the first sale, Permit & Bridge as the wedge. Modest and real."),
+],h=30)
+
+# ===== WHY WE EXIST =====
+ws=newtab("Why We Exist","Why PublicLogic Exists","We didn't start from a theory. We started from the work.")
+r=lines(ws,4,[
+ "PublicLogic came out of real work — Hubbardston, Sutton, Phillipston, Gardiner, Michigan LTC — and out of years inside municipal administration, capital planning, and grant development.",
+ "",
+ "Across all of it we kept seeing the same thing: good, important work would stall or quietly disappear. Not because the idea was wrong. Because the person holding it left, the knowledge was never written down, or no one owned what came next.",
+ "",
+ "PublicLogic is our attempt to fix that — with the practices we wish we'd had when we were inside it.",
+ "",
+])
+ws.cell(row=r+1,column=1,value="North Star").font=SEC
+ws.cell(row=r+2,column=1,value="“Every system should make it easier for the next person to do the right thing.”").font=Font(size=14,italic=True,color=GREEN)
+ws.cell(row=r+2,column=1).alignment=WRAP
+ws.cell(row=r+4,column=1,value="This isn't a new company we're inventing. It's the company that already exists — named, and made repeatable.").font=Font(size=11,color=SLATE,italic=True)
+
+# ===== WHAT BREAKS WITHOUT STEWARDSHIP =====
+ws=newtab("What Breaks","What Breaks Without Stewardship","Plain language. None of this is dramatic — which is exactly why it's dangerous.")
+htable(ws,4,["When stewardship is missing…","…this is what we've watched happen"],
+ [
+ ["Turnover","The person leaves and the knowledge leaves with them."],
+ ["Lost knowledge","How and why things were done stops being written down."],
+ ["Delayed projects","Work stalls because no one owns the next step."],
+ ["Missed funding","A funding window closes before anyone is ready."],
+ ["Dependency on individuals","The whole function runs through one person's head."],
+ ["Repeated mistakes","The same problems come back because nothing was captured."],
+ ["Plans that never become action","A good plan gets made, then sits on a shelf."],
+ ],[30,80])
+ws.cell(row=13,column=1,value="It's quiet failure. By the time anyone notices, the momentum, the money, or the knowledge is already gone. Stewardship is how we keep that from happening.").font=Font(italic=True,size=11,color=GREEN)
+ws.cell(row=13,column=1).alignment=WRAP; ws.merge_cells("A13:B14")
+
+# ===== WHAT WE DO =====
+ws=newtab("What We Do","What PublicLogic Actually Does",None)
+r=blocks(ws,4,[
+ ("In one sentence","PublicLogic helps projects move through public systems, and helps organizations keep the capacity required to sustain what they build."),
+ ("The bridge","Implementation is the service. Institutional Stewardship is the method."),
+ ("What makes us different","Most systems manage work. PublicLogic helps steward what has to survive the work."),
+ ("What we are NOT","Not a grant-writing firm. Not an AI consulting firm. Not a software company. Not a planning firm. Not a generic implementation consultant. The work touches all of those, but none of them is the point."),
+ ("Clients buy / we deliver","Clients buy funding, progress, and capacity. We deliver those — plus the stewardship that makes them last. That's not a contradiction; it's the business model."),
+],h=40)
+# equation
+ws.cell(row=r+1,column=1,value="THE EQUATION").font=SEC
+ws.cell(row=r+1,column=2,value="Recommended (use this one):  Good Work + Stewardship = Work That Lasts").font=GLD
+ws.cell(row=r+2,column=2,value="Fuller / operational:  Project + Funding + Capacity + Continuity = Implementation").font=Font(size=11,color=SLATE)
+ws.cell(row=r+3,column=2,value="Fuller / outcomes:  Vision + Funding + Capacity + Stewardship = Durable Results").font=Font(size=11,color=SLATE)
+# method
+ws.cell(row=r+5,column=1,value="HOW WE WORK").font=SEC
+ws.cell(row=r+5,column=2,value="Map  →  Embed  →  Encode  →  Sustain").font=GLD
+method=[("Map","Surface how work, knowledge, authority, records, and risk actually move."),
+ ("Embed","Put the right structure into the live workflow, with the people who do the work."),
+ ("Encode","Capture the knowledge and rules so they outlast any individual."),
+ ("Sustain","Monitor adoption and transfer ownership so it runs without us.")]
+for i,(st,d) in enumerate(method):
+    rr=r+6+i; a=ws.cell(row=rr,column=1,value=st); a.font=Font(bold=True,color=GOLD); a.fill=GFILL; a.border=B
+    c=ws.cell(row=rr,column=2,value=d); c.font=BODY; c.alignment=WRAP; c.border=B
+ws.column_dimensions["A"].width=22; ws.column_dimensions["B"].width=100
+
+# ===== OFFER STACK =====
+ws=newtab("Offer Stack","The Offer Stack","Simple, honestly priced. The Map comes first; everything else follows from what it finds. Fixed-fee or retainer, non-contingent.")
+htable(ws,4,["Product","Why it exists","Output","Price","Transfer asset"],
+ [
+ ["Stewardship Map  (entry)","Understand how work, knowledge, authority, records, and risk actually move — before anyone commits money. The safest first engagement.","Stewardship Map · Continuity Risks · Readiness Findings · Priority Roadmap","$2,500 – $7,500","CaseSpace + the Map"],
+ ["Project Development Sprint","Turn a priority or a challenge into an actionable project.","Project Development Roadmap","$5,000 – $15,000","Charter / Scope template"],
+ ["Funding Strategy Sprint","Find realistic funding and the readiness it requires.","Funding Roadmap","$5,000 – $12,500","Funding scan + roadmap workbook"],
+ ["Permit & Bridge Sprint","Move a project through the public systems around it (permits, boards, funding, stakeholders).","Approvals path + coordination plan","$7,500 – $15,000","Bridge map / permit register"],
+ ["Implementation Support","Coordinate and hold accountability while a plan gets executed by the client's team.","Implementation Framework + Accountability Structure","$3,500 – $8,500 / month","VAULT continuity record"],
+ ["Capacity Support","Step in and hold a role or function directly — interim / fractional — until it transfers back.","Embedded Capacity Plan + Continuity Handoff","$4,000 – $10,000 / month","Role / Coverage Map + handoff"],
+ ],[28,42,32,18,26])
+ws.cell(row=11,column=1,value="Implementation vs Capacity: Implementation helps YOUR team execute — the work stays theirs (e.g., Shrewsbury). Capacity means we hold the role ourselves until it transfers back (e.g., Swanzey). Same discipline; different level of who holds the Chair.").font=Font(italic=True,size=9,color=MUTEC)
+ws.cell(row=11,column=1).alignment=WRAP; ws.merge_cells("A11:E12")
+
+# ===== PERMIT & BRIDGE =====
+ws=newtab("Permit & Bridge","Permit & Bridge","This may be the most important thing we do.")
+blocks(ws,4,[
+ ("What it is","PublicLogic helps project sponsors move through public systems."),
+ ("That includes","Permits · boards · funding · grants · stakeholder processes · implementation planning · public-sector coordination."),
+ ("Why it exists","Developers, nonprofits, municipalities, and project sponsors usually understand their project. They often don't understand the public systems around it — the permits, the boards, the funding rules, the politics. That gap is where good projects stall."),
+ ("What we become","The bridge. We translate between the project and the public system, so the project keeps moving and nothing falls through the cracks between the people involved."),
+ ("Why it matters to us","It is the clearest, most sellable version of 'helping projects move through public systems' — and it's exactly the work we've already done in Sutton, Shrewsbury, Phillipston, and Michigan LTC."),
+],h=46)
+
+# ===== PROOF =====
+ws=newtab("Proof","Proof — We Can Show It","Stewardship is provable, not just stated. Each tied to work we've actually done.")
+htable(ws,4,["Proof","What it shows","How we show it","Example"],
+ [
+ ["Continuity","A function survives when the person who ran it leaves.","Successor test + structure mapped to authority and stop-rules.","Sutton — the 30-day successor test the town would otherwise fail."],
+ ["Record","Every claim, number, and decision traces to a source.","A governed record: source file → workbook row → output.","Michigan LTC corridor record — line-for-line traceability."],
+ ["Readiness","The organization can absorb and sustain the change.","Readiness findings in the Map, before any build.","Pre-build assessment that sequences what the org can carry."],
+ ["Adoption","Staff actually use the system — not just receive it.","Adoption monitoring through implementation (Allie's work).","Shrewsbury — human-systems support so the build is used."],
+ ["Outcome","The work moved forward and got funded.","Funded applications and delivered projects, documented.","Shrewsbury fiber, Sutton — funding secured, projects implemented."],
+ ],[16,36,40,44])
+ws.cell(row=10,column=1,value="Honesty note: confirm what we're comfortable naming before sharing externally — some of this is client-confidential.").font=SUB
+ws.cell(row=10,column=1).alignment=WRAP; ws.merge_cells("A10:D10")
+
+# ===== NATHAN + ALLIE =====
+ws=newtab("Nathan + Allie","Why We're Better Together",None)
+htable(ws,4,["","","" ],[],[40,40,40])
+blocks(ws,4,[
+ ("Nathan — institutional systems","How municipalities, money, grants, procurement, and projects actually work — from the inside."),
+ ("Allie — human systems","How people, roles, adoption, leadership, and change actually work — and why systems get used or ignored."),
+ ("PublicLogic — the intersection","Most firms have one side or the other. Projects fail for whichever side gets ignored. We've each watched work fail for the other reason — which is exactly why we work together this way."),
+ ("In practice","Nathan builds the structure; Allie makes sure people will actually use it and that it survives turnover. Neither half is optional."),
+],h=46)
+
+# ===== TRANSFER =====
+ws=newtab("Transfer","Transfer — Every Engagement Leaves Something Behind","The point isn't to be needed forever. It's to make the next person's job easier.")
+htable(ws,4,["Every engagement creates…","Meaning"],
+ [
+ ["Reusable knowledge","What we learned about how this kind of organization works."],
+ ["Reusable templates","Charters, roadmaps, registers, and workbooks we can adapt next time."],
+ ["Reusable process","A repeatable way of doing the work — not a one-off."],
+ ["Reusable proof","Evidence (continuity / record / readiness / adoption / outcome) we can show the next client."],
+ ],[30,78])
+ws.cell(row=9,column=1,value="Two tests for every engagement:").font=SEC
+ws.cell(row=10,column=1,value="PublicLogic should be stronger after every engagement.").font=Font(bold=True,size=12,color=GOLD)
+ws.cell(row=11,column=1,value="The client should be less dependent after every engagement.").font=Font(bold=True,size=12,color=GOLD)
+ws.cell(row=13,column=1,value="The carriers (plain language):  LogicCommons — shared templates & frameworks.   CaseSpaces — a project's governed record.   PuddleJumper — the workflow/process layer.   VAULT — how knowledge is preserved so it survives turnover.").font=Font(size=11,color=SLATE)
+ws.cell(row=13,column=1).alignment=WRAP; ws.merge_cells("A13:B14")
+
+# ===== WHO WE PURSUE =====
+ws=newtab("Who We Pursue","Who We Pursue — Forced Prioritization","Don't list twenty things. Start where there's already a project, a budget, and trust.")
+htable(ws,4,["Tier","Pursue","Why"],
+ [
+ ["Tier 1 — now","Existing municipal network · Regional planning agencies · Engineering firms · Municipal consulting firms","Already have projects and budgets; warmest relationships; shortest sales cycle."],
+ ["Tier 2 — next","Developers · Housing organizations · Community development organizations","Real need (especially Permit & Bridge), longer cycle; pursue once Tier 1 is producing."],
+ ["Tier 3 — later","Everything else","Interesting, but not now. Don't chase."],
+ ],[16,52,40])
+# small ranked pipeline
+ws.cell(row=9,column=1,value="TIER-1 PIPELINE  (illustrative Revenue/Probability — replace with real figures; Weighted = Revenue x Probability; sort to rank)").font=SEC
+ws.merge_cells("A9:F9")
+heads=["Pursue","Target","Relationship","Revenue ($)","Probability","Weighted ($)"]
+for i,hh in enumerate(heads):
+    c=ws.cell(row=10,column=i+1,value=hh); c.font=HDR; c.fill=HFILL; c.border=B; c.alignment=MID
+pipe=[
+ ["NOW","CMRPC (regional planning)","Developing",60000,0.45],
+ ["NOW","MRPC (regional planning)","Developing",50000,0.40],
+ ["NOW","Warm municipal relationships (Sutton/Shrewsbury/Phillipston)","Strong",35000,0.60],
+ ["NOW","Existing network","Strongest",25000,0.65],
+ ["NOW","Fuss & O'Neill (engineering)","Cold",40000,0.30],
+ ["Qualify","MVPC / other RPCs","Cold",50000,0.25],
+ ["Qualify","Community Paradigm (municipal consulting)","Cold",30000,0.25],
 ]
-r=4
-for k,v in sh:
-    a=ws.cell(row=r,column=1,value=k); a.font=HDR; a.fill=GHFILL; a.border=B; a.alignment=Alignment(wrap_text=True,vertical="center")
-    c=ws.cell(row=r,column=2,value=v); c.alignment=WRAP; c.border=B; c.fill=CFILL; c.font=Font(size=12,color=SLATE)
-    ws.row_dimensions[r].height=34; r+=1
-ws.column_dimensions["A"].width=18; ws.column_dimensions["B"].width=104
-wb.move_sheet("Start Here",-(len(wb._sheets)-1))  # move to first
+for i,row in enumerate(pipe):
+    rr=11+i
+    for ci,val in enumerate(row):
+        c=ws.cell(row=rr,column=ci+1,value=val); c.border=B; c.alignment=WRAP; c.font=BODY
+        if ci in (0,2,3,4): c.fill=IFILL
+    ws.cell(row=rr,column=4).number_format='#,##0'; ws.cell(row=rr,column=5).number_format='0%'
+    wv=ws.cell(row=rr,column=6,value=f"=IF(AND(ISNUMBER(D{rr}),ISNUMBER(E{rr})),D{rr}*E{rr},0)")
+    wv.number_format='#,##0'; wv.border=B; wv.font=BOLD; wv.fill=GFILL
+for col,w in zip("ABCDEF",[10,46,18,14,12,14]): ws.column_dimensions[col].width=w
+# engagement flow
+fr=11+len(pipe)+1
+ws.cell(row=fr,column=1,value="ENGAGEMENT FLOW").font=SEC
+ws.cell(row=fr,column=2,value="Signal → Fit → Map → Build → Sustain → Prove").font=GLD
+flow=[("Signal","A known trigger: turnover, a stalled project, a funding deadline, a capacity gap."),
+ ("Fit","Confirm authority, budget, and that it's a known problem we solve."),
+ ("Map","A paid Stewardship Map — the entry move."),
+ ("Build","Deliver the project, funding, permit, implementation, or capacity work."),
+ ("Sustain","Transfer ownership; optional Implementation or Capacity Support."),
+ ("Prove","Capture the evidence — which becomes the next Signal.")]
+for i,(st,d) in enumerate(flow):
+    rr=fr+1+i; a=ws.cell(row=rr,column=1,value=st); a.font=Font(bold=True,color=GOLD); a.fill=GFILL; a.border=B
+    c=ws.cell(row=rr,column=2,value=d); c.font=BODY; c.alignment=WRAP; c.border=B; ws.merge_cells(f"B{rr}:F{rr}")
+
+# ===== NEXT 12 MONTHS =====
+ws=newtab("Next 12 Months","What's Realistic in the Next 12 Months","Modest and real. We're two people who do the work; the plan should respect that.")
+lines(ws,4,[
+ "The honest goal for year one is not scale. It's a small number of real, paid engagements with people who already trust us — and a repeatable way to do them.",
+ "",
+])
+htable(ws,6,["Move","What it looks like","Why"],
+ [
+ ["Sell a few Maps","2–4 paid Stewardship Maps with warm Tier-1 relationships.","Low-risk entry; surfaces the next, bigger engagement; builds reference proof."],
+ ["Convert 1–2","Turn a Map into Project / Funding / Permit & Bridge work.","This is where the real revenue is, and where Permit & Bridge proves out."],
+ ["Land baseline retainers","1–2 monthly Implementation or Capacity engagements.","Predictable monthly revenue that smooths the project lumpiness."],
+ ["Build the templates as we go","Every engagement leaves a reusable asset (Transfer tab).","Each job gets cheaper to deliver; we compound instead of resetting."],
+ ],[24,46,40])
+ws.cell(row=12,column=1,value="Three questions to keep answering:  (1) Which 5 targets are we actually pursuing this quarter?  (2) What is the first paid engagement we want to sell?  (3) Which transfer asset gets created every time we do it?").font=Font(italic=True,size=11,color=GREEN)
+ws.cell(row=12,column=1).alignment=WRAP; ws.merge_cells("A12:C13")
 
 out=os.path.join(os.path.dirname(os.path.abspath(__file__)),"final_deck","PublicLogic - Capabilities Workbook (v2.0 2026-06).xlsx")
 os.makedirs(os.path.dirname(out),exist_ok=True)
