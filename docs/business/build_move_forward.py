@@ -70,17 +70,35 @@ for t,c in [
 ]:
     runs([("— ",SANS,GOLD,True,False),(t,SERIF if c==GREEN else SANS,c,c in (GREEN,GOLD),c==GREEN)],size=11,after=1)
 
+# ---- What breaks (the demand statement)
+para("WHAT BREAKS  (why this is needed)",SANS,10,GREEN,bold=True,before=8,after=2)
+tbl2([
+ ("Turnover","Knowledge leaves with the person.",False),
+ ("Unclear ownership","Projects stall — no one holds the next step.",False),
+ ("Funding without readiness","Momentum collapses; the window closes.",False),
+ ("No continuity system","Work restarts from zero.",False),
+ ("Plans without implementation","Reports sit on shelves.",False),
+],hdr=("What breaks","What happens"))
+runs([("PublicLogic exists because these problems are common, expensive, and preventable.",
+       SANS,GREEN,True,True)],size=11,before=3,after=6)
+
 # ---- The architecture / progression
 para("THE PROGRESSION  (this is how people actually buy)",SANS,10,GREEN,bold=True,before=8,after=2)
 tbl2([
- ("LogicCommons","“I need help understanding.”  — free public templates, checklists, frameworks.",True),
- ("Permit & Bridge","“I need help navigating.”  — find the path through permits, boards, funding.",True),
- ("Stewardship Map","“I need to know what actually needs to happen.”  — the safe paid first step.",True),
- ("PublicLogic","“I need help getting this done.”  — sprints, implementation, capacity.",True),
-],hdr=("Layer","What the buyer is saying"))
+ ("LogicCommons · Understand","“I need help understanding.”  — free public templates, checklists, frameworks.",True),
+ ("Permit & Bridge · Navigate","“I need help navigating.”  — find the path through permits, boards, funding.",True),
+ ("Stewardship Map · Diagnose","“I need to know what actually needs to happen.”  — the safe paid first step.",True),
+ ("PublicLogic · Deliver","“I need help getting this done.”  — sprints, implementation, capacity.",True),
+],hdr=("Layer · Verb","What the buyer is saying"))
 para("Delivered through Continuity & Stewardship Systems — the records, processes, templates, environments, "
      "accountability, and proof that help the work survive turnover. It's the plumbing, not a product.",
-     SANS,9.5,MUTE,ital=True,before=3,after=6)
+     SANS,9.5,MUTE,ital=True,before=3,after=3)
+para("What we're becoming:  LogicCommons = public infrastructure · Permit & Bridge = navigation infrastructure · "
+     "PublicLogic = professional services · Continuity & Stewardship Systems = delivery infrastructure.",
+     SANS,9.5,MUTE,ital=True,before=0,after=4)
+runs([("The one-line version:  ",SANS,GREEN,True,False),
+      ("Help people understand the path. Help projects move through the path. Leave the path easier for the next person.",
+       SERIF,SLATE,False,True)],size=11.5,before=2,after=6)
 
 # ---- What's in the stack
 para("WHAT'S IN THE STACK",SANS,10,GREEN,bold=True,after=2)
