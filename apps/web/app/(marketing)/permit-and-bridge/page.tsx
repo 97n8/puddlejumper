@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Hero, Section, P, Bullets, Quote, CTA } from '../../../components/marketing/site';
+import { Hero, Section, P, Bullets, Quote, CTA, CardGrid, Card } from '../../../components/marketing/site';
 
 export const metadata: Metadata = {
   title: 'Permit & Bridge',
@@ -47,6 +47,25 @@ export default function PermitAndBridge() {
         <P>
           The free tier builds trust; the paid tiers handle complexity. A paid tier credits toward the
           next engagement — credits don’t stack, so you never pay twice for the same step.
+        </P>
+      </Section>
+
+      <Section title="The Permit & Bridge Sprint — what you actually get">
+        <P>
+          When you’re ready to move a specific project, the sprint is fixed-fee
+          ($7,500–$15,000, non-contingent) and delivers six concrete things:
+        </P>
+        <CardGrid>
+          <Card title="Approvals Map">Every permit, board, and approval the project needs — in the order they have to happen.</Card>
+          <Card title="Stakeholder & Board Plan">Who must say yes, in what sequence, and what each one will want to see.</Card>
+          <Card title="Submission Checklist">The documents, drawings, and filings each body will require — gathered before you go.</Card>
+          <Card title="Coordination & Hearing Support">We manage the path, prep the submissions, and ready you for the meetings.</Card>
+          <Card title="Funding Alignment (optional)">Line the approvals up with grant or funding timing so nothing expires waiting.</Card>
+          <Card title="Handoff Record">A clear record of how you got there and who owns what next — so it survives the project.</Card>
+        </CardGrid>
+        <P>
+          Just need to know which path you’re on first? Start with a
+          $250–$750 Permit Path Scan and it credits toward the sprint.
         </P>
       </Section>
 
