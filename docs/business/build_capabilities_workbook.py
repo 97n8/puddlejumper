@@ -194,6 +194,8 @@ htable(ws,r,["Tier","Product","Price"],
  ["5","Funding / Grant Build","$5,000 – $25,000 (scope-dependent)"],
  ],[8,46,34])
 r+=8
+ws.cell(row=r,column=1,value="Credit policy: a paid tier credits toward the next engagement, but credits don't stack — up to one tier's fee credits forward. Keeps the entry risk low without eroding margin on a follow-on sprint.").font=Font(italic=True,size=9,color=MUTEC)
+ws.cell(row=r,column=1).alignment=WRAP; ws.merge_cells(f"A{r}:C{r+1}"); r+=2
 ws.cell(row=r,column=1,value="Permit & Bridge helps the public understand the path and helps project sponsors move through it.  That's the full product.").font=Font(bold=True,size=12,color=GOLD)
 ws.cell(row=r,column=1).alignment=WRAP; ws.merge_cells(f"A{r}:C{r+1}")
 

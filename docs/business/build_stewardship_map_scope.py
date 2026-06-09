@@ -84,8 +84,11 @@ para("FEE",SANS,10,GREEN,bold=True,before=8,after=1)
 runs([("$2,500 – $7,500",SERIF,SLATE,True,False),
       ("   fixed fee, scoped to the size of the organization and the question.",SANS,MUTE,False,True)],size=12,after=1)
 para("Typical engagement: 2–4 weeks. Fixed-fee and non-contingent — our fee never depends on a "
-     "funding outcome or a decision going a particular way. The Map credits toward a follow-on "
-     "engagement if you choose to continue.",SANS,9.5,MUTE,ital=True,after=6)
+     "funding outcome or a decision going a particular way.",SANS,9.5,MUTE,ital=True,after=1)
+runs([("Credit policy:  ",SANS,GREEN,True,False),
+      ("if you continue, the Map fee credits toward the next engagement. Credits don't stack — "
+       "up to one tier's fee credits forward, so you never pay twice for the same step.",
+       SANS,MUTE,False,True)],size=9.5,after=6)
 
 # ---- Why start here
 para("WHY START HERE",SANS,10,GREEN,bold=True,after=1)

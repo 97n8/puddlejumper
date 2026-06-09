@@ -84,8 +84,12 @@ para("FEE",SANS,10,GREEN,bold=True,before=8,after=1)
 runs([("$250 – $750",SERIF,SLATE,True,False),
       ("   flat fee, depending on how many systems the question touches.",SANS,MUTE,False,True)],size=12,after=1)
 para("Turnaround: a few business days. The Scan is triage, not a guarantee — it points you at the most "
-     "likely path so you can move with confidence; the permitting authority always makes the final call. "
-     "If you go on to a Stewardship Map, the Scan fee credits toward it.",SANS,9.5,MUTE,ital=True,after=6)
+     "likely path so you can move with confidence; the permitting authority always makes the final call.",
+     SANS,9.5,MUTE,ital=True,after=1)
+runs([("Credit policy:  ",SANS,GREEN,True,False),
+      ("if you go on to a Stewardship Map, the Scan fee credits toward it. Credits don't stack — "
+       "up to one tier's fee credits forward, so you never pay twice for the same step.",
+       SANS,MUTE,False,True)],size=9.5,after=6)
 
 # ---- What it is NOT
 para("WHAT IT IS NOT",SANS,10,GREEN,bold=True,after=1)
