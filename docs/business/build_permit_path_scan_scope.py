@@ -68,10 +68,11 @@ para("WHAT YOU GET",SANS,10,GREEN,bold=True,before=6,after=2)
 tbl=d.add_table(rows=0,cols=2); tbl.alignment=WD_TABLE_ALIGNMENT.CENTER
 tbl.autofit=False
 for label,desc in [
- ("Likely Path","The route you're probably on, in plain language."),
- ("First Contact","The specific board, office, or person to start with."),
- ("Document Checklist","What you'll most likely be asked to bring."),
- ("Watch-outs","The common places this kind of request stalls."),
+ ("Likely Path Summary","The route you're probably on, in plain language."),
+ ("Likely Boards / Offices","Which boards or offices will likely be involved, and who to start with."),
+ ("Likely Permits / Approvals","The permits, variances, or approvals you'll probably need."),
+ ("Likely Documents Needed","What you'll most likely be asked to bring."),
+ ("Recommended Next Step","The single best first move — and the common places this kind of request stalls."),
 ]:
     row=tbl.add_row().cells
     row[0].width=Inches(1.9); row[1].width=Inches(5.0)
@@ -95,7 +96,12 @@ runs([("Credit policy:  ",SANS,GREEN,True,False),
 para("WHAT IT IS NOT",SANS,10,GREEN,bold=True,after=1)
 runs([("It does not replace the municipality, inspector, planner, or permitting authority. ",SANS,SLATE,True,False),
       ("It helps you ask better questions, gather the right information, and avoid wasting time and money "
-       "on the wrong path.",SANS,SLATE,False,False)],after=8)
+       "on the wrong path.",SANS,SLATE,False,False)],after=6)
+
+# ---- Proof
+para("PROOF",SANS,10,GREEN,bold=True,after=1)
+para("Similar reviews have helped project sponsors understand permitting, stakeholder, and board pathways "
+     "before committing significant time and money.",SANS,10,SLATE,ital=True,after=8)
 
 # ---- Closing
 runs([("LogicCommons helps people start.  PublicLogic helps them carry it through.",SERIF,GREEN,True,True)],

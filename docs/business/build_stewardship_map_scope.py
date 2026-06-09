@@ -72,6 +72,7 @@ for label,desc in [
  ("Continuity Risks","The points where turnover or a gap would actually break something."),
  ("Readiness Findings","An honest read on what your organization can absorb and sustain right now."),
  ("Priority Roadmap","A short, sequenced list of the next moves — with what each one is worth."),
+ ("Recommended Next Step","Our honest read on the single best next move — or whether there isn't one yet."),
 ]:
     row=tbl.add_row().cells
     row[0].width=Inches(1.9); row[1].width=Inches(5.0)
@@ -95,7 +96,12 @@ para("WHY START HERE",SANS,10,GREEN,bold=True,after=1)
 runs([("Low risk. ",SANS,SLATE,True,False),
       ("Small, fixed, and bounded — you learn what's really going on before committing to anything bigger. "
        "Most clients use the Map to decide what to do next, and roughly half of what it finds is something "
-       "they hadn't seen coming.",SANS,SLATE,False,False)],after=8)
+       "they hadn't seen coming.",SANS,SLATE,False,False)],after=6)
+
+# ---- Proof
+para("PROOF",SANS,10,GREEN,bold=True,after=1)
+para("Similar work has been used to identify continuity, governance, and implementation risks before "
+     "capital, technology, and organizational investments.",SANS,10,SLATE,ital=True,after=8)
 
 # ---- Closing line + contact
 runs([("Every system should make it easier for the next person to do the right thing.",SERIF,GREEN,True,True)],
