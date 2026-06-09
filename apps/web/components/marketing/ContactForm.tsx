@@ -35,7 +35,7 @@ export function ContactForm() {
       }
     } catch {
       setStatus('error');
-      setError('Network error. Please email hello@publiclogic.org directly.');
+      setError('Network error. Please email nate@publiclogic.org directly.');
     }
   }
 
@@ -45,7 +45,7 @@ export function ContactForm() {
         <p className="font-display text-2xl text-g mb-2">Thank you — we’ve got it.</p>
         <p className="text-[15px] text-ink2 leading-relaxed">
           We read every note ourselves and reply within a couple of business days. If it’s urgent,
-          email <span className="font-medium text-ink">hello@publiclogic.org</span> or call
+          email <span className="font-medium text-ink">nate@publiclogic.org</span> or call
           978-807-0829.
         </p>
       </div>

@@ -93,7 +93,7 @@
 - Read in: `apps/web/app/api/contact/route.ts`. Requires `CONTACT_TO` and `CONTACT_FROM` to send.
 
 ## `CONTACT_TO`
-- Purpose: Destination address for contact-form emails (e.g., `hello@publiclogic.org`).
+- Purpose: Destination address for contact-form emails (e.g., `nate@publiclogic.org`).
 - Default: Unset.
 - Read in: `apps/web/app/api/contact/route.ts`.
 

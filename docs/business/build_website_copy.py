@@ -61,7 +61,7 @@ lab("FOOTER — TAGLINE LINE"); P("Honor the past. Improve the present. Continue
 lab("FOOTER — BOILERPLATE")
 body("PublicLogic helps organizations understand, improve, and continue their work. Municipal government is "
      "our home ground, but the method serves mission-driven and legacy-minded organizations wherever continuity matters.")
-lab("FOOTER — CONTACT"); body("[hello@publiclogic.org]   ·   [978-807-0829]   ·   PublicLogic LLC")
+lab("FOOTER — CONTACT"); body("[nate@publiclogic.org]   ·   [978-807-0829]   ·   PublicLogic LLC")
 lab("FOOTER — FINE PRINT")
 body("PublicLogic provides stewardship and advisory services. We are not a software vendor and our materials "
      "are not legal advice. © PublicLogic LLC. All rights reserved.")
@@ -148,7 +148,7 @@ bullets([
 cta("Download the “Can I Do This?” worksheet")
 h("When you need more than a template")
 body("If your project touches several systems at once, involves a public hearing, or you’ve already been bounced "
-     "between offices, a Permit Path Scan ($250–$750) lays out the likely path, the boards involved, and the "
+     "between offices, a Permit Path Scan ($500 flat) lays out the likely path, the boards involved, and the "
      "documents you’ll need — so you stop guessing.")
 P("LogicCommons helps people start. PublicLogic helps them carry it through.",SERIF,12,GREEN,bold=True,ital=True,before=4,after=2)
 cta("See Permit & Bridge")
@@ -170,7 +170,7 @@ body("Most sponsors understand their project. What stalls them is the public sys
 h("The offer ladder")
 bullets([
  "Tier 0 · Public Permit Helper — free or very low cost.",
- "Tier 1 · Permit Path Scan — $250–$750.",
+ "Tier 1 · Permit Path Scan — $500 flat.",
  "Tier 2 · Stewardship Map — $2,500–$7,500.",
  "Tier 3 · Permit & Bridge Sprint — $7,500–$15,000.",
  "Tier 4 · White-Glove Implementation — $3,500–$8,500 / month.",
@@ -286,7 +286,7 @@ qa("Is this an “AI” service?","No. We use good judgment, real experience, an
 qa("What’s a Stewardship Map?","A short, fixed-fee diagnostic of one function: how it runs, where it’s fragile, and "
    "what to do next. It’s the safest way to start, because it tells both of us exactly what should come next.")
 qa("What does it cost?","The Stewardship Map is $2,500–$7,500, fixed and non-contingent. Other offers range from a "
-   "$250–$750 Permit Path Scan up to monthly support. Our fee never depends on a funding outcome.")
+   "$500 Permit Path Scan up to monthly support. Our fee never depends on a funding outcome.")
 qa("How long does it take?","A Stewardship Map is usually 2–4 weeks. A Permit Path Scan is a few business days.")
 qa("Do you replace our staff?","Only if you ask us to, and only until it transfers back. Capacity Support means we "
    "hold a role temporarily; Implementation Support means we help your team carry it. Either way, the goal is to "
@@ -313,7 +313,7 @@ bullets([
 ])
 lab("FORM BUTTON"); cta("Send")
 h("Or reach us directly")
-body("[hello@publiclogic.org]   ·   [978-807-0829]")
+body("[nate@publiclogic.org]   ·   [978-807-0829]")
 P("If your planner leaves, does this still work? Let’s find out together.",SERIF,13,GREEN,bold=True,ital=True,before=4,after=2)
 
 # ============ CTA LIBRARY ============

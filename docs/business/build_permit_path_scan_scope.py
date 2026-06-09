@@ -82,10 +82,10 @@ for label,desc in [
 
 # ---- Fee
 para("FEE",SANS,10,GREEN,bold=True,before=8,after=1)
-runs([("$250 – $750",SERIF,SLATE,True,False),
-      ("   flat fee, depending on how many systems the question touches.",SANS,MUTE,False,True)],size=12,after=1)
-para("Turnaround: a few business days. The Scan is triage, not a guarantee — it points you at the most "
-     "likely path so you can move with confidence; the permitting authority always makes the final call.",
+runs([("$500 flat",SERIF,SLATE,True,False),
+      ("   ·  3 business days.   Rush (48 hrs) $750.   Complex / multi-board $1,250.   Follow-up call $150.",SANS,MUTE,False,True)],size=12,after=1)
+para("The Scan is triage, not a guarantee — it points you at the most likely path so you can move with "
+     "confidence; the permitting authority always makes the final call.",
      SANS,9.5,MUTE,ital=True,after=1)
 runs([("Credit policy:  ",SANS,GREEN,True,False),
       ("if you go on to a Stewardship Map, the Scan fee credits toward it. Credits don't stack — "

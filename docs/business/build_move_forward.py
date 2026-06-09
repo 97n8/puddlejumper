@@ -103,18 +103,25 @@ runs([("The one-line version:  ",SANS,GREEN,True,False),
 # ---- What's in the stack
 para("WHAT'S IN THE STACK",SANS,10,GREEN,bold=True,after=2)
 tbl2([
- ("Capabilities Workbook v2.0","The operating document. 11 tabs: why we exist, what breaks, what we do, the offer stack, Permit & Bridge, proof, Nathan + Allie, transfer, who we pursue, next 12 months. Internal strategy — start here.",False),
+ ("Capabilities Workbook v2.0","The operating document. 12 tabs (incl. a Language / Do-Not-Say guardrail). Internal strategy — start here.",False),
+ ("The Path (one-page visual)","The five-layer / five-verb diagram. Goes everywhere.",False),
  ("One Pager","The whole thing on one page. For a fast read or a first send.",False),
  ("Capabilities & Positioning deck","The narrative version, for a meeting or a screen-share.",False),
  ("Stewardship Map — Scope & Fee Sheet","Sellable. $2,500–$7,500, fixed, non-contingent. The first real sale.",False),
- ("Permit Path Scan — Scope & Fee Sheet","Sellable. $250–$750 triage. The cheap entry that feeds the Map.",False),
+ ("Permit Path Scan — Scope & Fee Sheet","Sellable. $500 flat triage. The cheap entry that feeds the Map.",False),
+ ("Permit & Bridge Sprint — Scope & Fee Sheet","Sellable. $7,500–$15,000. Six concrete deliverables for a stuck project.",False),
+ ("Permit Path Scan — 30-Day Cash Offer (run book)","The wedge to cash this month, ring-fenced under LogicCommons / Permit & Bridge.",False),
+ ("LogicCommons — “Can I Do This?” worksheet","The free public artifact. Trust + triage; feeds the Scan.",False),
+ ("Five Outreach Emails (Tier 1)","Short, no-hype notes that ask for one conversation.",False),
+ ("Proof & Case Example","The proof framework + a fill-in case template that turns each job into a quantified result.",False),
+ ("Website Copy (v1 Ecosystem)","Every page, in the canon voice. The live site is built from this.",False),
 ],hdr=("File","What it's for"))
 
 # ---- The offer ladder (quick reference)
 para("THE OFFER LADDER  (quick reference)",SANS,10,GREEN,bold=True,before=8,after=2)
 tbl2([
  ("Tier 0 — Public Permit Helper","Free / very low cost",False),
- ("Tier 1 — Permit Path Scan","$250 – $750",False),
+ ("Tier 1 — Permit Path Scan","$500 flat",False),
  ("Tier 2 — Stewardship Map","$2,500 – $7,500",False),
  ("Tier 3 — Permit & Bridge Sprint","$7,500 – $15,000",False),
  ("Tier 4 — White-Glove Implementation","$3,500 – $8,500 / month",False),

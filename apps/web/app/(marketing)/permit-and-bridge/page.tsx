@@ -37,7 +37,7 @@ export default function PermitAndBridge() {
         <Bullets
           items={[
             <><strong className="text-ink">Tier 0 · Public Permit Helper</strong> — free or very low cost.</>,
-            <><strong className="text-ink">Tier 1 · Permit Path Scan</strong> — $250–$750.</>,
+            <><strong className="text-ink">Tier 1 · Permit Path Scan</strong> — $500 flat.</>,
             <><strong className="text-ink">Tier 2 · Stewardship Map</strong> — $2,500–$7,500.</>,
             <><strong className="text-ink">Tier 3 · Permit &amp; Bridge Sprint</strong> — $7,500–$15,000.</>,
             <><strong className="text-ink">Tier 4 · White-Glove Implementation</strong> — $3,500–$8,500 / month.</>,
@@ -65,7 +65,7 @@ export default function PermitAndBridge() {
         </CardGrid>
         <P>
           Just need to know which path you’re on first? Start with a
-          $250–$750 Permit Path Scan and it credits toward the sprint.
+          $500 flat Permit Path Scan and it credits toward the sprint.
         </P>
       </Section>
 

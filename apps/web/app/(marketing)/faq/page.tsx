@@ -22,7 +22,7 @@ const QA: { q: string; a: string }[] = [
   },
   {
     q: 'What does it cost?',
-    a: 'The Stewardship Map is $2,500–$7,500, fixed and non-contingent. Other offers range from a $250–$750 Permit Path Scan up to monthly support. Our fee never depends on a funding outcome.',
+    a: 'The Stewardship Map is $2,500–$7,500, fixed and non-contingent. Other offers range from a $500 flat Permit Path Scan up to monthly support. Our fee never depends on a funding outcome.',
   },
   {
     q: 'How long does it take?',

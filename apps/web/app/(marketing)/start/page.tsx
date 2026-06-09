@@ -21,7 +21,7 @@ export default function Start() {
       </Section>
 
       <Section title="Or reach us directly">
-        <P>hello@publiclogic.org &nbsp;·&nbsp; 978-807-0829</P>
+        <P>nate@publiclogic.org &nbsp;·&nbsp; 978-807-0829</P>
         <Quote>If your planner leaves, does this still work? Let’s find out together.</Quote>
       </Section>
     </>

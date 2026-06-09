@@ -54,7 +54,7 @@ para("You have a specific project — a building, a use, a program, a developmen
 para("WHO IT'S FOR",SANS,10,GREEN,bold=True,after=1)
 para("Project sponsors — developers, towns, nonprofits, and businesses — with one real project that is "
      "stalled, about to start, or stuck between offices. (If you only need to know which path you're on, "
-     "start with a $250–$750 Permit Path Scan instead.)",SANS,9.5,MUTE,ital=True,after=5)
+     "start with a $500 Permit Path Scan instead.)",SANS,9.5,MUTE,ital=True,after=5)
 
 para("WHAT YOU GET",SANS,10,GREEN,bold=True,after=2)
 tbl=d.add_table(rows=0,cols=2); tbl.alignment=WD_TABLE_ALIGNMENT.CENTER; tbl.autofit=False
@@ -96,7 +96,7 @@ runs([("Permit & Bridge helps the public understand the path and helps project s
      size=12,align=WD_ALIGN_PARAGRAPH.CENTER,after=2)
 para("PublicLogic does not replace the municipality, inspector, planner, or permitting authority. © PublicLogic LLC.",
      SANS,8.5,MUTE,ital=True,align=WD_ALIGN_PARAGRAPH.CENTER,after=1)
-runs([("PublicLogic LLC  ·  Nathan Boudreau, MPA / MCPPO  ·  hello@publiclogic.org  ·  Private & Confidential",SANS,MUTE,False,False)],
+runs([("PublicLogic LLC  ·  Nathan Boudreau, MPA / MCPPO  ·  nate@publiclogic.org  ·  Private & Confidential",SANS,MUTE,False,False)],
      size=8.5,align=WD_ALIGN_PARAGRAPH.CENTER,before=0,after=0)
 
 out=os.path.join(os.path.dirname(os.path.abspath(__file__)),"final_deck","PublicLogic - Permit & Bridge Sprint - Scope & Fee Sheet.docx")

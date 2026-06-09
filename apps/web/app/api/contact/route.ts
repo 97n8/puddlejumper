@@ -84,7 +84,7 @@ export async function POST(req: Request) {
       {
         ok: false,
         error:
-          'Something went wrong sending your message. Please email hello@publiclogic.org directly.',
+          'Something went wrong sending your message. Please email nate@publiclogic.org directly.',
       },
       { status: 502 },
     );

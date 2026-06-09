@@ -40,7 +40,7 @@ export default function LogicCommons() {
       <Section title="When you need more than a template">
         <P>
           If your project touches several systems at once, involves a public hearing, or you’ve already
-          been bounced between offices, a Permit Path Scan ($250–$750) lays out the likely path, the
+          been bounced between offices, a Permit Path Scan ($500 flat) lays out the likely path, the
           boards involved, and the documents you’ll need — so you stop guessing.
         </P>
         <Band>LogicCommons helps people start. PublicLogic helps them carry it through.</Band>

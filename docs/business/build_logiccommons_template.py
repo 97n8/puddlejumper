@@ -136,7 +136,7 @@ para("WHEN IT'S WORTH GETTING HELP",SANS,10,GREEN,bold=True,before=9,after=1)
 runs([("If your project touches several systems at once, involves a hearing, or you've already been bounced "
        "between offices, a ",SANS,SLATE,False,False),
       ("Permit Path Scan",SANS,GREEN,True,False),
-      (" ($250–$750) lays out the likely path, the boards involved, and the documents you'll need — so you "
+      (" ($500 flat) lays out the likely path, the boards involved, and the documents you'll need — so you "
        "stop guessing. It doesn't replace the town; it helps you move with confidence.",SANS,SLATE,False,False)],after=8)
 
 # ---- Footer / canon

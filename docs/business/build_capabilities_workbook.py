@@ -160,7 +160,7 @@ htable(ws,4,["Product","Why it exists","Output","Price","Transfer asset"],
  ],[28,42,32,18,26])
 ws.cell(row=11,column=1,value="Implementation vs Capacity: Implementation helps YOUR team execute — the work stays theirs (e.g., Shrewsbury). Capacity means we hold the role ourselves until it transfers back (e.g., Swanzey). Same discipline; different level of who holds the Chair.").font=Font(italic=True,size=9,color=MUTEC)
 ws.cell(row=11,column=1).alignment=WRAP; ws.merge_cells("A11:E12")
-ws.cell(row=13,column=1,value="Entry below the Map: the Permit & Bridge tab adds a public-facing ladder — Tier 0 Public Permit Helper (free / very low cost) and Tier 1 Permit Path Scan ($250–$750) — that builds trust and feeds these paid offers.").font=Font(italic=True,size=9,color=MUTEC)
+ws.cell(row=13,column=1,value="Entry below the Map: the Permit & Bridge tab adds a public-facing ladder — Tier 0 Public Permit Helper (free / very low cost) and Tier 1 Permit Path Scan ($500 flat) — that builds trust and feeds these paid offers.").font=Font(italic=True,size=9,color=MUTEC)
 ws.cell(row=13,column=1).alignment=WRAP; ws.merge_cells("A13:E14")
 ws.cell(row=15,column=1,value="Deeper engagement: when a Map reveals serious drift or transition risk, the next step up is a Diagnostic — a deep review of risks, records, structure, and next steps ($10,000–$25,000+). It sits between the Map and ongoing support.").font=Font(italic=True,size=9,color=MUTEC)
 ws.cell(row=15,column=1).alignment=WRAP; ws.merge_cells("A15:E16")
@@ -220,7 +220,7 @@ ws.cell(row=r,column=1,value="THE OFFER LADDER  —  free tier creates trust; pa
 htable(ws,r,["Tier","Product","Price"],
  [
  ["0","Public Permit Helper / “Can I Do This?”","Free or very low cost"],
- ["1","Permit Path Scan","$250 – $750"],
+ ["1","Permit Path Scan","$500 flat"],
  ["2","Stewardship Map","$2,500 – $7,500"],
  ["3","Permit & Bridge Sprint","$7,500 – $15,000"],
  ["4","White-Glove Implementation","$3,500 – $8,500 / month"],

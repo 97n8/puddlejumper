@@ -65,7 +65,7 @@ export function Footer() {
           <Link href="/start" className="hover:text-g transition-colors">Start</Link>
         </div>
         <p className="text-[12px] text-ink3 mb-1">
-          hello@publiclogic.org &nbsp;·&nbsp; PublicLogic LLC &nbsp;·&nbsp; Continuity • Data • Stewardship
+          nate@publiclogic.org &nbsp;·&nbsp; PublicLogic LLC &nbsp;·&nbsp; Continuity • Data • Stewardship
         </p>
         <p className="text-[12px] text-ink4 max-w-2xl">
           PublicLogic provides stewardship and advisory services. We are not a software vendor and our

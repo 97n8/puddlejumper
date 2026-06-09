@@ -117,7 +117,7 @@ export default function CanIDoThis() {
       <Section title="When it’s worth getting help">
         <p className="max-w-2xl text-[15px] text-ink2 leading-relaxed mb-2">
           If your project touches several systems at once, involves a hearing, or you’ve already been
-          bounced between offices, a <strong className="text-ink">Permit Path Scan</strong> ($250–$750)
+          bounced between offices, a <strong className="text-ink">Permit Path Scan</strong> ($500 flat)
           lays out the likely path, the boards involved, and the documents you’ll need — so you stop
           guessing. It doesn’t replace the town; it helps you move with confidence.
         </p>
