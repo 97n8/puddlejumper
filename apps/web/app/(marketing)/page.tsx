@@ -26,7 +26,7 @@ export default function Home() {
       </Band>
 
       <Section title="What breaks">
-        <P>Good work fails for boring reasons. In a town, it usually looks like one of these:</P>
+        <P>Good work fails for boring reasons. In most organizations, it looks like one of these:</P>
         <Bullets
           items={[
             <><strong className="text-ink">Stalled projects</strong> — no one owns the next step, so it sits.</>,
@@ -81,14 +81,15 @@ export default function Home() {
 
       <Section title="Who it’s for">
         <P>
-          <strong className="text-ink">Municipal governments — our focus.</strong> For our first year we
-          are building one reputation: continuity and implementation support for towns and cities, and
-          the partners around them — regional planning agencies, engineering firms, and municipal
-          consulting firms.
+          Anyone carrying real responsibility that has to outlast them — people, teams, projects,
+          properties, businesses, nonprofits, and public organizations. If work depends on one person’s
+          memory or a window you can’t afford to miss, the method fits.
         </P>
         <P>
-          The method also serves mission-driven and legacy-minded organizations wherever continuity
-          matters, but municipalities are home ground and where we start.
+          <strong className="text-ink">Municipal government is our home ground</strong> — it’s where we
+          have the deepest experience, and the partners around it (regional planning agencies,
+          engineering firms, municipal consultants) are a natural fit. But the work serves anyone,
+          wherever continuity matters.
         </P>
       </Section>
 
