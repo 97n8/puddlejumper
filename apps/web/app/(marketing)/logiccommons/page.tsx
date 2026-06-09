@@ -32,7 +32,8 @@ export default function LogicCommons() {
           ]}
         />
         <CTARow>
-          <CTA href="/start">Request the “Can I Do This?” worksheet</CTA>
+          <CTA href="/logiccommons/can-i-do-this">Open the “Can I Do This?” worksheet</CTA>
+          <TextLink href="/logiccommons/can-i-do-this">Download or print →</TextLink>
         </CTARow>
       </Section>
 

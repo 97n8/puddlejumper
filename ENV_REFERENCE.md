@@ -86,3 +86,23 @@
 - Purpose: Live capability definitions (automations and quick actions) consumed by `/api/config/capabilities`.
 - Default: unset (required in production; endpoint returns `503` in non-production when unset).
 - Read in: `n8drive/apps/puddlejumper/src/api/server.ts`.
+
+## `RESEND_API_KEY`
+- Purpose: API key for sending marketing-site contact submissions via Resend.
+- Default: Unset (form falls back to `CONTACT_WEBHOOK_URL`, then to server logging).
+- Read in: `apps/web/app/api/contact/route.ts`. Requires `CONTACT_TO` and `CONTACT_FROM` to send.
+
+## `CONTACT_TO`
+- Purpose: Destination address for contact-form emails (e.g., `hello@publiclogic.org`).
+- Default: Unset.
+- Read in: `apps/web/app/api/contact/route.ts`.
+
+## `CONTACT_FROM`
+- Purpose: Verified sender address for contact-form emails (Resend-verified domain).
+- Default: Unset.
+- Read in: `apps/web/app/api/contact/route.ts`.
+
+## `CONTACT_WEBHOOK_URL`
+- Purpose: Alternative to Resend — a webhook (Slack/Zapier/Make) that receives contact submissions as JSON.
+- Default: Unset. If neither Resend nor this is set, submissions are written to the server log.
+- Read in: `apps/web/app/api/contact/route.ts`.
