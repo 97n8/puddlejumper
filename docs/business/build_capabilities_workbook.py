@@ -54,6 +54,7 @@ blocks(ws,4,[
  ("North Star","Every system should make it easier for the next person to do the right thing."),
  ("The bridge","Implementation is the service. Institutional Stewardship is the method."),
  ("The equation","Good Work + Stewardship = Work That Lasts."),
+ ("The ladder","LogicCommons helps people start. PublicLogic helps them carry it through."),
  ("1 · Why we exist","Good work keeps failing when knowledge, ownership, or continuity disappears. We've watched it happen, and we built the practices to stop it."),
  ("2 · The problem","Capacity stops keeping pace with complexity. The 'Chair' — the place where a function lives — ends up depending on one person."),
  ("3 · What clients buy","Projects moved forward. Funding found and won. A role or function covered."),
@@ -167,6 +168,20 @@ for q in ["“Can I put this in my backyard?”","“Do I need a permit?”","�
 r+=1
 ws.cell(row=r,column=1,value="This layer should be low-cost or free — its purpose is access, trust, and triage. It does NOT replace the municipality, inspector, planner, or permitting authority. It helps people ask better questions, gather the right information, and avoid wasting time.").font=Font(italic=True,size=11,color=GREEN)
 ws.cell(row=r,column=1).alignment=WRAP; ws.merge_cells(f"A{r}:C{r+1}"); ws.row_dimensions[r].height=30; r+=3
+# logiccommons public access layer
+ws.cell(row=r,column=1,value="THE FULL LADDER, FROM FREE TO WHITE-GLOVE").font=SEC; ws.merge_cells(f"A{r}:C{r}"); r+=1
+ws.cell(row=r,column=1,value="LogicCommons is the public access layer. It offers free templates, checklists, and simple frameworks that help residents, small organizations, and project sponsors understand the path before they need paid help.").font=BODY
+ws.cell(row=r,column=1).alignment=WRAP; ws.merge_cells(f"A{r}:C{r+1}"); ws.row_dimensions[r].height=28; r+=2
+htable(ws,r,["Layer","PublicLogic piece","Purpose"],
+ [
+ ["Free public tools","LogicCommons templates","Help people self-serve basic planning, permit, grant, and project questions."],
+ ["Cheap triage","Permit Path Scan","“What path am I probably on?”"],
+ ["Paid diagnostic","Stewardship Map","“What actually needs to happen, who owns it, and what breaks?”"],
+ ["White-glove help","Permit & Bridge / Funding / Implementation","PublicLogic carries the project forward."],
+ ],[22,40,56])
+r+=6
+ws.cell(row=r,column=1,value="LogicCommons helps people start. PublicLogic helps them carry it through.").font=Font(bold=True,size=12,color=GREEN)
+ws.cell(row=r,column=1).alignment=WRAP; ws.merge_cells(f"A{r}:C{r}"); r+=2
 # offer ladder
 ws.cell(row=r,column=1,value="THE OFFER LADDER  —  free tier creates trust; paid tiers handle complexity").font=SEC; ws.merge_cells(f"A{r}:C{r}"); r+=1
 htable(ws,r,["Tier","Product","Price"],
