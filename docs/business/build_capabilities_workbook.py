@@ -41,10 +41,11 @@ ws=wb.active; ws.title="Positioning"
 ws["A1"]="PUBLICLOGIC — Capabilities Workbook"; ws["A1"].font=Font(bold=True,size=16,color=SLATE)
 ws["A2"]="Institutional Stewardship through Project Delivery  ·  v2.0  ·  June 2026"; ws["A2"].font=Font(size=11,bold=True,color=GOLD)
 blocks=[
- ("WHAT WE ARE","PublicLogic applies Institutional Stewardship to help communities and mission-driven organizations move important projects from planning to implementation."),
+ ("WHAT WE ARE","PublicLogic applies Institutional Stewardship to help communities, public-sector organizations, and community-serving institutions move important projects from planning to implementation."),
  ("THE DISTINCTION","Implementation is the service. Institutional Stewardship is the method. The market buys project delivery; PublicLogic delivers Institutional Stewardship. Both are true; neither is sacrificed for the other."),
  ("WHAT WE ARE NOT","Not a grant-writing firm. Not an AI consulting firm. Not a traditional planning firm. We don't produce reports or plans that sit on shelves."),
- ("POSITIONING STATEMENT","PublicLogic helps communities and mission-driven organizations move important projects from planning to implementation. We do this through Institutional Stewardship — preserving, governing, transferring, and operationalizing the knowledge required for long-term success."),
+ ("CLIENTS BUY / WE DELIVER","Clients buy funding, progress, capacity, and execution. PublicLogic delivers Institutional Stewardship. That is not a contradiction — it is the business model."),
+ ("POSITIONING STATEMENT","PublicLogic helps communities, public-sector organizations, and community-serving institutions move important projects from planning to implementation. We do this through Institutional Stewardship — preserving, governing, transferring, and operationalizing the knowledge required for long-term success."),
  ("INSTITUTIONAL STEWARDSHIP (definition)","The deliberate practice of preserving, governing, transferring, and operationalizing organizational knowledge so critical functions remain durable across turnover, changing priorities, and organizational change. An operating discipline, applied to every engagement regardless of project type."),
  ("SUCCESS STANDARD","A successful engagement reduces future dependency. The organization becomes more capable; the process more durable; the knowledge more accessible."),
 ]
@@ -64,6 +65,7 @@ table(ws,4,
  ["Project Development","Transform ideas, priorities, and challenges into actionable projects.","Strategic initiatives · capital projects · community development · housing · infrastructure · program development","Project Charter · Scope Definition · Stakeholder Map · Readiness Assessment · Action Roadmap","Create clarity before resources are committed."],
  ["Funding Strategy","Identify, organize, and pursue sustainable funding opportunities.","Grant development · capital planning · funding roadmaps · partnership development · revenue strategy","Funding Scan · Funding Roadmap · Application Support · Capital Strategy · Partner Coordination","Align funding with long-term organizational capacity."],
  ["Implementation Support","Move projects from planning into execution.","Strategic-plan implementation · capital project coordination · program launch · community engagement · readiness","Implementation Framework · Accountability Structure · Progress Tracking · Facilitation · Stakeholder Coordination","Ensure important work survives beyond its initial champions."],
+ ["Capacity Support","Provide the institutional capacity to carry the work — directly.","Interim / fractional support · special-project support · administrative capacity · program coordination  (Swanzey · Hubbardston · Sutton · Michigan LTC)","Embedded Capacity Plan · Role / Coverage Map · Coordination Cadence · Continuity Handoff","Hold the Chair so critical functions stay covered through turnover and transition."],
  ],
  [22,34,40,40,40])
 
@@ -75,6 +77,7 @@ table(ws,4,
  ["Project Development Sprint","Move an idea into an actionable project.","Project Development Roadmap","","",""],
  ["Funding Strategy Sprint","Identify realistic funding pathways and readiness requirements.","Funding Roadmap","","",""],
  ["Implementation Support Partnership","Provide coordination and stewardship capacity through implementation.","Implementation Framework + Accountability Structure","","",""],
+ ["Capacity Support Engagement","Provide interim / fractional capacity to carry a function or special project.","Embedded Capacity Plan + Continuity Handoff","","",""],
  ],
  [30,40,38,26,16,16],editable_cols=(3,4,5))
 
@@ -102,26 +105,40 @@ table(ws,4,
  ],
  [18,56,30])
 
-# ---- TARGET MARKETS / PIPELINE (editable) ----
-ws=tab("Target Pipeline","Target Markets & Pipeline (Tier 1)","Prioritize organizations that already have projects and budgets. Yellow = working pipeline fields.")
-table(ws,4,
- ["Segment","Named Target","Why / Need","Status","Owner","Next Step"],
- [
- ["Regional Planning Agencies","CMRPC","Municipal implementation support; active project pipelines","","",""],
- ["Regional Planning Agencies","MRPC","Delivery capacity; community engagement","","",""],
- ["Regional Planning Agencies","MVPC","Project delivery capacity","","",""],
- ["Regional Planning Agencies","Strafford RPC","Municipal implementation support","","",""],
- ["Engineering Firms","Fuss & O'Neill","Public-process support; funding narratives; municipal coordination","","",""],
- ["Engineering Firms","Weston & Sampson","Municipal implementation capacity","","",""],
- ["Engineering Firms","Tighe & Bond","Public process + funding narratives","","",""],
- ["Engineering Firms","BETA","Municipal coordination capacity","","",""],
- ["Municipal Consulting","Community Paradigm (and similar)","Capacity + specialized expertise; subcontracting path","","",""],
- ["Municipalities","(by relationship)","Temporary capacity, strategic initiatives, capital planning, funding","","",""],
- ["Existing Network","(warm relationships)","Highest trust, shortest sales cycle","","",""],
- ],
- [22,24,40,16,14,26],editable_cols=(3,4,5))
-ws.cell(row=18,column=1,value="BD principle: don't convince organizations they have a hidden problem — help them solve a known one. Lead with capacity, funding, progress, execution.").font=SUB
-ws.cell(row=18,column=1).alignment=WRAP; ws.merge_cells("A18:F19")
+# ---- TARGET MARKETS / PIPELINE (decision tool, ranked) ----
+ws=tab("Target Pipeline","Target Markets & Pipeline (Tier 1)","A decision tool, not a list. Fill yellow cells; Weighted Value = Revenue x Probability. Sort by Weighted Value (descending) to rank.")
+heads=["Segment","Target","Authority to Buy","Relationship","Revenue Potential ($)","Probability","Weighted Value ($)","Next Action"]
+piperows=[
+ ["Regional Planning Agencies","CMRPC","Yes — active contracts & pipelines","Developing","","",""],
+ ["Regional Planning Agencies","MRPC","Yes — active pipelines","Developing","","",""],
+ ["Regional Planning Agencies","MVPC","Yes — project pipelines","Cold","","",""],
+ ["Regional Planning Agencies","Strafford RPC","Yes","Cold","","",""],
+ ["Engineering Firms","Fuss & O'Neill","Yes — buys as sub/teaming","Cold","","",""],
+ ["Engineering Firms","Weston & Sampson","Yes — teaming","Cold","","",""],
+ ["Engineering Firms","Tighe & Bond","Yes — teaming","Cold","","",""],
+ ["Engineering Firms","BETA","Yes — teaming","Cold","","",""],
+ ["Municipal Consulting","Community Paradigm (+ similar)","Yes — subcontract","Cold","","",""],
+ ["Municipalities","Direct (by relationship)","Yes — direct budget","Warm — existing (Sutton/Shrewsbury/Phillipston)","","",""],
+ ["Existing Network","Warm relationships","Varies","Strong — warmest, shortest cycle","","",""],
+]
+hrow(ws,4,heads)
+for i,row in enumerate(piperows):
+    rr=5+i
+    for ci,val in enumerate(row):
+        c=ws.cell(row=rr,column=ci+1,value=val); c.border=B; c.alignment=WRAP
+        if ci in (2,3,4,5,7): c.fill=IFILL  # editable
+    # Weighted Value = Revenue (col E=5) x Probability (col F=6)
+    wv=ws.cell(row=rr,column=7,value=f"=IF(AND(ISNUMBER(E{rr}),ISNUMBER(F{rr})),E{rr}*F{rr},0)")
+    wv.number_format='#,##0'; wv.border=B; wv.font=BOLD; wv.fill=GFILL
+    ws.cell(row=rr,column=6).number_format='0%'
+    ws.cell(row=rr,column=5).number_format='#,##0'
+for col,w in zip("ABCDEFGH",[22,26,26,28,16,11,16,28]): ws.column_dimensions[col].width=w
+ws.freeze_panes="A5"
+nr=5+len(piperows)+1
+ws.cell(row=nr,column=1,value="How to use: enter Revenue Potential ($) and Probability (%) for each target; Weighted Value computes automatically; sort the table by Weighted Value descending to rank. Then commit to the top 5 for the month.").font=SUB
+ws.cell(row=nr,column=1).alignment=WRAP; ws.merge_cells(f"A{nr}:H{nr+1}")
+ws.cell(row=nr+2,column=1,value="BD principle: don't convince organizations they have a hidden problem — help them solve a known one. Lead with capacity, funding, progress, execution. Warmest relationships first (shortest sales cycle).").font=Font(italic=True,size=9,color=GREEN)
+ws.cell(row=nr+2,column=1).alignment=WRAP; ws.merge_cells(f"A{nr+2}:H{nr+3}")
 
 # ---- LESSONS LEARNED ----
 ws=tab("Lessons Learned","Lessons Learned · AI for Impact","People buy outcomes. The methodology matters, but outcomes drive the purchasing decision.")

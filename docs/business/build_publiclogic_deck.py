@@ -182,7 +182,7 @@ foot(s); pg(s,11)
 s=base(p,SLATE); rule(s,y=Inches(2.4),w=Inches(1.1),col=GOLD)
 kick(s,"The Promise")
 tx(s,Inches(0.85),Inches(1.5),Inches(11.5),Inches(1.5),[[("We move important projects from planning to implementation —",SERIF,28,CREAM,True,False)],[("and keep the knowledge, systems, and structures that sustain them intact.",SERIF,28,GOLD,False,True)]],sp=1.08)
-tx(s,Inches(0.85),Inches(4.0),Inches(11.5),Inches(1.4),[[("PublicLogic helps communities and mission-driven organizations move important projects from planning to implementation. We do this through Institutional Stewardship — preserving, governing, transferring, and operationalizing the knowledge required for long-term success.",SANS,13.5,RGBColor(0xDC,0xD7,0xCD),False,False)]],sp=1.2)
+tx(s,Inches(0.85),Inches(4.0),Inches(11.5),Inches(1.4),[[("PublicLogic helps communities, public-sector organizations, and community-serving institutions move important projects from planning to implementation. We do this through Institutional Stewardship — preserving, governing, transferring, and operationalizing the knowledge required for long-term success.",SANS,13.5,RGBColor(0xDC,0xD7,0xCD),False,False)]],sp=1.2)
 rect(s,Inches(0.85),Inches(5.9),Inches(11.6),Inches(0.85),GREEN)
 tx(s,Inches(1.15),Inches(5.9),Inches(11.0),Inches(0.85),[[("The market buys project delivery. PublicLogic delivers Institutional Stewardship. Both statements are true; neither is sacrificed for the other.",SANS,13,CREAM,True,True)]],PP_ALIGN.LEFT,MSO_ANCHOR.MIDDLE)
 
