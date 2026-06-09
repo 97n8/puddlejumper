@@ -55,7 +55,7 @@ blocks(ws,4,[
  ("The bridge","Implementation is the service. Institutional Stewardship is the method."),
  ("The equation","Good Work + Stewardship = Work That Lasts."),
  ("The ladder","LogicCommons helps people start. PublicLogic helps them carry it through."),
- ("The architecture","LogicCommons = public access layer · Permit & Bridge = navigation layer · PublicLogic = services · Continuity System (PuddleJumper) = delivery infrastructure."),
+ ("The architecture","LogicCommons = public access layer · Permit & Bridge = navigation layer · PublicLogic = services · Continuity & Stewardship Systems = how we deliver (records, processes, templates, environments, accountability)."),
  ("1 · Why we exist","Good work keeps failing when knowledge, ownership, or continuity disappears. We've watched it happen, and we built the practices to stop it."),
  ("2 · The problem","Capacity stops keeping pace with complexity. The 'Chair' — the place where a function lives — ends up depending on one person."),
  ("3 · What clients buy","Projects moved forward. Funding found and won. A role or function covered."),
@@ -106,6 +106,7 @@ r=blocks(ws,4,[
  ("What makes us different","Most systems manage work. PublicLogic helps steward what has to survive the work."),
  ("What we are NOT","Not a grant-writing firm. Not an AI consulting firm. Not a software company. Not a planning firm. Not a generic implementation consultant. The work touches all of those, but none of them is the point."),
  ("Clients buy / we deliver","Clients buy funding, progress, and capacity. We deliver those — plus the stewardship that makes them last. That's not a contradiction; it's the business model."),
+ ("How we deliver","PublicLogic provides project development, funding strategy, implementation support, and capacity support through Continuity & Stewardship Systems — the records, processes, templates, environments, and accountability structures that help important work survive turnover and change."),
 ],h=40)
 # equation
 ws.cell(row=r+1,column=1,value="THE EQUATION").font=SEC
@@ -244,13 +245,16 @@ ws.cell(row=10,column=1,value="PublicLogic should be stronger after every engage
 ws.cell(row=11,column=1,value="The client should be less dependent after every engagement.").font=Font(bold=True,size=12,color=GOLD)
 ws.cell(row=12,column=1,value="If neither happens, we are doing consulting instead of stewardship.").font=Font(bold=True,italic=True,size=12,color=GREEN)
 ws.cell(row=12,column=1).alignment=WRAP; ws.merge_cells("A12:B12")
-ws.cell(row=14,column=1,value="THE CONTINUITY SYSTEM — our delivery infrastructure (PuddleJumper)").font=SEC; ws.merge_cells("A14:B14")
-ws.cell(row=15,column=1,value="Every engagement is delivered through a Continuity System — the records, decisions, templates, and processes that keep the work alive after we step back. PuddleJumper is the name of that system. Inside it —  CaseSpaces: a project's governed record.   VAULT: how knowledge is preserved so it survives turnover.   Workbooks · Registers · Templates: the reusable artifacts the work runs on.  ('Continuity System' is what we say to a client; 'PuddleJumper' is what we call it.)").font=Font(size=11,color=SLATE)
-ws.cell(row=15,column=1).alignment=WRAP; ws.merge_cells("A15:B16"); ws.row_dimensions[15].height=60
-ws.cell(row=17,column=1,value="LogicCommons is separate — the public, free layer (templates for residents and sponsors), not part of a client's Continuity System.").font=Font(size=10,color=MUTEC)
-ws.cell(row=17,column=1).alignment=WRAP; ws.merge_cells("A17:B17")
-ws.cell(row=18,column=1,value="A client never has to care about CaseSpaces or VAULT. They care about one thing: “If my planner leaves, does this still work?” A Continuity System is how we answer yes.").font=Font(italic=True,size=11,color=GREEN)
-ws.cell(row=18,column=1).alignment=WRAP; ws.merge_cells("A18:B19")
+ws.cell(row=14,column=1,value="HOW WE DELIVER — Continuity & Stewardship Systems").font=SEC; ws.merge_cells("A14:B14")
+ws.cell(row=15,column=1,value="The records, processes, templates, environments, and accountability structures that help important work survive turnover, changing priorities, and organizational change.   Continuity = the outcome.  Stewardship = the practice.  Systems = the mechanism.").font=Font(size=11,color=SLATE)
+ws.cell(row=15,column=1).alignment=WRAP; ws.merge_cells("A15:B16"); ws.row_dimensions[15].height=44
+ws.cell(row=17,column=1,value="PublicLogic engagements create Continuity & Stewardship Systems tailored to the project, organization, or initiative. The exact components vary; the goal is always the same — make it easier for the next person to do the right thing.").font=Font(size=11,color=SLATE)
+ws.cell(row=17,column=1).alignment=WRAP; ws.merge_cells("A17:B18"); ws.row_dimensions[17].height=30
+ws.cell(row=19,column=1,value="May include:").font=Font(bold=True,size=10,color=GREEN); ws.merge_cells("A19:B19")
+ws.cell(row=20,column=1,value="CaseSpaces · Workbooks · Registers · Templates · VAULT records · Accountability structures · Continuity plans · Project environments · Proof frameworks.   (Under the hood these run on PuddleJumper — no one needs that name unless they want to go deeper. LogicCommons is the separate public, free layer.)").font=Font(size=10,color=MUTEC)
+ws.cell(row=20,column=1).alignment=WRAP; ws.merge_cells("A20:B21"); ws.row_dimensions[20].height=30
+ws.cell(row=22,column=1,value="A client never has to care about the components. They care about one thing: “If my planner leaves, does this still work?” A Continuity & Stewardship System is how we answer yes.").font=Font(italic=True,size=11,color=GREEN)
+ws.cell(row=22,column=1).alignment=WRAP; ws.merge_cells("A22:B23")
 
 # ===== WHO WE PURSUE =====
 ws=newtab("Who We Pursue","Who We Pursue — Forced Prioritization","Don't list twenty things. Start where there's already a project, a budget, and trust.")
