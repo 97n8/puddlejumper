@@ -88,11 +88,15 @@ r=lines(ws,4,[
  "",
  "PublicLogic is our attempt to fix that — with the practices we wish we'd had when we were inside it.",
  "",
+ "The way we say it: most organizations don't suffer from a lack of effort. They suffer from a lack of visibility. PublicLogic exists to solve that problem.",
+ "",
 ])
 ws.cell(row=r+1,column=1,value="North Star").font=SEC
 ws.cell(row=r+2,column=1,value="“Every system should make it easier for the next person to do the right thing.”").font=Font(size=14,italic=True,color=GREEN)
 ws.cell(row=r+2,column=1).alignment=WRAP
-ws.cell(row=r+4,column=1,value="This isn't a new company we're inventing. It's the company that already exists — named, and made repeatable.").font=Font(size=11,color=SLATE,italic=True)
+ws.cell(row=r+4,column=1,value="Vision:  organizations should be easier to inherit than they were to build.").font=Font(size=12,bold=True,color=GOLD)
+ws.cell(row=r+5,column=1,value="Legacy line:  Honor the past. Improve the present. Continue the work.").font=Font(size=11,italic=True,color=GREEN)
+ws.cell(row=r+7,column=1,value="This isn't a new company we're inventing. It's the company that already exists — named, and made repeatable.").font=Font(size=11,color=SLATE,italic=True)
 
 # ===== WHAT BREAKS WITHOUT STEWARDSHIP =====
 ws=newtab("What Breaks","What Breaks Without Stewardship","Plain language. None of this is dramatic — which is exactly why it's dangerous.")
@@ -108,6 +112,8 @@ htable(ws,4,["When stewardship is missing…","…this is what we've watched hap
  ],[30,80])
 ws.cell(row=13,column=1,value="It's quiet failure. By the time anyone notices, the momentum, the money, or the knowledge is already gone. Stewardship is how we keep that from happening.").font=Font(italic=True,size=11,color=GREEN)
 ws.cell(row=13,column=1).alignment=WRAP; ws.merge_cells("A13:B14")
+ws.cell(row=15,column=1,value="The governance frame:  the central question is not whether risk exists, but where it will live.").font=Font(bold=True,size=11,color=GOLD)
+ws.cell(row=15,column=1).alignment=WRAP; ws.merge_cells("A15:B15")
 
 # ===== WHAT WE DO =====
 ws=newtab("What We Do","What PublicLogic Actually Does",None)
@@ -115,6 +121,7 @@ r=blocks(ws,4,[
  ("In one sentence","PublicLogic helps projects move through public systems, and helps organizations keep the capacity required to sustain what they build."),
  ("The bridge","Implementation is the service. Institutional Stewardship is the method."),
  ("What makes us different","Most systems manage work. PublicLogic helps steward what has to survive the work."),
+ ("Core promise","We do not create dependency. We create understanding."),
  ("What we are NOT","Not a grant-writing firm. Not an AI consulting firm. Not a software company. Not a planning firm. Not a generic implementation consultant. The work touches all of those, but none of them is the point."),
  ("Clients buy / we deliver","Clients buy funding, progress, and capacity. We deliver those — plus the stewardship that makes them last. That's not a contradiction; it's the business model."),
  ("How we deliver","PublicLogic delivers services through Continuity & Stewardship Systems designed to preserve knowledge, accountability, continuity, and momentum. (Defined once on the Transfer tab — it's the plumbing, not a product.)"),
@@ -134,6 +141,10 @@ method=[("Map","Surface how work, knowledge, authority, records, and risk actual
 for i,(st,d) in enumerate(method):
     rr=r+6+i; a=ws.cell(row=rr,column=1,value=st); a.font=Font(bold=True,color=GOLD); a.fill=GFILL; a.border=B
     c=ws.cell(row=rr,column=2,value=d); c.font=BODY; c.alignment=WRAP; c.border=B
+ws.cell(row=r+11,column=1,value="THE ENGAGEMENT CYCLE").font=SEC
+ws.cell(row=r+11,column=2,value="Discover · Honor · Understand · Improve · Build · Steward · Continue").font=GLD
+ws.cell(row=r+12,column=2,value="Map → Embed → Encode → Sustain is the method; this is the cycle a client moves through with us. (The Operating Workbook follows it tab for tab.)").font=Font(size=10,italic=True,color=MUTEC)
+ws.cell(row=r+12,column=2).alignment=WRAP
 ws.column_dimensions["A"].width=22; ws.column_dimensions["B"].width=100
 
 # ===== OFFER STACK =====
@@ -151,6 +162,8 @@ ws.cell(row=11,column=1,value="Implementation vs Capacity: Implementation helps 
 ws.cell(row=11,column=1).alignment=WRAP; ws.merge_cells("A11:E12")
 ws.cell(row=13,column=1,value="Entry below the Map: the Permit & Bridge tab adds a public-facing ladder — Tier 0 Public Permit Helper (free / very low cost) and Tier 1 Permit Path Scan ($250–$750) — that builds trust and feeds these paid offers.").font=Font(italic=True,size=9,color=MUTEC)
 ws.cell(row=13,column=1).alignment=WRAP; ws.merge_cells("A13:E14")
+ws.cell(row=15,column=1,value="Deeper engagement: when a Map reveals serious drift or transition risk, the next step up is a Diagnostic — a deep review of risks, records, structure, and next steps ($10,000–$25,000+). It sits between the Map and ongoing support.").font=Font(italic=True,size=9,color=MUTEC)
+ws.cell(row=15,column=1).alignment=WRAP; ws.merge_cells("A15:E16")
 
 # ===== PERMIT & BRIDGE =====
 ws=newtab("Permit & Bridge","Permit & Bridge","This may be the most important thing we do.  Best line: Permit & Bridge helps the public understand the path and helps project sponsors move through it.")
@@ -237,7 +250,7 @@ ws=newtab("Nathan + Allie","Why We're Better Together",None)
 htable(ws,4,["","","" ],[],[40,40,40])
 blocks(ws,4,[
  ("Nathan — institutional systems","How municipalities, money, grants, procurement, and projects actually work — from the inside."),
- ("Allie — human systems","How people, roles, adoption, leadership, and change actually work — and why systems get used or ignored."),
+ ("Allie — human systems","How people, roles, adoption, leadership, and change actually work — and why systems get used or ignored. In the model this is the Governance Steward lane: the human-centered guide who makes systems fit real people and keeps them trusted, adopted, and reviewed over time."),
  ("PublicLogic — the intersection","Most firms have one side or the other. Projects fail for whichever side gets ignored. We've each watched work fail for the other reason — which is exactly why we work together this way."),
  ("In practice","Nathan builds the structure; Allie makes sure people will actually use it and that it survives turnover. Neither half is optional."),
 ],h=46)
@@ -262,7 +275,7 @@ ws.cell(row=15,column=1).alignment=WRAP; ws.merge_cells("A15:B16"); ws.row_dimen
 ws.cell(row=17,column=1,value="PublicLogic engagements create Continuity & Stewardship Systems tailored to the project, organization, or initiative. The exact components vary; the goal is always the same — make it easier for the next person to do the right thing.").font=Font(size=11,color=SLATE)
 ws.cell(row=17,column=1).alignment=WRAP; ws.merge_cells("A17:B18"); ws.row_dimensions[17].height=30
 ws.cell(row=19,column=1,value="May include:").font=Font(bold=True,size=10,color=GREEN); ws.merge_cells("A19:B19")
-ws.cell(row=20,column=1,value="CaseSpaces · Workbooks · Registers · Templates · VAULT records · Accountability structures · Continuity plans · Project environments · Proof frameworks.   (Under the hood these run on PuddleJumper — no one needs that name unless they want to go deeper. LogicCommons is the separate public, free layer.)").font=Font(size=10,color=MUTEC)
+ws.cell(row=20,column=1,value="CaseSpaces · Workbooks · Registers · Templates · VAULT records · Accountability structures · Continuity plans · Project environments · Proof frameworks.   (Under the hood these run on PuddleJumper — our Governance Process Runtime; no one needs that name unless they want to go deeper. VAULT = Verification · Authority · Utility · Legitimacy · Transfer. LogicCommons is the separate public, free layer.)").font=Font(size=10,color=MUTEC)
 ws.cell(row=20,column=1).alignment=WRAP; ws.merge_cells("A20:B21"); ws.row_dimensions[20].height=30
 ws.cell(row=22,column=1,value="A client never has to care about the components. They care about one thing: “If my planner leaves, does this still work?” A Continuity & Stewardship System is how we answer yes.").font=Font(italic=True,size=11,color=GREEN)
 ws.cell(row=22,column=1).alignment=WRAP; ws.merge_cells("A22:B23")
@@ -328,6 +341,23 @@ htable(ws,6,["Move","What it looks like","Why"],
  ],[24,46,40])
 ws.cell(row=12,column=1,value="Three questions to keep answering:  (1) Which 5 targets are we actually pursuing this quarter?  (2) What is the first paid engagement we want to sell?  (3) Which transfer asset gets created every time we do it?").font=Font(italic=True,size=11,color=GREEN)
 ws.cell(row=12,column=1).alignment=WRAP; ws.merge_cells("A12:C13")
+
+# ===== LANGUAGE GUARDRAILS =====
+ws=newtab("Language","Language Guardrails — Do Not Say","Protect the category. We sell outcomes and stewardship — never hype, never software.")
+htable(ws,4,["Don't say","Say instead","Why"],
+ [
+ ["AI-powered / AI transformation","Continuity & Stewardship Systems · institutional stewardship","Too hype-driven; misstates the work."],
+ ["Revolutionary / disruptive","Serious, useful, durable","Generic startup language."],
+ ["Software platform / SaaS","Hosted operating environment","Makes the method sound like generic software."],
+ ["The dashboard (as the product)","The Stewardship Map / the operating environment","A dashboard is only a view, not the product."],
+ ["Workflow engine","Governance Process Runtime (PuddleJumper)","It governs the conditions around work, not just steps."],
+ ["AI bot","Governance Steward (the human guide)","Keep the human trust layer intact."],
+ ["We automate everything / magic","We make the work easier to understand and continue","Overclaim and wrong emphasis."],
+ ["Fully solved","Visible, improved, stewarded","Overpromises; denies the reality of stewardship."],
+ ["Buy PuddleJumper / the workbench","Clients receive the tool, framework, brief, or operating layer","Don't make internal build infrastructure the product."],
+ ],[30,40,46])
+ws.cell(row=14,column=1,value="Tagline, if you need one beneath the wordmark:  Continuity • Data • Stewardship.").font=Font(italic=True,size=10,color=GREEN)
+ws.cell(row=14,column=1).alignment=WRAP; ws.merge_cells("A14:C14")
 
 out=os.path.join(os.path.dirname(os.path.abspath(__file__)),"final_deck","PublicLogic - Capabilities Workbook (v2.0 2026-06).xlsx")
 os.makedirs(os.path.dirname(out),exist_ok=True)
