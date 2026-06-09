@@ -55,7 +55,7 @@ blocks(ws,4,[
  ("The bridge","Implementation is the service. Institutional Stewardship is the method."),
  ("The equation","Good Work + Stewardship = Work That Lasts."),
  ("The ladder","LogicCommons helps people start. PublicLogic helps them carry it through."),
- ("The architecture","LogicCommons = public access layer · Permit & Bridge = navigation layer · PublicLogic = services · Continuity System = delivery infrastructure."),
+ ("The architecture","LogicCommons = public access layer · Permit & Bridge = navigation layer · PublicLogic = services · Continuity System (PuddleJumper) = delivery infrastructure."),
  ("1 · Why we exist","Good work keeps failing when knowledge, ownership, or continuity disappears. We've watched it happen, and we built the practices to stop it."),
  ("2 · The problem","Capacity stops keeping pace with complexity. The 'Chair' — the place where a function lives — ends up depending on one person."),
  ("3 · What clients buy","Projects moved forward. Funding found and won. A role or function covered."),
@@ -244,11 +244,13 @@ ws.cell(row=10,column=1,value="PublicLogic should be stronger after every engage
 ws.cell(row=11,column=1,value="The client should be less dependent after every engagement.").font=Font(bold=True,size=12,color=GOLD)
 ws.cell(row=12,column=1,value="If neither happens, we are doing consulting instead of stewardship.").font=Font(bold=True,italic=True,size=12,color=GREEN)
 ws.cell(row=12,column=1).alignment=WRAP; ws.merge_cells("A12:B12")
-ws.cell(row=14,column=1,value="THE CONTINUITY SYSTEM — our delivery infrastructure").font=SEC; ws.merge_cells("A14:B14")
-ws.cell(row=15,column=1,value="Every engagement is delivered through a Continuity System: the records, decisions, templates, and processes that keep the work alive after we step back. In plain language —  CaseSpaces: a project's governed record.   VAULT: how knowledge is preserved so it survives turnover.   PuddleJumper: the workflow/process layer.   Workbooks · Registers · Templates: the reusable artifacts.   LogicCommons: the public, free version of the same templates.").font=Font(size=11,color=SLATE)
-ws.cell(row=15,column=1).alignment=WRAP; ws.merge_cells("A15:B16"); ws.row_dimensions[15].height=56
-ws.cell(row=17,column=1,value="A client never has to care about VAULT or CaseSpaces. They care about one thing: “If my planner leaves, does this still work?” A Continuity System is how we answer yes.").font=Font(italic=True,size=11,color=GREEN)
-ws.cell(row=17,column=1).alignment=WRAP; ws.merge_cells("A17:B18")
+ws.cell(row=14,column=1,value="THE CONTINUITY SYSTEM — our delivery infrastructure (PuddleJumper)").font=SEC; ws.merge_cells("A14:B14")
+ws.cell(row=15,column=1,value="Every engagement is delivered through a Continuity System — the records, decisions, templates, and processes that keep the work alive after we step back. PuddleJumper is the name of that system. Inside it —  CaseSpaces: a project's governed record.   VAULT: how knowledge is preserved so it survives turnover.   Workbooks · Registers · Templates: the reusable artifacts the work runs on.  ('Continuity System' is what we say to a client; 'PuddleJumper' is what we call it.)").font=Font(size=11,color=SLATE)
+ws.cell(row=15,column=1).alignment=WRAP; ws.merge_cells("A15:B16"); ws.row_dimensions[15].height=60
+ws.cell(row=17,column=1,value="LogicCommons is separate — the public, free layer (templates for residents and sponsors), not part of a client's Continuity System.").font=Font(size=10,color=MUTEC)
+ws.cell(row=17,column=1).alignment=WRAP; ws.merge_cells("A17:B17")
+ws.cell(row=18,column=1,value="A client never has to care about CaseSpaces or VAULT. They care about one thing: “If my planner leaves, does this still work?” A Continuity System is how we answer yes.").font=Font(italic=True,size=11,color=GREEN)
+ws.cell(row=18,column=1).alignment=WRAP; ws.merge_cells("A18:B19")
 
 # ===== WHO WE PURSUE =====
 ws=newtab("Who We Pursue","Who We Pursue — Forced Prioritization","Don't list twenty things. Start where there's already a project, a budget, and trust.")
