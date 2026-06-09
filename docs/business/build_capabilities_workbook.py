@@ -55,7 +55,7 @@ blocks(ws,4,[
  ("The bridge","Implementation is the service. Institutional Stewardship is the method."),
  ("The equation","Good Work + Stewardship = Work That Lasts."),
  ("The ladder","LogicCommons helps people start. PublicLogic helps them carry it through."),
- ("The architecture","LogicCommons = public access layer · Permit & Bridge = navigation layer · PublicLogic = services · Continuity & Stewardship Systems = how we deliver (records, processes, templates, environments, accountability)."),
+ ("The architecture","Five layers, five verbs:  LogicCommons = Understand · Permit & Bridge = Navigate · Stewardship Map = Diagnose · PublicLogic = Deliver · Continuity & Stewardship Systems = Sustain."),
  ("1 · Why we exist","Good work keeps failing when knowledge, ownership, or continuity disappears. We've watched it happen, and we built the practices to stop it."),
  ("2 · The problem","Capacity stops keeping pace with complexity. The 'Chair' — the place where a function lives — ends up depending on one person."),
  ("3 · What clients buy","Projects moved forward. Funding found and won. A role or function covered."),
@@ -288,30 +288,27 @@ htable(ws,4,["Tier","Pursue","Why"],
  ["Tier 2 — next","Developers · Housing organizations · Community development organizations","Real need (especially Permit & Bridge), longer cycle; pursue once Tier 1 is producing."],
  ["Tier 3 — later","Everything else","Interesting, but not now. Don't chase."],
  ],[16,52,40])
-# small ranked pipeline
-ws.cell(row=9,column=1,value="TIER-1 PIPELINE  (illustrative Revenue/Probability — replace with real figures; Weighted = Revenue x Probability; sort to rank)").font=SEC
-ws.merge_cells("A9:F9")
-heads=["Pursue","Target","Relationship","Revenue ($)","Probability","Weighted ($)"]
+# tier-1 pipeline — no dollars until they're real (avoids false precision)
+ws.cell(row=9,column=1,value="TIER-1 PIPELINE  (no revenue estimates until they're real — track relationship, probability, and the next action)").font=SEC
+ws.merge_cells("A9:D9")
+heads=["Target","Relationship","Probability","Next action"]
 for i,hh in enumerate(heads):
     c=ws.cell(row=10,column=i+1,value=hh); c.font=HDR; c.fill=HFILL; c.border=B; c.alignment=MID
 pipe=[
- ["NOW","CMRPC (regional planning)","Developing",60000,0.45],
- ["NOW","MRPC (regional planning)","Developing",50000,0.40],
- ["NOW","Warm municipal relationships (Sutton/Shrewsbury/Phillipston)","Strong",35000,0.60],
- ["NOW","Existing network","Strongest",25000,0.65],
- ["NOW","Fuss & O'Neill (engineering)","Cold",40000,0.30],
- ["Qualify","MVPC / other RPCs","Cold",50000,0.25],
- ["Qualify","Community Paradigm (municipal consulting)","Cold",30000,0.25],
+ ["CMRPC (regional planning)","Developing","Medium","Book an intro call; offer a paid Stewardship Map."],
+ ["MRPC (regional planning)","Developing","Medium","Warm intro; share the one-pager."],
+ ["Warm municipal relationships (Sutton/Shrewsbury/Phillipston)","Strong","High","Propose a Map on a known stalled function."],
+ ["Existing network","Strongest","High","Ask directly who needs a Map first."],
+ ["Fuss & O'Neill (engineering)","Cold","Low","Find a warm intro before pursuing."],
+ ["MVPC / other RPCs","Cold","Low","Qualify only once Tier 1 is producing."],
+ ["Community Paradigm (municipal consulting)","Cold","Low","Qualify only once Tier 1 is producing."],
 ]
 for i,row in enumerate(pipe):
     rr=11+i
     for ci,val in enumerate(row):
         c=ws.cell(row=rr,column=ci+1,value=val); c.border=B; c.alignment=WRAP; c.font=BODY
-        if ci in (0,2,3,4): c.fill=IFILL
-    ws.cell(row=rr,column=4).number_format='#,##0'; ws.cell(row=rr,column=5).number_format='0%'
-    wv=ws.cell(row=rr,column=6,value=f"=IF(AND(ISNUMBER(D{rr}),ISNUMBER(E{rr})),D{rr}*E{rr},0)")
-    wv.number_format='#,##0'; wv.border=B; wv.font=BOLD; wv.fill=GFILL
-for col,w in zip("ABCDEF",[10,46,18,14,12,14]): ws.column_dimensions[col].width=w
+        if ci in (1,2,3): c.fill=IFILL
+for col,w in zip("ABCD",[46,16,14,52]): ws.column_dimensions[col].width=w
 # engagement flow
 fr=11+len(pipe)+1
 ws.cell(row=fr,column=1,value="ENGAGEMENT FLOW").font=SEC
@@ -355,9 +352,10 @@ htable(ws,4,["Don't say","Say instead","Why"],
  ["We automate everything / magic","We make the work easier to understand and continue","Overclaim and wrong emphasis."],
  ["Fully solved","Visible, improved, stewarded","Overpromises; denies the reality of stewardship."],
  ["Buy PuddleJumper / the workbench","Clients receive the tool, framework, brief, or operating layer","Don't make internal build infrastructure the product."],
+ ["Institutional Stewardship (by itself)","Preventing turnover, lost knowledge, stalled projects, and missed opportunities through Institutional Stewardship","Always return to the problem. Stewardship disconnected from a real pain point goes abstract."],
  ],[30,40,46])
-ws.cell(row=14,column=1,value="Tagline, if you need one beneath the wordmark:  Continuity • Data • Stewardship.").font=Font(italic=True,size=10,color=GREEN)
-ws.cell(row=14,column=1).alignment=WRAP; ws.merge_cells("A14:C14")
+ws.cell(row=15,column=1,value="Tagline, if you need one beneath the wordmark:  Continuity • Data • Stewardship.").font=Font(italic=True,size=10,color=GREEN)
+ws.cell(row=15,column=1).alignment=WRAP; ws.merge_cells("A15:C15")
 
 out=os.path.join(os.path.dirname(os.path.abspath(__file__)),"final_deck","PublicLogic - Capabilities Workbook (v2.0 2026-06).xlsx")
 os.makedirs(os.path.dirname(out),exist_ok=True)

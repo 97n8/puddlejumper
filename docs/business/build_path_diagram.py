@@ -52,7 +52,7 @@ for i,(name,verb,desc,price,vc) in enumerate(steps):
 # foundation bar
 fy=Inches(y0+len(steps)*gap-0.02)
 rect(bx,fy,bw,Inches(0.72),GREEN,shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-tx(bx+Inches(0.4),fy,bw-Inches(0.8),Inches(0.72),[[("CONTINUITY & STEWARDSHIP SYSTEMS   ",SANS,13,WHITE,True,False),("the plumbing, not a product",SERIF,12,RGBColor(0xD8,0xC8,0x9A),False,True)]],anchor=MSO_ANCHOR.MIDDLE)
+tx(bx+Inches(0.4),fy,bw-Inches(0.8),Inches(0.72),[[("CONTINUITY & STEWARDSHIP SYSTEMS   ",SANS,13,WHITE,True,False),("· SUSTAIN ·   ",SANS,12,RGBColor(0xD8,0xC8,0x9A),True,False),("the plumbing, not a product",SERIF,12,RGBColor(0xD8,0xC8,0x9A),False,True)]],anchor=MSO_ANCHOR.MIDDLE)
 # footer
 tx(Inches(0.7),Inches(7.08),Inches(12),Inches(0.3),[[("Everything is delivered through it.  ",SANS,9,MUTE,False,True),("PublicLogic LLC · Private & Confidential",SANS,9,MUTE,False,False)]],anchor=MSO_ANCHOR.TOP)
 out=os.path.join(os.path.dirname(os.path.abspath(__file__)),"final_deck","PublicLogic - The Path (one-page visual).pptx")
