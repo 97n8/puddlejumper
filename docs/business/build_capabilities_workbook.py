@@ -135,16 +135,52 @@ htable(ws,4,["Product","Why it exists","Output","Price","Transfer asset"],
  ],[28,42,32,18,26])
 ws.cell(row=11,column=1,value="Implementation vs Capacity: Implementation helps YOUR team execute — the work stays theirs (e.g., Shrewsbury). Capacity means we hold the role ourselves until it transfers back (e.g., Swanzey). Same discipline; different level of who holds the Chair.").font=Font(italic=True,size=9,color=MUTEC)
 ws.cell(row=11,column=1).alignment=WRAP; ws.merge_cells("A11:E12")
+ws.cell(row=13,column=1,value="Entry below the Map: the Permit & Bridge tab adds a public-facing ladder — Tier 0 Public Permit Helper (free / very low cost) and Tier 1 Permit Path Scan ($250–$750) — that builds trust and feeds these paid offers.").font=Font(italic=True,size=9,color=MUTEC)
+ws.cell(row=13,column=1).alignment=WRAP; ws.merge_cells("A13:E14")
 
 # ===== PERMIT & BRIDGE =====
-ws=newtab("Permit & Bridge","Permit & Bridge","This may be the most important thing we do.")
-blocks(ws,4,[
- ("What it is","PublicLogic helps project sponsors move through public systems."),
+ws=newtab("Permit & Bridge","Permit & Bridge","This may be the most important thing we do.  Best line: Permit & Bridge helps the public understand the path and helps project sponsors move through it.")
+r=blocks(ws,4,[
+ ("What it is","PublicLogic helps project sponsors move through public systems — and helps the public understand the path before they get there."),
  ("That includes","Permits · boards · funding · grants · stakeholder processes · implementation planning · public-sector coordination."),
  ("Why it exists","Developers, nonprofits, municipalities, and project sponsors usually understand their project. They often don't understand the public systems around it — the permits, the boards, the funding rules, the politics. That gap is where good projects stall."),
  ("What we become","The bridge. We translate between the project and the public system, so the project keeps moving and nothing falls through the cracks between the people involved."),
  ("Why it matters to us","It is the clearest, most sellable version of 'helping projects move through public systems' — and it's exactly the work we've already done in Sutton, Shrewsbury, Phillipston, and Michigan LTC."),
-],h=46)
+],h=42)
+# two sides
+r+=1
+ws.cell(row=r,column=1,value="TWO SIDES OF THE SAME BRIDGE").font=SEC; ws.merge_cells(f"A{r}:B{r}"); r+=1
+htable(ws,r,["Layer","Audience","Offer"],
+ [
+ ["Public Help Layer","Residents · small owners · nonprofits","“Can I do X in my backyard / property / building?”  Cheap, simple, framework-guided."],
+ ["Project Sponsor Layer","Developers · towns · nonprofits · businesses","White-glove permit path · stewardship map · grant / funding strategy · implementation support."],
+ ],[22,34,62])
+r+=4
+# public output layer
+ws.cell(row=r,column=1,value="PERMIT & BRIDGE: PUBLIC OUTPUT LAYER").font=SEC; ws.merge_cells(f"A{r}:C{r}"); r+=1
+ws.cell(row=r,column=1,value="The free/cheap tier is NOT AI consulting. It is a guided public framework that helps people understand the path. PublicLogic can support a simple public-facing assistance layer for common questions:").font=BODY
+ws.cell(row=r,column=1).alignment=WRAP; ws.merge_cells(f"A{r}:C{r+1}"); ws.row_dimensions[r].height=30; r+=2
+for q in ["“Can I put this in my backyard?”","“Do I need a permit?”","“Who do I ask first?”",
+ "“What board or office handles this?”","“What documents will I likely need?”",
+ "“Is this a zoning, building, health, conservation, or licensing issue?”"]:
+    c=ws.cell(row=r,column=1,value="•  "+q); c.font=BODY; c.alignment=WRAP; ws.merge_cells(f"A{r}:C{r}"); r+=1
+r+=1
+ws.cell(row=r,column=1,value="This layer should be low-cost or free — its purpose is access, trust, and triage. It does NOT replace the municipality, inspector, planner, or permitting authority. It helps people ask better questions, gather the right information, and avoid wasting time.").font=Font(italic=True,size=11,color=GREEN)
+ws.cell(row=r,column=1).alignment=WRAP; ws.merge_cells(f"A{r}:C{r+1}"); ws.row_dimensions[r].height=30; r+=3
+# offer ladder
+ws.cell(row=r,column=1,value="THE OFFER LADDER  —  free tier creates trust; paid tiers handle complexity").font=SEC; ws.merge_cells(f"A{r}:C{r}"); r+=1
+htable(ws,r,["Tier","Product","Price"],
+ [
+ ["0","Public Permit Helper / “Can I Do This?”","Free or very low cost"],
+ ["1","Permit Path Scan","$250 – $750"],
+ ["2","Stewardship Map","$2,500 – $7,500"],
+ ["3","Permit & Bridge Sprint","$7,500 – $15,000"],
+ ["4","White-Glove Implementation","$3,500 – $8,500 / month"],
+ ["5","Funding / Grant Build","$5,000 – $25,000 (scope-dependent)"],
+ ],[8,46,34])
+r+=8
+ws.cell(row=r,column=1,value="Permit & Bridge helps the public understand the path and helps project sponsors move through it.  That's the full product.").font=Font(bold=True,size=12,color=GOLD)
+ws.cell(row=r,column=1).alignment=WRAP; ws.merge_cells(f"A{r}:C{r+1}")
 
 # ===== PROOF =====
 ws=newtab("Proof","Proof — We Can Show It","Stewardship is provable, not just stated. Each tied to work we've actually done.")
