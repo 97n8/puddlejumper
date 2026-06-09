@@ -83,18 +83,23 @@ table(ws,4,
  ["Capacity Support","Provide the institutional capacity to carry the work — directly.","Interim / fractional support · special-project support · administrative capacity · program coordination  (Swanzey · Hubbardston · Sutton · Michigan LTC)","Embedded Capacity Plan · Role / Coverage Map · Coordination Cadence · Continuity Handoff","Hold the Chair so critical functions stay covered through turnover and transition."],
  ],
  [22,34,40,40,40])
+ws.cell(row=10,column=1,value="Implementation Support vs Capacity Support — which one?").font=SEC
+ws.cell(row=11,column=1,value="Implementation Support = we help YOUR team execute — facilitation, accountability, coordination; the work stays theirs (e.g., Shrewsbury). Capacity Support = PublicLogic steps IN and holds the role or function directly — interim / fractional; we carry it until it transfers back (e.g., Swanzey). Same stewardship discipline; different level of who holds the Chair.").font=Font(size=11,color=SLATE)
+ws.cell(row=11,column=1).alignment=WRAP; ws.merge_cells("A11:E12")
 
 # ---- SIGNATURE OFFERINGS (editable scope/fee) ----
 ws=tab("Signature Offerings","Signature Offerings","Three ways to start. Yellow = fill in scope, duration, and fee per engagement.")
 table(ws,4,
- ["Offering","Purpose","Output","Transfer Asset Created","Scope (fill)","Duration (fill)","Fee (fill)"],
+ ["Offering","Purpose","Output","Transfer Asset Created","Scope (typical)","Duration (typical)","Fee (typical)"],
  [
- ["Project Development Sprint","Move an idea into an actionable project.","Project Development Roadmap","CaseSpace + reusable Charter/Scope template","","",""],
- ["Funding Strategy Sprint","Identify realistic funding pathways and readiness requirements.","Funding Roadmap","Reusable funding scan + roadmap workbook","","",""],
- ["Implementation Support Partnership","Provide coordination and stewardship capacity through implementation.","Implementation Framework + Accountability Structure","VAULT continuity record + accountability structure","","",""],
- ["Capacity Support Engagement","Provide interim / fractional capacity to carry a function or special project.","Embedded Capacity Plan + Continuity Handoff","Role/Coverage Map + Continuity Handoff","","",""],
+ ["Project Development Sprint","Move an idea into an actionable project.","Project Development Roadmap","CaseSpace + reusable Charter/Scope template","Map + charter + roadmap, one initiative","4–6 weeks","$18K–$35K (fixed)"],
+ ["Funding Strategy Sprint","Identify realistic funding pathways and readiness requirements.","Funding Roadmap","Reusable funding scan + roadmap workbook","Funding scan + roadmap + readiness","3–5 weeks","$15K–$28K (fixed)"],
+ ["Implementation Support Partnership","Provide coordination and stewardship capacity through implementation.","Implementation Framework + Accountability Structure","VAULT continuity record + accountability structure","Coordination + accountability through delivery","6–18 months","$6.5K–$15K / month"],
+ ["Capacity Support Engagement","Provide interim / fractional capacity to carry a function or special project.","Embedded Capacity Plan + Continuity Handoff","Role/Coverage Map + Continuity Handoff","Interim role / special-project capacity","Ongoing / fractional","Day rate or $4K–$12K / month"],
  ],
- [30,36,34,32,22,15,14],editable_cols=(4,5,6))
+ [30,34,30,30,30,16,18],editable_cols=(4,5,6))
+ws.cell(row=10,column=1,value="Typical ranges to anchor a sales conversation — confirm per engagement. All fees are fixed-fee or retainer and non-contingent. Where federal/grant funds pay, the fee rides as an allowable professional-service cost.").font=Font(italic=True,size=9,color="6B6660")
+ws.cell(row=10,column=1).alignment=WRAP; ws.merge_cells("A10:G11")
 
 # ---- THE MODEL ----
 ws=tab("The Model","The Nathan + Allie Model","Institutional systems and human systems are interdependent — projects fail when either is ignored.")
@@ -134,39 +139,42 @@ table(ws,4,
  [18,40,42,44])
 
 # ---- TARGET MARKETS / PIPELINE (decision tool, ranked) ----
-ws=tab("Pipeline & Flow","Target Pipeline & Engagement Flow","A decision tool, not a list. Fill yellow cells; Weighted Value = Revenue x Probability. Sort to rank.")
-heads=["Segment","Target","Authority to Buy","Relationship","Revenue Potential ($)","Probability","Weighted Value ($)","Next Action"]
+ws=tab("Pipeline & Flow","Target Pipeline & Engagement Flow","Decision tool. Revenue/Probability are ILLUSTRATIVE placeholders to show ranking — replace with your figures. Weighted Value = Revenue x Probability; sort descending to rank.")
+heads=["Pursue","Segment","Target","Authority to Buy","Relationship","Revenue Potential ($)","Probability","Weighted Value ($)","Next Action"]
 piperows=[
- ["Regional Planning Agencies","CMRPC","Yes — active contracts & pipelines","Developing","","",""],
- ["Regional Planning Agencies","MRPC","Yes — active pipelines","Developing","","",""],
- ["Regional Planning Agencies","MVPC","Yes — project pipelines","Cold","","",""],
- ["Regional Planning Agencies","Strafford RPC","Yes","Cold","","",""],
- ["Engineering Firms","Fuss & O'Neill","Yes — buys as sub/teaming","Cold","","",""],
- ["Engineering Firms","Weston & Sampson","Yes — teaming","Cold","","",""],
- ["Engineering Firms","Tighe & Bond","Yes — teaming","Cold","","",""],
- ["Engineering Firms","BETA","Yes — teaming","Cold","","",""],
- ["Municipal Consulting","Community Paradigm (+ similar)","Yes — subcontract","Cold","","",""],
- ["Municipalities","Direct (by relationship)","Yes — direct budget","Warm — existing (Sutton/Shrewsbury/Phillipston)","","",""],
- ["Existing Network","Warm relationships","Varies","Strong — warmest, shortest cycle","","",""],
+ ["NOW","Regional Planning Agencies","CMRPC","Yes — active contracts & pipelines","Developing",60000,0.45,""],
+ ["NOW","Regional Planning Agencies","MRPC","Yes — active pipelines","Developing",50000,0.40,""],
+ ["Qualify","Regional Planning Agencies","MVPC","Yes — project pipelines","Cold",50000,0.25,""],
+ ["Later","Regional Planning Agencies","Strafford RPC","Yes","Cold",40000,0.15,""],
+ ["NOW","Engineering Firms","Fuss & O'Neill","Yes — buys as sub/teaming","Cold",40000,0.30,""],
+ ["Qualify","Engineering Firms","Weston & Sampson","Yes — teaming","Cold",40000,0.20,""],
+ ["Later","Engineering Firms","Tighe & Bond","Yes — teaming","Cold",35000,0.15,""],
+ ["Later","Engineering Firms","BETA","Yes — teaming","Cold",35000,0.15,""],
+ ["Qualify","Municipal Consulting","Community Paradigm (+ similar)","Yes — subcontract","Cold",30000,0.25,""],
+ ["NOW","Municipalities","Direct (by relationship)","Yes — direct budget","Warm — existing (Sutton/Shrewsbury/Phillipston)",35000,0.60,""],
+ ["NOW","Existing Network","Warm relationships","Varies","Strong — warmest, shortest cycle",25000,0.65,""],
 ]
 hrow(ws,4,heads)
 for i,row in enumerate(piperows):
     rr=5+i
-    for ci,val in enumerate(row):
+    pursue,seg,tgt,auth,rel,rev,prob,nxt=row
+    cells=[pursue,seg,tgt,auth,rel,rev,prob,None,nxt]
+    for ci,val in enumerate(cells):
+        if ci==7: continue  # weighted column = formula
         c=ws.cell(row=rr,column=ci+1,value=val); c.border=B; c.alignment=WRAP
-        if ci in (2,3,4,5,7): c.fill=IFILL  # editable
-    # Weighted Value = Revenue (col E=5) x Probability (col F=6)
-    wv=ws.cell(row=rr,column=7,value=f"=IF(AND(ISNUMBER(E{rr}),ISNUMBER(F{rr})),E{rr}*F{rr},0)")
+        if ci in (0,3,4,5,6,8): c.fill=IFILL  # editable: pursue, authority, relationship, revenue, probability, next action
+    ws.cell(row=rr,column=6).number_format='#,##0'   # F revenue
+    ws.cell(row=rr,column=7).number_format='0%'      # G probability
+    wv=ws.cell(row=rr,column=8,value=f"=IF(AND(ISNUMBER(F{rr}),ISNUMBER(G{rr})),F{rr}*G{rr},0)")
     wv.number_format='#,##0'; wv.border=B; wv.font=BOLD; wv.fill=GFILL
-    ws.cell(row=rr,column=6).number_format='0%'
-    ws.cell(row=rr,column=5).number_format='#,##0'
-for col,w in zip("ABCDEFGH",[22,26,26,28,16,11,16,28]): ws.column_dimensions[col].width=w
-ws.freeze_panes="A5"
+    pc=ws.cell(row=rr,column=1); pc.font=Font(bold=True,color=GREEN) if pursue=="NOW" else Font(size=10,color="6B6660")
+for col,w in zip("ABCDEFGHI",[10,22,24,26,30,16,11,16,26]): ws.column_dimensions[col].width=w
+ws.freeze_panes="C5"
 nr=5+len(piperows)+1
-ws.cell(row=nr,column=1,value="How to use: enter Revenue Potential ($) and Probability (%) for each target; Weighted Value computes automatically; sort the table by Weighted Value descending to rank. Then commit to the top 5 for the month.").font=SUB
-ws.cell(row=nr,column=1).alignment=WRAP; ws.merge_cells(f"A{nr}:H{nr+1}")
-ws.cell(row=nr+2,column=1,value="BD principle: don't convince organizations they have a hidden problem — help them solve a known one. Lead with capacity, funding, progress, execution. Warmest relationships first (shortest sales cycle).").font=Font(italic=True,size=9,color=GREEN)
-ws.cell(row=nr+2,column=1).alignment=WRAP; ws.merge_cells(f"A{nr+2}:H{nr+3}")
+ws.cell(row=nr,column=1,value="First-pass focus (June): pursue NOW = CMRPC · MRPC · one lead engineering firm (Fuss & O'Neill) · the warm municipal & existing-network relationships. Qualify the rest through the engagement flow; don't chase 'Later' yet. Replace the illustrative Revenue/Probability with real figures, then sort by Weighted Value and commit to the top 5.").font=Font(italic=True,size=9,color=GREEN)
+ws.cell(row=nr,column=1).alignment=WRAP; ws.merge_cells(f"A{nr}:I{nr+1}")
+ws.cell(row=nr+2,column=1,value="BD principle: don't convince organizations they have a hidden problem — help them solve a known one. Lead with capacity, funding, progress, execution. Warmest relationships first (shortest sales cycle).").font=Font(italic=True,size=9,color="6B6660")
+ws.cell(row=nr+2,column=1).alignment=WRAP; ws.merge_cells(f"A{nr+2}:I{nr+3}")
 # Engagement Flow — the repeatable sales motion
 fr=nr+5
 ws.cell(row=fr,column=1,value="ENGAGEMENT FLOW").font=SEC
@@ -181,7 +189,7 @@ for i,(st,d) in enumerate(flow):
     rr=fr+1+i
     a=ws.cell(row=rr,column=1,value=st); a.font=Font(bold=True,color=GOLD); a.border=B; a.fill=GFILL
     c=ws.cell(row=rr,column=2,value=d); c.alignment=WRAP; c.border=B
-    ws.merge_cells(f"B{rr}:H{rr}")
+    ws.merge_cells(f"B{rr}:I{rr}")
 
 # ---- LESSONS LEARNED ----
 ws=tab("Lessons Learned","Lessons Learned · AI for Impact","People buy outcomes. The methodology matters, but outcomes drive the purchasing decision.")
