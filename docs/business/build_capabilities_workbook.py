@@ -147,6 +147,7 @@ r=blocks(ws,4,[
  ("Why it exists","Developers, nonprofits, municipalities, and project sponsors usually understand their project. They often don't understand the public systems around it — the permits, the boards, the funding rules, the politics. That gap is where good projects stall."),
  ("What we become","The bridge. We translate between the project and the public system, so the project keeps moving and nothing falls through the cracks between the people involved."),
  ("Why it matters to us","It is the clearest, most sellable version of 'helping projects move through public systems' — and it's exactly the work we've already done in Sutton, Shrewsbury, Phillipston, and Michigan LTC."),
+ ("The promise","A project sponsor should leave with a clear path forward, a clear record of how they got there, and a clear understanding of who owns what next."),
 ],h=42)
 # two sides
 r+=1
@@ -157,6 +158,12 @@ htable(ws,r,["Layer","Audience","Offer"],
  ["Project Sponsor Layer","Developers · towns · nonprofits · businesses","White-glove permit path · stewardship map · grant / funding strategy · implementation support."],
  ],[22,34,62])
 r+=4
+# logiccommons box (explicit)
+bx=ws.cell(row=r,column=1,value="LogicCommons — the public access layer"); bx.font=Font(bold=True,color="FFFFFF",size=11); bx.fill=GHFILL; bx.alignment=MID; bx.border=B
+ws.merge_cells(f"A{r}:C{r}"); ws.row_dimensions[r].height=20; r+=1
+lc=ws.cell(row=r,column=1,value="Free templates, checklists, and frameworks that help people understand the path before they need paid help.   LogicCommons helps people start. PublicLogic helps them carry it through.")
+lc.font=Font(size=11,color=SLATE); lc.alignment=WRAP; lc.fill=GFILL; lc.border=B
+ws.merge_cells(f"A{r}:C{r+1}"); ws.row_dimensions[r].height=28; r+=3
 # public output layer
 ws.cell(row=r,column=1,value="PERMIT & BRIDGE: PUBLIC OUTPUT LAYER").font=SEC; ws.merge_cells(f"A{r}:C{r}"); r+=1
 ws.cell(row=r,column=1,value="The free/cheap tier is NOT AI consulting. It is a guided public framework that helps people understand the path. PublicLogic can support a simple public-facing assistance layer for common questions:").font=BODY
@@ -234,6 +241,8 @@ htable(ws,4,["Every engagement creates…","Meaning"],
 ws.cell(row=9,column=1,value="Two tests for every engagement:").font=SEC
 ws.cell(row=10,column=1,value="PublicLogic should be stronger after every engagement.").font=Font(bold=True,size=12,color=GOLD)
 ws.cell(row=11,column=1,value="The client should be less dependent after every engagement.").font=Font(bold=True,size=12,color=GOLD)
+ws.cell(row=12,column=1,value="If neither happens, we are doing consulting instead of stewardship.").font=Font(bold=True,italic=True,size=12,color=GREEN)
+ws.cell(row=12,column=1).alignment=WRAP; ws.merge_cells("A12:B12")
 ws.cell(row=13,column=1,value="The carriers (plain language):  LogicCommons — shared templates & frameworks.   CaseSpaces — a project's governed record.   PuddleJumper — the workflow/process layer.   VAULT — how knowledge is preserved so it survives turnover.").font=Font(size=11,color=SLATE)
 ws.cell(row=13,column=1).alignment=WRAP; ws.merge_cells("A13:B14")
 
