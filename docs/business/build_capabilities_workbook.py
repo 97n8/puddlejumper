@@ -223,6 +223,27 @@ for p in proms:
 ws.column_dimensions["A"].width=110
 for rr in range(4,r): ws.row_dimensions[rr].height=30
 
+# ---- START HERE (the one-page summary; placed first) ----
+ws=wb.create_sheet("Start Here")
+ws["A1"]="PUBLICLOGIC — Start Here"; ws["A1"].font=Font(bold=True,size=16,color=SLATE)
+ws["A2"]="The whole workbook on one page. Depth is in the tabs that follow — only if you want it."; ws["A2"].font=SUB
+sh=[
+ ("North Star","Every system should make it easier for the next person to do the right thing."),
+ ("The bridge","Implementation is the service. Institutional Stewardship is the method."),
+ ("Why different","Most systems manage work. PublicLogic helps steward what has to survive the work."),
+ ("What we do","Project Development · Funding Strategy · Implementation Support · Capacity Support."),
+ ("We prove it","Continuity · record · readiness · adoption · outcome (see Proof)."),
+ ("How to start","Signal → Fit → Map → Build → Sustain → Prove. Begin with a paid Map."),
+ ("Where to look","Positioning · Service Catalog · Signature Offerings (pricing) · Proof · Pipeline & Flow."),
+]
+r=4
+for k,v in sh:
+    a=ws.cell(row=r,column=1,value=k); a.font=HDR; a.fill=GHFILL; a.border=B; a.alignment=Alignment(wrap_text=True,vertical="center")
+    c=ws.cell(row=r,column=2,value=v); c.alignment=WRAP; c.border=B; c.fill=CFILL; c.font=Font(size=12,color=SLATE)
+    ws.row_dimensions[r].height=34; r+=1
+ws.column_dimensions["A"].width=18; ws.column_dimensions["B"].width=104
+wb.move_sheet("Start Here",-(len(wb._sheets)-1))  # move to first
+
 out=os.path.join(os.path.dirname(os.path.abspath(__file__)),"final_deck","PublicLogic - Capabilities Workbook (v2.0 2026-06).xlsx")
 os.makedirs(os.path.dirname(out),exist_ok=True)
 wb.save(out); print("wrote",out,"| tabs:",wb.sheetnames)
