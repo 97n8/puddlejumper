@@ -67,6 +67,17 @@ blocks(ws,4,[
  ("9 · Nathan + Allie","Institutional systems + human systems = the intersection. The work fails when either side is ignored."),
  ("10 · Next 12 months","A handful of warm wins, the Map as the first sale, Permit & Bridge as the wedge. Modest and real."),
 ],h=30)
+# How the pieces fit together (the buyer's-eye view)
+ws["A20"]="HOW THE PIECES FIT TOGETHER"; ws["A20"].font=SEC; ws.merge_cells("A20:B20")
+htable(ws,21,["If you say…","…start here"],
+ [
+ ["“I need a template.”","LogicCommons"],
+ ["“I have a question / how do I navigate this?”","Permit & Bridge"],
+ ["“I have a project — what actually needs to happen?”","Stewardship Map"],
+ ["“I need help getting this done.”","PublicLogic (Sprints · Implementation · Capacity)"],
+ ],[48,60])
+ws.column_dimensions["A"].width=48; ws.column_dimensions["B"].width=104
+ws.freeze_panes=None
 
 # ===== WHY WE EXIST =====
 ws=newtab("Why We Exist","Why PublicLogic Exists","We didn't start from a theory. We started from the work.")
@@ -106,7 +117,7 @@ r=blocks(ws,4,[
  ("What makes us different","Most systems manage work. PublicLogic helps steward what has to survive the work."),
  ("What we are NOT","Not a grant-writing firm. Not an AI consulting firm. Not a software company. Not a planning firm. Not a generic implementation consultant. The work touches all of those, but none of them is the point."),
  ("Clients buy / we deliver","Clients buy funding, progress, and capacity. We deliver those — plus the stewardship that makes them last. That's not a contradiction; it's the business model."),
- ("How we deliver","PublicLogic provides project development, funding strategy, implementation support, and capacity support through Continuity & Stewardship Systems — the records, processes, templates, environments, and accountability structures that help important work survive turnover and change."),
+ ("How we deliver","PublicLogic delivers services through Continuity & Stewardship Systems designed to preserve knowledge, accountability, continuity, and momentum. (Defined once on the Transfer tab — it's the plumbing, not a product.)"),
 ],h=40)
 # equation
 ws.cell(row=r+1,column=1,value="THE EQUATION").font=SEC
@@ -246,7 +257,7 @@ ws.cell(row=11,column=1,value="The client should be less dependent after every e
 ws.cell(row=12,column=1,value="If neither happens, we are doing consulting instead of stewardship.").font=Font(bold=True,italic=True,size=12,color=GREEN)
 ws.cell(row=12,column=1).alignment=WRAP; ws.merge_cells("A12:B12")
 ws.cell(row=14,column=1,value="HOW WE DELIVER — Continuity & Stewardship Systems").font=SEC; ws.merge_cells("A14:B14")
-ws.cell(row=15,column=1,value="The records, processes, templates, environments, and accountability structures that help important work survive turnover, changing priorities, and organizational change.   Continuity = the outcome.  Stewardship = the practice.  Systems = the mechanism.").font=Font(size=11,color=SLATE)
+ws.cell(row=15,column=1,value="The records, processes, templates, environments, accountability structures, and proof needed to help important work survive turnover, changing priorities, and organizational change.   Continuity = the outcome.  Stewardship = the practice.  Systems = the mechanism.").font=Font(size=11,color=SLATE)
 ws.cell(row=15,column=1).alignment=WRAP; ws.merge_cells("A15:B16"); ws.row_dimensions[15].height=44
 ws.cell(row=17,column=1,value="PublicLogic engagements create Continuity & Stewardship Systems tailored to the project, organization, or initiative. The exact components vary; the goal is always the same — make it easier for the next person to do the right thing.").font=Font(size=11,color=SLATE)
 ws.cell(row=17,column=1).alignment=WRAP; ws.merge_cells("A17:B18"); ws.row_dimensions[17].height=30
