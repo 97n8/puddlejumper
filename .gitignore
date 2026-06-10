@@ -42,3 +42,7 @@ _tmp_*
 
 # AI tool worktrees
 .claude/worktrees/
+
+# Generated site preview mock (regenerable from the build)
+docs/business/site_mock/
+docs/business/PublicLogic_Site_Mock.zip
