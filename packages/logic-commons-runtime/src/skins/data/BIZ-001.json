@@ -1,0 +1,17 @@
+{
+  "skin_key": "BIZ-001",
+  "domain": "biz",
+  "field_labels": {
+    "subject_ref": "Project task",
+    "needed_by": "Deliver by"
+  },
+  "required_fields": ["subject_ref", "needed_by"],
+  "pools": {
+    "owner": { "role": "assignee" },
+    "decider": { "role": "reviewer" }
+  },
+  "default_owner": "owner",
+  "derived_holds": [
+    { "field": "subject_ref", "hold_kind": "scheduled", "resource_prefix": "project" }
+  ]
+}

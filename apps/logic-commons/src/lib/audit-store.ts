@@ -45,6 +45,10 @@ let _db: Database.Database | null = null;
 
 /** Override the data directory. Call before any store operations. */
 export function configureAuditStore(dataDir: string): void {
+  if (_db) {
+    _db.close();
+    _db = null;
+  }
   _dataDir = dataDir;
 }
 

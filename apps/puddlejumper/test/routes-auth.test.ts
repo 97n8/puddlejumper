@@ -10,6 +10,7 @@ import { createAuthRoutes } from '../src/api/routes/auth.js';
 import { createSessionRoutes } from '@publiclogic/logic-commons';
 import { createLocalUser, resetLocalUserDb } from '../src/api/localUsersStore.js';
 import { verifyJwt } from '@publiclogic/core';
+import { getDb, migrate, type DatabaseHandle } from '@pj/db';
 
 // ── Test helpers ────────────────────────────────────────────────────────────
 
@@ -79,6 +80,17 @@ async function getAuthToken() {
     { sub: TEST_USER.id, name: TEST_USER.name, role: TEST_USER.role, permissions: TEST_USER.permissions, tenants: TEST_USER.tenants, tenantId: TEST_USER.tenantId },
     { expiresIn: '1h' },
   );
+}
+
+function freshCanonDb(): DatabaseHandle {
+  const db = getDb(':memory:')
+  migrate(db)
+  db.prepare('INSERT INTO tenants (id, name, canon_version) VALUES (?, ?, ?)').run(
+    'publiclogic',
+    'PublicLogic',
+    '1.0.0',
+  )
+  return db
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -185,6 +197,69 @@ describe('Auth routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
       expect(res.body.user.mustChangePassword).toBe(false);
+    });
+
+    it("maps a local user onto the canonical identity when the canon bridge is configured", async () => {
+      const canonDb = freshCanonDb()
+      canonDb.prepare(
+        `INSERT INTO identities (identity_id, tenant_id, kind, active, email, display_name)
+         VALUES (?, ?, 'person', 1, ?, ?)`,
+      ).run('id-nate', 'publiclogic', 'nate@publiclogic.org', 'Nate Boudreau')
+
+      await createLocalUser(TEST_DATA_DIR, {
+        username: 'nate',
+        name: 'Nate Boudreau',
+        email: 'nate@publiclogic.org',
+        temporaryPassword: TEST_PASSWORD,
+        mustChangePassword: false,
+      });
+
+      const app = buildApp({
+        builtInLoginEnabled: false,
+        loginUsers: [],
+        canonDb,
+        canonTenantId: 'publiclogic',
+      });
+
+      const res = await request(app)
+        .post('/api/login')
+        .set('X-PuddleJumper-Request', 'true')
+        .send({ username: 'nate', password: TEST_PASSWORD });
+
+      expect(res.status).toBe(200);
+      const cookies = res.headers['set-cookie'];
+      const jwtCookie = (Array.isArray(cookies) ? cookies : [cookies]).find((c: string) => c.startsWith('jwt='));
+      const token = jwtCookie!.match(/^jwt=([^;]+)/)?.[1];
+      const claims = await verifyJwt(token!);
+      expect(claims.sub).not.toBe('id-nate');
+      expect((claims as any).canonIdentityId).toBe('id-nate');
+      expect((claims as any).userId).toBe('id-nate');
+      expect(claims.tenantId).toBe('publiclogic');
+    });
+
+    it("fails closed when a canon-bound local user has no canonical identity", async () => {
+      const canonDb = freshCanonDb()
+      await createLocalUser(TEST_DATA_DIR, {
+        username: 'allie',
+        name: 'Allie',
+        email: 'allie@publiclogic.org',
+        temporaryPassword: TEST_PASSWORD,
+      });
+
+      const app = buildApp({
+        builtInLoginEnabled: false,
+        loginUsers: [],
+        canonDb,
+        canonTenantId: 'publiclogic',
+      });
+
+      const res = await request(app)
+        .post('/api/login')
+        .set('X-PuddleJumper-Request', 'true')
+        .send({ username: 'allie', password: TEST_PASSWORD });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toContain('not provisioned');
     });
 
     it('returns 503 when no users configured', async () => {

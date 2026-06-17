@@ -1,0 +1,26 @@
+{
+  "skin_key": "BIZ-002",
+  "domain": "biz",
+  "field_labels": {
+    "subject_ref": "Project task",
+    "needed_by": "Client due"
+  },
+  "required_fields": ["subject_ref", "needed_by"],
+  "pools": {
+    "owner": { "role": "assignee" },
+    "closer": { "role": "administrator" },
+    "decider": { "role": "reviewer" }
+  },
+  "transitions": {
+    "route": {
+      "action": "process.assign"
+    },
+    "close": {
+      "action": "process.close"
+    }
+  },
+  "default_owner": "owner",
+  "derived_holds": [
+    { "field": "subject_ref", "hold_kind": "scheduled", "resource_prefix": "project" }
+  ]
+}

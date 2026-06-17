@@ -1,0 +1,17 @@
+{
+  "skin_key": "STAY-003",
+  "domain": "stay",
+  "field_labels": {
+    "subject_ref": "Owner task",
+    "needed_by": "Guest promise by"
+  },
+  "required_fields": ["subject_ref"],
+  "pools": {
+    "owner": { "role": "assignee" },
+    "approver": { "role": "approver" }
+  },
+  "default_owner": "owner",
+  "derived_holds": [
+    { "field": "subject_ref", "hold_kind": "derived", "resource_prefix": "property" }
+  ]
+}
