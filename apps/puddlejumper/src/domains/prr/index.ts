@@ -20,9 +20,11 @@ export {
   transitionPRR,
   closePRR,
   updateFields,
+  rebuildProjectionFromAudit,
   type CreatePRRInput,
   type ListPRRFilters,
   type UpdateFieldsResult,
+  type RebuildProjectionResult,
 } from './prr.store.js';
 
 export {
