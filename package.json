@@ -28,7 +28,7 @@
     "db:backup": "tsx apps/puddlejumper/src/api/sqliteMaintenance.ts backup",
     "db:migrate": "node --import tsx apps/logic-commons/bin/migrate.mjs up",
     "smoke": "./scripts/smoke-test.sh",
-    "ci": "turbo run build typecheck --filter=!@gpr/logicos"
+    "ci": "turbo run build typecheck test --filter=!@gpr/logicos"
   },
   "devDependencies": {
     "turbo": "^2.5.4",
