@@ -7,10 +7,10 @@ import { pathToFileURL } from "node:url";
 const repoRoot = path.resolve(new URL("../..", import.meta.url).pathname);
 dotenv.config({ path: path.join(repoRoot, ".env") });
 
-const {
-  runPuddleJumperMigrations,
-  markPuddleJumperMigrationApplied,
-} = await import("../../puddlejumper/src/api/migrations.ts");
+// Keep the namespace (don't destructure) and call through it at runtime, so
+// tests can spy on these functions. Destructuring captures the originals at
+// import time, before any spy is installed.
+const migrations = await import("../../puddlejumper/src/api/migrations.ts");
 
 export function parseArgs(argv) {
   const [command = "up", ...rest] = argv;
@@ -40,12 +40,12 @@ function resolveCliPaths() {
   };
 }
 
-export async function main(argv = process.argv.slice(2)): Promise<void> {
+export async function main(argv = process.argv.slice(2)) {
   const { dataDir, prrDbPath, approvalDbPath } = resolveCliPaths();
   const { command, args } = parseArgs(argv);
 
   if (command === "up") {
-    const result = runPuddleJumperMigrations({
+    const result = migrations.runPuddleJumperMigrations({
       dataDir,
       prrDbPath,
       approvalDbPath,
@@ -64,7 +64,7 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
         "Usage: migrate.mjs mark-applied --database <prr|approvals|audit> --filename <migration.sql> --out-of-band-applied",
       );
     }
-    const record = markPuddleJumperMigrationApplied({
+    const record = migrations.markPuddleJumperMigrationApplied({
       dataDir,
       prrDbPath,
       approvalDbPath,

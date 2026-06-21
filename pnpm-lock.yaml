@@ -29,6 +29,9 @@ importers:
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
+      dotenv:
+        specifier: ^16.0.0
+        version: 16.6.1
       express:
         specifier: ^4.21.2
         version: 4.22.1
@@ -242,6 +245,12 @@ importers:
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.41
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      supertest:
+        specifier: ^7.1.4
+        version: 7.2.2
       vitest:
         specifier: ^1.0.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.41)(jsdom@28.1.0(@noble/hashes@1.8.0))(lightningcss@1.32.0)
