@@ -16,7 +16,7 @@ Legend:
 |----|-------------------------------------------------------------------------|---------|----------|
 | 1  | SQLite + better-sqlite3, WAL mode. No Postgres / Redis / managed DB.    | LIVE    | `apps/puddlejumper/src/api/migrations.ts` opens DBs with `journal_mode = WAL`. `ship.sh` blocks banned deps. |
 | 2  | `audit_events` is append-only. SQLite triggers enforce.                 | LIVE    | Both triggers defined in `apps/logic-commons/src/lib/audit-store.ts` and in `pj/canon/migrations/001_schema_init.sql`. `ship.sh` verifies. |
-| 3  | PRR state names are statutory: received→…→closed.                       | PARTIAL | PRR storage exists (`apps/puddlejumper/src/prr/store.ts`); state machine in code does not yet line up 1:1 with the seven canon states. |
+| 3  | PRR state names are statutory: received→…→closed.                       | LIVE    | Canon state machine at `apps/puddlejumper/src/domains/prr/prr.machine.ts` enforces the seven states 1:1 with a closed transition table; store/routes drive it. Supersedes legacy `apps/puddlejumper/src/prr/store.ts`. |
 | 4  | No "wren" anywhere in code.                                             | LIVE    | `ship.sh` word-boundary sweep clean (only false-positive substring is "Lawrence"). |
 | 5  | No `@vercel/kv` anywhere.                                               | LIVE    | `ship.sh` sweep clean. |
 | 6  | SYNCHRON8 is PJ-native. Not n8n / BullMQ.                               | PARTIAL | `apps/puddlejumper/src/syncronate/*` is PJ-native; no n8n / BullMQ deps. Intent dispatch not yet wired. |
@@ -122,45 +122,32 @@ Captured by `PJ_SHIP_SOFT_TYPECHECK=1 ./scripts/ship.sh` after Phase 0.
 | STATUS.md present                  | PASS   |       |
 | `turbo typecheck` (excl. RETIRE)   | PASS   | 4 packages clean (`@publiclogic/core`, `@publiclogic/vault`, `@publiclogic/logic-commons`, `@publiclogic/puddlejumper`) |
 | `turbo build` (excl. RETIRE)       | PASS   | same 4 packages build cleanly |
-| `turbo test` (excl. RETIRE)        | FAIL   | one pre-existing failure — see below |
+| `turbo test` (excl. RETIRE)        | PASS   | whole-monorepo suite green (16/16 test tasks) — see resolved section below |
 
 `@gpr/logicos` is RETIRE per spec and is filtered out of all three turbo
 runs (matching the existing `pnpm run ci` script).
 
-### Pre-existing test failures — not in scope
+### Pre-existing test failures — RESOLVED
 
-These four test files fail today and are tolerated by `scripts/ship.sh` via
-an explicit allow-list. Any **new** test failure is still a hard fail.
+The four test files previously tolerated by `scripts/ship.sh` are now fixed,
+and CI (`pnpm run ci`) runs `turbo run … test`, so a red suite blocks merges.
 
-The set was uncovered during Phase 2: prior gate runs ran `turbo` without
-`--continue`, so the first failing package cancelled the others mid-stream
-and the gate believed only one file was broken. `ship.sh` now passes
-`--continue` to turbo so the picture is honest.
+1. **`packages/core/test/auth.test.ts`** — added the missing `supertest` +
+   `@types/supertest` devDependencies to `packages/core/package.json`.
 
-1. **`packages/core/test/auth.test.ts`** — imports `supertest` but the dep
-   is missing from `packages/core/package.json` (declared in two sibling
-   packages). Fix is one-line: add `supertest` + `@types/supertest` to the
-   core package's devDependencies.
+2. **`apps/logic-commons/bin/migrate.test.ts`** — `migrate.mjs` had a
+   TypeScript return annotation in a `.mjs` file (invalid JS) and imported
+   `dotenv` without declaring it; both fixed. The CLI now calls the
+   migrations module through its namespace (not a destructured binding) and
+   the test aligns its specifier + uses `clearAllMocks` so describe-scoped
+   spies survive past the first test.
 
-2. **`apps/logic-commons/bin/migrate.test.ts`** — pre-existing failure in
-   the legacy migration runner CLI test. Not yet diagnosed.
-
-3. **`apps/puddlejumper/src/api/migrations.test.ts`** — 2 tests fail with
-   `Failed to apply migration … no such table: main.audit_events` and
-   `UNIQUE constraint failed: schema_migrations.filename`. Root cause is
-   the audit-store module-level singleton (`_db` / `_dataDir` in
-   `apps/logic-commons/src/lib/audit-store.ts`): when test re-runs change
-   `_dataDir`, the cached `_db` connection still points at the prior path,
-   so migrations against the new audit DB find no `audit_events` table
-   and the prior DB sees a duplicate-PK insert.
-
-4. **`apps/puddlejumper/test/tier-enforcement.test.ts`** — 14 tests fail
-   for the same audit-store singleton reason as (3). Passes in isolation.
-
-A proper fix is to reset the audit-store singleton between test files
-(or to inject the DB handle instead of using module-level state). That
-refactor is structural and outside Phase 2 scope; it is queued for the
-phase that next touches `apps/logic-commons`.
+3. **`apps/puddlejumper/src/api/migrations.test.ts`** & **4. `tier-enforcement.test.ts`**
+   — the audit-store module-level singleton (`_db` / `_dataDir` in
+   `apps/logic-commons/src/lib/audit-store.ts`) leaked across test files.
+   Fixed two ways: `configureAuditStore()` now closes the cached handle when
+   the data dir changes, and the app vitest config isolates each test file in
+   its own forked process. Full app suite: 674 passed; whole monorepo: green.
 
 ## Resolved decisions (formerly open)
 
