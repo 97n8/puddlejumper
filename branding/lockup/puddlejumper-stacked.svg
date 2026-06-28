@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 420" role="img" aria-label="PuddleJumper stacked lockup">
+  <circle cx="260" cy="116" r="76" fill="#16489E"/>
+  <circle cx="252" cy="96" r="25" fill="#F4A81D"/>
+  <path d="M272 96l29 10-29 10z" fill="#F26A1B"/>
+  <path d="M212 132c24-29 58-39 94-23l-11 18c-26-10-50-4-68 17z" fill="#2EA82F"/>
+  <text x="62" y="258" font-family="Arial, sans-serif" font-size="64" font-weight="800" fill="#16489E">Puddle</text>
+  <text x="250" y="258" font-family="Arial, sans-serif" font-size="64" font-weight="800" fill="#2EA82F">Jumper</text>
+  <text x="166" y="310" font-family="Arial, sans-serif" font-size="26" font-weight="600" fill="#6E7B86">by PublicLogic</text>
+</svg>

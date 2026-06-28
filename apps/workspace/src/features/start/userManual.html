@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workspace — User Manual</title>
+  <style>
+    :root {
+      --brand: #1a56db;
+      --brand-light: #e8f0fe;
+      --brand-dark: #1240a8;
+      --civic: #0f766e;
+      --civic-light: #ccfbf1;
+      --warn: #b45309;
+      --warn-light: #fef3c7;
+      --danger: #dc2626;
+      --danger-light: #fef2f2;
+      --success: #166534;
+      --success-light: #dcfce7;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --bg: #f9fafb;
+      --white: #ffffff;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    nav {
+      width: 264px;
+      flex-shrink: 0;
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 24px 0 48px;
+    }
+
+    nav .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    nav .logo .icon {
+      width: 32px; height: 32px;
+      background: var(--brand);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 800; font-size: 15px;
+    }
+    nav .logo-text { line-height: 1.2; }
+    nav .logo-text .name { font-weight: 700; font-size: 14px; }
+    nav .logo-text .sub { font-size: 11px; color: var(--muted); }
+
+    nav h3 {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      padding: 14px 20px 4px;
+    }
+    nav a {
+      display: block;
+      padding: 5px 20px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13px;
+      transition: background .12s;
+    }
+    nav a:hover { background: var(--brand-light); color: var(--brand); }
+    nav a.active { color: var(--brand); font-weight: 600; background: var(--brand-light); }
+
+    main {
+      flex: 1;
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 48px 44px 80px;
+    }
+
+    /* ── Typography ── */
+    h1 { font-size: 30px; font-weight: 800; line-height: 1.2; margin-bottom: 8px; }
+    h2 { font-size: 21px; font-weight: 700; margin: 52px 0 16px; padding-top: 12px; border-top: 2px solid var(--border); }
+    h3 { font-size: 16px; font-weight: 700; margin: 28px 0 10px; }
+    h4 { font-size: 14px; font-weight: 600; margin: 18px 0 6px; color: var(--brand); }
+    p  { margin-bottom: 12px; }
+    ul, ol { padding-left: 22px; margin-bottom: 12px; }
+    li { margin-bottom: 5px; }
+    strong { font-weight: 600; }
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #1e40af 0%, #4f46e5 100%);
+      color: white;
+      border-radius: 14px;
+      padding: 36px 40px;
+      margin-bottom: 40px;
+    }
+    .hero h1 { color: white; font-size: 26px; margin-bottom: 6px; }
+    .hero p { color: rgba(255,255,255,0.85); font-size: 15px; margin: 0; max-width: 600px; }
+    .hero .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.28);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      letter-spacing: .04em;
+    }
+
+    /* ── Callouts ── */
+    .callout {
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin: 18px 0;
+      border-left: 4px solid;
+      font-size: 14px;
+    }
+    .callout.tip    { background: var(--brand-light);   border-color: var(--brand);  }
+    .callout.warn   { background: var(--warn-light);    border-color: var(--warn);   }
+    .callout.civic  { background: var(--civic-light);   border-color: var(--civic);  }
+    .callout.danger { background: var(--danger-light);  border-color: var(--danger); }
+    .callout .label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 5px;
+      display: block;
+    }
+    .callout.tip    .label { color: var(--brand);  }
+    .callout.warn   .label { color: var(--warn);   }
+    .callout.civic  .label { color: var(--civic);  }
+    .callout.danger .label { color: var(--danger); }
+
+    /* ── Module cards ── */
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(218px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .module-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .module-card .emoji { font-size: 20px; margin-bottom: 7px; }
+    .module-card h4 { margin: 0 0 4px; font-size: 13.5px; color: var(--text); }
+    .module-card p { font-size: 12.5px; color: var(--muted); margin: 0; }
+    .module-card .url {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--brand);
+      background: var(--brand-light);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    /* ── Steps ── */
+    .steps { margin: 14px 0; }
+    .step {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 18px;
+      align-items: flex-start;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 26px; height: 26px;
+      background: var(--brand);
+      color: white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 12px;
+    }
+    .step-body h4 { margin-top: 1px; font-size: 14px; color: var(--text); }
+    .step-body p { font-size: 13.5px; color: var(--muted); margin: 4px 0 0; }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+    th { background: var(--bg); font-weight: 700; text-align: left; padding: 8px 12px; border: 1px solid var(--border); }
+    td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: top; }
+    tr:nth-child(even) td { background: #f9fafb; }
+
+    /* ── Code ── */
+    code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #1f2937;
+    }
+
+    /* ── Keyboard ── */
+    kbd {
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      padding: 1px 7px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+
+    /* ── Status badge ── */
+    .status {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 11.5px;
+      font-weight: 600;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .status.live { background: var(--success-light); color: var(--success); }
+    .status.beta { background: var(--warn-light);    color: var(--warn);    }
+    .status.planned { background: #f3f4f6;           color: var(--muted);   }
+
+    /* ── Flow diagram ── */
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin: 14px 0;
+      padding: 14px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .flow-step {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 12px;
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+    .flow-arrow { color: var(--muted); font-size: 16px; }
+
+    /* ── Screenshot placeholder ── */
+    .screenshot {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      background: var(--white);
+      padding: 32px 24px;
+      margin: 18px 0;
+      text-align: center;
+    }
+    .screenshot .placeholder-icon { font-size: 32px; margin-bottom: 10px; }
+    .screenshot .placeholder-title { font-weight: 600; font-size: 14px; color: var(--muted); }
+    .screenshot .placeholder-desc { font-size: 12.5px; color: #9ca3af; margin-top: 4px; }
+
+    /* ── Quickstart highlight ── */
+    .qs-step {
+      display: flex;
+      gap: 16px;
+      padding: 14px 16px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+    }
+    .qs-step .qs-time {
+      flex-shrink: 0;
+      width: 48px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--brand);
+      padding-top: 2px;
+    }
+    .qs-step h4 { font-size: 14px; color: var(--text); margin: 0 0 3px; }
+    .qs-step p  { font-size: 13px; color: var(--muted); margin: 0; }
+
+    section { scroll-margin-top: 24px; }
+
+    @media (max-width: 768px) {
+      nav { display: none; }
+      main { padding: 24px 20px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ══ Sidebar ══ -->
+  <nav>
+    <div class="logo">
+      <div class="icon">⚖</div>
+      <div class="logo-text">
+        <div class="name">Workspace</div>
+        <div class="sub">User Manual · v1.0</div>
+      </div>
+    </div>
+
+    <h3>Start Here</h3>
+    <a href="#quickstart">First 15 Minutes</a>
+    <a href="#overview">What is Workspace?</a>
+    <a href="#login">Signing In</a>
+    <a href="#connections">Connecting Services</a>
+    <a href="#navigation">Toolbar & Navigation</a>
+    <a href="#mobile">Mobile Support</a>
+
+    <h3>Civic Environment</h3>
+    <a href="#civic">Civic Governance</a>
+    <a href="#civic-setup">Setup & Configuration</a>
+    <a href="#org-manager">Org Manager</a>
+    <a href="#civic-modules">Live Queues</a>
+    <a href="#future-envs">Future Environments</a>
+
+    <h3>Core Modules</h3>
+    <a href="#casespaces">Workspaces</a>
+    <a href="#vault">Vault (Records)</a>
+    <a href="#formkey">Vault Forms</a>
+    <a href="#intake">Intake</a>
+    <a href="#records">Records</a>
+
+    <h3>Finance & Operations</h3>
+    <a href="#budgeting">Budgeting</a>
+    <a href="#procurement">Procurement</a>
+    <a href="#capital">Capital & Grants (CGM)</a>
+    <a href="#time">Time Tracking</a>
+
+    <h3>Governance</h3>
+    <a href="#boardcompliance">Board Compliance</a>
+    <a href="#watchlayer">Watch Layer</a>
+    <a href="#evidence">Evidence</a>
+    <a href="#clerk">Clerk</a>
+
+    <h3>People & Comms</h3>
+    <a href="#staffhr">Staff & HR</a>
+    <a href="#comms">Communications</a>
+
+    <h3>Platform Tools</h3>
+    <a href="#automations">Automations (Flows)</a>
+    <a href="#builder">Module Builder</a>
+    <a href="#logiccommons">Logic Commons</a>
+    <a href="#logicdash">LogicDASH</a>
+    <a href="#govai">GovAI</a>
+
+    <h3>Account & Admin</h3>
+    <a href="#users">Adding Users & Roles</a>
+    <a href="#data-ownership">Data Ownership</a>
+    <a href="#offline">Offline & Outages</a>
+    <a href="#troubleshooting">Troubleshooting</a>
+
+    <h3>Reference</h3>
+    <a href="#keyboard">Keyboard Shortcuts</a>
+    <a href="#roles">Roles & Permissions</a>
+    <a href="#glossary">Glossary</a>
+    <a href="#support">Support</a>
+  </nav>
+
+  <!-- ══ Main ══ -->
+  <main>
+
+    <div class="hero">
+      <div class="badge">Workspace v1.0 · April 2026 · PublicLogic, Inc.</div>
+      <h1>Workspace User Manual</h1>
+      <p>The complete guide to running your municipality on Workspace — from signing in to sealing a record before a Select Board meeting.</p>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="quickstart">
+      <h2>Your First 15 Minutes in Workspace</h2>
+      <p>This walkthrough follows a <strong>Town Clerk</strong> setting up Workspace for the first time. If you're a Finance Director, DPW head, or Town Administrator — the same path applies, just pick your module in step 4.</p>
+
+      <div class="qs-step">
+        <div class="qs-time">Min 0–2</div>
+        <div>
+          <h4>Sign in with GitHub</h4>
+          <p>Go to <a href="https://os.publiclogic.org" target="_blank">os.publiclogic.org</a> → click <strong>Sign in with GitHub</strong>. You'll be back in Workspace within 30 seconds. Your name and photo appear in the top toolbar.</p>
+        </div>
+      </div>
+
+      <div class="qs-step">
+        <div class="qs-time">Min 2–4</div>
+        <div>
+          <h4>Connect Microsoft 365 or Google (optional but recommended)</h4>
+          <p>Click <strong>Connect</strong> in the toolbar → pick your service → authorize the popup. This lets Workspace file records directly to SharePoint or Google Drive and send notifications.</p>
+        </div>
+      </div>
+
+      <div class="qs-step">
+        <div class="qs-time">Min 4–6</div>
+        <div>
+          <h4>Open the Civic Environment</h4>
+          <p>Click <strong>Civic</strong> in the toolbar (or go to <code>/civic</code>). Select your town from the list. You'll land in the Civic Setup wizard.</p>
+        </div>
+      </div>
+
+      <div class="qs-step">
+        <div class="qs-time">Min 6–10</div>
+        <div>
+          <h4>Configure Org Manager first</h4>
+          <p>Before anything else, open <strong>Org Manager</strong> (<code>/org</code>) and add your key positions: Town Administrator, Finance Director, Town Clerk, Purchasing Agent. Map the 7 governance roles to people. Every other module resolves its approvers from Org Manager — this is the foundation.</p>
+        </div>
+      </div>
+
+      <div class="qs-step">
+        <div class="qs-time">Min 10–13</div>
+        <div>
+          <h4>Configure one module</h4>
+          <p>Return to Civic Setup and configure <strong>Board Compliance</strong> (quickest) or <strong>Records Management</strong>. Set the Responsible Officer, pick your document routing, confirm the retention period. That's it — the module is live.</p>
+        </div>
+      </div>
+
+      <div class="qs-step">
+        <div class="qs-time">Min 13–15</div>
+        <div>
+          <h4>Seal your first record</h4>
+          <p>Open <strong>Vault</strong> (<code>/vault</code>) → upload any document → assign a classification → click <strong>Seal Record</strong>. Workspace assigns a FormKey, computes a SHA-256 hash, and starts the retention clock. The record is now tamper-evident and defense-ready.</p>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="label">✅ You're live</span>
+        After those 15 minutes you have a configured governance module and at least one verified record. The Watch Layer will begin surfacing compliance items as you add more data.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="overview">
+      <h2>What is Workspace?</h2>
+      <p>Workspace is the <strong>PublicLogic</strong> operational platform for regulated organizations — built on the principle that governance, compliance, and records must survive personnel changes, audits, and undocumented process. The first deployed environment is <strong>Civic</strong>, purpose-built for New England municipalities. Additional environments for healthcare organizations, grant-funded nonprofits, and multi-jurisdictional authorities are in development and follow the same architecture.</p>
+
+      <p>Workspace replaces the spreadsheets, email threads, and disconnected software that most organizations use for finance, records, procurement, and board management with a single system that enforces statutory and regulatory obligations automatically.</p>
+
+      <p>Workspace runs at <strong><a href="https://os.publiclogic.org" target="_blank">os.publiclogic.org</a></strong>. The backend API is at <a href="https://api.publiclogic.org" target="_blank">api.publiclogic.org</a>.</p>
+
+      <h3>The One Process</h3>
+      <p>Every action in Workspace — whether it's an invoice, a meeting notice, or a permit — follows the same 8 stages:</p>
+      <div class="flow">
+        <div class="flow-step">📥 Receives</div><div class="flow-arrow">→</div>
+        <div class="flow-step">📂 Opens</div><div class="flow-arrow">→</div>
+        <div class="flow-step">⚙️ Works</div><div class="flow-arrow">→</div>
+        <div class="flow-step">⚖️ Decides</div><div class="flow-arrow">→</div>
+        <div class="flow-step">📋 Records</div><div class="flow-arrow">→</div>
+        <div class="flow-step">📬 Notifies</div><div class="flow-arrow">→</div>
+        <div class="flow-step">🗄 Archives</div><div class="flow-arrow">→</div>
+        <div class="flow-step">🧠 Learns</div>
+      </div>
+      <p>These 8 stages are fixed by design. What you configure is <em>who</em> handles each stage and <em>which statutes</em> govern it. The stages don't change when someone leaves — only the name assigned to that role changes.</p>
+
+      <h3>The Proof Chain</h3>
+      <div class="flow">
+        <div class="flow-step">🗄 VAULT <em>defines it</em></div><div class="flow-arrow">→</div>
+        <div class="flow-step">📋 ARCHIEVE <em>records it</em></div><div class="flow-arrow">→</div>
+        <div class="flow-step">🔒 SEAL <em>proves it didn't change</em></div>
+      </div>
+      <p>Every record is hashed with SHA-256 at the moment of creation. The SEAL system runs server-side and can verify any record's integrity at any time. This is the foundation of Workspace's tamper-evidence story.</p>
+
+      <h3>Two Ways to Use Workspace</h3>
+      <table>
+        <tr><th>Mode</th><th>How to access</th><th>Best for</th></tr>
+        <tr><td><strong>Civic Environment</strong></td><td>Click <strong>Civic</strong> in the toolbar or go to <code>/civic</code></td><td>Town staff running day-to-day municipal operations</td></tr>
+        <tr><td><strong>Standalone Modules</strong></td><td>Click <strong>Modules</strong> in the toolbar to browse individual tools</td><td>Power users accessing a specific tool (Vault, Procurement, Board Compliance) directly</td></tr>
+      </table>
+      <p>Both modes work with the same underlying data. A record sealed in standalone Vault appears in the Civic Records module. A module configured in Civic Setup is the same module you'd reach via the Modules tab.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="login">
+      <h2>Signing In</h2>
+      <p>Workspace authenticates through GitHub. You do not need a separate password.</p>
+
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">
+          <h4>Go to os.publiclogic.org</h4>
+          <p>If you're not signed in, the login screen appears automatically.</p>
+        </div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">
+          <h4>Click "Sign in with GitHub"</h4>
+          <p>You'll be redirected to GitHub. Sign in with your GitHub account and authorize PublicLogic.</p>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">
+          <h4>Return to Workspace</h4>
+          <p>GitHub redirects you back automatically. Your profile photo and name appear in the toolbar — you're in.</p>
+        </div></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="label">💡 Session persistence</span>
+        Your session is maintained by a secure server-side cookie. You stay signed in across browser restarts until you explicitly sign out from the user menu in the toolbar.
+      </div>
+
+      <h3>Signing Out</h3>
+      <p>Click your profile picture or initials in the top-right of the toolbar → <strong>Sign out</strong>. Your session cookie is invalidated immediately.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="connections">
+      <h2>Connecting Services</h2>
+      <p>Workspace integrates with Microsoft 365, Google Workspace, and GitHub. Connecting these unlocks document filing, email routing, notifications, and cloud sync. Connections are optional — Workspace works without them, but modules will tell you what's missing.</p>
+
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">
+          <h4>Click "Connect" in the toolbar</h4>
+          <p>The Connected Services panel opens on the right side of the screen.</p>
+        </div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">
+          <h4>Choose a provider</h4>
+          <p>Click <strong>Connect</strong> next to Microsoft 365, Google, or GitHub.</p>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">
+          <h4>Authorize in the popup</h4>
+          <p>A browser popup opens your provider's login screen. Sign in and grant access. The popup closes automatically when done. <strong>Note:</strong> pop-up blockers must allow os.publiclogic.org for this step to work.</p>
+        </div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">
+          <h4>Confirm the green "Connected" badge</h4>
+          <p>Each connected service shows a green badge. Your provider credentials are stored securely on the server — they never appear in your browser or URL bar.</p>
+        </div></div>
+      </div>
+
+      <table>
+        <tr><th>Service</th><th>What it unlocks</th></tr>
+        <tr><td>🔵 Microsoft 365</td><td>SharePoint file storage, Teams notifications, Outlook email routing for intake, Planner task tracking</td></tr>
+        <tr><td>🔴 Google Workspace</td><td>Google Drive file storage, Gmail routing for intake, Google Docs templates</td></tr>
+        <tr><td>⚫ GitHub</td><td>Repository access, Logic Commons templates, code-backed governance workflows</td></tr>
+      </table>
+
+      <div class="callout warn">
+        <span class="label">⚠ Microsoft 365 Authorization</span>
+        If the Microsoft 365 popup closes without connecting, check that your Microsoft tenant administrator has approved the PublicLogic app in Azure AD. Contact your IT administrator if you see an "approval required" message. See <a href="#troubleshooting">Troubleshooting</a> for more.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="navigation">
+      <h2>Toolbar &amp; Navigation</h2>
+      <p>The Workspace toolbar runs across the top of the screen and stays visible at all times. It has three sections, accessible via tabs:</p>
+
+      <table>
+        <tr><th>Tab</th><th>What's there</th><th>Who sees it</th></tr>
+        <tr><td><strong>Desk</strong></td><td>Home — active workspaces, recent activity, service status, quick-create menu</td><td>All users</td></tr>
+        <tr><td><strong>Modules</strong></td><td>Individual governance tools: Vault, Records, Procurement, Board Compliance, etc.</td><td>All users</td></tr>
+        <tr><td><strong>Platform</strong></td><td>Core platform tools (VAULT, Admin, Audit Log) and builder tools (Flows, FormKey, Builder, GovAI, Logic Commons)</td><td>Admins and owners only</td></tr>
+      </table>
+
+      <h3>URL Bookmarks</h3>
+      <p>Every tool has a direct URL you can bookmark or share:</p>
+      <table>
+        <tr><th>URL</th><th>Tool</th></tr>
+        <tr><td><code>/civic</code></td><td>Civic Governance Environment</td></tr>
+        <tr><td><code>/casespaces</code></td><td>Workspaces</td></tr>
+        <tr><td><code>/vault</code></td><td>Vault (Records)</td></tr>
+        <tr><td><code>/intake</code></td><td>Intake</td></tr>
+        <tr><td><code>/records</code></td><td>Records</td></tr>
+        <tr><td><code>/org</code></td><td>Org Manager</td></tr>
+        <tr><td><code>/budgeting</code></td><td>Budgeting</td></tr>
+        <tr><td><code>/procurement</code></td><td>Procurement</td></tr>
+        <tr><td><code>/boardcompliance</code></td><td>Board Compliance</td></tr>
+        <tr><td><code>/watch</code></td><td>Watch Layer</td></tr>
+        <tr><td><code>/clerk</code></td><td>Clerk</td></tr>
+        <tr><td><code>/capital</code></td><td>Capital Projects &amp; Grants</td></tr>
+        <tr><td><code>/staffhr</code></td><td>Staff &amp; HR</td></tr>
+        <tr><td><code>/comms</code></td><td>Communications</td></tr>
+        <tr><td><code>/formkey</code></td><td>Vault Forms (legacy shortcut)</td></tr>
+        <tr><td><code>/automations</code></td><td>Automations (Flows)</td></tr>
+        <tr><td><code>/commons</code></td><td>Logic Commons</td></tr>
+        <tr><td><code>/dashboard</code></td><td>LogicDASH</td></tr>
+        <tr><td><code>/settings</code></td><td>Settings</td></tr>
+      </table>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="mobile">
+      <h2>Mobile Support</h2>
+      <p>Workspace is designed primarily for desktop use. Most modules work on mobile browsers, with the following exceptions and caveats:</p>
+
+      <table>
+        <tr><th>Feature</th><th>Mobile support</th></tr>
+        <tr><td>Reading records, queues, and status</td><td>✅ Full support</td></tr>
+        <tr><td>Board Compliance — viewing agendas, minutes</td><td>✅ Full support</td></tr>
+        <tr><td>Intake — submitting items</td><td>✅ Full support</td></tr>
+        <tr><td>Vault — uploading files</td><td>✅ Supported (camera upload on iOS/Android)</td></tr>
+        <tr><td>Civic Environment — full desk</td><td>⚠️ Functional but some panels are narrow; recommend landscape orientation</td></tr>
+        <tr><td><strong>Automations (Flows)</strong></td><td>🚫 <strong>Blocked on mobile.</strong> Use a desktop browser to create or edit automation rules.</td></tr>
+        <tr><td>Module Builder &amp; Platform tools</td><td>⚠️ Accessible but not optimized; desktop strongly recommended</td></tr>
+      </table>
+
+      <div class="callout tip">
+        <span class="label">📱 Best mobile experience</span>
+        For Select Board meetings, the Board Compliance and Clerk modules work well on an iPad in landscape mode. Agenda posting and vote recording are fully mobile-compatible.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="civic">
+      <h2>Civic Governance Environment <span class="status live">● Live</span></h2>
+      <p>The Civic Environment is the full municipal governance desk — one screen that replaces a dozen separate tools. It is MGL-compliant by design: retention periods, approval thresholds, and notice requirements are pre-configured per statute.</p>
+
+      <div class="callout civic">
+        <span class="label">⚖ MGL compliance is built in</span>
+        You set the <em>people</em>. Workspace enforces the <em>law</em>. Every module is pre-wired with the relevant Massachusetts General Law statute, so you can't forget a 48-hour posting window or a $10,000 bid threshold — the system catches it first.
+      </div>
+
+      <h3>Eligibility — V1 (Current)</h3>
+      <p>Civic V1 serves Massachusetts municipalities with a population <strong>under 15,000</strong>. This is an intentional V1 constraint — the module configuration, approval chains, and template library are tuned for small-town governance structures (one Finance Director, one Town Clerk, Select Board as the top approval body).</p>
+      <p>Towns in the 15,000–25,000 range are planned for Civic V2. If your town is near that boundary, email info&#64;publiclogic.org — we may be able to configure V1 for you manually while V2 is in development.</p>
+
+      <h3>Getting into the Civic Environment</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">
+          <h4>Click "Civic" in the toolbar → select your town</h4>
+          <p>Search by town name. The system uses Massachusetts DOR codes to identify your municipality precisely.</p>
+        </div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">
+          <h4>Complete Civic Setup (first time only)</h4>
+          <p>The Setup Wizard walks you through each module. You can skip modules and configure them later — the Civic desk opens regardless.</p>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">
+          <h4>Your governance desk is live</h4>
+          <p>All configured modules appear in the left sidebar with live status indicators. Unconfigured modules show in gray with a "Configure" button.</p>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="civic-setup">
+      <h2>Civic Setup &amp; Configuration</h2>
+      <p>The Setup Wizard configures each module once. You can re-open it at any time by clicking the gear icon next to a module name in the Civic sidebar — changing configuration does not affect existing records.</p>
+
+      <h3>What you configure per module</h3>
+      <div class="module-grid">
+        <div class="module-card">
+          <div class="emoji">👤</div>
+          <h4>Responsible Officer</h4>
+          <p>Name, title, and email of the person who owns each module's outcomes. When they leave, update this field — the process continues.</p>
+        </div>
+        <div class="module-card">
+          <div class="emoji">🔄</div>
+          <h4>Process Flow</h4>
+          <p>The steps work moves through: intake → assign → dept approval → authority approval → record → archive.</p>
+        </div>
+        <div class="module-card">
+          <div class="emoji">🗄</div>
+          <h4>Document Routing</h4>
+          <p>Where incoming documents land (SharePoint, Google Drive, or local) and where approved records are filed.</p>
+        </div>
+        <div class="module-card">
+          <div class="emoji">⏱</div>
+          <h4>Retention Period</h4>
+          <p>How long records must be kept per MGL. Pre-filled — override only if your town policy is stricter than the statute.</p>
+        </div>
+        <div class="module-card">
+          <div class="emoji">⚡</div>
+          <h4>Automations</h4>
+          <p>Which events trigger automatic actions: notifications, escalations, filing, and compliance timers.</p>
+        </div>
+        <div class="module-card">
+          <div class="emoji">🏛</div>
+          <h4>Approval Thresholds</h4>
+          <p>Dollar amounts or conditions that route to Select Board, Finance Director, or other authority. MGL defaults pre-filled.</p>
+        </div>
+      </div>
+
+      <h3>Module configuration table</h3>
+      <table>
+        <tr><th>Module</th><th>Status</th><th>MGL</th><th>Key configuration</th></tr>
+        <tr><td>💰 Fiscal Controls &amp; AP</td><td><span class="status live">Live</span></td><td>Ch. 41, §52</td><td>Finance Director, invoice routing, 30-day payment timer, Select Board threshold</td></tr>
+        <tr><td>📋 Procurement</td><td><span class="status live">Live</span></td><td>Ch. 30B</td><td>Purchasing Agent, bid thresholds ($10k / $50k / $100k)</td></tr>
+        <tr><td>📜 Board Compliance</td><td><span class="status live">Live</span></td><td>Ch. 39, §23B</td><td>Town Clerk, 48-hour posting rule, quorum, minutes archival</td></tr>
+        <tr><td>📁 Records Management</td><td><span class="status live">Live</span></td><td>Ch. 66</td><td>Records Officer, public records request routing, retention schedules</td></tr>
+        <tr><td>🏗 Capital Projects</td><td><span class="status live">Live</span></td><td>Ch. 44, §7</td><td>Project Owner, budget authority, board approval triggers</td></tr>
+        <tr><td>🤝 HR &amp; Personnel</td><td><span class="status live">Live</span></td><td>Ch. 31</td><td>HR Director, civil service tracking, disciplinary routing</td></tr>
+        <tr><td>🔔 Communications</td><td><span class="status live">Live</span></td><td>Ch. 39, §23A</td><td>Public notice channels, emergency alert routing</td></tr>
+        <tr><td>⏰ Time &amp; Attendance</td><td><span class="status live">Live</span></td><td>Town policy</td><td>Dept heads, overtime approval, leave tracking</td></tr>
+        <tr><td>💼 CGM (Grants)</td><td><span class="status beta">Beta</span></td><td>Various</td><td>Grant Manager, funding sources, 2-approval disbursement chain — requires Org Manager first</td></tr>
+      </table>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="org-manager">
+      <h2>Org Manager <span class="status live">● Live</span></h2>
+      <p>Org Manager is the structural foundation of Workspace. It maps your organization — departments, positions, and the people holding them. Every other module resolves its approvers, responsible officers, and escalation targets from Org Manager at runtime.</p>
+
+      <div class="callout warn">
+        <span class="label">⚠ Configure Org Manager first</span>
+        If Org Manager is empty, other modules cannot route or escalate. Set it up before running Civic Setup for Finance, Procurement, or CGM. CGM specifically will not function without it.
+      </div>
+
+      <h3>Key concepts</h3>
+      <table>
+        <tr><th>Concept</th><th>What it means</th></tr>
+        <tr><td><strong>Position</strong></td><td>A role in the org chart (Finance Director, Town Clerk). Exists independently of the person holding it — when someone leaves, re-assign the position rather than reconfiguring every module.</td></tr>
+        <tr><td><strong>Governance Role</strong></td><td>One of 7 statutory authorities (see below) that map to specific approval powers in Workspace modules.</td></tr>
+        <tr><td><strong>Acting Start Date</strong></td><td>When someone begins an acting appointment. Tracked separately from permanent appointment — important for civil service compliance.</td></tr>
+      </table>
+
+      <h3>The 7 Governance Roles</h3>
+      <div class="module-grid">
+        <div class="module-card"><div class="emoji">🏛</div><h4>Administrator</h4><p>Town Administrator — top-level escalation authority for all modules</p></div>
+        <div class="module-card"><div class="emoji">💰</div><h4>Finance Authority</h4><p>Town Accountant or Treasurer — final sign-off on fiscal transactions</p></div>
+        <div class="module-card"><div class="emoji">🤝</div><h4>Grant Manager</h4><p>Oversees federal and state grant compliance and disbursements</p></div>
+        <div class="module-card"><div class="emoji">🏗</div><h4>Project Owner</h4><p>Accountable for capital project delivery and budget adherence</p></div>
+        <div class="module-card"><div class="emoji">🔍</div><h4>Auditor</h4><p>Internal or external auditor — read access to all records across all modules</p></div>
+        <div class="module-card"><div class="emoji">📋</div><h4>Procurement Authority</h4><p>Purchasing Agent — approves bids, vendor contracts, and POs above threshold</p></div>
+        <div class="module-card"><div class="emoji">📁</div><h4>Records Authority</h4><p>Town Clerk — custodian of official records, public records requests, and retention</p></div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="civic-modules">
+      <h2>Live Queues — How Modules Work Day-to-Day</h2>
+      <p>Once configured, each Civic module operates as a live queue. Items flow through from intake to archive. You never need to open a spreadsheet to check what's pending.</p>
+
+      <h3>Status indicators</h3>
+      <table>
+        <tr><th>Indicator</th><th>Meaning</th></tr>
+        <tr><td>🟢 Operational</td><td>Module live, configured, all items on track</td></tr>
+        <tr><td>🟡 Attention</td><td>Items approaching a deadline or threshold</td></tr>
+        <tr><td>🔴 Overdue</td><td>One or more items past their statutory deadline</td></tr>
+        <tr><td>⚪ Not Configured</td><td>Module setup not completed — click to configure</td></tr>
+      </table>
+
+      <h3>The queue at a glance</h3>
+      <table>
+        <tr><th>Queue stage</th><th>What it means</th></tr>
+        <tr><td>📥 New</td><td>Received, not yet assigned to anyone</td></tr>
+        <tr><td>🟡 Awaiting Approval</td><td>Sent to a role-holder for decision</td></tr>
+        <tr><td>🔵 In Review</td><td>Under active review — someone is working it</td></tr>
+        <tr><td>⚠ Overdue</td><td>Exceeded statutory deadline — Watch Layer will flag this</td></tr>
+        <tr><td>✅ Completed</td><td>Decided, sealed, and archived</td></tr>
+      </table>
+
+      <h3>Compliance Confidence Score</h3>
+      <p>Each module shows a score from 0–100% on LogicDASH. It reflects on-time processing, record completeness, and the absence of overdue flags:</p>
+      <table>
+        <tr><th>Score</th><th>Meaning</th></tr>
+        <tr><td>90–100% 🟢</td><td>Excellent — all items on time, no open flags</td></tr>
+        <tr><td>70–89% 🟡</td><td>Good — minor delays or a few open items</td></tr>
+        <tr><td>50–69% 🟠</td><td>Attention needed — multiple overdue or unrouted items</td></tr>
+        <tr><td>Below 50% 🔴</td><td>At risk — statutory deadlines are being missed</td></tr>
+      </table>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="future-envs">
+      <h2>Future Environments</h2>
+      <p>Civic is the first environment. The platform is designed for any organization that operates under documented authority, regulatory obligation, or public accountability — not only municipalities. Environments in development:</p>
+
+      <div class="module-grid">
+        <div class="module-card">
+          <div class="emoji">🤝</div>
+          <h4>Grants Environment <span class="status planned">Planned</span></h4>
+          <p>Full grant lifecycle for any grantee — application, award, 2 CFR 200 compliance, drawdown, reporting, agency relationship continuity, and closeout. Built for organizations managing federal and state programs without dedicated grants staff.</p>
+        </div>
+        <div class="module-card">
+          <div class="emoji">🏥</div>
+          <h4>Health Environment <span class="status planned">Planned</span></h4>
+          <p>Regulated health and human services organizations — clinical compliance, reporting obligations, state and federal licensing, staff authority documentation, and outcome tracking across multi-site operations.</p>
+        </div>
+        <div class="module-card">
+          <div class="emoji">⚙️</div>
+          <h4>Ops Environment <span class="status planned">Planned</span></h4>
+          <p>Field operations and capital projects — service requests, inspections, asset tracking, multi-party authority documentation, and compliance for organizations running infrastructure programs or public construction.</p>
+        </div>
+      </div>
+      <p>Each environment shares the same Org Manager, VAULT, and records backbone as Civic. Governance roles, authority maps, and obligation registers configured in one environment carry forward automatically.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="casespaces">
+      <h2>Workspaces <span class="status live">● Live</span></h2>
+      <p>Workspaces (also called Case Spaces) are governed collaboration environments for teams or projects. Each workspace has its own members, files, automations, and tool configuration — and maintains its own audit trail.</p>
+
+      <div class="callout tip">
+        <span class="label">📋 Vocabulary note</span>
+        "Workspace" and "Case Space" mean the same thing in Workspace. The UI uses "Workspace." The URL uses <code>/casespaces</code>. These will be unified in a future release.
+      </div>
+
+      <h3>Creating a workspace</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">
+          <h4>Go to /casespaces or click "Environments" in the toolbar</h4>
+          <p>The Workspaces screen shows all environments you have access to.</p>
+        </div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">
+          <h4>Click "+ New Environment" in the left sidebar</h4>
+          <p>A setup sheet opens on the right.</p>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">
+          <h4>Name the workspace and choose a type</h4>
+          <p>Types: Civic, Health, Grants, Ops, or General. The type sets the default modules and templates loaded into the workspace.</p>
+        </div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">
+          <h4>Add members (optional at creation)</h4>
+          <p>You can add members now or later from inside the workspace. Members can be assigned Viewer, Member, Admin, or Owner roles specific to that workspace.</p>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="vault">
+      <h2>Vault <span class="status live">● Live</span></h2>
+      <p>Vault is the governed document store. Every record saved in Vault is immutable — it receives a FormKey, a SHA-256 hash, and a retention tag at creation. The SEAL system verifies the hash server-side at any time, producing proof that the record has not been altered since it was filed.</p>
+
+      <h3>Uploading and sealing a record</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">
+          <h4>Open Vault at /vault</h4>
+          <p>Your governed file library appears. Search, filter by classification, or browse by date.</p>
+        </div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">
+          <h4>Click Upload or drag a file into the panel</h4>
+          <p>Vault accepts PDF, Word, Excel, images, and plain text. File size limit: 100MB.</p>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">
+          <h4>Assign a classification</h4>
+          <p>Choose from: Invoice, Contract, Meeting Minutes, Public Notice, Bid Document, Personnel Record, Evidence, Other.</p>
+        </div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">
+          <h4>Seal the record</h4>
+          <p>Click <strong>Seal Record</strong>. Workspace assigns a FormKey, computes and stores the SHA-256 hash, and starts the retention clock. The record is now tamper-evident.</p>
+        </div></div>
+      </div>
+
+      <h3>Verifying a record</h3>
+      <p>To verify a record hasn't been altered: open the record in Vault → click <strong>Verify Seal</strong>. The system recomputes the hash and compares it to the stored value. You'll see either a green "Record verified — hash matches" or a red warning.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="formkey">
+      <h2>FormKey <span class="status live">● Live</span></h2>
+      <p>FormKey is Workspace's document identification system. Every governed record receives a unique, human-readable key at the moment it is created. The key encodes what the record is, when it was created, and its sequence number.</p>
+
+      <p><strong>Pattern:</strong> <code>TOWN_MODULE_DOCTYPE_YYYY-MM-DD_NNN_V1</code></p>
+      <p><strong>Example:</strong> <code>SUTTON_FISCAL_INVOICE_YYYY-MM-DD_001_V1</code></p>
+
+      <h3>Why FormKey matters</h3>
+      <ul>
+        <li>Every document is findable by ID across all modules — no folder hunting</li>
+        <li>The key is human-readable by design: a Town Clerk can read it aloud at a meeting</li>
+        <li>Cross-module linking: an invoice's FormKey connects to its procurement record, contract, and board vote — one click for the full audit trail</li>
+        <li>Defense-ready: in a public records request or legal proceeding, you can produce any record in under 30 seconds by FormKey</li>
+      </ul>
+
+      <p>The FormKey generator and demo is at <code>/formkey</code>.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="intake">
+      <h2>Intake <span class="status live">● Live</span></h2>
+      <p>Intake is the front door for everything arriving at town hall — invoices, permit applications, public records requests, complaints, and correspondence. When something arrives, Intake logs it, assigns a FormKey, classifies it, and routes it to the right module and person.</p>
+
+      <div class="flow">
+        <div class="flow-step">📥 Arrives</div><div class="flow-arrow">→</div>
+        <div class="flow-step">🔑 FormKey assigned</div><div class="flow-arrow">→</div>
+        <div class="flow-step">🏷 Classified</div><div class="flow-arrow">→</div>
+        <div class="flow-step">➡️ Routed to module</div><div class="flow-arrow">→</div>
+        <div class="flow-step">👤 Assigned to person</div>
+      </div>
+
+      <h3>Intake channels</h3>
+      <table>
+        <tr><th>Channel</th><th>How it works</th></tr>
+        <tr><td>Email</td><td>Configure a dedicated intake address (e.g., invoices@yourtownname.gov) to forward to Intake. Each incoming email creates an intake item automatically.</td></tr>
+        <tr><td>Browser upload</td><td>Drag a file or click Upload in the Intake panel. Works from desktop and mobile.</td></tr>
+        <tr><td>Walk-in scan</td><td>Scan a paper document to a connected scanner and upload from the file system.</td></tr>
+        <tr><td>API</td><td>For developers: POST to the PuddleJumper API endpoint to push items programmatically.</td></tr>
+      </table>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="records">
+      <h2>Records <span class="status live">● Live</span></h2>
+      <p>The Records module is the official archive. All sealed records from every module flow here. Records are organized by classification, retention schedule, module origin, and status.</p>
+
+      <h3>What you can do in Records</h3>
+      <ul>
+        <li><strong>Search</strong> — Full-text search and FormKey lookup across all records</li>
+        <li><strong>Filter</strong> — By module, classification, date range, retention tier, or status</li>
+        <li><strong>Export</strong> — Download one or multiple records (PDF, original format) for FOIA responses or audits</li>
+        <li><strong>Verify</strong> — Run SEAL verification to confirm a record's integrity</li>
+        <li><strong>Transfer</strong> — Move records to permanent archival storage when their active period ends</li>
+      </ul>
+
+      <h3>Public Records Requests (Ch. 66)</h3>
+      <p>When a public records request arrives in Intake, it is automatically routed to Records. MGL Ch. 66 §10 requires an <em>initial response</em> within 10 business days of receipt; extensions are available under the statute for requests that require additional time to fulfill. Workspace starts the clock at Intake, displays a countdown on the item, and escalates to the Records Authority at day 8 if no response has been sent.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="budgeting">
+      <h2>Budgeting <span class="status live">● Live</span></h2>
+      <p>Budgeting tracks appropriations, line items, encumbrances, and expenditures by department. It integrates with Procurement and Fiscal Controls for a live view of what has been voted vs. what has been spent.</p>
+
+      <table>
+        <tr><th>Term</th><th>Meaning</th></tr>
+        <tr><td>Appropriation</td><td>Amount voted by Town Meeting or Select Board for a specific purpose</td></tr>
+        <tr><td>Encumbrance</td><td>Funds committed but not yet paid (e.g., an open purchase order)</td></tr>
+        <tr><td>Expenditure</td><td>Funds actually paid out to a vendor</td></tr>
+        <tr><td>Balance</td><td>Appropriation − Encumbrances − Expenditures = available funds</td></tr>
+      </table>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="procurement">
+      <h2>Procurement <span class="status live">● Live</span></h2>
+      <p>Procurement manages the full MGL Ch. 30B vendor lifecycle: solicitation, bid opening, award, and contract management.</p>
+
+      <h3>MGL Ch. 30B bid thresholds (auto-enforced)</h3>
+      <table>
+        <tr><th>Amount</th><th>Required process</th><th>Workspace behavior</th></tr>
+        <tr><td>Under $10,000</td><td>Written quotes encouraged; verbal acceptable</td><td>No escalation required</td></tr>
+        <tr><td>$10,000 – $50,000</td><td>3 written quotes required</td><td>Routes to Purchasing Agent for quote confirmation</td></tr>
+        <tr><td>$50,000 – $100,000</td><td>Invitation for Bids (IFB) required</td><td>Opens formal bid workflow; notifies legal counsel</td></tr>
+        <tr><td>Over $100,000</td><td>Full public bid with legal advertisement</td><td>Triggers board notification and legal notice workflow</td></tr>
+      </table>
+
+      <div class="callout civic">
+        <span class="label">⚖ Auto-escalation example</span>
+        A $9,800 purchase order will generate a warning before processing: "This amount is $200 below the $10,000 written-quote threshold. Please confirm this is not part of a split purchase order prohibited under Ch. 30B."
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="capital">
+      <h2>Capital Projects &amp; Grants (CGM) <span class="status beta">⚡ Beta</span></h2>
+      <p>The Capital &amp; Grant Management module tracks capital projects and grant awards from inception through final closeout. Every disbursement requires a sequential two-approval chain and is sealed with a hash.</p>
+
+      <div class="callout warn">
+        <span class="label">⚠ Requires Org Manager</span>
+        CGM cannot route, approve, or escalate without live Org Manager data. Configure Org Manager and assign a Grant Manager and Finance Authority before opening CGM cases.
+      </div>
+
+      <table>
+        <tr><th>Object</th><th>What it tracks</th></tr>
+        <tr><td>CGM Case</td><td>The parent project or grant award — the container for everything below</td></tr>
+        <tr><td>Funding Source</td><td>Grant award, bond authorization, or appropriation funding the project</td></tr>
+        <tr><td>Budget</td><td>Line-item project budget with encumbrances and expenditures</td></tr>
+        <tr><td>Disbursement</td><td>Payment requests — require two sequential approvals before release</td></tr>
+        <tr><td>Obligation</td><td>Contractual commitments tied to the project</td></tr>
+        <tr><td>Compliance Report</td><td>Federal and state grant compliance filings (quarterly, annual)</td></tr>
+        <tr><td>Closeout Package</td><td>Final documentation package required to close out the project or grant</td></tr>
+      </table>
+
+      <p>Access at <code>/capital</code>.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="time">
+      <h2>Time Tracking <span class="status live">● Live</span></h2>
+      <p>Time Tracking records staff hours by department and project. It supports overtime approval workflows, leave request routing, and department-head review cycles. Access at <code>/time</code>.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="boardcompliance">
+      <h2>Board Compliance <span class="status live">● Live</span></h2>
+      <p>Board Compliance enforces Massachusetts Open Meeting Law (MGL Ch. 39, §23B) — the statute that governs public notice requirements for all government board meetings.</p>
+
+      <h3>Open Meeting Law requirements</h3>
+      <ul>
+        <li>Meeting notices must be posted <strong>48 hours in advance</strong> (excluding Sundays and legal holidays)</li>
+        <li>Agendas must specify all topics to be discussed — no "other business" catch-all items</li>
+        <li>Minutes must be approved and made available in a reasonable time</li>
+        <li>Executive sessions require a specific statutory purpose, a recorded vote to enter, and a statement that the discussion will remain confidential</li>
+      </ul>
+
+      <h3>What Workspace does automatically</h3>
+      <ul>
+        <li>Sends posting reminders 72 hours before the required 48-hour window closes</li>
+        <li>Flags meetings that have no agenda posted</li>
+        <li>Tracks quorum attendance and alerts when quorum is at risk</li>
+        <li>Auto-archives approved minutes with SEAL verification and a retention tag</li>
+        <li>Generates a compliance report for the Town Clerk showing any Open Meeting Law gaps in the past 12 months</li>
+      </ul>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="watchlayer">
+      <h2>Watch Layer <span class="status live">● Live</span></h2>
+      <p>The Watch Layer monitors all active modules for compliance health. It surfaces overdue items, escalation triggers, and threshold breaches before they become violations — the difference between "we caught it" and "we received a complaint."</p>
+
+      <h3>What Watch Layer monitors</h3>
+      <ul>
+        <li>Invoices nearing the 30-day statutory payment expectation (MGL Ch. 41, §52)</li>
+        <li>Procurement items approaching bid thresholds without the required quotes</li>
+        <li>Meeting notices not yet posted within the 48-hour window</li>
+        <li>Records without retention tags or classification</li>
+        <li>Approval chains pending for more than a configurable number of days</li>
+        <li>Disbursements awaiting second approval past deadline</li>
+      </ul>
+
+      <p>Access at <code>/watch</code>.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="evidence">
+      <h2>Evidence <span class="status live">● Live</span></h2>
+      <p>Evidence manages attachments, supporting documents, and exhibits linked to cases, hearings, and investigations. Each piece of evidence receives a FormKey and is hash-verified at upload. Access at <code>/evidence</code>.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="clerk">
+      <h2>Clerk Module <span class="status live">● Live</span></h2>
+      <p>The Clerk module is the Town Clerk's desk — vital records, elections, licenses, appointments, and public notices. It integrates with Board Compliance for meeting management and with Records for public records request routing. Access at <code>/clerk</code>.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="staffhr">
+      <h2>Staff &amp; HR <span class="status live">● Live</span></h2>
+      <p>Staff &amp; HR tracks personnel records, civil service status, disciplinary actions, performance evaluations, and onboarding. It integrates with Org Manager for org chart accuracy and Time Tracking for attendance. Access at <code>/staffhr</code>.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="comms">
+      <h2>Communications <span class="status live">● Live</span></h2>
+      <p>The Comms module manages official communications: public notices, press releases, emergency alerts, and internal department announcements. Routing is configurable — notices can go through Microsoft Teams, email, or a public posting endpoint. Access at <code>/comms</code>.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="automations">
+      <h2>Automations (Flows) <span class="status live">● Live</span></h2>
+      <p>Automations let you define triggers and actions across all connected services. A trigger might be a new invoice arriving in Intake; an action might be creating a SharePoint folder, sending a Teams notification, and starting a 30-day compliance timer — all automatically.</p>
+
+      <div class="callout warn">
+        <span class="label">⚠ Desktop only</span>
+        The Automations builder requires a desktop browser. Mobile access is blocked. Access at <code>/automations</code>.
+      </div>
+
+      <h3>Built-in Civic automations</h3>
+      <table>
+        <tr><th>Automation</th><th>Trigger</th><th>What happens</th></tr>
+        <tr><td>Auto Intake Logging</td><td>Document received via email or upload</td><td>Assigns FormKey, classifies document, creates intake record</td></tr>
+        <tr><td>Compliance Timer</td><td>Invoice enters system</td><td>Starts 30-day clock; escalates to Finance Director at day 25 if not approved</td></tr>
+        <tr><td>Threshold Routing</td><td>Invoice or PO amount &gt; $10,000</td><td>Adds Select Board approval step to the workflow</td></tr>
+        <tr><td>Record Lock &amp; Archive</td><td>Final approval granted</td><td>Locks the record, applies retention label, generates audit log entry, stores in SharePoint or Google Drive</td></tr>
+        <tr><td>Automatic Filing</td><td>Record sealed</td><td>Stores in configured cloud storage with naming convention: <code>TOWN_MODULE_DOCTYPE_DATE_NNN_V1</code></td></tr>
+        <tr><td>Weekly Snapshot</td><td>Every Friday morning</td><td>Emails a fiscal and compliance summary to configured recipients</td></tr>
+      </table>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="builder">
+      <h2>Module Builder <span class="status live">● Live</span></h2>
+      <p>Module Builder is a low-code tool for creating reusable governance modules — your own approval chains, form types, and workspace templates. Modules built here can be shared through Logic Commons or added to any workspace. Access at <code>/builder</code>.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="logiccommons">
+      <h2>Logic Commons <span class="status live">● Live</span></h2>
+      <p>Logic Commons is a GitHub-backed library of governance templates, module definitions, and workflow blueprints. Browse community templates, fork them for your town, and publish your own. Requires GitHub to be connected. Access at <code>/commons</code>.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="logicdash">
+      <h2>LogicDASH <span class="status live">● Live</span></h2>
+      <p>LogicDASH is the analytics and reporting dashboard. It shows aggregate Compliance Confidence Scores, pending item counts, spend totals, and activity trends across all modules. Access at <code>/dashboard</code>.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="govai">
+      <h2>GovAI <span class="status beta">⚡ Beta</span></h2>
+      <p>GovAI is an AI assistant trained on Massachusetts law and municipal governance practices. Ask it questions about MGL statutes, procurement rules, Open Meeting Law requirements, and best practices.</p>
+
+      <div class="callout warn">
+        <span class="label">⚠ Not legal advice</span>
+        GovAI provides guidance based on publicly available law and general practices. It is not a substitute for your town counsel. For legal opinions, consult a licensed attorney.
+      </div>
+
+      <p>Access at <code>/govai</code>.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="users">
+      <h2>Adding Users &amp; Assigning Roles</h2>
+      <p>User management is available to workspace Owners and Admins.</p>
+
+      <h3>Adding a user to your workspace</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">
+          <h4>Open Settings → Members</h4>
+          <p>Navigate to <code>/settings</code> and select the <strong>Members</strong> tab.</p>
+        </div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">
+          <h4>Click "Invite Member"</h4>
+          <p>Enter the person's GitHub username or email address. They must have a GitHub account — Workspace authenticates through GitHub.</p>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">
+          <h4>Assign a role</h4>
+          <p>Choose from: <strong>Viewer</strong>, <strong>Member</strong>, <strong>Admin</strong>, or <strong>Owner</strong>. See the Roles table below for what each role can do.</p>
+        </div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">
+          <h4>The user accepts the invite</h4>
+          <p>They receive a notification and can sign in at <a href="https://os.publiclogic.org" target="_blank">os.publiclogic.org</a> with their GitHub account.</p>
+        </div></div>
+      </div>
+
+      <h3>Changing or revoking access</h3>
+      <p>Go to <strong>Settings → Members</strong>, find the user, and click the role dropdown to change it or select <strong>Remove</strong> to revoke access. Access is revoked immediately — the user's next action will be refused.</p>
+
+      <div class="callout tip">
+        <span class="label">💡 Role continuity</span>
+        When a staff member leaves, do not remove their account immediately if they have open items in a queue. First, reassign their open items to another user (Settings → Members → that user's queue), then remove their access.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="roles">
+      <h2>Roles &amp; Permissions</h2>
+      <table>
+        <tr><th>Role</th><th>Can do</th><th>Cannot do</th></tr>
+        <tr><td><strong>Owner</strong></td><td>Everything — all modules, admin panel, billing, user management</td><td>—</td></tr>
+        <tr><td><strong>Admin</strong></td><td>All modules, can add/remove Members and Viewers, can access Platform tab</td><td>Cannot manage Owners or billing</td></tr>
+        <tr><td><strong>Member</strong></td><td>Access modules granted by Owner/Admin, can create and edit records</td><td>Cannot access Settings, Admin, or Platform tab</td></tr>
+        <tr><td><strong>Viewer</strong></td><td>Read-only access to shared workspaces and records</td><td>Cannot create, edit, or seal records</td></tr>
+        <tr><td><strong>Demo User</strong></td><td>Access to demo workspace only — no real data visible</td><td>Cannot access any production module</td></tr>
+      </table>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="data-ownership">
+      <h2>Data Ownership &amp; Export</h2>
+      <p>Your records belong to your municipality. Workspace is a custodian, not an owner. Here's what that means practically:</p>
+
+      <h3>Exporting your data</h3>
+      <ul>
+        <li><strong>Individual records:</strong> Open any record in Vault or Records → click <strong>Export</strong> → download in original format or PDF with the SEAL verification certificate appended.</li>
+        <li><strong>Bulk export:</strong> From <strong>Records</strong>, use the filter to select a date range or classification → click <strong>Export All</strong>. You'll receive a ZIP file of all matching records.</li>
+        <li><strong>Full account export:</strong> Email info&#64;publiclogic.org to request a complete data export. We will provide a structured export within 5 business days.</li>
+      </ul>
+
+      <h3>If you leave Workspace</h3>
+      <p>Your records are your town's property. On cancellation:</p>
+      <ul>
+        <li>You have <strong>30 days</strong> to export all records before the account is closed</li>
+        <li>All SEAL verification certificates remain valid after export — you can verify record integrity independently of Workspace</li>
+        <li>Records filed to SharePoint or Google Drive during your subscription remain in your SharePoint/Drive; they are not deleted when you leave Workspace</li>
+      </ul>
+
+      <div class="callout civic">
+        <span class="label">⚖ This is by design</span>
+        VAULT's core principle is that records are the town's property, not the software vendor's. The SEAL hash is computed using open standards (SHA-256) — any compliant tool can verify a Workspace record without needing Workspace.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="offline">
+      <h2>Offline &amp; Outage Behavior</h2>
+      <p>Workspace is a cloud-hosted application and requires an internet connection for full functionality. Here's what happens in each scenario:</p>
+
+      <table>
+        <tr><th>Scenario</th><th>What you can do</th><th>What you can't do</th></tr>
+        <tr><td>Internet outage during a Select Board meeting</td><td>View any agenda or minutes you downloaded before the outage; take notes locally</td><td>Post notices, seal records, or access the live queue in real time</td></tr>
+        <tr><td>Workspace scheduled maintenance</td><td>Records filed to SharePoint or Google Drive remain accessible via those services directly</td><td>Access Workspace modules</td></tr>
+        <tr><td>Partial connectivity (slow connection)</td><td>Read-only views generally load; file uploads may time out</td><td>Large file uploads and real-time collaboration</td></tr>
+      </table>
+
+      <h3>Recommended workaround for meetings</h3>
+      <p>Before any critical meeting, open Board Compliance and print or PDF the agenda and attendance roster. If connectivity is lost mid-meeting, minutes can be entered after connectivity is restored — the SEAL timestamp will reflect when the record was actually sealed, not backdated.</p>
+
+      <div class="callout tip">
+        <span class="label">💡 Coming soon</span>
+        Offline minute entry with automatic sync when connectivity is restored is on the V2 roadmap for the Board Compliance module.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="troubleshooting">
+      <h2>Troubleshooting &amp; FAQ</h2>
+
+      <h3>I signed in with GitHub but Microsoft 365 won't authorize</h3>
+      <p>This is the most common connection issue. The most likely cause is that your Microsoft tenant administrator hasn't approved the PublicLogic application in Azure Active Directory.</p>
+      <ol>
+        <li>When you see the "Approval Required" or "Need Admin Approval" screen in the Microsoft popup, note the application ID and send it to your IT administrator.</li>
+        <li>The IT administrator can approve it in Azure AD → Enterprise Applications → Admin Consent.</li>
+        <li>Once approved, try connecting again from the Workspace Connected Services panel.</li>
+      </ol>
+      <p>If your organization doesn't have a Microsoft 365 tenant administrator, use Google Workspace or email info&#64;publiclogic.org for alternatives.</p>
+
+      <h3>My Google Drive connection fails to save files</h3>
+      <p>Check that the Google account you connected is the one that has write access to the destination folder configured in Civic Setup. If you connected a personal Gmail but your Drive is a Workspace account, disconnect and reconnect with the correct account.</p>
+
+      <h3>I can't see the Platform tab in the toolbar</h3>
+      <p>The Platform tab is visible to Admins and Owners only. If you are a Member or Viewer, you won't see it. Ask your workspace Owner to change your role if you need access.</p>
+
+      <h3>A record shows "Hash mismatch" during SEAL verification</h3>
+      <p>This is a serious integrity flag. It means the stored file content does not match the hash recorded at sealing — the record may have been altered after it was sealed. <strong>Do not alter or delete the record.</strong> Email info&#64;publiclogic.org immediately and note the FormKey of the affected record.</p>
+
+      <h3>I accidentally archived a record that shouldn't have been archived</h3>
+      <p>Sealed records cannot be deleted (by design — this is a compliance requirement). Contact support with the FormKey and we can add a correction record linked to the original. The original remains in the archive for the statutory retention period.</p>
+
+      <h3>The Civic Setup wizard asks for a town I can't find</h3>
+      <p>Workspace uses Massachusetts DOR municipality codes. If your town is not appearing, it may be because your population is above the V1 threshold of 15,000. Email info&#64;publiclogic.org with your town name — we can often accommodate towns near the boundary manually.</p>
+
+      <h3>The Automations (Flows) tab is blocked on my phone</h3>
+      <p>This is intentional. The Automations builder requires a desktop browser due to its interface complexity. Open Workspace on a laptop or desktop computer to create or edit automation rules.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="keyboard">
+      <h2>Keyboard Shortcuts</h2>
+      <table>
+        <tr><th>Shortcut</th><th>Action</th></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Close current panel or go back to the previous screen</td></tr>
+        <tr><td><kbd>⌘ K</kbd> / <kbd>Ctrl K</kbd></td><td>Open command palette — search all tools and navigate directly</td></tr>
+        <tr><td><kbd>?</kbd></td><td>Show keyboard shortcuts overlay (when not in a text field)</td></tr>
+        <tr><td><kbd>⌘ /</kbd> / <kbd>Ctrl /</kbd></td><td>Focus search bar in current panel</td></tr>
+        <tr><td><kbd>Tab</kbd></td><td>Move through form fields in Setup Wizard</td></tr>
+        <tr><td><kbd>Enter</kbd></td><td>Confirm selection in dropdown menus and command palette</td></tr>
+      </table>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="glossary">
+      <h2>Glossary</h2>
+      <table>
+        <tr><th>Term</th><th>Definition</th></tr>
+        <tr><td><strong>Acting Start Date</strong></td><td>The date a person begins an acting appointment to a position. Tracked separately from permanent appointment for civil service compliance.</td></tr>
+        <tr><td><strong>ARCHIEVE</strong></td><td>The append-only event log that records every action taken on every record — who did what, when. The spelling is intentional (it is a product name, not a typo of "archive"). ARCHIEVE only appends — it never modifies or deletes entries.</td></tr>
+        <tr><td><strong>Case Space</strong></td><td>Technical name for a Workspace — a governed collaboration environment. The UI says "Workspace"; the URL uses /casespaces. These mean the same thing.</td></tr>
+        <tr><td><strong>CGM</strong></td><td>Capital &amp; Grant Management — the financial governance module for capital projects and grant awards. Requires Org Manager to function.</td></tr>
+        <tr><td><strong>Ch. 30B</strong></td><td>MGL Chapter 30B — the Massachusetts statute governing municipal procurement thresholds and competitive bidding requirements.</td></tr>
+        <tr><td><strong>Compliance Confidence Score</strong></td><td>A 0–100% rating for each module reflecting on-time processing, record completeness, and the absence of overdue flags. Visible in LogicDASH.</td></tr>
+        <tr><td><strong>DOR Code</strong></td><td>Massachusetts Department of Revenue municipality classification code — used to identify towns uniquely in Workspace.</td></tr>
+        <tr><td><strong>FormKey</strong></td><td>Unique, human-readable document identifier assigned to every governed record. Pattern: TOWN_MODULE_DOCTYPE_YYYY-MM-DD_NNN_V1. Example: SUTTON_FISCAL_INVOICE_YYYY-MM-DD_001_V1.</td></tr>
+        <tr><td><strong>Governance Role</strong></td><td>One of 7 statutory authority roles in Org Manager (Administrator, Finance Authority, Grant Manager, Project Owner, Auditor, Procurement Authority, Records Authority). Modules resolve approvers from these roles at runtime.</td></tr>
+        <tr><td><strong>Intake</strong></td><td>The front door for all incoming items — invoices, applications, requests, and correspondence. Intake logs, classifies, and routes everything before it reaches a module.</td></tr>
+        <tr><td><strong>Live Queue</strong></td><td>The real-time list of items moving through a module's process stages (New → Awaiting Approval → In Review → Completed).</td></tr>
+        <tr><td><strong>MGL</strong></td><td>Massachusetts General Laws — the statutes governing town operations. Workspace pre-wires every Civic module with the relevant MGL chapter and section.</td></tr>
+        <tr><td><strong>One Process, The</strong></td><td>The 8-stage governance flow that every action in Workspace follows: Receives → Opens → Works → Decides → Records → Notifies → Archives → Learns.</td></tr>
+        <tr><td><strong>Open Meeting Law</strong></td><td>MGL Ch. 39, §23B — requires public notice of government meetings and public access to minutes. Board Compliance enforces this automatically.</td></tr>
+        <tr><td><strong>PuddleJumper</strong></td><td>The Workspace backend API, running at api.publiclogic.org. All data flows through PuddleJumper; the browser never touches provider tokens directly.</td></tr>
+        <tr><td><strong>SEAL</strong></td><td>The server-side SHA-256 hash verification system. SEAL proves a record was not altered after it was created. Runs entirely server-side — the browser never sees or writes hashes.</td></tr>
+        <tr><td><strong>Setup Wizard</strong></td><td>The guided configuration flow that runs the first time you enter the Civic Environment for a town. Configures each module's Responsible Officer, document routing, retention period, and automations.</td></tr>
+        <tr><td><strong>VAULT</strong></td><td>The governed document store. Every record in VAULT is immutable after sealing, hash-verified, and tagged with a retention period.</td></tr>
+        <tr><td><strong>Watch Layer</strong></td><td>The compliance monitoring system that surfaces overdue items, approaching deadlines, and threshold violations across all active modules.</td></tr>
+      </table>
+    </section>
+
+    <!-- ══════════════════════════════════════════ -->
+    <section id="support">
+      <h2>Support</h2>
+      <table>
+        <tr><th>Channel</th><th>Details</th></tr>
+        <tr><td>Email</td><td>info&#64;publiclogic.org</td></tr>
+        <tr><td>Workspace</td><td><a href="https://os.publiclogic.org" target="_blank">os.publiclogic.org</a></td></tr>
+        <tr><td>Company website</td><td><a href="https://publiclogic.org" target="_blank">publiclogic.org</a></td></tr>
+      </table>
+
+      <div class="callout tip" style="margin-top: 24px;">
+        <span class="label">📋 Version &amp; legal</span>
+        Workspace v1.0 · April 2026 · © 2026 PublicLogic, Inc. · <a href="https://publiclogic.org/terms" target="_blank">Terms</a> · <a href="https://publiclogic.org/privacy" target="_blank">Privacy</a>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const sections = document.querySelectorAll('section[id]')
+  const navLinks = document.querySelectorAll('nav a[href^="#"]')
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id
+        navLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id)
+        })
+      }
+    })
+  }, { rootMargin: '-10% 0px -75% 0px' })
+
+  sections.forEach(s => observer.observe(s))
+</script>
+</body>
+</html>

@@ -5,10 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "predev": "pnpm brand:sync",
     "build": "next build",
+    "prebuild": "pnpm brand:sync",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "brand:sync": "node ../../scripts/sync-brand.mjs",
+    "brand:check": "node ../../scripts/sync-brand.mjs --check"
   },
   "dependencies": {
     "@pj/ui": "workspace:*",

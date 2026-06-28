@@ -1,0 +1,53 @@
+name: Daily Platform Check
+
+on:
+  schedule:
+    - cron: "17 13 * * *"
+  workflow_dispatch:
+
+jobs:
+  live-health:
+    name: Check PJ and LogicOS live health
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check PuddleJumper health
+        env:
+          URL: https://api.publiclogic.org/health
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          code="$(curl -sS -L --max-time 15 -o "$body" -w '%{http_code}' "$URL")"
+          if [ "$code" != "200" ]; then
+            echo "::error::PuddleJumper health returned HTTP $code"
+            cat "$body"
+            exit 1
+          fi
+          if ! grep -q '"status":"ok"' "$body"; then
+            echo "::error::PuddleJumper health body did not report ok"
+            cat "$body"
+            exit 1
+          fi
+          cat "$body"
+
+      - name: Check LogicOS live
+        env:
+          URL: https://os.publiclogic.org
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          code="$(curl -sS -L --max-time 15 -o "$body" -w '%{http_code}' "$URL")"
+          if [ "$code" != "200" ]; then
+            echo "::error::LogicOS returned HTTP $code"
+            cat "$body"
+            exit 1
+          fi
+          if ! grep -qi 'LogicOS' "$body"; then
+            echo "::error::LogicOS response did not include expected marker"
+            head -n 40 "$body"
+            exit 1
+          fi
+          head -n 40 "$body"

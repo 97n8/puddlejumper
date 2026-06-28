@@ -1,0 +1,69 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Vercel (production)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    environment:
+      name: production
+      url: https://workspace-rho.vercel.app
+
+    steps:
+      - name: Validate secrets
+        run: |
+          missing=()
+          [ -z "$VERCEL_TOKEN" ]      && missing+=("VERCEL_TOKEN")
+          [ -z "$VERCEL_ORG_ID" ]     && missing+=("VERCEL_ORG_ID")
+          [ -z "$VERCEL_PROJECT_ID" ] && missing+=("VERCEL_PROJECT_ID")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing or empty repository secrets: ${missing[*]}"
+            exit 1
+          fi
+          echo "All required secrets are present."
+        env:
+          VERCEL_TOKEN:      ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID:     ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Deploy to Vercel
+        run: vercel --prod --yes
+        env:
+          VERCEL_TOKEN:      ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID:     ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

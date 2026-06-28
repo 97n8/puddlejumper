@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Suzor Civic Systems · Partnership Proposal · March 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ─────────────────────────────── */
+:root {
+  --navy:   #0D1F35;
+  --navy2:  #1B3A5C;
+  --blue:   #2563A8;
+  --ltblue: #D6E8F7;
+  --orng:   #C96A1B;
+  --ltorng: #FDF0E4;
+  --grn:    #2F5233;
+  --ltgrn:  #D8EDE0;
+  --lgry:   #F4F6F9;
+  --bgry:   #CBD5E1;
+  --mgry:   #64748B;
+  --red:    #7F1D1D;
+  --ltred:  #FEF2F2;
+  --sub:    #334155;
+  --serif:  'Cormorant Garamond', Georgia, serif;
+  --sans:   'DM Sans', system-ui, sans-serif;
+}
+
+/* ── RESET ──────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── PRINT SETUP ────────────────────────── */
+/* 8.5x11 with 0.125in bleed on all sides = 8.75x11.25 */
+@page {
+  size: 8.75in 11.25in;
+  margin: 0;
+  bleed: 0.125in;
+}
+@media print {
+  body { background: white !important; margin: 0 !important; padding: 0 !important; }
+  .page { box-shadow: none !important; margin: 0 !important; page-break-after: always; }
+  .crop-wrap { margin: 0 !important; padding: 0.125in !important; }
+  * { print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
+}
+
+/* ── SCREEN ─────────────────────────────── */
+body {
+  font-family: var(--sans);
+  font-size: 12px;
+  line-height: 1.62;
+  color: var(--sub);
+  background: #bfc5cc;
+}
+
+@media screen {
+  body { padding: 40px 20px; }
+}
+
+/* ── CROP MARK WRAPPER ──────────────────── */
+/* Each page sits inside a wrapper that shows crop marks on screen
+   and provides the 0.125in bleed padding for print */
+.crop-wrap {
+  position: relative;
+  width: 8.5in;
+  margin: 0 auto 52px;
+}
+
+/* Crop marks — 4 corners, each has H + V line */
+@media screen {
+  .crop-wrap::before,
+  .crop-wrap::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+  }
+  /* top-left + top-right + bottom-left + bottom-right
+     using a transparent pseudo-element with box-shadow lines */
+  .crop-mark {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+  }
+  /* top-left corner */
+  .crop-mark.tl {
+    top: -18px; left: -18px;
+    box-shadow:
+      10px 0 0 0 #888,  18px 0 0 0 #888,  /* H line outward */
+      0 10px 0 0 #888,  0 18px 0 0 #888;  /* V line outward */
+  }
+  /* top-right corner */
+  .crop-mark.tr {
+    top: -18px; right: -18px;
+    box-shadow:
+      -10px 0 0 0 #888, -18px 0 0 0 #888,
+      0 10px 0 0 #888,  0 18px 0 0 #888;
+  }
+  /* bottom-left corner */
+  .crop-mark.bl {
+    bottom: -18px; left: -18px;
+    box-shadow:
+      10px 0 0 0 #888,  18px 0 0 0 #888,
+      0 -10px 0 0 #888, 0 -18px 0 0 #888;
+  }
+  /* bottom-right corner */
+  .crop-mark.br {
+    bottom: -18px; right: -18px;
+    box-shadow:
+      -10px 0 0 0 #888, -18px 0 0 0 #888,
+      0 -10px 0 0 #888, 0 -18px 0 0 #888;
+  }
+}
+
+/* ── PAGE SHELL ─────────────────────────── */
+.page {
+  width: 8.5in;
+  height: 11in;
+  overflow: hidden;
+  position: relative;
+  background: white;
+  page-break-after: always;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* ── HEADER / FOOTER ────────────────────── */
+.hdr {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: .52in;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 .95in;
+  border-bottom: 1px solid #e2e8f0;
+  background: white;
+}
+.hdr-l { font-size: 8.5px; font-weight: 600; letter-spacing: .2em; color: var(--navy2); text-transform: uppercase; }
+.hdr-r { font-size: 8.5px; color: var(--mgry); letter-spacing: .06em; }
+
+.ftr {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: .44in;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 .95in;
+  border-top: 1px solid #e2e8f0;
+  background: white;
+}
+.ftr-l { font-size: 8.5px; color: var(--mgry); }
+.ftr-r { font-size: 8.5px; color: var(--mgry); font-style: italic; }
+
+/* ── CONTENT BODY ───────────────────────── */
+.body {
+  position: absolute;
+  top: .52in;
+  bottom: .44in;
+  left: .95in;
+  right: .95in;
+  overflow: hidden;
+}
+.body-pad { padding: .2in 0 .14in; }
+
+/* ── COVER ──────────────────────────────── */
+.cover {
+  width: 100%; height: 100%;
+  background: var(--navy);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: .85in .95in .72in;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.cov-eyebrow {
+  font-size: 9px; font-weight: 500; letter-spacing: .28em;
+  color: rgba(255,255,255,.3); text-transform: uppercase;
+}
+.cov-main { margin-top: 1.5in; }
+.cov-rule { width: 44px; height: 4px; background: var(--orng); margin-bottom: 18px; }
+.cov-name {
+  font-family: var(--serif); font-size: 76px; font-weight: 300;
+  color: white; line-height: .97; letter-spacing: -.015em;
+}
+.cov-tagline {
+  margin-top: 14px; font-size: 11px; font-weight: 300;
+  letter-spacing: .32em; color: rgba(255,255,255,.32); text-transform: uppercase;
+}
+.cov-badge {
+  display: inline-block; margin-top: 32px; font-size: 9px;
+  font-weight: 600; letter-spacing: .24em; color: var(--orng);
+  text-transform: uppercase; border: 1px solid rgba(201,106,27,.38); padding: 5px 13px;
+}
+.cov-bottom {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding-top: 24px; border-top: 1px solid rgba(255,255,255,.1);
+}
+.cov-prepared { font-size: 11px; color: rgba(255,255,255,.48); font-weight: 300; line-height: 1.9; }
+.cov-prepared strong { color: rgba(255,255,255,.82); font-weight: 500; }
+.cov-conf {
+  text-align: right; font-size: 9px; letter-spacing: .1em;
+  color: rgba(255,255,255,.22); text-transform: uppercase; line-height: 1.9;
+}
+
+/* ── TYPOGRAPHY ─────────────────────────── */
+.eyebrow {
+  font-size: 8.5px; font-weight: 600; letter-spacing: .2em;
+  color: var(--orng); text-transform: uppercase; margin-bottom: 4px;
+}
+.ptitle {
+  font-family: var(--serif); font-size: 32px;
+  font-weight: 400; color: var(--navy); line-height: 1.06;
+}
+.prule { width: 30px; height: 3px; background: var(--orng); margin: 7px 0 13px; }
+
+h2 {
+  font-size: 9px; font-weight: 600; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--navy2);
+  margin: 11px 0 4px; padding-bottom: 3px; border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+p {
+  font-size: 11.5px; color: var(--sub); line-height: 1.65;
+  margin-bottom: 6px; text-align: justify; text-justify: inter-word;
+}
+
+/* ── METRICS STRIP ──────────────────────── */
+.metrics { display: flex; border: 1px solid #e2e8f0; margin: 10px 0; overflow: hidden; }
+.metric {
+  flex: 1; padding: 10px 8px; text-align: center;
+  border-right: 1px solid #e2e8f0;
+}
+.metric:last-child { border-right: none; }
+.metric:nth-child(even) { background: var(--lgry); }
+.metric-val {
+  font-family: var(--serif); font-size: 32px; font-weight: 600;
+  color: var(--navy); display: block; line-height: 1; margin-bottom: 3px;
+}
+.metric-lbl { font-size: 8px; font-weight: 500; letter-spacing: .15em; color: var(--mgry); text-transform: uppercase; }
+
+/* ── TABLES ─────────────────────────────── */
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 10.5px; margin: 4px 0 8px;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+thead th {
+  background: var(--navy); color: white;
+  padding: 5px 9px; text-align: left;
+  font-size: 8px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+tbody td {
+  padding: 5px 9px; border-bottom: 1px solid #eaecf0;
+  color: var(--sub); vertical-align: top; line-height: 1.48;
+}
+tbody td:first-child { font-weight: 500; color: var(--navy); }
+tbody tr:nth-child(even) td { background: var(--lgry); }
+
+/* ── CALLOUTS ───────────────────────────── */
+.callout {
+  border-left: 4px solid var(--blue); background: var(--ltblue);
+  padding: 8px 11px; margin: 5px 0;
+  font-size: 10.5px; line-height: 1.58; color: var(--sub);
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+.callout.orng { border-color: var(--orng); background: var(--ltorng); }
+.callout.grn  { border-color: var(--grn);  background: var(--ltgrn); }
+.callout.red  { border-color: var(--red);  background: var(--ltred); }
+.callout.navy { border-color: var(--navy); background: var(--lgry); }
+.callout.blue { border-color: var(--blue); background: var(--ltblue); }
+.callout .ct {
+  font-size: 8.5px; font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--navy); display: block; margin-bottom: 4px; text-align: left;
+}
+.callout p { font-size: 10.5px; margin-bottom: 3px; color: var(--sub); text-align: left; }
+.callout p:last-child { margin-bottom: 0; }
+
+/* ── BULLETS ────────────────────────────── */
+ul.buls { list-style: none; padding: 0; margin: 3px 0 6px; }
+ul.buls li {
+  font-size: 11px; color: var(--sub); line-height: 1.6;
+  padding: 2px 0 2px 14px; position: relative; text-align: left;
+}
+ul.buls li::before { content: '–'; position: absolute; left: 0; color: var(--bgry); }
+
+/* ── TWO-COL ────────────────────────────── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 4px 0 8px; }
+.col-card { border: 1px solid #e2e8f0; overflow: hidden; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.col-head {
+  background: var(--navy); color: white; font-size: 8px; font-weight: 600;
+  letter-spacing: .16em; text-transform: uppercase; padding: 6px 11px;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact; text-align: left;
+}
+.col-head.blue { background: var(--blue); }
+.col-item {
+  font-size: 10.5px; color: var(--sub); padding: 4px 11px;
+  border-bottom: 1px solid #eaecf0; line-height: 1.48; text-align: left;
+}
+.col-item:last-child { border-bottom: none; }
+.col-item:nth-child(odd) { background: var(--lgry); }
+
+/* ── LEADER CARDS ───────────────────────── */
+.leader-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 6px 0 8px; }
+.lcard {
+  border: 1px solid #e2e8f0; padding: 12px;
+  background: var(--lgry); print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+.lcard.nt { border-top: 4px solid var(--navy); }
+.lcard.bt { border-top: 4px solid var(--blue); }
+.lcard .role { font-size: 8px; font-weight: 600; letter-spacing: .18em; color: var(--mgry); text-transform: uppercase; margin-bottom: 3px; text-align: left; }
+.lcard .name { font-family: var(--serif); font-size: 19px; font-weight: 600; color: var(--navy); line-height: 1.1; margin-bottom: 2px; text-align: left; }
+.lcard .creds { font-size: 9px; color: var(--mgry); margin-bottom: 9px; text-align: left; }
+.lcard .emp { font-size: 9px; font-style: italic; color: var(--orng); margin-bottom: 7px; padding-bottom: 7px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+.lcard.bt .emp { color: var(--blue); }
+.lcard .li { font-size: 10px; color: var(--sub); line-height: 1.5; margin-bottom: 3px; padding-left: 10px; position: relative; text-align: left; }
+.lcard .li::before { content: '–'; position: absolute; left: 0; color: var(--bgry); }
+.lcard .stat { margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; font-size: 9.5px; font-weight: 600; color: var(--navy); text-align: left; }
+.lcard.bt .stat { color: var(--blue); }
+
+/* ── MILESTONE CARDS ────────────────────── */
+.mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 6px 0 8px; }
+.mcard { border: 1px solid #e2e8f0; padding: 11px; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.mcard.c1 { border-top: 3px solid var(--navy); }
+.mcard.c2 { border-top: 3px solid var(--blue); }
+.mcard.c3 { border-top: 3px solid var(--grn); }
+.mcard.c4 { border-top: 3px solid var(--orng); }
+.mpct { font-family: var(--serif); font-size: 40px; font-weight: 600; line-height: 1; display: block; margin-bottom: 4px; }
+.mcard.c1 .mpct { color: var(--navy); }
+.mcard.c2 .mpct { color: var(--blue); }
+.mcard.c3 .mpct { color: var(--grn); }
+.mcard.c4 .mpct { color: var(--orng); }
+.mtitle { font-size: 11px; font-weight: 600; color: var(--navy); margin-bottom: 4px; text-align: left; }
+.mdesc  { font-size: 10px; color: var(--sub); line-height: 1.5; margin-bottom: 6px; text-align: left; }
+.msign  { font-size: 9px; font-style: italic; color: var(--mgry); text-align: left; }
+
+/* ── SIGNATURES ─────────────────────────── */
+.sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
+.sblock {
+  border: 1px solid #e2e8f0; padding: 16px;
+  background: var(--lgry); print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+.sblock.nt { border-top: 4px solid var(--navy); }
+.sblock.bt { border-top: 4px solid var(--blue); }
+.sorg { font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 20px; text-align: left; }
+.sblock.bt .sorg { color: var(--blue); }
+.sline { border-top: 1px solid #94a3b8; padding-top: 4px; font-size: 11px; color: var(--sub); margin-bottom: 7px; text-align: left; }
+.slbl  { font-size: 9px; font-style: italic; color: var(--mgry); text-align: left; }
+
+/* ── GLOSSARY ───────────────────────────── */
+.gdict { columns: 2; column-gap: .28in; margin-top: 7px; }
+.gentry { break-inside: avoid; margin-bottom: 8px; }
+.gterm { font-size: 9.5px; font-weight: 600; color: var(--navy); display: block; margin-bottom: 1px; text-align: left; }
+.gdef  { font-size: 9.5px; color: var(--sub); line-height: 1.5; text-align: left; }
+
+/* ── RÉSUMÉ ─────────────────────────────── */
+.rhead {
+  width: 100%; background: var(--navy);
+  padding: .5in .95in .38in;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+.rhead.grn { background: var(--grn); }
+.rappx  { font-size: 8.5px; font-weight: 600; letter-spacing: .22em; color: var(--orng); text-transform: uppercase; margin-bottom: 6px; }
+.rname  { font-family: var(--serif); font-size: 46px; font-weight: 300; color: white; line-height: 1.0; letter-spacing: -.01em; margin-bottom: 4px; }
+.rcreds { font-size: 11.5px; color: rgba(255,255,255,.45); font-weight: 300; margin-bottom: 10px; }
+.rcontact { font-size: 9.5px; color: rgba(255,255,255,.35); display: flex; gap: 20px; }
+.rcontact span { color: rgba(255,255,255,.6); }
+.rbody { padding: .24in .82in .4in; }
+.rsummary {
+  font-size: 11.5px; color: var(--sub); line-height: 1.65;
+  border-left: 3px solid var(--orng); padding-left: 12px; margin-bottom: 13px;
+  text-align: justify; text-justify: inter-word;
+}
+.rsummary.grn { border-color: var(--grn); }
+.rshead {
+  font-size: 8.5px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--navy); margin: 12px 0 7px; padding-bottom: 3px; border-bottom: 1px solid #e2e8f0; text-align: left;
+}
+.rtitle { font-size: 11.5px; font-weight: 600; color: var(--navy); text-align: left; }
+.rorgline {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: var(--mgry); margin-bottom: 3px;
+}
+.rorg { font-weight: 500; color: var(--sub); }
+.rbuls { list-style: none; padding: 0; margin: 0 0 10px; }
+.rbuls li {
+  font-size: 10.5px; color: var(--sub); line-height: 1.58;
+  padding: 2px 0 2px 12px; position: relative; text-align: left;
+}
+.rbuls li::before { content: '·'; position: absolute; left: 2px; color: var(--bgry); font-size: 13px; }
+.pub { font-size: 10px; color: var(--sub); line-height: 1.52; margin-bottom: 5px; padding-left: 12px; position: relative; text-align: left; }
+.pub::before { content: '–'; position: absolute; left: 0; color: var(--bgry); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+  1 · COVER
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+<div class="cover">
+
+  <!-- top bar -->
+  <div class="cov-top">
+    <div class="cov-top-label">Suzor Civic Systems<br>Partnership Program</div>
+    <div class="cov-top-label" style="text-align:right;">PublicLogic LLC<br>Governance &amp; Technology</div>
+  </div>
+
+  <!-- center — logo + identity -->
+  <div class="cov-main">
+    <div class="cov-logo-wrap">
+      <img src="https://97n8.github.io/97N8-Drafts/Suzor%20Civic%20Systems%20logo%20design.png"
+           onerror="this.src='data:image/jpeg;base64,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'"
+           alt="Suzor Civic Systems — powered by PublicLogic">
+    </div>
+    <div class="cov-divider"></div>
+    <div class="cov-proposal-label">Partnership Proposal</div>
+    <div class="cov-title">A Governance Revenue Channel<br>for Municipal Technology Partners</div>
+    <div class="cov-date">March 2026</div>
+  </div>
+
+  <!-- bottom — attribution + confidential -->
+  <div class="cov-bottom">
+    <div class="cov-prepared">
+      Prepared by<br>
+      <strong>Nathan R. Boudreau, MPA, MCPPO</strong><br>
+      <strong>Dr. Allison Weiss Rothschild, PsyD, LICSW, BCBA, LABA</strong>
+      <div class="cov-for">For &nbsp; Adam Suzor, Founder &amp; CEO &nbsp;·&nbsp; Suzor IT</div>
+    </div>
+    <div class="cov-conf">
+      Confidential<br>
+      PublicLogic LLC<br>
+      110 Kendall Pond Rd West<br>
+      Gardner, Massachusetts<br>
+      www.publiclogic.org
+    </div>
+  </div>
+
+</div>
+</div></div><!-- /crop-wrap -->
+
+<!-- ══════════════════════════════════════
+  3 · EXECUTIVE SUMMARY
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+  <div class="hdr"><span class="hdr-l">Suzor Civic Systems &nbsp;·&nbsp; powered by PublicLogic</span><span class="hdr-r">Confidential &nbsp;·&nbsp; March 2026</span></div>
+  <div class="body"><div class="body-pad">
+    <div class="eyebrow">01 &nbsp;·&nbsp; Executive Summary</div>
+    <div class="ptitle">Executive Summary</div>
+    <div class="prule"></div></div><!-- /crop-wrap -->
+
+    <p>Suzor IT holds trusted technology relationships across municipalities and K–12 districts throughout Western and Central Massachusetts. PublicLogic holds VAULT — a governance framework that installs institutional survivability: the documented, transferable, defensible operating layer that keeps towns functional through staff turnover, leadership transitions, and regulatory scrutiny.</p>
+    <p>PublicLogic also holds CivicPulse, a civic intelligence dashboard mapping DLS Cherry Sheet figures, DESE district data, and assessor datasets to each municipality's operational context — giving administrators one-click access from any meeting room or device. Critically, SCS does not ask municipalities to replace existing systems. VAULT layers on top of VADAR, Tyler Technologies, Munis, and Patriot Properties — no rip-and-replace, no data migration risk.</p>
+
+    <div class="metrics">
+      <div class="metric"><span class="metric-val">$20K</span><span class="metric-lbl">Avg Activation Fee</span></div>
+      <div class="metric"><span class="metric-val">15%</span><span class="metric-lbl">Year 1 Split</span></div>
+      <div class="metric"><span class="metric-val">30%</span><span class="metric-lbl">Year 2+ Split</span></div>
+      <div class="metric"><span class="metric-val">$36K</span><span class="metric-lbl">Year 2 Annual Min.</span></div>
+    </div>
+
+    <h2>Deal Economics</h2>
+    <table>
+      <thead><tr><th>Item</th><th>Structure</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Upfront Licensing Fee</td><td>$15,000–$25,000</td><td>One-time, Phase 1 activation</td></tr>
+        <tr><td>Revenue Split</td><td>Year 1: 15% gross &nbsp;|&nbsp; Year 2+: 30% gross</td><td>Net margin option available</td></tr>
+        <tr><td>Activation Fee Credit</td><td>Credited against PL's Year 1 share</td><td>Cash flow neutral to Suzor IT</td></tr>
+        <tr><td>Annual Minimum</td><td>$0 Year 1 &nbsp;|&nbsp; $36,000 Year 2+</td><td>Failure triggers exclusivity remedy schedule</td></tr>
+        <tr><td>Systems Architect</td><td>Employed by Suzor IT</td><td>Performance bonus tied to SCS milestones</td></tr>
+        <tr><td>Division Head</td><td>Compensated by PublicLogic</td><td>Not a direct cost to Suzor IT</td></tr>
+        <tr><td>Phase 1 Scope</td><td>PRR Module + Workspace Homescreen</td><td>2–3 pilot municipalities</td></tr>
+        <tr><td>Exclusivity</td><td>3 years, MA &amp; NH</td><td>Municipalities + K–12, performance-conditioned</td></tr>
+        <tr><td>IP Ownership</td><td>100% PublicLogic</td><td>VAULT, Workspace, CivicPulse — delivery rights licensed only</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Proposed Next Steps</h2>
+    <ul class="buls">
+      <li>Partnership Review Meeting — align on deal structure, leadership model, and exclusivity terms</li>
+      <li>Technical Review — Suzor IT reviews PL tech stack (Workspace, PRR module, CivicPulse) with Nate and Allie</li>
+      <li>Term Sheet executed — framework aligned before attorneys engage</li>
+      <li>Systems Architect engagement and Phase 1 pilot scoped — first client identified</li>
+    </ul>
+  </div></div>
+  <div class="ftr"><span class="ftr-l">PublicLogic LLC &nbsp;·&nbsp;  &nbsp;·&nbsp; www.publiclogic.org</span><span class="ftr-r">3</span></div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+  5 · THE PARTNERSHIP
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+  <div class="hdr"><span class="hdr-l">Suzor Civic Systems &nbsp;·&nbsp; powered by PublicLogic</span><span class="hdr-r">Confidential &nbsp;·&nbsp; March 2026</span></div>
+  <div class="body"><div class="body-pad">
+    <div class="eyebrow">02 &nbsp;·&nbsp; The Partnership</div>
+    <div class="ptitle">The Partnership</div>
+    <div class="prule"></div></div><!-- /crop-wrap -->
+
+    <h2>Structural Risk in Municipal Operations</h2>
+    <p>Massachusetts municipalities under 25,000 residents share a structural vulnerability: when a key employee leaves, institutional knowledge leaves with them. IT infrastructure stays. Governance does not. The result is delayed public records responses, missed compliance windows, dropped grant cycles, and staff set up to fail from day one. Compounding this, most municipalities are locked into legacy systems — including Tyler Technologies (Munis), Patriot Properties, and VADAR — that cannot be replaced without significant disruption. Suzor IT has been solving the infrastructure half of this problem for years. PublicLogic was built to solve the governance half. SCS combines both into a single offering no competitor in this geography currently provides.</p>
+
+    <h2>Division Structure</h2>
+    <table>
+      <thead><tr><th>Element</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Division Name</td><td>Suzor Civic Systems (SCS)</td></tr>
+        <tr><td>Client-Facing Brand</td><td>"Suzor Civic Systems, powered by PublicLogic"</td></tr>
+        <tr><td>Division Head</td><td>Dr. Allison Weiss Rothschild — governance delivery, framework fidelity, training oversight. Compensated by PublicLogic.</td></tr>
+        <tr><td>Systems Architect</td><td>Nathan R. Boudreau — VAULT licensing authority, deployment strategy, municipal relationships. Employed by Suzor IT.</td></tr>
+        <tr><td>IP Ownership</td><td>PublicLogic retains 100% of VAULT, Workspace, CivicPulse, and all derivatives</td></tr>
+        <tr><td>Billing Model</td><td>SCS invoices clients; PL receives licensing fee and revenue split on all SCS engagements</td></tr>
+      </tbody>
+    </table>
+
+    <h2>What Each Party Receives</h2>
+    <div class="two-col">
+      <div class="col-card">
+        <div class="col-head">Suzor IT Receives</div>
+        <div class="col-item">A civic governance division no regional IT firm currently offers</div>
+        <div class="col-item">VAULT module roadmap access as PL opens each phase</div>
+        <div class="col-item">PL vendor network and state-level government relationships</div>
+        <div class="col-item">One year complimentary grant writing and planning for SCS clients</div>
+      </div>
+      <div class="col-card">
+        <div class="col-head blue">PublicLogic Receives</div>
+        <div class="col-item">A trusted technical delivery partner with embedded client relationships</div>
+        <div class="col-item">Technical staff and operational presence without PL carrying all headcount</div>
+        <div class="col-item">Revenue share on every SCS engagement</div>
+        <div class="col-item">Expanded MA/NH market without direct business development overhead</div>
+      </div>
+    </div>
+
+    <h2>Phased Rollout</h2>
+    <table>
+      <thead><tr><th>Phase</th><th>Deliverable</th><th>Activation Trigger</th></tr></thead>
+      <tbody>
+        <tr><td>Phase 1</td><td>PRR Module + Workspace Homescreen; 2–3 pilots</td><td>Agreement signed; 1 Suzor staff VAULT-certified</td></tr>
+        <tr><td>Phase 2</td><td>Permitting or Board Compliance Module (PL selects)</td><td>Phase 1 formally accepted; 2 additional staff certified</td></tr>
+        <tr><td>Phase 3+</td><td>Full VAULT stack: Fiscal, Appointments, Encoding</td><td>PL readiness determination only</td></tr>
+      </tbody>
+    </table>
+  </div></div>
+  <div class="ftr"><span class="ftr-l">PublicLogic LLC &nbsp;·&nbsp;  &nbsp;·&nbsp; www.publiclogic.org</span><span class="ftr-r">5</span></div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+  7 · COMMERCIAL TERMS
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+  <div class="hdr"><span class="hdr-l">Suzor Civic Systems &nbsp;·&nbsp; powered by PublicLogic</span><span class="hdr-r">Confidential &nbsp;·&nbsp; March 2026</span></div>
+  <div class="body"><div class="body-pad">
+    <div class="eyebrow">03 &nbsp;·&nbsp; Commercial Terms</div>
+    <div class="ptitle">Commercial Terms</div>
+    <div class="prule"></div></div><!-- /crop-wrap -->
+
+    <h2>Economics Summary</h2>
+    <table>
+      <thead><tr><th>Item</th><th>Range</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Phase 1 Activation Fee</td><td>$15,000–$25,000</td><td>Credited against PL's Year 1 share — cash flow neutral to Suzor IT</td></tr>
+        <tr><td>Phase 2 Activation Fee</td><td>$8,000–$15,000</td><td>Per additional module licensed</td></tr>
+        <tr><td>Phase 3+ Activation Fee</td><td>$5,000–$10,000 / module</td><td>Scale economics; framework mature</td></tr>
+        <tr><td>Revenue Split — Year 1</td><td>15% of Gross Revenue to PL</td><td>Build-phase rate; Suzor IT carrying Systems Architect salary</td></tr>
+        <tr><td>Revenue Split — Year 2+</td><td>30% of Gross Revenue to PL</td><td>Full rate; Net Margin Option at 10%/20% of Net Revenue available</td></tr>
+        <tr><td>Annual Minimum</td><td>$0 Yr 1 &nbsp;|&nbsp; $36,000 Yr 2+</td><td>Failure triggers the exclusivity remedy process</td></tr>
+        <tr><td>Systems Architect Salary</td><td>Subject to negotiation</td><td>Employed by Suzor IT; bonus up to 25% of base tied to milestones</td></tr>
+        <tr><td>Division Head Comp.</td><td>Carried by PublicLogic</td><td>Not a direct cost to Suzor IT</td></tr>
+        <tr><td>Grant Services — Year 1</td><td>Complimentary; PL labor</td><td>Billed at PL standard rates after Year 1</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Revenue Split Structure</h2>
+    <table>
+      <thead><tr><th></th><th>Year 1 — Gross</th><th>Year 2+ — Gross</th><th>Net Option (Alt)</th></tr></thead>
+      <tbody>
+        <tr><td>Split to PL</td><td>15% of gross</td><td>30% of gross</td><td>10% / 20% of net</td></tr>
+        <tr><td>Min / Engagement</td><td>$1,500</td><td>$3,000</td><td>$1,000 / $2,000</td></tr>
+        <tr><td>Annual Minimum</td><td>N/A</td><td>$36,000</td><td>$30,000</td></tr>
+        <tr><td>Invoicing</td><td>Monthly, net 30</td><td>Monthly, net 30</td><td>Quarterly, net 30</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Activation Fee Credit — Worked Example</h2>
+    <div class="callout orng">
+      <span class="ct">How the Credit Works</span>
+      <p><strong>Activation Fee paid at signing: $20,000</strong></p>
+      <p>Year 1 Gross Revenue (3 engagements): $120,000 &nbsp;·&nbsp; PL Share at 15% = $18,000 — applied to Activation Fee Balance first. <strong>Cash to PL Year 1: $0.</strong> Remaining balance: $2,000.</p>
+      <p>Year 2 Month 1: PL Share = $3,600 (30% of $12,000). First $2,000 clears balance. Cash to PL: $1,600. <strong>Full 30% split active from this point forward.</strong></p>
+      <p style="margin-top:5px;font-size:10px;color:var(--mgry);font-style:italic;">Reporting cadence: Monthly revenue statement due by the 10th. Quarterly true-up within 30 days of quarter end. Annual reconciliation within 60 days of year end.</p>
+    </div>
+  </div></div>
+  <div class="ftr"><span class="ftr-l">PublicLogic LLC &nbsp;·&nbsp;  &nbsp;·&nbsp; www.publiclogic.org</span><span class="ftr-r">7</span></div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+  9 · LEADERSHIP
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+  <div class="hdr"><span class="hdr-l">Suzor Civic Systems &nbsp;·&nbsp; powered by PublicLogic</span><span class="hdr-r">Confidential &nbsp;·&nbsp; March 2026</span></div>
+  <div class="body"><div class="body-pad">
+    <div class="eyebrow">04 &nbsp;·&nbsp; Leadership &amp; Compensation</div>
+    <div class="ptitle">Leadership Structure</div>
+    <div class="prule"></div></div><!-- /crop-wrap -->
+
+    <p>Two senior leaders — one within each organization — carry the division's authority. Their structures reinforce the independence that makes the governance model credible and the delivery model durable.</p>
+
+    <div class="leader-grid">
+      <div class="lcard nt">
+        <div class="role">Division Head</div>
+        <div class="name">Dr. Allison Weiss Rothschild</div>
+        <div class="creds">PsyD, LICSW, BCBA, LABA</div>
+        <div class="emp">Compensated by PublicLogic LLC</div>
+        <div class="li">Governance delivery &amp; VAULT framework fidelity</div>
+        <div class="li">Organizational change leadership for municipal clients</div>
+        <div class="li">Training design and VAULT certification oversight</div>
+        <div class="li">Research methodology and documentation standards</div>
+        <div class="stat">20+ years governance systems, org change &amp; research</div>
+      </div>
+      <div class="lcard bt">
+        <div class="role">Systems Architect</div>
+        <div class="name">Nathan R. Boudreau</div>
+        <div class="creds">MPA, MCPPO</div>
+        <div class="emp">Employed by Suzor IT</div>
+        <div class="li">VAULT licensing authority and deployment strategy</div>
+        <div class="li">Municipal relationship management &amp; pipeline development</div>
+        <div class="li">Primary operational interface between PL and Suzor IT</div>
+        <div class="li">SCS growth strategy and performance accountability</div>
+        <div class="stat">15+ years MA municipal &amp; state governance systems</div>
+      </div>
+    </div>
+
+    <h2>Proposed Systems Architect Compensation</h2>
+    <div class="callout blue">
+      <span class="ct">Compensation Structure</span>
+      <p><strong>Base Salary: $150,000–$185,000 annually,</strong> subject to negotiation.</p>
+      <p><strong>Performance Bonus: Up to 25% of base salary</strong> — tied to independently measurable SCS milestones (see Section 05).</p>
+      <p style="font-size:10px;color:var(--mgry);font-style:italic;margin-top:4px;">Comparable senior municipal administrators with procurement credentials in Massachusetts private-sector roles command $135,000–$200,000. The VAULT licensing authority and SCS division leadership scope warrants the upper range.</p>
+    </div>
+
+    <h2>Why This Structure Works</h2>
+    <table>
+      <thead><tr><th>Division Head (PL-compensated)</th><th>Systems Architect (Suzor IT-compensated)</th></tr></thead>
+      <tbody>
+        <tr><td>Governance and framework independence preserved</td><td>Full operational alignment within Suzor IT</td></tr>
+        <tr><td>Research-driven implementation standards</td><td>Municipal relationships and deployment execution</td></tr>
+        <tr><td>VAULT methodology continuity across engagements</td><td>Licensing authority and delivery pacing and milestone management</td></tr>
+        <tr><td>Training and certification authority</td><td>Vendor coordination and pipeline development</td></tr>
+        <tr><td>Institutional continuity regardless of Suzor IT changes</td><td>Institutional continuity regardless of PL internal changes</td></tr>
+      </tbody>
+    </table>
+  </div></div>
+  <div class="ftr"><span class="ftr-l">PublicLogic LLC &nbsp;·&nbsp;  &nbsp;·&nbsp; www.publiclogic.org</span><span class="ftr-r">9</span></div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+  11 · MILESTONES
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+  <div class="hdr"><span class="hdr-l">Suzor Civic Systems &nbsp;·&nbsp; powered by PublicLogic</span><span class="hdr-r">Confidential &nbsp;·&nbsp; March 2026</span></div>
+  <div class="body"><div class="body-pad">
+    <div class="eyebrow">05 &nbsp;·&nbsp; Performance Milestones</div>
+    <div class="ptitle">Performance Milestones</div>
+    <div class="prule"></div></div><!-- /crop-wrap -->
+
+    <p>The Systems Architect performance bonus (up to 25% of base salary) is earned in tranches against the milestones below. Each is independently measurable and requires documented sign-off before payment. They may be earned in any sequence; unearned Year 1 tranches do not carry forward.</p>
+
+    <div class="mgrid">
+      <div class="mcard c1">
+        <span class="mpct">40%</span>
+        <div class="mtitle">Phase 1 Pilot Acceptance</div>
+        <div class="mdesc">Functional tests pass + 4 weeks stable production with zero unresolved P1 incidents. Live walkthrough + 28-day incident log required.</div>
+        <div class="msign">Sign-off: Nathan R. Boudreau + Adam Suzor</div>
+      </div>
+      <div class="mcard c2">
+        <span class="mpct">20%</span>
+        <div class="mtitle">Certified Suzor IT Staff</div>
+        <div class="mdesc">Minimum 3 Suzor IT staff hold VAULT Foundations Certification before pilot launch. Certificates issued by the Division Head.</div>
+        <div class="msign">Sign-off: PublicLogic (Division Head)</div>
+      </div>
+      <div class="mcard c3">
+        <span class="mpct">25%</span>
+        <div class="mtitle">First Paying Client</div>
+        <div class="mdesc">1 SCS municipal client invoiced within 90 days of Phase 1 acceptance. Signed engagement + first invoice required.</div>
+        <div class="msign">Sign-off: Suzor IT + PublicLogic</div>
+      </div>
+      <div class="mcard c4">
+        <span class="mpct">15%</span>
+        <div class="mtitle">Security Validation</div>
+        <div class="mdesc">Pen test completed; all critical and high findings remediated. Third-party pen test report accepted by PublicLogic.</div>
+        <div class="msign">Sign-off: PublicLogic + Suzor IT</div>
+      </div>
+    </div>
+
+    <h2>Milestone Sign-Off Requirements</h2>
+    <table>
+      <thead><tr><th>Milestone</th><th>Acceptance Evidence</th><th>Bonus %</th><th>Paid Within</th></tr></thead>
+      <tbody>
+        <tr><td>Phase 1 Pilot Acceptance</td><td>Live walkthrough + 28-day incident log</td><td>40%</td><td>30 days of sign-off</td></tr>
+        <tr><td>Certified Suzor IT Staff</td><td>Certificates issued by Division Head</td><td>20%</td><td>30 days of sign-off</td></tr>
+        <tr><td>First Paying Client</td><td>Signed engagement + first invoice</td><td>25%</td><td>30 days of sign-off</td></tr>
+        <tr><td>Security Signoff</td><td>Third-party pen test report accepted by PL</td><td>15%</td><td>30 days of sign-off</td></tr>
+      </tbody>
+    </table>
+  </div></div>
+  <div class="ftr"><span class="ftr-l">PublicLogic LLC &nbsp;·&nbsp;  &nbsp;·&nbsp; www.publiclogic.org</span><span class="ftr-r">11</span></div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+  13 · LEGAL
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+  <div class="hdr"><span class="hdr-l">Suzor Civic Systems &nbsp;·&nbsp; powered by PublicLogic</span><span class="hdr-r">Confidential &nbsp;·&nbsp; March 2026</span></div>
+  <div class="body"><div class="body-pad">
+    <div class="eyebrow">06 &nbsp;·&nbsp; Legal &amp; Compliance</div>
+    <div class="ptitle">Legal &amp; Compliance</div>
+    <div class="prule"></div></div><!-- /crop-wrap -->
+
+    <h2>Intellectual Property &amp; License Scope</h2>
+    <ul class="buls">
+      <li>PublicLogic retains 100% ownership of VAULT, Workspace, CivicPulse, and all derivatives regardless of authorship during the partnership.</li>
+      <li>Suzor IT receives a limited, non-exclusive, non-transferable, revocable license to deliver, install, configure, and support PL-licensed VAULT modules to SCS clients only.</li>
+      <li>All bugfixes, patches, or enhancements authored by either party are automatically assigned to PL upon creation; Suzor IT retains a license to use within SCS deployments during the term.</li>
+      <li>No sublicensing, white-labeling, or modification of core VAULT framework without PL's prior written consent.</li>
+      <li>Config/documentation escrow maintained by PL for client continuity. Credentials transferred to a designated successor within 14 days of Systems Architect departure.</li>
+    </ul>
+
+    <h2>Exclusivity &amp; Remedy Schedule</h2>
+    <p>PL designates Suzor IT as exclusive VAULT delivery partner for MA and NH municipalities and K–12 districts, conditioned on the $36,000 Annual Minimum commencing Year 2. Exclusivity does not apply to PL's existing clients as of the Effective Date, statewide procurement vehicles, higher education, or municipalities Suzor IT declines in writing.</p>
+    <div class="callout navy">
+      <span class="ct">If the Annual Minimum Is Missed</span>
+      <p><strong>Failure to meet Annual Minimum:</strong> PL issues written notice. Suzor IT has 90 days to cure by demonstrating a signed pipeline sufficient to meet the minimum within 180 days.</p>
+      <p><strong>Cure expires without cure:</strong> PL may (a) invite other delivery partners for new engagements, or (b) carve out specific municipalities as non-exclusive. Existing SCS clients unaffected.</p>
+      <p><strong>Two consecutive missed years:</strong> PL may convert exclusivity to non-exclusive on 30 days' written notice.</p>
+    </div>
+
+    <h2>Data Custody &amp; Cyber Obligations</h2>
+    <p>All client data owned by the municipality. SCS does not act as records custodian. Complex redactions and legal holds excluded from PRR compliance calculations. Both parties comply with MGL Ch.66, Ch.30B, and applicable federal privacy law.</p>
+    <div class="callout red">
+      <span class="ct">Data Breach Protocol</span>
+      <p><strong>Notification:</strong> Both parties notify each other and affected municipalities within 72 hours of discovering a confirmed or reasonably suspected breach.</p>
+      <p><strong>Forensics:</strong> Mandatory investigation at cost of the breaching party (shared if cause is indeterminate).</p>
+      <p><strong>Annual attestation:</strong> Suzor IT provides SOC 2 Type II or equivalent pen-test certification scoped to SCS infrastructure. PL receives copies of all reports and remediation plans.</p>
+      <p><strong>Uncapped exposure:</strong> Breach remediation costs attributable to Suzor IT infrastructure are not subject to the liability cap.</p>
+    </div>
+
+    <h2>Liability, Brand &amp; Insurance</h2>
+    <table>
+      <thead><tr><th>Item</th><th>Terms</th></tr></thead>
+      <tbody>
+        <tr><td>Liability Cap</td><td>12 months of fees paid or payable. Carve-outs (uncapped): IP infringement, willful misconduct, gross negligence, data breach.</td></tr>
+        <tr><td>Insurance</td><td>GL $1M/$2M, E&amp;O $1M, Cyber $1M; both parties carry; certificates exchanged at signing and annually.</td></tr>
+        <tr><td>Audit Rights</td><td>PL may audit SCS revenue records once per year on 30 days' notice. Underpayment &gt;5% triggers audit cost recovery plus interest.</td></tr>
+        <tr><td>Brand Usage</td><td>"Powered by PublicLogic" required on all SCS client-facing materials. "VAULT" is a PL trademark requiring written approval per marketing use.</td></tr>
+      </tbody>
+    </table>
+  </div></div>
+  <div class="ftr"><span class="ftr-l">PublicLogic LLC &nbsp;·&nbsp;  &nbsp;·&nbsp; www.publiclogic.org</span><span class="ftr-r">13</span></div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+  15 · SUPPORT / TRAINING / ACCEPTANCE
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+  <div class="hdr"><span class="hdr-l">Suzor Civic Systems &nbsp;·&nbsp; powered by PublicLogic</span><span class="hdr-r">Confidential &nbsp;·&nbsp; March 2026</span></div>
+  <div class="body"><div class="body-pad">
+    <div class="eyebrow">07 &nbsp;·&nbsp; Support, Training &amp; Acceptance</div>
+    <div class="ptitle">Support &amp; Acceptance</div>
+    <div class="prule"></div></div><!-- /crop-wrap -->
+
+    <h2>Support Structure &amp; SLAs</h2>
+    <p>First-line: Suzor IT handles all technical issues. Second-line: PublicLogic handles governance framework questions, VAULT configuration, and Workspace interpretation. The Systems Architect coordinates escalation. <strong>P1 incidents require response regardless of Business Hours.</strong></p>
+    <table>
+      <thead><tr><th>Priority</th><th>Definition</th><th>Response</th><th>Resolution</th></tr></thead>
+      <tbody>
+        <tr><td>P1 — Critical</td><td>System down; PRR deadlines at risk; data integrity issue</td><td>2 hours (24/7)</td><td>8 business hours</td></tr>
+        <tr><td>P2 — High</td><td>Core module impaired; workaround available</td><td>4 business hours</td><td>1 business day</td></tr>
+        <tr><td>P3 — Standard</td><td>Non-critical; minor workflow disruption</td><td>1 business day</td><td>3 business days</td></tr>
+        <tr><td>P4 — Low</td><td>Enhancement request or documentation question</td><td>3 business days</td><td>Next release cycle</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:10.5px;color:var(--mgry);font-style:italic;margin-top:2px;">Business Hours: Mon–Fri 8:00 AM–5:00 PM ET, excl. MA state holidays. Scheduled maintenance: 72 hours advance notice. Uptime target: 99.5%. SLA remedy: 3+ P1 breaches in 90 days triggers joint remediation plan within 5 business days.</p>
+
+    <h2>Staff Certification</h2>
+    <ul class="buls">
+      <li>All Suzor IT staff delivering VAULT modules must hold VAULT Foundations Certification before any client-facing work.</li>
+      <li>Certification: 8 hours of training, 80%-pass written assessment, and one supervised pilot engagement — designed and administered by the Division Head.</li>
+      <li>Minimum 3 certified staff required before Phase 1 pilot launches. Annual recertification: 4-hour refresher when new modules activate.</li>
+    </ul>
+
+    <h2>Phase 1 Acceptance Criteria</h2>
+    <div class="callout grn">
+      <span class="ct">PRR Measurement Methodology</span>
+      <p><strong>Time starts</strong> when a compliant request is received in the Workspace PRR module. <strong>Time stops</strong> at delivery of response or written extension notice to requestor. <strong>Excluded:</strong> legal hold periods, requestor-caused delay, complex redactions requiring legal review, and requests received after 4:30 PM on Business Days (counted next Business Day). Measured over the first 60 days of pilot operation.</p>
+      <p><strong>28-day clean run:</strong> Calendar days from first go-live with zero P1 incidents. P1 re-classification requires joint agreement of Systems Architect and Division Head within 24 hours of incident close.</p>
+      <p><strong>Acceptance sign-off:</strong> Joint written checklist signed by Nathan R. Boudreau and Adam Suzor, with attached evidence package: test cases, incident log, compliance rate report, pen test report, and client satisfaction survey results.</p>
+    </div>
+    <table style="margin-top:8px;">
+      <thead><tr><th>Criterion</th><th>Target</th><th>Evidence</th><th>Sign-Off</th></tr></thead>
+      <tbody>
+        <tr><td>PRR Module functional</td><td>End-to-end workflow</td><td>Live walkthrough + test cases</td><td>PL + Suzor IT</td></tr>
+        <tr><td>Workspace Homescreen</td><td>Login + role-based access verified</td><td>User acceptance test</td><td>PL + Suzor IT</td></tr>
+        <tr><td>Data isolation</td><td>Pilot clients logically separated</td><td>Security architecture review</td><td>PL + Suzor IT</td></tr>
+        <tr><td>Security pen test</td><td>Critical + high findings remediated</td><td>Third-party pen test report</td><td>PL</td></tr>
+        <tr><td>Staff certified</td><td>Min. 3 Suzor IT staff</td><td>Certificates issued by PL</td><td>PL</td></tr>
+        <tr><td>2–3 pilots live</td><td>28-day clean production</td><td>Incident log</td><td>Nate + Adam</td></tr>
+        <tr><td>PRR compliance</td><td>90%+ meet Ch.66 10-day window</td><td>Compliance rate report (60 days)</td><td>PL</td></tr>
+        <tr><td>Client satisfaction</td><td>4/5 or higher</td><td>Post-pilot survey</td><td>Joint</td></tr>
+      </tbody>
+    </table>
+  </div></div>
+  <div class="ftr"><span class="ftr-l">PublicLogic LLC &nbsp;·&nbsp;  &nbsp;·&nbsp; www.publiclogic.org</span><span class="ftr-r">15</span></div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+  17 · GOVERNANCE / TIMELINE
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+  <div class="hdr"><span class="hdr-l">Suzor Civic Systems &nbsp;·&nbsp; powered by PublicLogic</span><span class="hdr-r">Confidential &nbsp;·&nbsp; March 2026</span></div>
+  <div class="body"><div class="body-pad">
+    <div class="eyebrow">08 &nbsp;·&nbsp; Governance &amp; Timeline</div>
+    <div class="ptitle">Governance &amp; Timeline</div>
+    <div class="prule"></div></div><!-- /crop-wrap -->
+
+    <h2>Governance &amp; Dispute Resolution</h2>
+    <p>A joint steering committee comprising Nathan R. Boudreau, Dr. Allison Weiss Rothschild, and Adam Suzor (or designee) meets quarterly to review engagement pipeline, delivery progress, revenue performance, and open disputes. PL holds the tie-breaking vote on matters of governance framework fidelity.</p>
+    <table>
+      <thead><tr><th>Escalation Level</th><th>Process</th><th>Timeframe</th></tr></thead>
+      <tbody>
+        <tr><td>Operational Issues</td><td>Resolved between Systems Architect and PL</td><td>Within 5 business days</td></tr>
+        <tr><td>Contract Disputes</td><td>Escalated to the steering committee</td><td>Within 10 business days</td></tr>
+        <tr><td>Unresolved Disputes</td><td>Mediation — JAMS or AAA, Massachusetts venue</td><td>Within 30 days</td></tr>
+        <tr><td>Arbitration</td><td>Binding — AAA rules, Massachusetts law, single arbitrator</td><td>After mediation fails</td></tr>
+        <tr><td>Material Breach</td><td>30-day cure period from written notice; terminate for cause if uncured</td><td>Either party</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Implementation Timeline</h2>
+    <table>
+      <thead><tr><th>Week</th><th>Milestone</th><th>Key Actions</th></tr></thead>
+      <tbody>
+        <tr><td>Week 1</td><td>Partnership Review</td><td>Align on deal structure, leadership model, exclusivity, and revenue split</td></tr>
+        <tr><td>Week 1</td><td>Technical Review</td><td>Suzor IT reviews PL stack; Nate and Allie present Workspace and PRR module</td></tr>
+        <tr><td>Week 2</td><td>Term Sheet Signed</td><td>Both parties sign; PL counsel begins agreement draft</td></tr>
+        <tr><td>Weeks 3–4</td><td>Agreement Drafted</td><td>Counsel for both parties; PL holds IP, exclusivity, and leadership terms</td></tr>
+        <tr><td>Week 5</td><td>Agreement Signed + SA Engaged</td><td>Effective Date set; activation fee invoiced; Nate's employment begins</td></tr>
+        <tr><td>Weeks 5–7</td><td>VAULT Certification</td><td>Division Head delivers 8-hour training; 3 Suzor IT staff certified</td></tr>
+        <tr><td>Weeks 7–10</td><td>Pilot Municipalities Scoped</td><td>2–3 pilot towns identified from Suzor IT existing relationships</td></tr>
+        <tr><td>Weeks 10–14</td><td>Phase 1 Live</td><td>PRR Module + Workspace deployed in pilot towns</td></tr>
+        <tr><td>Week 18</td><td>Production Run Complete</td><td>4-week clean production milestone triggered</td></tr>
+        <tr><td>Week 20</td><td>Phase 1 Formally Accepted</td><td>Acceptance checklist signed; Phase 2 licensing conversation begins</td></tr>
+      </tbody>
+    </table>
+  </div></div>
+  <div class="ftr"><span class="ftr-l">PublicLogic LLC &nbsp;·&nbsp;  &nbsp;·&nbsp; www.publiclogic.org</span><span class="ftr-r">17</span></div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+  19 · TERM SHEET
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+  <div class="hdr"><span class="hdr-l">Suzor Civic Systems &nbsp;·&nbsp; powered by PublicLogic</span><span class="hdr-r">Confidential &nbsp;·&nbsp; March 2026</span></div>
+  <div class="body"><div class="body-pad">
+    <div class="eyebrow">09 &nbsp;·&nbsp; Term Sheet</div>
+    <div class="ptitle">Term Sheet</div>
+    <div class="prule"></div>
+    <p style="text-align:center;font-size:9px;font-weight:600;letter-spacing:.18em;color:var(--orng);text-transform:uppercase;margin-bottom:12px;">Confidential &nbsp;·&nbsp; Not a Binding Contract &nbsp;·&nbsp; For Discussion Purposes Only</p>
+
+    <h2>1. Parties</h2>
+    <p><strong>Licensor:</strong> PublicLogic LLC, 110 Kendall Pond Road West, Gardner MA 01440. &nbsp;<strong>Licensee:</strong> Suzor IT, 131 West Main Street, Orange MA 01364. &nbsp;<strong>Division:</strong> Suzor Civic Systems (SCS) — a division of Suzor IT, powered by PublicLogic.</p>
+
+    <h2>2. Term &amp; Exclusivity</h2>
+    <p>Initial Term: 3 years. Auto-renews annually unless either party provides 90 days' written notice. Exclusivity in MA/NH municipalities and K–12 districts conditioned on $36,000 Annual Minimum commencing Year 2. Performance conditions and remedy steps are detailed in Section 06.</p>
+
+    <h2>3. Economics</h2>
+    <p>Phase 1 Activation Fee: $15,000–$25,000, due at signing. Year 1: 15% Gross Revenue to PL, min $1,500/Engagement. Year 2+: 30% Gross Revenue, min $3,000/Engagement. Net Margin Option: 10%/20% Net Revenue with quarterly open-book reporting. Activation Fee Credit applied against Year 1 PL Share before cash distribution; uncredited balance rolls to Year 2. Monthly statement due by the 10th; quarterly true-up within 30 days; annual reconciliation within 60 days.</p>
+
+    <h2>4. Leadership &amp; Compensation</h2>
+    <div class="callout orng">
+      <p><strong>Systems Architect:</strong> Suzor IT shall employ Nathan R. Boudreau within 30 days of the Effective Date, base salary subject to negotiation, performance bonus up to 25% of base tied to milestones. All SCS-scope work product subject to IP assignment to PL.</p>
+      <p style="margin-top:5px;"><strong>Division Head:</strong> Dr. Allison Weiss Rothschild is and remains an employee of PublicLogic LLC, compensated by PL. Suzor IT has no employment obligation or authority. If the role changes at PL, PL provides equivalent governance coverage within 60 days. All SCS-scope work product subject to IP assignment to PL.</p>
+    </div></div><!-- /crop-wrap -->
+
+    <h2>5. License, IP, Derivatives &amp; Data</h2>
+    <p>Limited, non-exclusive, non-transferable, revocable license to deliver, install, configure, and support VAULT modules to SCS clients only. No sublicensing or white-labeling. All IP — including bugfixes and enhancements — assigned to PL upon creation; Suzor IT retains license within SCS deployments. Config/documentation escrow maintained by PL. Client data owned by the municipality; complex redactions and legal holds excluded from PRR compliance metrics.</p>
+
+    <h2>6. Cyber, Liability &amp; Insurance</h2>
+    <p>Breach notification within 72 hours. Annual SOC 2 Type II attestation required from Suzor IT. Breach remediation costs attributable to Suzor IT infrastructure uncapped. Liability cap: 12 months fees paid or payable; carve-outs for IP infringement, willful misconduct, gross negligence, data breach. Insurance: GL $1M/$2M, E&amp;O $1M, Cyber $1M.</p>
+
+    <h2>7. Termination &amp; Transition</h2>
+    <p>30-day cure period for material breach. Immediate termination for IP breach or uncured data breach. 90-day client transition obligation survives termination. PL provides Division Head governance coverage for 60 days post-termination.</p>
+
+    <h2>8. Signatures</h2>
+    <div class="sig-grid">
+      <div class="sblock nt">
+        <div class="sorg">PublicLogic LLC</div>
+        <div class="sline" style="margin-top:24px;">Signature</div>
+        <p style="font-size:11.5px;margin-bottom:2px;">Nathan R. Boudreau, MPA, MCPPO</p>
+        <div class="slbl">Founder &amp; Systems Architect</div>
+        <div class="sline" style="margin-top:18px;">Date</div>
+      </div>
+      <div class="sblock bt">
+        <div class="sorg">Suzor IT</div>
+        <div class="sline" style="margin-top:24px;">Signature</div>
+        <p style="font-size:11.5px;margin-bottom:2px;">Adam Suzor</p>
+        <div class="slbl">Founder &amp; CEO</div>
+        <div class="sline" style="margin-top:18px;">Date</div>
+      </div>
+    </div>
+  </div></div>
+  <div class="ftr"><span class="ftr-l">PublicLogic LLC &nbsp;·&nbsp;  &nbsp;·&nbsp; www.publiclogic.org</span><span class="ftr-r">19</span></div>
+</div>
+
+<!-- ══════════════════════════════════════
+  20 · GLOSSARY
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+  <div class="hdr"><span class="hdr-l">Suzor Civic Systems &nbsp;·&nbsp; powered by PublicLogic</span><span class="hdr-r">Confidential &nbsp;·&nbsp; March 2026</span></div>
+  <div class="body"><div class="body-pad">
+    <div class="eyebrow">Glossary</div>
+    <div class="ptitle">Glossary of Terms &amp; Statutes</div>
+    <div class="prule"></div>
+    <div class="gdict">
+      <div class="gentry"><span class="gterm">VAULT</span><span class="gdef">PublicLogic's proprietary governance framework. Installs institutional survivability — documented, transferable, defensible operating infrastructure for municipalities.</span></div>
+      <div class="gentry"><span class="gterm">Workspace</span><span class="gdef">PublicLogic's proprietary municipal operating system and VAULT staff interface. Internal automation and governance center for municipal operations.</span></div>
+      <div class="gentry"><span class="gterm">CivicPulse</span><span class="gdef">PublicLogic's civic intelligence dashboard. Maps DLS Cherry Sheet, DESE data, equalized valuation, and Local Aid distributions to each municipality's context.</span></div>
+      <div class="gentry"><span class="gterm">SCS</span><span class="gdef">Suzor Civic Systems — the joint division formed under this partnership delivering VAULT-powered governance and technology infrastructure.</span></div>
+      <div class="gentry"><span class="gterm">PRR / PRR Module</span><span class="gdef">Public Records Request. The PRR Module is the VAULT-integrated workflow for receiving, routing, responding to, and closing public records requests under MGL Ch.66.</span></div>
+      <div class="gentry"><span class="gterm">VAULT Certification</span><span class="gdef">8-hour training, 80%-pass written assessment, and one supervised pilot engagement. Required for all Suzor IT staff delivering VAULT modules. Administered by the Division Head.</span></div>
+      <div class="gentry"><span class="gterm">Systems Architect</span><span class="gdef">Nathan R. Boudreau — VAULT licensing authority, deployment strategy, and municipal relationships. Employed by Suzor IT.</span></div>
+      <div class="gentry"><span class="gterm">Division Head</span><span class="gdef">Dr. Allison Weiss Rothschild — governance delivery, VAULT framework fidelity, training and certification oversight. Employed and compensated by PublicLogic LLC.</span></div>
+      <div class="gentry"><span class="gterm">MGL Ch.66</span><span class="gdef">Massachusetts General Laws Chapter 66 — Public Records Law. Governs public records access and the 10-business-day response window.</span></div>
+      <div class="gentry"><span class="gterm">MGL Ch.30B</span><span class="gdef">Massachusetts General Laws Chapter 30B — Uniform Procurement Act. Governs municipal procurement of goods and services.</span></div>
+      <div class="gentry"><span class="gterm">MCPPO</span><span class="gdef">Massachusetts Certified Public Purchasing Official — professional procurement credential held by Nathan R. Boudreau.</span></div>
+      <div class="gentry"><span class="gterm">DLS</span><span class="gdef">Division of Local Services — MA Department of Revenue division that certifies local tax rates and distributes Cherry Sheet Local Aid to municipalities.</span></div>
+      <div class="gentry"><span class="gterm">DESE</span><span class="gdef">Department of Elementary and Secondary Education — MA K–12 oversight agency; source of district-level data integrated into CivicPulse.</span></div>
+      <div class="gentry"><span class="gterm">VADAR</span><span class="gdef">Veterans' Agent Data and Reporting system — Massachusetts veterans' services platform used by many municipalities. VAULT integrates without replacement.</span></div>
+      <div class="gentry"><span class="gterm">Tyler Technologies / Munis</span><span class="gdef">Major municipal ERP vendor. VAULT layers on top without requiring data migration or platform replacement.</span></div>
+      <div class="gentry"><span class="gterm">SOC 2 Type II</span><span class="gdef">Service Organization Control 2 audit validating security, availability, and privacy controls over a defined period. Required from Suzor IT annually.</span></div>
+      <div class="gentry"><span class="gterm">Delivery Gate</span><span class="gdef">A formal sign-off milestone that must be satisfied before the next phase of SCS module delivery is licensed. PL holds unilateral authority over each delivery phase.</span></div>
+      <div class="gentry"><span class="gterm">Gross Revenue</span><span class="gdef">Total amounts invoiced by SCS to end clients for services delivered under this agreement in a given period, before any deductions.</span></div>
+      <div class="gentry"><span class="gterm">Net Revenue</span><span class="gdef">Gross Revenue less pre-approved third-party software fees, pre-approved subcontractor costs, and applicable sales tax. Excludes PL Share itself.</span></div>
+      <div class="gentry"><span class="gterm">Engagement</span><span class="gdef">A signed SCS client agreement covering one or more VAULT modules. Each executed client contract counts as one Engagement for minimum calculation purposes.</span></div>
+      <div class="gentry"><span class="gterm">Annual Minimum</span><span class="gdef">$36,000 in Gross Revenue from SCS Engagements in any calendar year commencing Year 2. Failure triggers the exclusivity remedy process.</span></div>
+      <div class="gentry"><span class="gterm">P1 Incident</span><span class="gdef">Any event causing: (a) complete system unavailability; (b) data integrity compromise; or (c) inability to process public records requests within MGL Ch.66 windows. 24/7 response required.</span></div>
+      <div class="gentry"><span class="gterm">Business Hours</span><span class="gdef">Monday–Friday, 8:00 AM–5:00 PM ET, excluding Massachusetts state holidays and agreed maintenance windows. P1 incidents require response outside Business Hours.</span></div>
+    </div>
+  </div></div>
+  <div class="ftr"><span class="ftr-l">PublicLogic LLC &nbsp;·&nbsp;  &nbsp;·&nbsp; www.publiclogic.org</span><span class="ftr-r">Glossary</span></div>
+</div></div><!-- /crop-wrap -->
+
+<!-- ══════════════════════════════════════
+  21 · APPENDIX A — NATE
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+  <div class="rhead">
+    <div class="rappx">Appendix A &nbsp;·&nbsp; Systems Architect</div>
+    <div class="rname">Nathan R.<br>Boudreau</div>
+    <div class="rcreds">MPA &nbsp;·&nbsp; MCPPO</div>
+    <div class="rcontact">Massachusetts &nbsp;&nbsp; <span>nate@publiclogic.org</span> &nbsp;&nbsp; <span>978-807-0829</span></div>
+  </div>
+  <div class="rbody">
+    <div class="rsummary">Senior municipal and state governance professional with 15+ years operating inside board-accountable institutions as both elected official and chief executive. Extensive experience spanning municipal administration, state legislative operations, procurement, finance, and governance systems design. Founder of PublicLogic LLC and designated Systems Architect of Suzor Civic Systems.</div></div><!-- /crop-wrap -->
+
+    <div class="rshead">Current Role</div>
+    <div class="rtitle">Founder &amp; Systems Architect — PublicLogic LLC, Gardner MA</div>
+    <div class="rorgline"><span class="rorg"></span><span>2023 – Present</span></div>
+    <ul class="rbuls">
+      <li>Founded PublicLogic to install VAULT — converting municipal institutional knowledge into transferable, defensible, encoded operating systems.</li>
+      <li>Developed Workspace, CivicPulse, and the VAULT module stack; recognized at the 2025 MA Digital Government Summit. CivicPulse maps DLS Cherry Sheet figures, DESE district data, equalized valuation, and Local Aid distributions — accessible from any meeting room or mobile device.</li>
+      <li>Serves MA municipalities under 25,000 residents across Diagnostic, Foundations, Workspace, Encoding, and Transfer/Exit engagement models.</li>
+    </ul>
+
+    <div class="rshead">Professional Experience</div>
+    <div class="rtitle">Town Administrator</div>
+    <div class="rorgline"><span class="rorg">Town of Hubbardston, MA &nbsp;(Pop. 4,750)</span><span>2022 – 2025</span></div>
+    <ul class="rbuls">
+      <li>Chief administrative officer with final authority over municipal operations, personnel, finance, facilities, procurement, and regulatory compliance.</li>
+      <li>Led acquisition of 48 Gardner Road Municipal Complex (19,000 SF), consolidating Town Hall, Police, and Fire. Passed with 91% voter approval.</li>
+      <li>Designed and implemented HubbCONNECT municipal operating platform in-house. Recognized with Excellence in Municipal Service Award — 2025 MA Digital Government Summit.</li>
+      <li>Managed $11M annual operating budget including capital planning, debt service, and revenue forecasting.</li>
+    </ul>
+
+    <div class="rtitle">Town Clerk &amp; Special Projects Coordinator</div>
+    <div class="rorgline"><span class="rorg">Town of Princeton, MA</span><span>2020 – 2022</span></div>
+    <ul class="rbuls">
+      <li>Administered elections, vital records, licensing, and statutory reporting. Oversaw CARES Act and ARPA compliance. Led records management modernization.</li>
+    </ul>
+
+    <div class="rtitle">City Councillor (Elected) &nbsp;·&nbsp; Five Terms</div>
+    <div class="rorgline"><span class="rorg">City of Gardner, MA &nbsp;(Pop. 21,000)</span><span>2013 – 2023</span></div>
+    <ul class="rbuls">
+      <li>Ten years of elected service. Multiple committee chairs. Legislative and oversight authority over municipal budgets, capital appropriations, and policy.</li>
+    </ul>
+
+    <div class="rtitle">Prior Experience</div>
+    <div class="rorgline"><span class="rorg"></span><span>2009 – 2020</span></div>
+    <ul class="rbuls">
+      <li>Chief of Staff, Office of the Mayor — City of Marlborough (Pop. 40,000)</li>
+      <li>Executive Aide and HR Coordinator — Town of Shirley &nbsp;·&nbsp; Legislative Aide — Massachusetts House of Representatives</li>
+    </ul>
+
+    <div class="rshead">Education, Credentials &amp; Recognition</div>
+    <ul class="rbuls">
+      <li>Master of Public Administration — Clark University &nbsp;·&nbsp; Certificate in Government Leadership — MMA / Suffolk University</li>
+      <li>BA, Political Science and Criminal Justice — American International College &nbsp;·&nbsp; Massachusetts Certified Public Purchasing Official (MCPPO)</li>
+      <li>Excellence in Municipal Service Award — 31st MA Digital Government Summit (2025) &nbsp;·&nbsp; Small Town Administrators of MA — Legislative Committee Chair</li>
+    </ul>
+  </div>
+  <div class="ftr"><span class="ftr-l">PublicLogic LLC &nbsp;·&nbsp;  &nbsp;·&nbsp; www.publiclogic.org</span><span class="ftr-r">Appendix A</span></div>
+</div>
+
+<!-- ══════════════════════════════════════
+  22 · APPENDIX B — ALLIE
+══════════════════════════════════════ -->
+<div class="crop-wrap"><div class="crop-mark tl"></div><div class="crop-mark tr"></div><div class="crop-mark bl"></div><div class="crop-mark br"></div><div class="page">
+  <div class="rhead grn">
+    <div class="rappx">Appendix B &nbsp;·&nbsp; Division Head</div>
+    <div class="rname">Dr. Allison<br>Weiss Rothschild</div>
+    <div class="rcreds">PsyD, MSW, LICSW, BCBA, LABA</div>
+    <div class="rcontact"><span>allie@publiclogic.org</span> &nbsp;&nbsp; <span>617-347-2951</span></div>
+  </div>
+  <div class="rbody">
+    <div class="rsummary grn">Doctoral-level organizational psychologist with 20+ years of experience across governance systems, organizational change, and applied research in complex institutional environments. Licensed Independent Clinical Social Worker and Board-Certified Behavior Analyst with expertise spanning micro and macro systems. Research and Behavioral Systems Partner at PublicLogic LLC and Division Head of Suzor Civic Systems.</div>
+
+    <div class="rshead">Current Role</div>
+    <div class="rtitle">Research &amp; Behavioral Systems Partner &nbsp;·&nbsp; Division Head, SCS &nbsp;—&nbsp; PublicLogic LLC</div>
+    <div class="rorgline"><span class="rorg"></span><span>2025 – Present</span></div>
+    <ul class="rbuls">
+      <li>Leads VAULT framework implementation strategy, incorporating organizational behavior, change management, and applied research methodology into each SCS engagement.</li>
+      <li>Serves as Division Head of Suzor Civic Systems — governance delivery, framework fidelity, training certification, and research standards across all client engagements.</li>
+      <li>Compensated by PublicLogic, which preserves the governance independence the model depends on.</li>
+    </ul>
+
+    <div class="rshead">Professional Experience</div>
+    <div class="rtitle">Assistant Vice President and Director of Clinical Services</div>
+    <div class="rorgline"><span class="rorg">Seven Hills NeuroCare &nbsp;·&nbsp; Worcester, MA</span><span>2021 – Present</span></div>
+    <ul class="rbuls">
+      <li>Oversees multidisciplinary clinicians providing rehabilitation services to adults with acquired brain injury. Leads systems change initiatives, DDS compliance, and research-driven organizational practice development.</li>
+    </ul>
+
+    <div class="rtitle">Research Team Co-Chair</div>
+    <div class="rorgline"><span class="rorg">Seven Hills Foundation &nbsp;·&nbsp; Worcester, MA</span><span>2021 – Present</span></div>
+    <ul class="rbuls">
+      <li>Co-chairs the SHF research team. Lead researcher on multiple active and in-publication projects. Provides research design, qualitative and statistical analysis, and semi-annual stakeholder reports.</li>
+    </ul>
+
+    <div class="rtitle">AVP and Director of Clinical Services &nbsp;/&nbsp; Assistant Director &nbsp;/&nbsp; Assistant Clinical Director</div>
+    <div class="rorgline"><span class="rorg">Seven Hills Community Services &amp; Seven Hills Clinical Associates</span><span>2012 – 2021</span></div>
+    <ul class="rbuls">
+      <li>Oversaw vertical teams of behavioral and mental health clinicians serving adults with intellectual and developmental disabilities. Led systems development, DCF Caring Together compliance, regional intake, and staff training infrastructure.</li>
+    </ul>
+
+    <div class="rtitle">Part-Time Adjunct Professor</div>
+    <div class="rorgline"><span class="rorg">Assumption University &nbsp;·&nbsp; Worcester, MA</span><span>2021 – 2022</span></div>
+    <ul class="rbuls">
+      <li>Supervision and classroom instruction for practicum students in the Applied Behavior Analysis Master's program.</li>
+    </ul>
+
+    <div class="rshead">Licenses, Certifications &amp; Education</div>
+    <ul class="rbuls">
+      <li>Licensed Applied Behavior Analyst (LABA) 2017 &nbsp;·&nbsp; Board Certified Behavior Analyst (BCBA) 2012 &nbsp;·&nbsp; LICSW 2011</li>
+      <li>Certification in Trauma-Focused Cognitive-Behavioral Therapy — Medical University of South Carolina (2008)</li>
+      <li>Doctorate of Psychology (PsyD), Leadership Psychology — William James College, Newton, MA (2019). GPA 4.0 / 4.0.</li>
+      <li>Advanced Graduate Study, Behavior Analysis — Florida Institute of Technology (2012)</li>
+      <li>Master of Social Work — Boston College (2008). GPA 3.75 / 4.0. &nbsp;·&nbsp; Bachelor of Arts, Psychology — Boston College (2007). Dean's List. GPA 3.6 / 4.0.</li>
+    </ul>
+
+    <div class="rshead">Selected Publications</div>
+    <div class="pub">Driscoll, N. M., Weiss Rothschild, A., &amp; Weiss, M. (in press; 2024). Safety skills to reduce risk and harm. In K. Dyer et al. (Eds.), <em>Fostering communication, social connection, and belonging: The behavior analyst's guide to neurodiversity.</em></div>
+    <div class="pub">Hager, K., Martinez Calderon, M., Rothschild, A. W., &amp; Luiselli, J. K. (2024). Assessment of barriers to mental health services among families of children with rare disease. <em>Journal of Rare Diseases, 3(1),</em> 1–7.</div>
+    <div class="pub">Rothschild, A. W., Ricciardi, J. N., Luiselli, J. K., et al. (2021). Organizational responsiveness to the COVID-19 pandemic: A mixed-methods social validity assessment. <em>Advances in Neurodevelopmental Disorders.</em></div>
+    <div class="pub">Ricciardi, J. N., Rothschild, A. W., et al. (2020). Social validity assessment of behavior data recording. <em>Behavioral Interventions, 35(3),</em> 458–466.</div>
+    <div class="pub">Rothschild, A. W. (2019). Using participatory action research to increase job satisfaction and decrease turnover among direct care staff (doctoral dissertation). William James College.</div>
+    <div class="pub" style="font-style:italic;color:var(--mgry);">Additional publications and presentations available upon request.</div>
+  </div>
+  <div class="ftr"><span class="ftr-l">PublicLogic LLC &nbsp;·&nbsp; www.publiclogic.org</span><span class="ftr-r">Appendix B</span></div>
+</div></div><!-- /crop-wrap -->
+
+</body>
+</html>
