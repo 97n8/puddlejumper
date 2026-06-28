@@ -18,6 +18,7 @@
     "seed": "tsx seed/seed.ts"
   },
   "dependencies": {
+    "@pj/casespace-view": "workspace:*",
     "@pj/db": "workspace:*",
     "@pj/org-manager": "workspace:*",
     "@pj/split-row": "workspace:*",
@@ -41,6 +42,7 @@
     "isolated-vm": "^6.0.2"
   },
   "devDependencies": {
+    "@pj/pipeline": "workspace:*",
     "@types/bcryptjs": "^2.4.4",
     "@types/better-sqlite3": "^7.6.11",
     "@types/cookie-parser": "^1.4.7",

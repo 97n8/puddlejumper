@@ -1,0 +1,16 @@
+import { defineConfig } from 'vitest/config';
+import path from 'node:path';
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@pj/db': path.resolve(__dirname, '../db/src/index.ts'),
+      '@pj/pipeline': path.resolve(__dirname, '../pipeline/src/index.ts'),
+      '@publiclogic/core': path.resolve(__dirname, '../core/src/index.ts'),
+    },
+  },
+  test: {
+    globals: false,
+    exclude: ['**/node_modules/**', '**/dist/**'],
+  },
+});
