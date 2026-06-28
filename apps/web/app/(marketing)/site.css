@@ -1,0 +1,217 @@
+/* PublicLogic marketing site styles. Uses the @pj/ui design tokens
+   (--color-*, --font-*). Mobile-first: stacks one column, nav collapses to a
+   hamburger, proof bar wraps, no horizontal scroll (Builder Clarifications). */
+
+.pl-page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+.pl-nav {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.pl-brand { display: flex; flex-direction: column; line-height: 1.1; text-decoration: none; }
+.pl-wordmark {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-ink);
+  font-size: 18px;
+}
+.pl-subhead {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--color-ink3);
+  font-size: 13px;
+}
+.pl-nav-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--color-bd2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--color-ink);
+}
+.pl-nav-links { display: flex; align-items: center; gap: 22px; }
+.pl-nav-links a {
+  color: var(--color-ink2);
+  text-decoration: none;
+  font-size: 14px;
+}
+.pl-nav-links a:hover { color: var(--color-ink); }
+.pl-nav-cta {
+  border: 1px solid var(--color-g-bd);
+  background: var(--color-g-lt);
+  color: var(--color-g) !important;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* ── CTAs ────────────────────────────────────────────────────────────────── */
+.pl-cta {
+  display: inline-block;
+  padding: 11px 20px;
+  border-radius: 7px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 15px;
+}
+.pl-cta-primary { background: var(--color-g); color: #fff; }
+.pl-cta-primary:hover { background: var(--color-g-mid); }
+.pl-cta-secondary {
+  background: transparent;
+  color: var(--color-ink);
+  border: 1px solid var(--color-bd2);
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.pl-hero { padding: 64px 0 40px; }
+.pl-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 6vw, 56px);
+  line-height: 1.05;
+  margin: 0 0 16px;
+  color: var(--color-ink);
+}
+.pl-hero p {
+  font-size: 18px;
+  color: var(--color-ink2);
+  max-width: 620px;
+  margin: 0 0 24px;
+}
+.pl-hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* ── Proof bar ───────────────────────────────────────────────────────────── */
+.pl-proofbar {
+  border-top: 1px solid var(--color-bd);
+  border-bottom: 1px solid var(--color-bd);
+  padding: 20px 0;
+  margin: 24px 0;
+}
+.pl-proofbar ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pl-proofbar li {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+}
+.pl-proofbar li + li::before { content: '·'; margin-right: 22px; color: var(--color-ink4); }
+.pl-proofbar-body { color: var(--color-ink3); margin: 12px 0 0; font-size: 14px; }
+
+/* ── Sections + cards ────────────────────────────────────────────────────── */
+.pl-section { padding: 40px 0; }
+.pl-section > h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  margin: 0 0 8px;
+}
+.pl-section > p.pl-lead { color: var(--color-ink2); max-width: 620px; margin: 0 0 24px; }
+
+.pl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.pl-card {
+  background: var(--color-s0);
+  border: 1px solid var(--color-bd);
+  border-radius: 10px;
+  padding: 20px;
+}
+.pl-card h3 { margin: 0 0 6px; font-size: 18px; }
+.pl-card .pl-card-line {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--color-g);
+}
+.pl-card p { color: var(--color-ink2); margin: 6px 0 14px; font-size: 14px; }
+.pl-card ul { margin: 0 0 14px; padding-left: 18px; color: var(--color-ink2); font-size: 14px; }
+.pl-card ul li { margin: 3px 0; }
+.pl-card .pl-status { font-size: 12px; color: var(--color-ink3); }
+.pl-card .pl-status-soon { color: var(--color-amber); }
+
+.pl-before-after { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.pl-ba-col { background: var(--color-s1); border: 1px solid var(--color-bd); border-radius: 10px; padding: 20px; }
+.pl-ba-col h4 { margin: 0 0 8px; color: var(--color-ink3); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+.pl-pullquote {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1.3;
+  color: var(--color-ink);
+  border-left: 3px solid var(--color-g);
+  padding: 8px 0 8px 20px;
+  margin: 32px 0;
+}
+
+.pl-price { font-family: var(--font-mono); font-size: 22px; color: var(--color-ink); margin: 4px 0 10px; }
+.pl-empty, .pl-note { color: var(--color-ink3); font-size: 14px; }
+
+.pl-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.pl-list-row {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 12px 16px; background: var(--color-s0);
+  border: 1px solid var(--color-bd); border-radius: 8px;
+}
+
+/* ── Method / About prose ────────────────────────────────────────────────── */
+.pl-principles { display: grid; gap: 14px; }
+.pl-principle h3 { margin: 0 0 2px; font-size: 17px; }
+.pl-principle p { margin: 0; color: var(--color-ink2); }
+.pl-canon { margin-top: 40px; border-top: 1px solid var(--color-bd); padding-top: 24px; }
+.pl-canon h2 { font-size: 20px; color: var(--color-ink2); }
+
+/* ── Contact form ────────────────────────────────────────────────────────── */
+.pl-form { display: grid; gap: 16px; max-width: 620px; }
+.pl-field { display: grid; gap: 6px; }
+.pl-field label { font-size: 14px; font-weight: 500; color: var(--color-ink); }
+.pl-field input, .pl-field select, .pl-field textarea {
+  font: inherit; padding: 9px 11px;
+  border: 1px solid var(--color-bd2); border-radius: 6px;
+  background: var(--color-s0); color: var(--color-ink);
+}
+.pl-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pl-check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--color-ink2); }
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+.pl-footer {
+  max-width: 1040px; margin: 0 auto; padding: 40px 20px;
+  border-top: 1px solid var(--color-bd);
+  display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center;
+}
+.pl-footer-brand { display: flex; flex-direction: column; }
+.pl-footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
+.pl-footer-links a { color: var(--color-ink2); text-decoration: none; font-size: 14px; }
+.pl-footer-note { font-family: var(--font-display); font-style: italic; color: var(--color-ink3); }
+
+/* ── Mobile-first responsive (no horizontal scroll) ──────────────────────── */
+@media (max-width: 720px) {
+  .pl-nav-toggle { display: block; }
+  .pl-nav-links {
+    display: none; width: 100%; flex-direction: column; align-items: flex-start; gap: 14px;
+  }
+  .pl-nav-links.is-open { display: flex; }
+  .pl-grid { grid-template-columns: 1fr; }       /* cards stack one per row */
+  .pl-before-after { grid-template-columns: 1fr; }
+  .pl-checks { grid-template-columns: 1fr; }
+}
