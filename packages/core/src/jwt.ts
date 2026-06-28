@@ -16,16 +16,35 @@ function resolveJwtSecret(): Uint8Array {
   return new TextEncoder().encode(raw);
 }
 
+function resolveClaimConfig(): { issuer: string | undefined; audience: string | undefined } {
+  const issuer = process.env.AUTH_ISSUER;
+  const audience = process.env.AUTH_AUDIENCE;
+  if (process.env.NODE_ENV === 'production') {
+    if (!issuer) {
+      throw new Error('[core/jwt] AUTH_ISSUER must be set in production');
+    }
+    if (!audience) {
+      throw new Error('[core/jwt] AUTH_AUDIENCE must be set in production');
+    }
+  } else {
+    if (!issuer || !audience) {
+      // eslint-disable-next-line no-console
+      console.warn('[core/jwt] AUTH_ISSUER/AUTH_AUDIENCE unset — issuer/audience claims will not be validated (NOT FOR PRODUCTION)');
+    }
+  }
+  return { issuer, audience };
+}
+
 const SECRET = resolveJwtSecret();
+const { issuer: ISSUER, audience: AUDIENCE } = resolveClaimConfig();
 
 export async function signJwt(payload: Record<string, any>, opts?: { expiresIn?: number | string }) {
   const builder = new SignJWT(payload).setProtectedHeader({ alg: 'HS256', typ: 'JWT' }).setIssuedAt();
-  // set issuer/audience from env when available
-  if (process.env.AUTH_ISSUER) {
-    builder.setIssuer(process.env.AUTH_ISSUER);
+  if (ISSUER) {
+    builder.setIssuer(ISSUER);
   }
-  if (process.env.AUTH_AUDIENCE) {
-    builder.setAudience(process.env.AUTH_AUDIENCE);
+  if (AUDIENCE) {
+    builder.setAudience(AUDIENCE);
   }
   if (opts?.expiresIn) {
     builder.setExpirationTime(opts.expiresIn as any);
@@ -37,8 +56,8 @@ export async function signJwt(payload: Record<string, any>, opts?: { expiresIn?:
 
 export async function verifyJwt(token: string) {
   const { payload } = await jwtVerify(token, SECRET, {
-    issuer: process.env.AUTH_ISSUER,
-    audience: process.env.AUTH_AUDIENCE
+    ...(ISSUER ? { issuer: ISSUER } : {}),
+    ...(AUDIENCE ? { audience: AUDIENCE } : {})
   });
   return payload as JWTPayload;
 }
