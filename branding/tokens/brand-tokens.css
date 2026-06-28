@@ -1,0 +1,18 @@
+/* PuddleJumper — brand color tokens (source of truth for the logo kit).
+   CANON: the locked /home shell palette (forest green + deep teal-navy).
+   These are the reviewed shell values — not sampled, not invented. One
+   pinned green, one pinned navy; ink / gold / paper are the neutrals. */
+:root {
+  /* Core pair */
+  --pj-green: #2f5d50; /* forest — primary (shell --green) */
+  --pj-navy:  #315d74; /* deep teal-navy — secondary/accent (shell --blue) */
+
+  /* Neutrals */
+  --pj-ink:   #17211d; /* text / monochrome mark (shell --ink) */
+  --pj-gold:  #b88a3b; /* beak / fine accents (shell --gold) */
+  --pj-paper: #fbfaf6; /* surfaces (shell --soft) */
+  --pj-bg:    #f6f4ed; /* app background (shell --bg) */
+
+  /* Tints */
+  --pj-green-10: #eef2ef;
+}

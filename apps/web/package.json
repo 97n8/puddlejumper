@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "brand:sync": "node ../../scripts/sync-brand.mjs",
+    "brand:check": "node ../../scripts/sync-brand.mjs --check",
+    "predev": "node ../../scripts/sync-brand.mjs",
+    "prebuild": "node ../../scripts/sync-brand.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
