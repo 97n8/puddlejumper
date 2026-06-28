@@ -1244,9 +1244,7 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   const documentRoutes = createDocumentRoutes({ dbPath: vaultDbPath });
   app.use("/api", documentRoutes);
   app.use("/api", createDiscoveryRoutes({ dbPath: vaultDbPath }));
-  // Re-use the vault DB path for file drafts (separate Database connection, same file)
-  const vaultDb = new Database(vaultDbPath);
-  app.use("/api", createFileDraftsRouter(vaultDb));
+  app.use("/api", createFileDraftsRouter(canonDb));
 
   app.use("/api", createRulesRoutes({ db: approvalStore.db }));
   app.use("/api", createTasksRoutes({ db: approvalStore.db }));

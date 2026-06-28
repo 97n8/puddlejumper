@@ -42,3 +42,9 @@ _tmp_*
 
 # AI tool worktrees
 .claude/worktrees/
+
+# spark scaffolding artifacts (never track)
+.spark-initial-sha
+spark.meta.json
+**/.spark-initial-sha
+**/spark.meta.json
