@@ -9,7 +9,9 @@ import path from "node:path";
 import { OAuthStateStore } from "./lib/state-store.js";
 import { createOAuthRoutes } from "./lib/oauth.js";
 import type { OAuthProvider } from "./lib/oauth.js";
+import type { UserInfo } from "./lib/session.js";
 import { createSessionRoutes } from "./routes/login.js";
+import { createTokenExchangeRoutes } from "./routes/token-exchange.js";
 
 // Re-export providers for convenience
 export { googleProvider } from "./lib/google.js";
@@ -27,8 +29,23 @@ export interface MountAuthRoutesOptions {
   providers: OAuthProvider[];
   /** Optional rate-limit middleware applied to OAuth login routes. */
   oauthLoginRateLimit?: express.RequestHandler;
+  /** Optional rate-limit middleware applied to OAuth callback routes. */
+  oauthCallbackRateLimit?: express.RequestHandler;
+  /** Optional rate-limit middleware applied to token exchange. */
+  tokenExchangeRateLimit?: express.RequestHandler;
   /** Override the FRONTEND_URL for post-login redirects. */
   frontendUrl?: string;
+  /** Optional hook to resolve/create the runtime user before session creation. */
+  onUserAuthenticated?: (userInfo: UserInfo) => UserInfo | Promise<UserInfo>;
+  /** Optional hook invoked after provider token exchange succeeds. */
+  onTokenExchanged?: (params: {
+    provider: string;
+    accessToken: string;
+    refreshToken: string | null;
+    userInfo: UserInfo;
+  }) => void | Promise<void>;
+  /** Optional callback interceptors mounted before the shared OAuth callback routes. */
+  beforeProviderCallback?: Partial<Record<string, express.RequestHandler | express.RequestHandler[]>>;
 }
 
 export interface MountAuthRoutesResult {
@@ -57,6 +74,16 @@ export function mountAuthRoutes(opts: MountAuthRoutesOptions): MountAuthRoutesRe
     if (opts.oauthLoginRateLimit) {
       app.use(`/api/auth/${provider.name}/login`, opts.oauthLoginRateLimit);
     }
+    if (opts.oauthCallbackRateLimit) {
+      app.use(`/api/auth/${provider.name}/callback`, opts.oauthCallbackRateLimit);
+    }
+    const callbackInterceptors = opts.beforeProviderCallback?.[provider.name];
+    if (callbackInterceptors) {
+      const handlers = Array.isArray(callbackInterceptors) ? callbackInterceptors : [callbackInterceptors];
+      for (const handler of handlers) {
+        app.get(`/api/auth/${provider.name}/callback`, handler);
+      }
+    }
 
     app.use(
       "/api",
@@ -64,12 +91,23 @@ export function mountAuthRoutes(opts: MountAuthRoutesOptions): MountAuthRoutesRe
         nodeEnv,
         oauthStateStore,
         frontendUrl: opts.frontendUrl,
+        onUserAuthenticated: opts.onUserAuthenticated,
+        onTokenExchanged: opts.onTokenExchanged,
       }),
     );
   }
 
   // Mount session lifecycle routes (refresh, logout, revoke, status, audit)
   app.use("/api", createSessionRoutes({ nodeEnv }));
+
+   if (opts.tokenExchangeRateLimit) {
+    app.use("/api/auth/token-exchange", opts.tokenExchangeRateLimit);
+  }
+  app.use("/api", createTokenExchangeRoutes({
+    nodeEnv,
+    providers: Object.fromEntries(providers.map((provider) => [provider.name, provider])),
+    onUserAuthenticated: opts.onUserAuthenticated,
+  }));
 
   return { oauthStateStore };
 }

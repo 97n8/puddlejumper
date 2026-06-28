@@ -26,6 +26,8 @@ import {
   listLocalUsers,
 } from "../localUsersStore.js";
 import { getMemberRole, getWorkspaceForMember } from "../../engine/workspaceStore.js";
+import type { DatabaseHandle } from "@pj/db";
+import { resolveActorForLogin } from "@publiclogic/logic-commons-runtime";
 
 const DUMMY_BCRYPT_HASH = "$2b$12$9xw2FQch7hT2fV3BrqOZL.B8O7M8j0lW0m0VJzK1lT3VQ8x0vP6n2";
 
@@ -56,6 +58,8 @@ type AuthRoutesOptions = {
   nodeEnv: string;
   trustedParentOrigins: string[];
   dataDir: string;
+  canonDb?: DatabaseHandle;
+  canonTenantId?: string;
 };
 
 export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
@@ -121,6 +125,16 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
     }
 
     const mustChangePassword = localUser.must_change_password === 1;
+    const canonTenantId = opts.canonTenantId?.trim() ?? "";
+    const canonActor = opts.canonDb && canonTenantId
+      ? resolveActorForLogin(opts.canonDb, canonTenantId, { email: localUser.email })
+      : null;
+    if (opts.canonDb && canonTenantId && (!canonActor || !canonActor.ok)) {
+      res.status(403).json({ error: "Access denied — your identity is not provisioned for this workspace." });
+      return;
+    }
+    const effectiveTenantId = canonActor?.ok ? canonTenantId : workspaceId;
+    const canonIdentityId = canonActor?.ok ? canonActor.identityId : null;
 
     const token = await signJwt(
       {
@@ -130,7 +144,9 @@ export function createAuthRoutes(opts: AuthRoutesOptions): express.Router {
         role,
         permissions: [],
         tenants: [{ id: workspaceId, name: "Workspace", sha: "", connections: [] }],
-        tenantId: workspaceId,
+        tenantId: effectiveTenantId,
+        userId: canonIdentityId ?? localUser.id,
+        canonIdentityId: canonIdentityId ?? undefined,
         delegations: [],
         // Custom claim — LogicOS reads this to show the change-password gate
         mustChangePassword,

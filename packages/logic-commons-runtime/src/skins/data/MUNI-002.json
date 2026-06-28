@@ -1,0 +1,27 @@
+{
+  "skin_key": "MUNI-002",
+  "domain": "muni",
+  "field_labels": {
+    "subject_ref": "Permit file",
+    "needed_by": "Board target"
+  },
+  "required_fields": ["casespace_ref", "subject_ref", "needed_by"],
+  "pools": {
+    "owner": { "role": "intake" },
+    "closer": { "role": "administrator" },
+    "approver": { "role": "approver" }
+  },
+  "transitions": {
+    "route": {
+      "action": "process.assign"
+    },
+    "close": {
+      "action": "process.transition",
+      "approvalRole": "approver"
+    }
+  },
+  "default_owner": "owner",
+  "derived_holds": [
+    { "field": "subject_ref", "hold_kind": "locked", "resource_prefix": "permit-file" }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "skin_key": "STAY-001",
+  "domain": "stay",
+  "field_labels": {
+    "subject_ref": "Guest stay",
+    "needed_by": "Arrival due"
+  },
+  "required_fields": ["casespace_ref", "subject_ref"],
+  "pools": {
+    "owner": { "role": "assignee" },
+    "closer": { "role": "administrator" }
+  },
+  "default_owner": "owner",
+  "derived_holds": [
+    { "field": "subject_ref", "hold_kind": "derived", "resource_prefix": "stay" }
+  ],
+  "assist": {
+    "advisory": {
+      "suggest_photo_checklist": true
+    }
+  }
+}

@@ -17,6 +17,7 @@ import {
 } from '@publiclogic/core';
 import type { DatabaseHandle } from '@pj/db';
 import { can } from '@pj/org-manager';
+import { resolveActor } from '@publiclogic/logic-commons-runtime';
 import {
   closePRR,
   createPRR,
@@ -77,7 +78,11 @@ const listQuerySchema = z.object({
   cursor: z.string().optional(),
 });
 
-function tenantOrForbidden(req: express.Request, res: express.Response):
+function tenantOrForbidden(
+  db: DatabaseHandle,
+  req: express.Request,
+  res: express.Response,
+):
   | { tenantId: string; actorRef: string }
   | null {
   const auth = getAuthContext(req);
@@ -89,9 +94,24 @@ function tenantOrForbidden(req: express.Request, res: express.Response):
     res.status(403).json({ ok: false, error: { code: 'NO_TENANT', message: 'Tenant binding missing' } });
     return null;
   }
+  const tenantId = String(auth.tenantId)
+  const resolved = resolveActor(db, tenantId, {
+    canonIdentityId: (auth as { canonIdentityId?: string | null }).canonIdentityId,
+    userId: String(auth.userId ?? ''),
+    sub: String(auth.sub ?? ''),
+    email: auth.email ?? null,
+    name: auth.name ?? null,
+  })
+  if (!resolved.ok) {
+    res.status(403).json({
+      ok: false,
+      error: { code: 'authority_failure', message: 'Authenticated actor could not be resolved to a canonical identity' },
+    })
+    return null
+  }
   return {
-    tenantId: String(auth.tenantId),
-    actorRef: String(auth.sub ?? auth.userId ?? 'unknown'),
+    tenantId,
+    actorRef: resolved.identityId,
   };
 }
 
@@ -108,7 +128,7 @@ export function createCanonPrrRouter(opts: CanonPrrRoutesOptions): express.Route
   const router = express.Router();
 
   router.post('/prr', requireAuthenticated(), (req, res) => {
-    const auth = tenantOrForbidden(req, res);
+    const auth = tenantOrForbidden(db, req, res);
     if (!auth) return;
     const parsed = createBodySchema.safeParse(req.body ?? {});
     if (!parsed.success) {
@@ -120,7 +140,7 @@ export function createCanonPrrRouter(opts: CanonPrrRoutesOptions): express.Route
   });
 
   router.get('/prr', requireAuthenticated(), (req, res) => {
-    const auth = tenantOrForbidden(req, res);
+    const auth = tenantOrForbidden(db, req, res);
     if (!auth) return;
     const parsed = listQuerySchema.safeParse(req.query);
     if (!parsed.success) {
@@ -132,7 +152,7 @@ export function createCanonPrrRouter(opts: CanonPrrRoutesOptions): express.Route
   });
 
   router.get('/prr/:id', requireAuthenticated(), (req, res) => {
-    const auth = tenantOrForbidden(req, res);
+    const auth = tenantOrForbidden(db, req, res);
     if (!auth) return;
     const id = String(req.params.id ?? '').trim();
     if (!id) {
@@ -148,7 +168,7 @@ export function createCanonPrrRouter(opts: CanonPrrRoutesOptions): express.Route
   });
 
   router.patch('/prr/:id/state', requireAuthenticated(), (req, res) => {
-    const auth = tenantOrForbidden(req, res);
+    const auth = tenantOrForbidden(db, req, res);
     if (!auth) return;
     const id = String(req.params.id ?? '').trim();
     const parsed = transitionBodySchema.safeParse(req.body ?? {});
@@ -190,7 +210,7 @@ export function createCanonPrrRouter(opts: CanonPrrRoutesOptions): express.Route
   });
 
   router.patch('/prr/:id/fields', requireAuthenticated(), (req, res) => {
-    const auth = tenantOrForbidden(req, res);
+    const auth = tenantOrForbidden(db, req, res);
     if (!auth) return;
     const id = String(req.params.id ?? '').trim();
     if (!id) { badRequest(res, 'Process id required'); return; }
@@ -242,7 +262,7 @@ export function createCanonPrrRouter(opts: CanonPrrRoutesOptions): express.Route
   });
 
   router.post('/prr/:id/close', requireAuthenticated(), (req, res) => {
-    const auth = tenantOrForbidden(req, res);
+    const auth = tenantOrForbidden(db, req, res);
     if (!auth) return;
     const id = String(req.params.id ?? '').trim();
     try {

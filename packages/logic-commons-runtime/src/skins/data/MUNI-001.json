@@ -1,0 +1,17 @@
+{
+  "skin_key": "MUNI-001",
+  "domain": "muni",
+  "field_labels": {
+    "subject_ref": "Records request",
+    "needed_by": "Statutory due"
+  },
+  "required_fields": ["casespace_ref", "subject_ref", "needed_by"],
+  "pools": {
+    "owner": { "role": "records_officer" },
+    "closer": { "role": "records_officer" }
+  },
+  "default_owner": "owner",
+  "derived_holds": [
+    { "field": "subject_ref", "hold_kind": "locked", "resource_prefix": "record" }
+  ]
+}

@@ -30,6 +30,7 @@ const MIGRATION_FILENAMES = [
   '005_deployment_status.sql',
   '006_identity_overlay.sql',
   '007_pipeline_schema.sql',
+  '008_logic_commons_runtime.sql',
 ] as const;
 
 export interface MigrateResult {

@@ -82,16 +82,13 @@ import {
   createErrorHandler,
 } from "./serverMiddleware.js";
 import { processAccessNotificationQueueOnce } from "./accessNotificationWorker.js";
-import { OAuthStateStore } from "@publiclogic/logic-commons";
 import {
-  createOAuthRoutes,
+  mountAuthRoutes,
   googleProvider,
   githubProvider,
   microsoftProvider,
   configureRefreshStore,
   configureAuditStore,
-  createSessionRoutes,
-  createTokenExchangeRoutes,
   type UserInfo,
 } from "@publiclogic/logic-commons";
 
@@ -296,8 +293,6 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     throw new Error("CONNECTOR_DB_PATH must be inside the controlled data directory");
   }
   if (!connectorStateSecret) throw new Error("CONNECTOR_STATE_SECRET is required");
-  const oauthStateDbPath = path.join(CONTROLLED_DATA_DIR, "oauth_state.db");
-  const oauthStateStore = new OAuthStateStore(oauthStateDbPath);
   const approvalDbPath = path.resolve(process.env.APPROVAL_DB_PATH ?? DEFAULT_APPROVAL_DB_PATH);
   if (!isPathInsideDirectory(approvalDbPath, CONTROLLED_DATA_DIR)) {
     throw new Error("APPROVAL_DB_PATH must be inside the controlled data directory");
@@ -960,19 +955,9 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
   app.use("/api", createAuthRoutes({
     builtInLoginEnabled, loginUsers, loginRateLimit, nodeEnv, trustedParentOrigins,
     dataDir: CONTROLLED_DATA_DIR,
+    canonDb,
+    canonTenantId: process.env.PJ_CANON_TENANT_ID,
   }));
-  // Session lifecycle routes (refresh, /auth/logout, /auth/revoke, /auth/status,
-  // /session, /admin/audit) — provided by logic-commons
-  app.use("/api", createSessionRoutes({ nodeEnv }));
-  // Rate-limit OAuth login redirects AND callbacks (10 req/min per IP).
-  // Callbacks accept attacker-controllable state/code params, so they need limiting too.
-  app.use("/api/auth/github/login", loginRateLimit);
-  app.use("/api/auth/google/login", loginRateLimit);
-  app.use("/api/auth/microsoft/login", loginRateLimit);
-  app.use("/api/auth/github/callback", loginRateLimit);
-  app.use("/api/auth/google/callback", loginRateLimit);
-  app.use("/api/auth/microsoft/callback", loginRateLimit);
-  // Mount generic OAuth routes for all three providers (via logic-commons factory)
   const onUserAuthenticated = (userInfo: UserInfo): UserInfo => {
     // ── Access allowlist ──────────────────────────────────────────────────────
     // ALLOWED_EMAILS: comma-separated list of exact emails that may log in
@@ -1110,7 +1095,6 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     const effectiveUserId   = canonBridge.mode === 'hit' ? canonBridge.canonIdentityId : row.sub;
     return { ...userInfo, role: row.role, tenantId: effectiveTenantId, userId: effectiveUserId, workspaceId: ws.id, workspaceName: ws.name } as typeof userInfo & { role: string; tenantId: string; userId: string; workspaceId: string; workspaceName: string };
   };
-  const oauthRouteOpts = { nodeEnv, oauthStateStore, onUserAuthenticated, frontendUrl: (process.env.LOGIC_COMMONS_URL ?? "").trim() || "https://logicos-rho.vercel.app" };
   // Auto-connect connector store when user signs in with any provider
   const onTokenExchanged = async ({ provider, accessToken, refreshToken, userInfo }: { provider: string; accessToken: string; refreshToken: string | null; userInfo: any }) => {
     const tenantId = userInfo.tenantId ?? "";
@@ -1132,26 +1116,28 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
       console.warn(`${provider} connector auto-connect failed:`, err?.message);
     }
   };
-  const allOauthRouteOpts = { ...oauthRouteOpts, onTokenExchanged };
-  // Intercept /api/auth/github/callback before the login handler — if the `state`
-  // is a signed connector state (user connecting GitHub while logged in as another
-  // provider), store the token and redirect; otherwise fall through to login flow.
-  app.get("/api/auth/github/callback", createConnectorCallbackMiddleware({
-    stateHmacKey: connectorStateSecret, store: connectorStore,
-  }));
-  app.get("/api/auth/google/callback", createConnectorCallbackMiddleware({
-    stateHmacKey: connectorStateSecret, store: connectorStore,
-  }));
-  app.use("/api", createOAuthRoutes(githubProvider, allOauthRouteOpts));
-  app.use("/api", createOAuthRoutes(googleProvider, allOauthRouteOpts));
-  app.use("/api", createOAuthRoutes(microsoftProvider, allOauthRouteOpts));
-  // Token exchange (SSO bridge — lets OS exchange an MSAL token for a PJ session)
-  app.use("/api/auth/token-exchange", loginRateLimit);
-  app.use("/api", createTokenExchangeRoutes({
+  mountAuthRoutes({
+    app,
     nodeEnv,
-    providers: { microsoft: microsoftProvider, google: googleProvider, github: githubProvider },
+    dataDir: CONTROLLED_DATA_DIR,
+    providers: [githubProvider, googleProvider, microsoftProvider],
+    oauthLoginRateLimit: loginRateLimit,
+    oauthCallbackRateLimit: loginRateLimit,
+    tokenExchangeRateLimit: loginRateLimit,
+    frontendUrl: (process.env.LOGIC_COMMONS_URL ?? "").trim() || "https://logicos-rho.vercel.app",
     onUserAuthenticated,
-  }));
+    onTokenExchanged,
+    beforeProviderCallback: {
+      github: createConnectorCallbackMiddleware({
+        stateHmacKey: connectorStateSecret,
+        store: connectorStore,
+      }),
+      google: createConnectorCallbackMiddleware({
+        stateHmacKey: connectorStateSecret,
+        store: connectorStore,
+      }),
+    },
+  });
   app.use("/api", createConfigRoutes({ runtimeContext, runtimeTiles, runtimeCapabilities }));
   // Canon PRR domain — replaces legacy routes/prr.ts (Phase 2).
   app.use("/api", createCanonPrrRouter({ db: canonDb }));
@@ -1212,7 +1198,10 @@ export function createApp(nodeEnv: string = process.env.NODE_ENV ?? "development
     prrStore,
     workspaceId: process.env.PUBLIC_PRR_WORKSPACE_ID,
   }));
-  app.use("/api", createAdminPRRRoutes());
+  // TODO(logiccommons-v1): route admin PRR mutations through the canon transition
+  // path before remounting. Leaving this mounted keeps an ungated legacy status
+  // write reachable in the running server.
+  // app.use("/api", createAdminPRRRoutes());
   app.use("/api", createWebhookActionRoutes({
     approvalStore, dispatcherRegistry, chainStore,
   }));

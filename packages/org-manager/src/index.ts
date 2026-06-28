@@ -178,6 +178,11 @@ export interface WhoisResult extends Identity {
   title?: string;
 }
 
+export interface IdentityOverlayRow extends Identity {
+  email: string | null;
+  display_name: string | null;
+}
+
 /**
  * Look up an identity by id, scoped to a tenant. The optional `title`
  * field is the role_type from the most recent active assignment in this
@@ -208,6 +213,33 @@ export function whois(
 
   const identity = rowToIdentity(row);
   return titleRow ? { ...identity, title: titleRow.role_type } : identity;
+}
+
+/**
+ * Resolve an active tenant-scoped identity by normalized email.
+ * Returns null when no row matches.
+ */
+export function resolveIdentityByEmail(
+  db: DatabaseHandle,
+  tenantId: string,
+  email: string,
+): IdentityOverlayRow | null {
+  const normalized = email.toLowerCase().trim();
+  if (!normalized) return null;
+  const row = db
+    .prepare(
+      `SELECT * FROM identities
+       WHERE tenant_id = ? AND active = 1 AND LOWER(email) = ?`,
+    )
+    .get(tenantId, normalized) as
+      | (IdentityRow & { email: string | null; display_name: string | null })
+      | undefined;
+  if (!row) return null;
+  return {
+    ...rowToIdentity(row),
+    email: row.email,
+    display_name: row.display_name,
+  };
 }
 
 // ── can ─────────────────────────────────────────────────────────────────────

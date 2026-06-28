@@ -1,0 +1,31 @@
+{
+  "skin_key": "STAY-002",
+  "domain": "stay",
+  "field_labels": {
+    "subject_ref": "Turnover",
+    "needed_by": "Ready by"
+  },
+  "required_fields": ["casespace_ref", "subject_ref", "needed_by"],
+  "pools": {
+    "owner": { "role": "assignee" },
+    "closer": { "role": "administrator" },
+    "decider": { "role": "reviewer" }
+  },
+  "transitions": {
+    "route": {
+      "action": "process.assign"
+    },
+    "close": {
+      "requiredEvidence": ["turnover-photo"]
+    }
+  },
+  "default_owner": "owner",
+  "derived_holds": [
+    { "field": "subject_ref", "hold_kind": "scheduled", "resource_prefix": "unit" }
+  ],
+  "assist": {
+    "advisory": {
+      "photo_prompt": "Suggested cleanup proof only"
+    }
+  }
+}
