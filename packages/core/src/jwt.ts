@@ -27,9 +27,10 @@ function resolveClaimConfig(): { issuer: string | undefined; audience: string | 
       throw new Error('[core/jwt] AUTH_AUDIENCE must be set in production');
     }
   } else {
-    if (!issuer || !audience) {
+    const missing = [!issuer && 'AUTH_ISSUER', !audience && 'AUTH_AUDIENCE'].filter(Boolean).join(', ');
+    if (missing) {
       // eslint-disable-next-line no-console
-      console.warn('[core/jwt] AUTH_ISSUER/AUTH_AUDIENCE unset — issuer/audience claims will not be validated (NOT FOR PRODUCTION)');
+      console.warn(`[core/jwt] ${missing} unset — those claims will not be validated (NOT FOR PRODUCTION)`);
     }
   }
   return { issuer, audience };
