@@ -45,6 +45,17 @@ let _db: Database.Database | null = null;
 
 /** Override the data directory. Call before any store operations. */
 export function configureAuditStore(dataDir: string): void {
+  // If a handle is already open against a different directory, close it so the
+  // next getDb() re-opens against the new path. Without this, reconfiguring the
+  // data dir silently keeps the stale handle and audit_events is never created
+  // at the new location — the migration runner then fails applying its
+  // audit-targeted migration ("no such table: audit_events"). Production opens
+  // one dataDir per boot, so this is a no-op there; it only matters when the
+  // dir changes within a process (tests, multi-tenant tooling).
+  if (_db && _dataDir !== null && _dataDir !== dataDir) {
+    try { _db.close(); } catch { /* already closed */ }
+    _db = null;
+  }
   _dataDir = dataDir;
 }
 

@@ -2,11 +2,23 @@ import express, { type Router } from "express";
 import Stripe from "stripe";
 // VAULT_PAY_DB_INJECTED
 import Database from 'better-sqlite3';
+import fs from 'node:fs';
 import path from 'path';
-const db = new Database(
-  process.env.VAULT_PAY_DB || path.join(process.cwd(), 'data/vault-pay.db')
-);
-db.pragma('journal_mode = WAL');
+
+// Lazy-init the vault-pay DB. Opening at module load crashed boot (and any
+// import of server.ts) when the data dir did not yet exist — the same
+// box-stays-up fragility this milestone closes. Defer until first use and
+// create the directory so the open cannot throw.
+let _db: Database.Database | null = null;
+function getDb(): Database.Database {
+  if (_db) return _db;
+  const dbPath = process.env.VAULT_PAY_DB || path.join(process.cwd(), 'data/vault-pay.db');
+  if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  _db = new Database(dbPath);
+  _db.pragma('journal_mode = WAL');
+  return _db;
+}
+void getDb; // reserved for the persistence wiring sketched below
 
 
 const router: Router = express.Router();

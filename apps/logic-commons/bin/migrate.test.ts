@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import * as migrationsModule from "../../puddlejumper/src/api/migrations.js";
+// Import via the same `.ts` specifier the CLI uses (migrate.mjs), so the spy
+// and the CLI's dynamic import resolve to one module instance and the spy
+// actually intercepts. A `.js` specifier here resolves to a separate Vite
+// module node and the spies never fire.
+import * as migrationsModule from "../../puddlejumper/src/api/migrations.ts";
 import { main } from "./migrate.mjs";
 
 describe("migrate CLI", () => {
@@ -25,7 +29,10 @@ describe("migrate CLI", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    // clearAllMocks (not restoreAllMocks): the spies are created once at
+    // describe scope, so restoring would detach them and every test after the
+    // first would call the real implementation. beforeEach re-arms them.
+    vi.clearAllMocks();
   });
 
   it("applies pending migrations with the default command", async () => {

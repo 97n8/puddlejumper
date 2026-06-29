@@ -15,6 +15,7 @@
     "@publiclogic/core": "workspace:*",
     "better-sqlite3": "^12.6.2",
     "cookie-parser": "^1.4.7",
+    "dotenv": "^16.0.0",
     "express": "^4.21.2"
   },
   "devDependencies": {

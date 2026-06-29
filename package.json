@@ -26,9 +26,11 @@
     "deploy:vercel": "./scripts/deploy-vercel.sh",
     "mint:service-jwt": "tsx scripts/mint-service-jwt.ts",
     "db:backup": "tsx apps/puddlejumper/src/api/sqliteMaintenance.ts backup",
+    "db:validate-restore": "tsx apps/puddlejumper/src/api/sqliteMaintenance.ts validate-restore",
     "db:migrate": "node --import tsx apps/logic-commons/bin/migrate.mjs up",
+    "prr:backfill-public-id": "node scripts/backfill_prr_public_id.mjs",
     "smoke": "./scripts/smoke-test.sh",
-    "ci": "turbo run build typecheck --filter=!@gpr/logicos"
+    "ci": "turbo run build typecheck test --filter=!@gpr/logicos"
   },
   "devDependencies": {
     "turbo": "^2.5.4",
