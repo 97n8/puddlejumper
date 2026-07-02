@@ -126,8 +126,8 @@ para("The program has been reauthorized through September 30, 2031, and the next
 h("THE SMALL FIRST STEP")
 para("To get moving without a big commitment, PublicLogic will run the initial grant-fit and due-diligence "
      "work — confirming the best agency, the solicitation window, and how competitive WasteWerx would be — "
-     "for a modest fixed fee of $1,500. If we proceed to the application, it credits toward the "
-     "grant-management work. And if we don’t find a strong fit, you’re out $1,500 and you know the "
+     "for a fixed fee of $2,500. If we proceed to the application, it credits toward the "
+     "grant-management work. And if we don’t find a strong fit, you’re out $2,500 and you know the "
      "landscape — cheaper than chasing the wrong grant. It’s the fastest way to turn this from a good idea "
      "into a filed application.",after=4)
 
