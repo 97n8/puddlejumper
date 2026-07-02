@@ -105,7 +105,7 @@ para("UCF proves the fuel is real. Getting a town, a hauler, or a plant operator
 h("WHAT THIS ASKS OF YOU")
 bullet("Access — ","Let UCF independently test samples from your runs. The results are yours and the partnership’s.")
 bullet("Data — ","Share enough run data for the university to do honest measurement. Your IP and reactor design stay yours.")
-bullet("Time — ","A modest in-kind commitment of machine time and materials, which also counts toward the grant’s cost-share.")
+bullet("Time — ","A modest in-kind commitment of machine time and materials, which also counts toward the grant’s cost-share (the match some federal grants ask for).")
 para("PublicLogic does the writing, the budgeting, the filing, and the reporting. The lift on your side is "
      "the technology you’re already running.",ital=True,color=MUTE,size=9.5,before=2,after=4)
 
@@ -127,7 +127,9 @@ h("THE SMALL FIRST STEP")
 para("To get moving without a big commitment, PublicLogic will run the initial grant-fit and due-diligence "
      "work — confirming the best agency, the solicitation window, and how competitive WasteWerx would be — "
      "for a modest fixed fee of $1,500. If we proceed to the application, it credits toward the "
-     "grant-management work. It’s the fastest way to turn this from a good idea into a filed application.",after=4)
+     "grant-management work. And if we don’t find a strong fit, you’re out $1,500 and you know the "
+     "landscape — cheaper than chasing the wrong grant. It’s the fastest way to turn this from a good idea "
+     "into a filed application.",after=4)
 
 greenbox("WHAT WE’D NAIL DOWN TOGETHER",
      "What gets tested — which feedstocks, which fuel fractions, and what “success” looks like.   "
