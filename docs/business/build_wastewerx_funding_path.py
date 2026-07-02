@@ -94,18 +94,13 @@ para("On the money: the large majority of the grant funds the actual research �
      "(grant development, compliance, and stewardship), separate from the research work itself. It is not a "
      "cut of your share or UCF’s.",before=5,after=4)
 
-h("THE ADOPTION LAYER — AND WHO LEADS IT")
-para("UCF proves the fuel is real. Getting a town, a hauler, or a plant operator to actually run the system, "
-     "trust it, and keep using it is a different problem. PublicLogic’s organizational implementation work is "
-     "led by Dr. Allison Weiss Rothschild. She holds a PsyD in Leadership Psychology from William James "
-     "College and an MSW from Boston College, with licenses as a Clinical Social Worker (LICSW) and Behavior "
-     "Analyst (BCBA/LABA), and has spent her career inside multi-site, regulated human-services "
-     "organizations. Her doctoral work looked at why organizations struggle to hold onto new practices and "
-     "staff buy-in after a strong start — the same problem a new technology runs into once the demonstration "
-     "phase ends. She draws on CFIR, a framework researchers use to assess whether a new system actually "
-     "takes hold in an organization, to build the training and adoption plan that carries a project past the "
-     "lab bench. Reviewers increasingly look for teams with a credible path to real-world adoption, not just "
-     "technical feasibility, and that’s the piece PublicLogic adds to the partnership.",after=4)
+h("THE ADOPTION LAYER")
+para("UCF proves the fuel is real. Getting a town, a hauler, or a plant operator to actually run the system — "
+     "and keep using it — is a different problem, and it’s the one PublicLogic’s Dr. Allison Weiss "
+     "Rothschild works on. A PsyD in Leadership Psychology, her research is on why organizations lose new "
+     "practices after a strong start — exactly what happens to a new technology once the demonstration ends. "
+     "She builds the training and adoption plan (using CFIR, a standard framework for whether a new system "
+     "actually takes hold) that carries the project past the lab bench.",after=4)
 
 h("WHAT THIS ASKS OF YOU")
 bullet("Access — ","Let UCF independently test samples from your runs. The results are yours and the partnership’s.")
