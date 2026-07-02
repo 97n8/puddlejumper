@@ -51,8 +51,8 @@ para("The short version. There is federal money built for exactly this situation
 
 greenbox("THE QUESTION THE GRANT PAYS US TO ANSWER",
      "Can the WasteWerx process turn everyday waste — tires, mixed plastics, wood — into clean jet and diesel "
-     "fuel that meets the industry’s quality bar, in one pass, with a carbon footprint a buyer can trust? "
-     "A university saying yes to that is worth far more than a vendor saying it.")
+     "fuel that meets the industry’s quality bar (the ASTM standard), in one pass, with a carbon footprint a "
+     "buyer can trust? A university saying yes to that is worth far more than a vendor saying it.")
 para("That’s a feasibility question — which is precisely what this grant funds. Answer it well and the next, "
      "bigger round of money (and serious buyers) opens up.",before=3,after=5)
 
@@ -64,11 +64,11 @@ cols=[("WasteWerx","The technology and the proof",
         "Own the equipment, the IP, and the path to building more",
         "Line up the buyers and licensing interest"]),
       ("UCF","The independent proof",
-       ["Test the fuel against the industry quality standards",
+       ["Test the fuel against the ASTM quality standards",
         "Confirm what the fuel is and how clean it burns",
+        "Help shorten the ASTM certification timeline",
         "Measure the real carbon footprint, start to finish",
-        "Put a university name on the results — the credibility layer",
-        "Supply the university research lead the grant requires"]),
+        "Put a university name on the results — and supply the research lead the grant requires"]),
       ("PublicLogic","The build, the paperwork, the adoption",
        ["Write and assemble the full grant package",
         "Structure the agreement and split the funds correctly",
@@ -122,11 +122,17 @@ bullet("Staying power — ","A documented adoption plan that makes the whole thi
 
 h("THE TIMING")
 para("The program has been reauthorized through September 30, 2031, and the next step is matching the project "
-     "to the right agency solicitation cycle. From there the work is assembling the package and pairing the "
-     "project with the right UCF researcher — we’ll work through UCF’s research office to land that fit, and "
-     "PublicLogic coordinates the rest. One honest note: every grant is competitive, and we won’t put "
-     "anything forward that doesn’t position WasteWerx as a clear contender. The point of getting in early is "
-     "to build exactly that kind of application.",after=4)
+     "to the right agency solicitation cycle — for a waste-to-fuel process, most likely DOE or USDA. From "
+     "there the work is assembling the package and pairing the project with the right UCF researcher — we’ll "
+     "work through UCF’s research office to land that fit, and PublicLogic coordinates the rest. One honest "
+     "note: every grant is competitive, and we won’t put anything forward that doesn’t position WasteWerx as "
+     "a clear contender. The point of getting in early is to build exactly that kind of application.",after=4)
+
+h("THE SMALL FIRST STEP")
+para("To get moving without a big commitment, PublicLogic will run the initial grant-fit and due-diligence "
+     "work — confirming the best agency, the solicitation window, and how competitive WasteWerx would be — "
+     "for a modest fixed fee of $1,500. If we proceed to the application, it credits toward the "
+     "grant-management work. It’s the fastest way to turn this from a good idea into a filed application.",after=4)
 
 greenbox("WHAT WE’D NAIL DOWN TOGETHER",
      "What gets tested — which feedstocks, which fuel fractions, and what “success” looks like.   "
