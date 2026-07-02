@@ -89,10 +89,13 @@ for i,(_,_,items) in enumerate(cols):
         r=p.add_run("• "); r.font.name=SANS; r.font.size=Pt(9); r.font.color.rgb=GOLD
         r2=p.add_run(it); r2.font.name=SANS; r2.font.size=Pt(9); r2.font.color.rgb=SLATE
 
-para("On the money: the large majority of the grant funds the actual research — WasteWerx running the system "
-     "and UCF testing the results. PublicLogic is paid as a smaller line for building and managing the award "
-     "(grant development, compliance, and stewardship), separate from the research work itself. It is not a "
-     "cut of your share or UCF’s.",before=5,after=4)
+para("On the money: most of the grant funds the research itself — WasteWerx running the system and UCF "
+     "testing the results. PublicLogic is a separate, scoped line for grant development, compliance, and "
+     "stewardship — professional work priced to what full-service grant management actually costs, not a cut "
+     "of your share or UCF’s. And it is never contingent on the award: that’s the compliant way to pay for "
+     "grant work (contingent “pay-if-you-win” fees can’t be charged to the grant), and it keeps our "
+     "incentives straight — we’re paid to build the strongest possible application, not to gamble on it.",
+     before=5,after=4)
 
 h("THE ADOPTION LAYER")
 para("UCF proves the fuel is real. Getting a town, a hauler, or a plant operator to actually run the system — "
